@@ -90,6 +90,8 @@ describe("lockstep", () => {
       expect(clients.map((c) => c.match!.fields.indexOf(c.game))).toEqual([0, 1, 2]);
       room.queue(0, { type: "build", tower: "pulse", x: 4, y: 4 });
       room.queue(1, { type: "build", tower: "blast", x: 6, y: 5 });
+      // Priorities live in the state hash; a missing entry would let clients drift unnoticed.
+      room.queue(1, { type: "target", id: 1, priority: "strong" });
       for (const p of [0, 1, 2]) room.queue(p, { type: "ready" });
       let frames = 0;
       while (!clients[0].match!.result && frames++ < 6000) {
@@ -99,7 +101,7 @@ describe("lockstep", () => {
         expect(new Set(clients.map((c) => c.sim.hash())).size).toBe(1);
       }
       expect(clients[1].match!.fields[0].state.towers).toHaveLength(1);
-      expect(clients[2].match!.fields[1].state.towers[0].type).toBe("blast");
+      expect(clients[2].match!.fields[1].state.towers[0]).toMatchObject({ type: "blast", priority: "strong" });
       if (mode === "siege") expect(clients[0].applied.some((a) => a.command.type === "send" && a.result.ok)).toBe(true);
       expect(clients[0].hashes).toEqual(clients[2].hashes);
     });

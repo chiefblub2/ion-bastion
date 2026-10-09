@@ -1,5 +1,7 @@
 import type { Game } from "../core/game";
-import type { CommandResult, EnemyId, TowerId } from "../core/types";
+import type { CommandResult, EnemyId, TargetPriority, TowerId } from "../core/types";
+import { TARGET_PRIORITIES } from "../systems/combat";
+import { isSupport } from "../systems/attacks";
 import type { MatchCommand } from "../core/match";
 import { type Interface, nextMission, renderMission, renderMissionList, TOWER_KEYS } from "../ui/interface";
 import { describeResult } from "../ui/messages";
@@ -128,6 +130,10 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     if (b.dataset.mission) return selectMission(b.dataset.mission);
     if (b.dataset.send) return execute({ type: "send", enemy: b.dataset.send as EnemyId });
     if (b.dataset.sector) return showSector(Number(b.dataset.sector));
+    if (b.dataset.priority && view.selected !== null) {
+      execute({ type: "target", id: view.selected, priority: b.dataset.priority as TargetPriority });
+      return;
+    }
     if (b.dataset.upgrade && view.selected !== null) {
       execute({ type: "upgrade", id: view.selected, upgrade: b.dataset.upgrade });
       return;
@@ -228,6 +234,14 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     }
     if (e.key.toLowerCase() === "n") {
       execute({ type: "start" });
+      return;
+    }
+    if (e.key.toLowerCase() === "t") {
+      // Cycles the selected attack tower to its next target priority.
+      const t = game.state.towers.find((t) => t.id === view.selected);
+      if (!t || isSupport(game.content.towers[t.type].attack)) return;
+      const next = TARGET_PRIORITIES[(TARGET_PRIORITIES.indexOf(t.priority ?? "first") + 1) % TARGET_PRIORITIES.length];
+      execute({ type: "target", id: t.id, priority: next });
       return;
     }
     if (e.target === document.getElementById("board")) {

@@ -6,7 +6,7 @@ import { validateContent } from "../core/validation";
 import { DEFAULT_CONTENT } from "../content";
 import { TOWERS } from "../content/towers";
 import { ENEMIES } from "../content/enemies";
-import type { ChainAttack, Enemy, EnemyId, PierceAttack, SplashAttack, TowerId } from "../core/types";
+import type { ChainAttack, Enemy, EnemyId, PierceAttack, SplashAttack, TargetPriority, TowerId } from "../core/types";
 import { applyDamage } from "./damage";
 import { damageTaken, speedFactor, tickStatus } from "./status";
 /** Tower at (7,5) on the outpost map; enemies are placed directly into the state. */
@@ -244,5 +244,39 @@ describe("newer attack mechanics", () => {
     const g = fire("decay", [small]);
     landProjectiles(g);
     expect(small.hp).toBeCloseTo(100 - TOWERS.decay.damage - 4);
+  });
+});
+describe("target priorities", () => {
+  /** Pulse tower at (7,5); returns the id its first shot aims at. */
+  function aim(priority: TargetPriority | undefined, enemies: Enemy[]) {
+    const g = new Game();
+    const id = g.command({ type: "build", tower: "pulse", x: 7, y: 5 }).id!;
+    if (priority) expect(g.command({ type: "target", id, priority }).ok).toBe(true);
+    g.state.enemies = enemies;
+    attackEnemies(g, 0);
+    return g.state.projectiles[0].target;
+  }
+  const field = () => {
+    const near = makeEnemy(1, "drone", 7, 6, 10),
+      ahead = makeEnemy(2, "drone", 8.5, 5, 12),
+      behind = makeEnemy(3, "drone", 6, 4, 8);
+    near.hp = 50;
+    ahead.hp = 20;
+    behind.hp = 90;
+    return [near, ahead, behind];
+  };
+  it.each([
+    [undefined, 2],
+    ["first", 2],
+    ["last", 3],
+    ["strong", 3],
+    ["weak", 2],
+    ["close", 1],
+  ] as const)("%s aims at enemy %i", (priority, expected) => {
+    expect(aim(priority, field())).toBe(expected);
+  });
+  it("breaks ties by path progress, then id", () => {
+    const [a, b, c] = [makeEnemy(5, "drone", 7, 6, 9), makeEnemy(4, "drone", 7, 4, 11), makeEnemy(6, "drone", 7, 4, 11)];
+    expect(aim("strong", [a, b, c])).toBe(4);
   });
 });

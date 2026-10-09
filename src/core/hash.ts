@@ -11,7 +11,7 @@ export function stateHash(s: GameState) {
     s.nextId,
     round(s.time),
     s.wallets.map(round).join(","),
-    s.towers.map((t) => `${t.id}:${t.owner}:${t.upgrades.join("+")}:${t.kills}`).join(";"),
+    s.towers.map((t) => `${t.id}:${t.owner}:${t.upgrades.join("+")}:${t.kills}${t.priority ? `:${t.priority}` : ""}`).join(";"),
     s.enemies.map((e) => `${e.id}:${round(e.hp)}:${round(e.distance)}`).join(";"),
     s.projectiles.length,
   ].join("|");

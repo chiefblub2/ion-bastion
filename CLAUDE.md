@@ -55,7 +55,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 ## Simulation details
 
 - Order of `Game.tick` (only runs while `status === "wave"` and not paused): spawn, status effects, move, detection, projectiles, attack, prune dead enemies, `settleWave`.
-- Targeting picks the enemy with the most path progress; the stable id breaks ties.
+- Targeting follows `Tower.priority` (`TargetPriority`: first, last, strong, weak, close; set with `{ type: "target", id, priority }`). Absent means "first", the most path progress, and the handler deletes the field when "first" is chosen, so solo replays stay unchanged. `compareTargets` (`systems/combat.ts`) orders candidates; ties fall back to path progress, then the stable id. An attack module's `choose` (Lanze) receives the candidates in that order.
 - Damage lands on impact. Projectiles are part of the state, fly at `projectile.speed` per tower, and still land after their tower is sold.
   - Homing shots (Impuls, Flak, Kryo) retarget within 1.5 cells when their target dies.
   - Nova shells fly to a fixed point.

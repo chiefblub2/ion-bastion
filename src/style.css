@@ -644,6 +644,40 @@ kbd {
 .sell:hover {
   color: #ff9aab;
 }
+/* Target priority of the selected tower: a row of small segment buttons. */
+.target-priority {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0 0 10px;
+  font-size: 11px;
+}
+.target-priority span {
+  color: var(--muted);
+  margin-right: 4px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+}
+.target-priority button {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 2px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: none;
+  color: #a3b0b7;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.target-priority button:hover:not(:disabled) {
+  color: #e5eeec;
+}
+.target-priority button.active {
+  border-color: var(--mint);
+  color: var(--mint);
+}
 .primary {
   width: 100%;
   background: var(--mint);

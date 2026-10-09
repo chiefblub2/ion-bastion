@@ -287,7 +287,11 @@ export interface Tower extends Point {
   kills: number;
   /** Player who built the tower; 0 in single-player. */
   owner: number;
+  /** Whom the tower aims at; absent means "first". */
+  priority?: TargetPriority;
 }
+/** Target selection of an attack tower; ties fall back to path progress, then id. */
+export type TargetPriority = "first" | "last" | "strong" | "weak" | "close";
 export interface Projectile extends Point {
   id: number;
   /** Firing tower; it may already be sold when the projectile lands. */
@@ -355,6 +359,7 @@ export type Command = (
   | { type: "build"; tower: TowerId; x: number; y: number }
   | { type: "upgrade"; id: number; upgrade: string }
   | { type: "sell"; id: number }
+  | { type: "target"; id: number; priority: TargetPriority }
   | { type: "start" }
   | { type: "pause" }
   | { type: "restart" }
@@ -391,7 +396,9 @@ export type MessageCode =
   | "ready-set"
   | "enemy-sent"
   | "send-unavailable"
-  | "send-locked";
+  | "send-locked"
+  | "target-set"
+  | "priority-unknown";
 export interface CommandResult {
   ok: boolean;
   code: MessageCode;

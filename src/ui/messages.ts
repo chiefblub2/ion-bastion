@@ -1,5 +1,13 @@
-import type { CommandResult, MessageCode } from "../core/types";
+import type { CommandResult, MessageCode, TargetPriority } from "../core/types";
 type Params = NonNullable<CommandResult["params"]>;
+/** German names of the target priorities. */
+export const PRIORITY_LABELS: Record<TargetPriority, string> = {
+  first: "Erster",
+  last: "Letzter",
+  strong: "Stärkster",
+  weak: "Schwächster",
+  close: "Nächster",
+};
 /** German texts for all command results; the simulation itself stays language-neutral. */
 const MESSAGES: Record<MessageCode, (p: Params) => string> = {
   restarted: () => "Neue Mission. Baue deine erste Verteidigung.",
@@ -32,5 +40,7 @@ const MESSAGES: Record<MessageCode, (p: Params) => string> = {
   "enemy-sent": (p) => `${p.enemy} zu Spieler ${p.target} geschickt.`,
   "send-unavailable": () => "Gerade kannst du keine Gegner schicken.",
   "send-locked": () => "Diesen Gegnertyp kannst du erst schicken, wenn er in einer Welle vorkam.",
+  "target-set": (p) => `Zielpriorität: ${PRIORITY_LABELS[p.priority as TargetPriority]}.`,
+  "priority-unknown": () => "Diese Zielpriorität gibt es für diesen Turm nicht.",
 };
 export const describeResult = (result: CommandResult) => MESSAGES[result.code](result.params ?? {});

@@ -1,7 +1,8 @@
 import { DEFAULT_CONTENT } from "../content";
 import { missionById, missionNumber } from "../content/missions";
 import { moveEnemies } from "../systems/movement";
-import { attackEnemies, moveProjectiles } from "../systems/combat";
+import { attackEnemies, moveProjectiles, TARGET_PRIORITIES } from "../systems/combat";
+import { isSupport } from "../systems/attacks";
 import { tickStatus } from "../systems/status";
 import { updateDetection } from "../systems/detection";
 import { spawnEnemies, settleWave } from "../systems/waves";
@@ -147,6 +148,18 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
       const t = ownTower(g, c.id, c.player);
       if (!("owner" in t)) return t;
       return purchaseUpgrade(g.state, t, c.upgrade, g.content);
+    },
+  },
+  target: {
+    allowedIn: PLAYING,
+    run: (g, c) => {
+      const t = ownTower(g, c.id, c.player);
+      if (!("owner" in t)) return t;
+      if (!TARGET_PRIORITIES.includes(c.priority) || isSupport(g.content.towers[t.type].attack)) return fail("priority-unknown");
+      // The default stays absent so solo states and replays are unchanged.
+      if (c.priority === "first") delete t.priority;
+      else t.priority = c.priority;
+      return ok("target-set", { priority: c.priority });
     },
   },
 };

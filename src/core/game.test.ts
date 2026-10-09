@@ -72,6 +72,24 @@ describe("command guards", () => {
     g.command({ type: "start" });
     expect(g.drainEvents().map((e) => e.type)).toEqual(["build", "upgrade", "sell", "waveStart"]);
   });
+  it("sets target priorities only on own attack towers while the mission runs", () => {
+    const g = new Game();
+    g.setPlayers(2);
+    g.command({ type: "restart" });
+    g.state.wallets = [1000, 1000];
+    const id = g.command({ type: "build", tower: "pulse", x: 4, y: 4 }).id!,
+      aura = g.command({ type: "build", tower: "aura", x: 6, y: 4 }).id!;
+    expect(g.command({ type: "target", id, priority: "weak" })).toMatchObject({ ok: true, code: "target-set", params: { priority: "weak" } });
+    expect(g.state.towers[0].priority).toBe("weak");
+    expect(g.command({ type: "target", id, priority: "first" }).ok).toBe(true);
+    expect(g.state.towers[0]).not.toHaveProperty("priority");
+    expect(g.command({ type: "target", id, priority: "weak", player: 1 })).toMatchObject({ ok: false, code: "tower-foreign" });
+    expect(g.command({ type: "target", id: aura, priority: "weak" })).toMatchObject({ ok: false, code: "priority-unknown" });
+    expect(g.command({ type: "target", id, priority: "random" as never })).toMatchObject({ ok: false, code: "priority-unknown" });
+    expect(g.command({ type: "target", id: 999, priority: "weak" })).toMatchObject({ ok: false, code: "tower-missing" });
+    g.state.status = "lost";
+    expect(g.command({ type: "target", id, priority: "weak" })).toMatchObject({ ok: false, code: "mission-over" });
+  });
 });
 describe("mission outcomes", () => {
   it("reaches defeat without defense and prevents additional gameplay commands", () => {

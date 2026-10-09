@@ -26,7 +26,8 @@ Gegner laufen einen festen Pfad entlang zum Reaktor. Erreicht einer den Reaktor,
 | Eingabe | Aktion |
 | --- | --- |
 | Turm wählen, freies Feld anklicken | Bauen. Danach endet der Baumodus; Shift+Klick baut weitere Türme desselben Typs. |
-| Gebauten Turm anklicken | Verbessern oder verkaufen |
+| Gebauten Turm anklicken | Verbessern, verkaufen oder Zielpriorität wählen |
+| `T` | Zielpriorität des ausgewählten Turms weiterschalten |
 | `1`–`9`, `0`, `Q`, `W`, `E` | Turmtyp wählen (in Listenreihenfolge) |
 | Rechtsklick, `Esc` oder ✕ | Baumodus und Auswahl aufheben. Ohne Auswahl beendet `Esc` das Vollbild. |
 | `N` | Nächste Welle starten (im Versus: „Bereit“) |
@@ -177,6 +178,20 @@ Die **Raffinerie** hat drei Stufen und zahlt 25 / 40 / 60 Credits pro Welle (Aus
 | Reichweite | +15 % · 100 | +25 % · 170 | +35 % · 280 |
 
 Überlappen mehrere Auren, gilt je Eigenschaft der größte Bonus. Für mehrere Boni baust du mehrere Auren mit verschiedenen Pfaden. Aura-Türme und Raffinerien werden nie verstärkt.
+
+### Zielprioritäten
+
+Jeder Angriffsturm hat eine eigene Zielpriorität. Du stellst sie im Turm-Panel unter „Ziel“ ein oder schaltest sie mit `T` weiter. Sie gilt für alle Gegner in Reichweite, die der Turm treffen kann.
+
+| Priorität | Zielt auf |
+| --- | --- |
+| Erster (Standard) | den Gegner, der dem Reaktor am nächsten ist |
+| Letzter | den Gegner, der am weitesten zurückliegt |
+| Stärkster | den Gegner mit den meisten aktuellen HP |
+| Schwächster | den Gegner mit den wenigsten aktuellen HP |
+| Nächster | den Gegner, der dem Turm am nächsten ist |
+
+Bei Gleichstand gewinnt der Gegner, der weiter vorne liegt. Die Lanze zielt weiterhin auf die Linie mit den meisten Treffern; die Priorität entscheidet dort nur bei gleicher Trefferzahl. Stirbt das Ziel eines Impuls-, Flak- oder Kryo-Geschosses im Flug, sucht es sich wie bisher den nächsten Gegner. Raffinerie, Detektor und Aura haben keine Zielpriorität. Im Koop kannst du nur die Priorität deiner eigenen Türme ändern.
 
 ## Gegner
 

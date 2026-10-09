@@ -6,6 +6,16 @@ import type { ContentPack, Tower, TowerId, UnitLayer } from "../core/types";
 import { resolveUpgrades, towerLevel, maxTowerLevel, towerColor, towerPath } from "../core/upgrades";
 import { number, percent, statValue } from "./format";
 import { upgradeControl } from "./upgrade-tooltip";
+import { PRIORITY_LABELS } from "./messages";
+import { TARGET_PRIORITIES } from "../systems/combat";
+
+/** One button per target priority; the active one is pressed. */
+const priorityControl = (tower: Tower) => {
+  const active = tower.priority ?? "first";
+  return `<div class="target-priority" role="group" aria-label="Zielpriorität (T wechselt)"><span>Ziel</span>${TARGET_PRIORITIES.map(
+    (p) => `<button data-priority="${p}" class="${p === active ? "active" : ""}" aria-pressed="${p === active}">${PRIORITY_LABELS[p]}</button>`,
+  ).join("")}</div>`;
+};
 
 /** Attack parameters such as slowdown or chain jumps, generated from the attack module. */
 const attackSummary = (type: TowerId, tower: Tower | undefined, content: ContentPack) =>
@@ -66,5 +76,5 @@ export function towerDetails(
   const cancelLabel = tower ? "Auswahl aufheben (Esc)" : "Baumodus beenden (Esc)";
   return `<div class="selection-heading"><span>${tower ? "TURM AUSGEWÄHLT" : "BAUMODUS"}</span><span class="selection-actions"><b>${heading}</b><button id="cancel-selection" class="cancel-selection" title="${cancelLabel}" aria-label="${cancelLabel}">✕</button></span></div>
     <p>${definition.description}</p>${isSupport(definition.attack) ? "" : `<p class="tower-targets">Ziele: <b>${targets(definition.targets)}</b>${attackSummary(type, tower, content)}</p>`}${values}
-    ${tower ? `${upgradeControl(tower, towers, content)}<button id="sell-btn" class="sell">Verkaufen · +${sellValue(tower)} Credits</button>` : '<div class="placement-note">Freies Feld anklicken zum Bauen.<br><span>Esc, ✕ oder Rechtsklick beendet den Baumodus. Shift+Klick baut mehrere.</span></div>'}`;
+    ${tower ? `${isSupport(definition.attack) ? "" : priorityControl(tower)}${upgradeControl(tower, towers, content)}<button id="sell-btn" class="sell">Verkaufen · +${sellValue(tower)} Credits</button>` : '<div class="placement-note">Freies Feld anklicken zum Bauen.<br><span>Esc, ✕ oder Rechtsklick beendet den Baumodus. Shift+Klick baut mehrere.</span></div>'}`;
 }
