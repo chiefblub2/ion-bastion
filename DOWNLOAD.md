@@ -19,7 +19,7 @@ Danach http://localhost:4173 im Browser öffnen.
 Tests: `npm test`
 Produktionsbuild: `npm run build` (Ausgabe in `dist/`)
 
-Architektur und Erweiterung: siehe README.md.
+Spielübersicht: README.md. Architektur und Erweiterung: CLAUDE.md.
 
 Enthalten sind Quellcode, Tests, Assets, Konfiguration und die Paket-Lockdatei.
 Abhängigkeiten werden mit npm ci installiert. Git-Historie, lokale Abhängigkeiten
