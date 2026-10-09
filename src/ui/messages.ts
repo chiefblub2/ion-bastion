@@ -1,0 +1,36 @@
+import type { CommandResult, MessageCode } from "../core/types";
+type Params = NonNullable<CommandResult["params"]>;
+/** German texts for all command results; the simulation itself stays language-neutral. */
+const MESSAGES: Record<MessageCode, (p: Params) => string> = {
+  restarted: () => "Neue Mission. Baue deine erste Verteidigung.",
+  "mission-loaded": (p) => `Mission ${String(p.number).padStart(2, "0")}: ${p.name}. Baue deine erste Verteidigung.`,
+  "mission-unknown": () => "Unbekannte Mission.",
+  "mission-over": () => "Die Mission ist beendet. Starte eine neue Runde.",
+  paused: () => "Spiel pausiert.",
+  resumed: () => "Spiel fortgesetzt.",
+  "pause-unavailable": () => "Pausieren geht nur während einer Welle.",
+  "wave-running": () => "Die aktuelle Welle läuft noch.",
+  "wave-started": (p) => `Welle ${p.wave} gestartet`,
+  "tower-unknown": () => "Unbekannter Turm.",
+  "tower-unavailable": (p) => `${p.tower} ist in dieser Mission nicht verfügbar.`,
+  "cell-blocked": () => "Hier kannst du nicht bauen. Wähle ein freies Rasterfeld.",
+  "credits-missing": () => "Nicht genügend Credits.",
+  "tower-built": (p) => `${p.tower} gebaut.`,
+  "tower-missing": () => "Turm nicht gefunden.",
+  "tower-sold": (p) => `Turm verkauft. +${p.refund} Credits.`,
+  "upgrade-purchased": (p) => `${p.tower}: ${p.upgrade} verbessert.`,
+  "upgrade-unknown": () => "Dieses Upgrade ist hier nicht verfügbar.",
+  "upgrade-purchased-already": () => "Dieses Upgrade ist bereits aktiv.",
+  "upgrade-locked": () => "Zuerst die erforderlichen Upgrades kaufen.",
+  "upgrade-excluded": () => "Dieser Aura-Turm hat bereits einen anderen Pfad gewählt.",
+  "upgrade-unaffordable": () => "Nicht genügend Credits.",
+  "tower-foreign": () => "Dieser Turm gehört einem Mitspieler.",
+  "host-only": () => "Das kann im Mehrspieler-Modus nur der Host.",
+  "command-sent": () => "Befehl gesendet.",
+  "pause-versus": () => "Im Versus-Modus gibt es keine Pause.",
+  "ready-set": () => "Bereit. Die Welle startet, sobald alle bereit sind.",
+  "enemy-sent": (p) => `${p.enemy} zu Spieler ${p.target} geschickt.`,
+  "send-unavailable": () => "Gerade kannst du keine Gegner schicken.",
+  "send-locked": () => "Diesen Gegnertyp kannst du erst schicken, wenn er in einer Welle vorkam.",
+};
+export const describeResult = (result: CommandResult) => MESSAGES[result.code](result.params ?? {});
