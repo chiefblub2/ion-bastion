@@ -130,6 +130,15 @@ const TRAITS: Registry = {
     validate: (t) => first(positive("radius", t.radius), share("per", t.per), share("max", t.max)),
     onDamage: (t, amount, e, sim) => amount * (1 - swarmShare(t, e, sim)),
   },
+  rage: {
+    validate: (t) => positive("max", t.max),
+    speed: (t, e) => 1 + rageShare(t.max, e),
+  },
+  facet: {
+    validate: (t) =>
+      first(positive("every", t.every), positive("length", t.length), t.length < t.every ? undefined : "length muss kleiner als every sein.", share("reduction", t.reduction)),
+    onDamage: (t, amount, _, sim, dot) => (!dot && isFaceted(t, sim.state.time) ? amount * (1 - t.reduction) : amount),
+  },
 };
 /** In the burst window of its cycle: derived from the path distance, so a pull-back leaves it correctly. */
 const isSurging = (t: { every: number; length: number }, e: Enemy) => e.distance % t.every >= t.every - t.length;
@@ -139,6 +148,10 @@ const swarmShare = (t: { radius: number; per: number; max: number }, e: Enemy, s
   for (const o of sim.state.enemies) if (o !== e && o.hp > 0 && o.type === e.type && dist(o, e) <= t.radius) n++;
   return Math.min(t.max, t.per * n);
 };
+/** Current speed bonus share of a raging enemy: 0 at full HP, `max` at 0 HP. */
+const rageShare = (max: number, e: Enemy) => max * (1 - e.hp / e.maxHp);
+/** In the hardened window of its time cycle: derived from the global clock, so it is stateless and synced. */
+const isFaceted = (t: { every: number; length: number }, time: number) => time % t.every >= t.every - t.length;
 /** Current damage reduction of a hardening enemy: 0 at full HP, `max` at 0 HP. */
 const hardenShare = (max: number, e: Enemy) => max * (1 - e.hp / e.maxHp);
 /** Damage hooks in order: a dodge first, then reductions, the shield takes what is left. */
@@ -231,6 +244,10 @@ export interface TraitFlags {
   surging: boolean;
   /** Current damage reduction share of a swarming enemy, 0..max; 0 without the trait. */
   swarm: number;
+  /** Current speed bonus share of a raging enemy, 0..max; 0 without the trait. */
+  rage: number;
+  /** Currently in the hardened window of a facet. */
+  faceted: boolean;
 }
 /** Visible traits for drawing; `leader` and `healer` are their radii in cells (0 if absent). */
 export function traitFlags(sim: Sim, e: Enemy): TraitFlags {
@@ -252,6 +269,8 @@ export function traitFlags(sim: Sim, e: Enemy): TraitFlags {
     harden: 0,
     surging: false,
     swarm: 0,
+    rage: 0,
+    faceted: false,
   };
   for (const t of traitsOf(sim, e)) {
     if (t.kind === "shield") flags.shield = (e.shield ?? 0) / (t.capacity * e.maxHp);
@@ -261,6 +280,8 @@ export function traitFlags(sim: Sim, e: Enemy): TraitFlags {
     else if (t.kind === "harden") flags.harden = hardenShare(t.max, e);
     else if (t.kind === "surge") flags.surging = isSurging(t, e);
     else if (t.kind === "swarm") flags.swarm = swarmShare(t, e, sim);
+    else if (t.kind === "rage") flags.rage = rageShare(t.max, e);
+    else if (t.kind === "facet") flags.faceted = isFaceted(t, sim.state.time);
     else if (t.kind === "stealth" || t.kind === "unstoppable" || t.kind === "swift" || t.kind === "evade" || t.kind === "regen") flags[t.kind] = true;
   }
   return flags;

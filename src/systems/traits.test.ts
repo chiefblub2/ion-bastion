@@ -375,3 +375,61 @@ describe("swarm", () => {
     expect(() => validateContent(withDroneTraits({ kind: "swarm", radius: 1, per: 0.1, max: 0.5 }))).not.toThrow();
   });
 });
+
+describe("rage", () => {
+  const raging = () => new Game(undefined, withDroneTraits({ kind: "rage", max: 1 }));
+  it("is faster the more HP is missing", () => {
+    const g = raging(), e = makeEnemy(1, "drone", 0, 3);
+    expect(traitSpeedFactor(g, e)).toBe(1);
+    expect(traitFlags(g, e).rage).toBe(0);
+    e.hp = e.maxHp / 2;
+    expect(traitSpeedFactor(g, e)).toBeCloseTo(1.5);
+    expect(traitFlags(g, e).rage).toBeCloseTo(0.5);
+    e.hp = 0;
+    expect(traitSpeedFactor(g, e)).toBeCloseTo(2);
+  });
+  it("has no flag without the trait", () => {
+    const g = new Game(), e = makeEnemy(1, "drone", 0, 3);
+    e.hp = 1;
+    expect(traitFlags(g, e).rage).toBe(0);
+  });
+  it("is rejected by validation when max is not positive", () => {
+    for (const max of [0, -0.5]) expect(() => validateContent(withDroneTraits({ kind: "rage", max }))).toThrow();
+    expect(() => validateContent(withDroneTraits({ kind: "rage", max: 1 }))).not.toThrow();
+  });
+});
+
+describe("facet", () => {
+  const faceted = () => new Game(undefined, withDroneTraits({ kind: "facet", every: 4, length: 2, reduction: 0.7 }));
+  const hitAt = (time: number, dot = false) => {
+    const g = faceted(), e = makeEnemy(1, "drone", 5, 5);
+    g.state.enemies = [e];
+    g.state.time = time;
+    applyDamage(g, src, e, 100, dot);
+    return { taken: 1000 - e.hp, flags: traitFlags(g, e) };
+  };
+  it("reduces hits only in the last `length` seconds of each cycle", () => {
+    expect(hitAt(0).taken).toBeCloseTo(100);
+    expect(hitAt(1.99).taken).toBeCloseTo(100);
+    expect(hitAt(2).taken).toBeCloseTo(30);
+    expect(hitAt(3.99).taken).toBeCloseTo(30);
+    expect(hitAt(4).taken).toBeCloseTo(100);
+    expect(hitAt(6.5).taken).toBeCloseTo(30);
+  });
+  it("lets dot ticks pass unchanged and reports the flag", () => {
+    expect(hitAt(3, true).taken).toBeCloseTo(100);
+    expect(hitAt(3).flags.faceted).toBe(true);
+    expect(hitAt(1).flags.faceted).toBe(false);
+  });
+  it("is rejected by validation when malformed", () => {
+    for (const t of [
+      { every: 0, length: 1, reduction: 0.5 },
+      { every: 4, length: 0, reduction: 0.5 },
+      { every: 4, length: 4, reduction: 0.5 },
+      { every: 4, length: 2, reduction: 0 },
+      { every: 4, length: 2, reduction: 1 },
+    ])
+      expect(() => validateContent(withDroneTraits({ kind: "facet", ...t }))).toThrow();
+    expect(() => validateContent(withDroneTraits({ kind: "facet", every: 4, length: 2, reduction: 0.7 }))).not.toThrow();
+  });
+});

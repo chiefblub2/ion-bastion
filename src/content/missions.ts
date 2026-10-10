@@ -14,7 +14,9 @@ import { DSCHUNGEL } from "./sectors/jungle";
 import { FROSTGUERTEL } from "./sectors/frost";
 import { ORBITALDECK } from "./sectors/orbit";
 import { SINGULARITAET } from "./sectors/rift";
+import { KRISTALLHOEHLE } from "./sectors/geode";
 import { GEWITTERFRONT } from "./sectors/storm";
+import { VULKANKETTE } from "./sectors/volcano";
 import { RUINENSTADT } from "./sectors/ruin";
 import { SAEUREMOOR } from "./sectors/toxic";
 const GRENZZONE: readonly MissionDefinition[] = [
@@ -80,6 +82,8 @@ export const SECTORS: readonly MissionSector[] = [
   TIEFSEE,
   GEWITTERFRONT,
   DSCHUNGEL,
+  VULKANKETTE,
+  KRISTALLHOEHLE,
   KREISLAUF,
 ];
 export const MISSIONS: readonly MissionDefinition[] = SECTORS.flatMap((s) => s.missions);

@@ -3,12 +3,14 @@ import { b, type Strategies } from "./build";
 import { CIRCLE_STRATEGIES } from "./circle";
 import { DUNE_STRATEGIES } from "./dune";
 import { FROST_STRATEGIES } from "./frost";
+import { GEODE_STRATEGIES } from "./geode";
 import { JUNGLE_STRATEGIES } from "./jungle";
 import { ORBIT_STRATEGIES } from "./orbit";
 import { RIFT_STRATEGIES } from "./rift";
 import { RUIN_STRATEGIES } from "./ruin";
 import { STORM_STRATEGIES } from "./storm";
 import { TOXIC_STRATEGIES } from "./toxic";
+import { VOLCANO_STRATEGIES } from "./volcano";
 /** Sector I; the other sectors keep their strategies in their own module. */
 const GRENZZONE: Strategies = {
   "outpost-07": {
@@ -114,5 +116,7 @@ export const STRATEGIES: Strategies = {
   ...ABYSS_STRATEGIES,
   ...STORM_STRATEGIES,
   ...JUNGLE_STRATEGIES,
+  ...VOLCANO_STRATEGIES,
+  ...GEODE_STRATEGIES,
   ...CIRCLE_STRATEGIES,
 };

@@ -104,6 +104,11 @@ const TRAIT_TAGS: { [K in TraitKind]: (t: Extract<Trait, { kind: K }>, content: 
     label: "SCHWARM",
     title: `Pro Artgenosse in ${number(t.radius)} Feldern ${number(t.per * 100)} % weniger Schaden, höchstens ${number(t.max * 100)} %`,
   }),
+  rage: (t) => ({ label: "WUT", title: `Wird schneller, je mehr HP fehlen: bis zu ${number(t.max * 100)} % schneller kurz vor dem Tod` }),
+  facet: (t) => ({
+    label: "FACETTE",
+    title: `Alle ${number(t.every)} s für ${number(t.length)} s ${number(t.reduction * 100)} % weniger Schaden durch Treffer, Brand wirkt voll`,
+  }),
   healer: (t) => ({
     label: "HEILER",
     title: `Heilt Gegner in ${number(t.radius)} Feldern um ${number(t.percent * 100)} % ihrer HP pro Sekunde`,

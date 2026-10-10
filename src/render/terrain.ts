@@ -1398,6 +1398,220 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
   },
+  // Vulkankette: hellgrauer Aschegrund, Schwefelgelb, Lavaglut; Obsidian-Spitzen und Schwefelkrater.
+  volcano: {
+    backdrop: 0x2a2726,
+    ground: [0x4a4542, 0x433f3c],
+    grid: 0x5f5954,
+    path: { edge: 0x7a6a3a, bed: 0x2c2826, line: 0xff5a1a, arrow: 0xf2d23c },
+    accent: 0xf2d23c,
+    obstacle: (g, x, y, rand) => {
+      const kind = rand(),
+        cx = x + 28;
+      g.fillStyle(0x0c0a09, 0.55);
+      g.fillEllipse(cx + 2, y + 47, 42, 11);
+      if (kind < 0.55) {
+        // Obsidian spires: black glossy shards with a pale highlight edge.
+        const spires: [number, number, number][] = [
+          [-11, 24, 17],
+          [10, 20, 14],
+          [0, 36, 8],
+        ];
+        for (const [dx, h, w] of spires) {
+          const bx = cx + dx + (rand() - 0.5) * 3,
+            by = y + 47,
+            lean = (rand() - 0.5) * 6;
+          g.fillStyle(0x0d0c0e);
+          g.fillPoints([{ x: bx - w / 2, y: by }, { x: bx - w * 0.3 + lean, y: by - h * 0.7 }, { x: bx + lean, y: by - h - 8 }, { x: bx + w * 0.35 + lean, y: by - h * 0.6 }, { x: bx + w / 2, y: by }], true);
+          g.fillStyle(0x2c2a33);
+          g.fillPoints([{ x: bx - w * 0.3 + lean, y: by - h * 0.7 }, { x: bx + lean, y: by - h - 8 }, { x: bx + w * 0.05 + lean, y: by - h * 0.4 }, { x: bx - w * 0.2, y: by - 2 }], true);
+          g.lineStyle(1, 0x9a96ac, 0.7);
+          g.lineBetween(bx + lean, by - h - 8, bx - w * 0.3 + lean, by - h * 0.7);
+        }
+        g.fillStyle(0xff5a1a, 0.4);
+        g.fillEllipse(cx, y + 47, 22, 4);
+      } else {
+        // Sulfur vent: yellow-crusted crater rim with a faint plume.
+        g.fillStyle(0x3a3532);
+        g.fillEllipse(cx, y + 40, 40, 17);
+        g.fillStyle(0xc9a92c);
+        g.fillEllipse(cx, y + 38, 36, 14);
+        g.fillStyle(0xf2d23c);
+        g.fillEllipse(cx - 3, y + 36, 28, 9);
+        g.fillStyle(0x4a3a10);
+        g.fillEllipse(cx, y + 38, 18, 6);
+        g.fillStyle(0xff5a1a, 0.55);
+        g.fillEllipse(cx, y + 38.5, 9, 3);
+        for (let i = 0; i < 4; i++) {
+          g.fillStyle(0xfff08a, 0.9);
+          g.fillCircle(cx - 15 + rand() * 30, y + 38 + (rand() - 0.5) * 10, 1.2);
+        }
+        g.fillStyle(0xd8d4c8, 0.14);
+        g.fillEllipse(cx + 3, y + 24, 14, 12);
+        g.fillEllipse(cx + 6, y + 13, 18, 12);
+      }
+    },
+    decor: (g, x, y, rand) => {
+      const cx = x + 12 + rand() * 32,
+        cy = y + 14 + rand() * 28;
+      if (rand() < 0.55) {
+        // Pale ash drift.
+        g.fillStyle(0xaaa49b, 0.35);
+        g.fillEllipse(cx, cy, 18 + rand() * 10, 6 + rand() * 3);
+        g.fillStyle(0xd0cac0, 0.3);
+        g.fillEllipse(cx - 2, cy - 1, 10 + rand() * 6, 3);
+      } else {
+        // Cooled lava streak with a dim orange core.
+        const pts = zigzagPoints(cx - 8, cy, rand, 16, 3);
+        g.lineStyle(4, 0x1c1816, 0.8);
+        g.strokePoints(pts, false);
+        g.lineStyle(1.5, 0xc2441a, 0.55);
+        g.strokePoints(pts, false);
+      }
+    },
+    // Ash flakes falling slowly, a lava glow pulsing along the path and vent plumes.
+    ambient: ({ g, map, path, clock, hash }) => {
+      const w = map.columns * CELL,
+        h = map.rows * CELL;
+      flow(path, clock, 2.4, 0.35, (p, k) => {
+        const pulse = 0.5 + 0.5 * Math.sin(clock * 1.3 + k * 1.9);
+        g.fillStyle(0xff5a1a, 0.04 + 0.05 * pulse);
+        g.fillEllipse(p.x, p.y, 52, 30);
+        g.fillStyle(0xff8a3a, 0.05 + 0.06 * pulse);
+        g.fillCircle(p.x, p.y, 9);
+      });
+      for (const b of map.blocked) {
+        const o = hash(b.x, b.y);
+        if (o < 0.55) continue;
+        for (let i = 0; i < 3; i++) {
+          const life = (clock * 0.25 + o * 7 + i / 3) % 1;
+          g.fillStyle(0xd8d4c8, 0.12 * (1 - life));
+          g.fillCircle(b.x * CELL + 28 + Math.sin(life * 4 + o * 9) * 6 + life * 8, b.y * CELL + 30 - life * 30, 5 + life * 8);
+        }
+      }
+      for (let k = 0; k < Math.ceil(map.columns * 2.2); k++) {
+        const s = hash(k, 91),
+          life = (clock * (0.035 + s * 0.03) + hash(k, 92)) % 1,
+          fx = s * w + Math.sin(clock * 0.6 + s * 30) * 14 + life * 30,
+          fy = life * (h + 20) - 10;
+        g.fillStyle(0xb8b2a8, 0.28 + 0.2 * s);
+        g.fillRect(fx, fy, 2 + s * 1.5, 1.6);
+      }
+    },
+  },
+  // Kristallhöhle: türkise Höhle, klare Quarzsäulen und aufgeschnittene Amethyst-Geoden.
+  geode: {
+    backdrop: 0x081a1d,
+    ground: [0x0f2a2e, 0x0d2528],
+    grid: 0x1c474c,
+    path: { edge: 0x2a8a86, bed: 0x07181b, line: 0x5ef2e0, arrow: 0xa86cf0 },
+    accent: 0x5ef2e0,
+    obstacle: (g, x, y, rand) => {
+      const kind = rand(),
+        cx = x + 28;
+      g.fillStyle(0x020c0e, 0.55);
+      g.fillEllipse(cx + 2, y + 47, 42, 11);
+      if (kind < 0.55) {
+        // Clear hexagonal quartz columns with pointed tips and bright edges.
+        const cols: [number, number, number][] = [
+          [-10, 26, 13],
+          [9, 20, 11],
+          [0, 34, 12],
+        ];
+        for (const [dx, h, w] of cols) {
+          const bx = cx + dx + (rand() - 0.5) * 3,
+            by = y + 47,
+            top = by - h;
+          g.fillStyle(0x7ad8d8, 0.85);
+          g.fillRect(bx - w / 2, top, w, h);
+          g.fillPoints([{ x: bx - w / 2, y: top }, { x: bx - w / 4, y: top - 7 }, { x: bx + w / 4, y: top - 7 }, { x: bx + w / 2, y: top }], true);
+          g.fillStyle(0xe8ffff, 0.75);
+          g.fillRect(bx - w / 2, top, w * 0.32, h);
+          g.fillPoints([{ x: bx - w / 2, y: top }, { x: bx - w / 4, y: top - 7 }, { x: bx, y: top - 7 }, { x: bx, y: top }], true);
+          g.fillStyle(0x3a9aa0, 0.8);
+          g.fillRect(bx + w * 0.18, top, w * 0.32, h);
+          g.lineStyle(1, 0xf4ffff, 0.95);
+          g.strokePoints([{ x: bx - w / 2, y: by }, { x: bx - w / 2, y: top }, { x: bx - w / 4, y: top - 7 }, { x: bx + w / 4, y: top - 7 }, { x: bx + w / 2, y: top }, { x: bx + w / 2, y: by }], false);
+          g.lineBetween(bx, top, bx, by);
+        }
+      } else {
+        // Cut-open geode: grey rock shell around an amethyst crystal bed.
+        const cy = y + 34;
+        g.fillStyle(0x5a6064);
+        g.fillCircle(cx, cy, 17);
+        g.fillStyle(0x7a8286);
+        g.fillCircle(cx - 2, cy - 2, 14);
+        g.fillStyle(0xd8d4f0);
+        g.fillCircle(cx, cy, 12);
+        g.fillStyle(0x7a3cc0);
+        g.fillCircle(cx, cy, 10);
+        g.fillStyle(0xa86cf0);
+        g.fillCircle(cx, cy + 1, 7);
+        g.fillStyle(0xd2a8ff);
+        for (let i = 0; i < 6; i++) {
+          const a = rand() * Math.PI * 2,
+            r = 2 + rand() * 6;
+          polygon(g, cx + Math.cos(a) * r, cy + Math.sin(a) * r, 2.2, 3, 0xd2a8ff, a);
+        }
+        g.fillStyle(0xf0e0ff, 0.9);
+        g.fillCircle(cx - 3, cy - 3, 1.4);
+        g.lineStyle(1, 0x3a4044);
+        g.strokeCircle(cx, cy, 17);
+      }
+    },
+    decor: (g, x, y, rand) => {
+      const cx = x + 12 + rand() * 32,
+        cy = y + 14 + rand() * 28;
+      if (rand() < 0.55) {
+        // Thin glowing mineral vein.
+        const pts = zigzagPoints(cx - 10, cy, rand, 22, 4);
+        g.lineStyle(3, 0x5ef2e0, 0.1);
+        g.strokePoints(pts, false);
+        g.lineStyle(1, 0x5ef2e0, 0.5);
+        g.strokePoints(pts, false);
+      } else {
+        // Tiny glow-mushrooms.
+        for (let i = 0; i < 2; i++) {
+          const mx = cx + i * 6 - 3,
+            my = cy + (rand() - 0.5) * 4;
+          g.fillStyle(0x5ef2e0, 0.12);
+          g.fillCircle(mx, my, 6);
+          g.fillStyle(0x1a5a60);
+          g.fillRect(mx - 0.5, my, 1, 3);
+          g.fillStyle(0x5ef2e0, 0.9);
+          g.fillEllipse(mx, my, 5, 3);
+        }
+      }
+    },
+    // Twinkling glints on the quartz and geodes, light caustics drifting along the path.
+    ambient: ({ g, map, path, clock, hash }) => {
+      for (const b of map.blocked) {
+        const o = hash(b.x, b.y),
+          quartz = o < 0.55,
+          tw = Math.sin(clock * 2.2 + o * 40),
+          gx = b.x * CELL + 20 + hash(b.y, b.x) * 18,
+          gy = b.y * CELL + (quartz ? 14 : 26) + hash(b.x, b.y + 9) * 12;
+        if (!quartz) {
+          g.fillStyle(0xa86cf0, 0.05 + 0.05 * (0.5 + 0.5 * tw));
+          g.fillCircle(b.x * CELL + 28, b.y * CELL + 34, 22);
+        }
+        if (tw < 0.4) continue;
+        const r = 2 + 4 * tw;
+        g.lineStyle(1.2, quartz ? 0xf4ffff : 0xe8d0ff, 0.9 * tw);
+        g.lineBetween(gx - r, gy, gx + r, gy);
+        g.lineBetween(gx, gy - r, gx, gy + r);
+      }
+      flow(path, clock, 1.5, 0.3, (p, k) => {
+        const s = 0.5 + 0.5 * Math.sin(clock * 0.9 + k * 2.3),
+          ox = Math.sin(clock * 0.5 + k * 1.3) * 10,
+          oy = Math.cos(clock * 0.45 + k * 2.1) * 6;
+        g.lineStyle(1.5, 0x9ffcf0, 0.05 + 0.1 * s);
+        g.strokeEllipse(p.x + ox, p.y + oy, 22 + 10 * s, 9 + 4 * s);
+        g.lineStyle(1, 0xc8b0ff, 0.04 + 0.07 * (1 - s));
+        g.strokeEllipse(p.x - ox, p.y - oy, 14 + 8 * s, 6 + 3 * s);
+      });
+    },
+  },
 };
 const themeOf = (map: MapDefinition) => THEMES[map.theme ?? "outpost"];
 /** Reactor colour of the map's theme. */

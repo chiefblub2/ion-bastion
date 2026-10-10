@@ -33,7 +33,7 @@ const BODIES: { [K in EnemyVisual["shape"]]: (ctx: BodyContext, visual: Extract<
 };
 /** Status marker colours; they match the towers that cause the effect. */
 const STATUS_COLORS = { slowed: 0xa5a2ff, stunned: 0x5cf2d6, burning: 0xff6a3d, vulnerable: 0xb6f04a, pulled: 0x4d7cff, disrupted: 0xff3df2, netted: 0xe0c068, bleeding: 0xd7263d, charged: 0xff4d4d };
-const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff9e, scan: 0x6fd3ff, regen: 0x93f5b8, armor: 0xc9d1d9, immune: 0x9fe6ff, split: 0x442e36, sand: 0xc9a46a, plate: 0xff9a7a, gust: 0x9fd8ff, swarm: 0xb6ff6a };
+const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff9e, scan: 0x6fd3ff, regen: 0x93f5b8, armor: 0xc9d1d9, immune: 0x9fe6ff, split: 0x442e36, sand: 0xc9a46a, plate: 0xff9a7a, gust: 0x9fd8ff, swarm: 0xb6ff6a, rage: 0xff5a1a, facet: 0x7ff4ea };
 /** Markers under the body: auras of leaders and healers, motion trails, outlines. */
 function traitsBelow(g: Ink, x: number, y: number, r: number, cell: number, color: number, heading: number, t: TraitFlags, clock: number) {
   if (t.leader) {
@@ -79,6 +79,14 @@ function traitsBelow(g: Ink, x: number, y: number, r: number, cell: number, colo
       const a = (i * Math.PI) / 2 + clock * 0.5;
       g.lineBetween(x + Math.cos(a) * r, y + Math.sin(a) * r, x + Math.cos(a) * (r + 7), y + Math.sin(a) * (r + 7));
     }
+  }
+  // Raging: a pulsing red-orange heat ring that grows and brightens with the speed bonus.
+  if (t.rage > 0) {
+    const pulse = 0.5 + 0.5 * Math.sin(clock * 8);
+    g.fillStyle(TRAIT_COLORS.rage, (0.08 + 0.2 * t.rage) * (0.6 + 0.4 * pulse));
+    g.fillCircle(x, y, r + 4 + 4 * t.rage);
+    g.lineStyle(1.5 + t.rage, TRAIT_COLORS.rage, (0.25 + 0.6 * t.rage) * (0.6 + 0.4 * pulse));
+    g.strokeCircle(x, y, r + 3 + 5 * t.rage * pulse);
   }
   // Evasive: a faint afterimage beside the body.
   if (t.evade) {
@@ -151,6 +159,14 @@ function traitsAbove(g: Ink, x: number, y: number, r: number, t: TraitFlags, clo
       g.arc(x, y, r + 3.5, a, a + 0.7);
       g.strokePath();
     }
+  }
+  // Faceted (hardened window): bright cyan crystal outline with facet spokes.
+  if (t.faceted) {
+    g.lineStyle(2, TRAIT_COLORS.facet, 0.9);
+    const pts = Array.from({ length: 6 }, (_, i) => ({ x: x + Math.cos((i * Math.PI) / 3 + 0.5) * (r + 3), y: y + Math.sin((i * Math.PI) / 3 + 0.5) * (r + 3) }));
+    g.strokePoints(pts, true);
+    g.lineStyle(1, 0xffffff, 0.5 + 0.3 * Math.sin(clock * 6));
+    for (let i = 0; i < 6; i += 2) g.lineBetween(x, y, pts[i].x, pts[i].y);
   }
   // Splitting: three small dots inside the body.
   if (t.split) {

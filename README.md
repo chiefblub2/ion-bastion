@@ -1,6 +1,6 @@
 # ION BASTION
 
-Tower-Defense im Browser, gebaut mit TypeScript, Phaser 3 und Vite. <!-- counts:start -->53 Missionen in 11 Sektoren<!-- counts:end --> mit eigenen Maps, Wellen und Terrain-Stilen, über dreißig Türme und <!-- counts:start -->23 Gegnertypen<!-- counts:end --> am Boden und in der Luft. Allein spielbar oder mit 2–4 Spielern im Koop- oder Versus-Modus.
+Tower-Defense im Browser, gebaut mit TypeScript, Phaser 3 und Vite. <!-- counts:start -->63 Missionen in 13 Sektoren<!-- counts:end --> mit eigenen Maps, Wellen und Terrain-Stilen, über dreißig Türme und <!-- counts:start -->28 Gegnertypen<!-- counts:end --> am Boden und in der Luft. Allein spielbar oder mit 2–4 Spielern im Koop- oder Versus-Modus.
 
 Das Spiel läuft komplett im Browser; nur der Mehrspieler braucht einen kleinen Relay-Server. Spielstände liegen bewusst nur im Arbeitsspeicher: Neuladen startet eine neue Mission.
 
@@ -152,10 +152,22 @@ Alle Missionen sind über „Missionen“ direkt wählbar, mit einem Tab je Sekt
 | 48 | Mangrovensumpf | Nur Flächen- und Wuchttürme | 11 × 10 | 18 | 770 | 80 % |
 | 49 | Schlangengrube | Nur 10 Reaktorenergie | 14 × 11 | 18 | 790 | 100 % |
 | 50 | Herz des Dschungels | Finale: drei Titanen | 15 × 13 | 20 | 820 | 58 %¹ |
-| **XI** | **Kreislauf** | | | | | |
-| 51 | Umlaufbahn | Einfacher Ring, max. 30 Gegner, Welle alle 22 s | 18 × 12 | 8 | 400 | 35 % |
-| 52 | Doppelschleife | Einbuchtung bündelt zwei Bahnen, max. 30, alle 20 s | 20 × 12 | 9 | 450 | 45 % |
-| 53 | Mahlstrom | Zwei Einbuchtungen, max. 35, alle 18 s | 20 × 13 | 10 | 500 | 30 % |
+| **XI** | **Vulkankette** | | | | | |
+| 51 | Aschefeld | Glutläufer rasen bei wenig HP, Kryo und Henker | 11 × 7 | 18 | 760 | 100 %¹ |
+| 52 | Lavastrom | Aschenschwingen in der Luft, Echo-Wellen | 14 × 9 | 18 | 780 | 100 %¹ |
+| 53 | Schlackengrat | Ohne Kryo, Stasis, Teergrube und Fangeisen | 14 × 9 | 19 | 800 | 110 %¹ |
+| 54 | Glutkammer | Nur 10 Reaktorenergie | 14 × 11 | 19 | 830 | 110 %¹ |
+| 55 | Vulkanschlund | Finale: drei Titanen | 15 × 13 | 20 | 860 | 120 %¹ |
+| **XII** | **Kristallhöhle** | | | | | |
+| 56 | Quarzstollen | Kristallwächter härten im Takt, Glut brennt durch | 14 × 8 | 18 | 800 | 120 % |
+| 57 | Spiegelsaal | Splitterfalter zerfallen in Gleiter, Echo-Wellen | 13 × 10 | 20 | 820 | 120 %¹ |
+| 58 | Geodenkammer | Nur 10 Reaktorenergie | 12 × 9 | 18 | 840 | 100 % |
+| 59 | Prismenschacht | Phantome, ohne Aura und Raffinerie | 10 × 10 | 18 | 860 | 100 % |
+| 60 | Kristallherz | Finale: drei Titanen | 14 × 11 | 20 | 880 | 110 %¹ |
+| **XIII** | **Kreislauf** | | | | | |
+| 61 | Umlaufbahn | Einfacher Ring, max. 30 Gegner, Welle alle 22 s | 18 × 12 | 8 | 400 | 35 % |
+| 62 | Doppelschleife | Einbuchtung bündelt zwei Bahnen, max. 30, alle 20 s | 20 × 12 | 9 | 450 | 45 % |
+| 63 | Mahlstrom | Zwei Einbuchtungen, max. 35, alle 18 s | 20 × 13 | 10 | 500 | 30 % |
 
 ¹ Einzelne Wellen haben einen eigenen HP-Faktor statt des linearen Zuwachses.
 <!-- missions:end -->
@@ -296,8 +308,10 @@ Sektor I nutzt fünf Grundgegner, darunter ab Mission 02 den **Gleiter**: schnel
 | VI Singularität | Phasenläufer (weicht jedem n-ten Treffer aus), Berserker (unaufhaltsam, spurtet bei wenig HP) |
 | VII Dünenmeer | Skarabäus (gepanzert und flink), Gräber (taucht regelmäßig ab; dann treffen nur Fallen und Flächenschaden) |
 | VIII Tiefsee | Panzerkrebs (verhärtet, je verletzter er ist), Qualle (fliegt und heilt Gegner in der Nähe) |
-| IX Gewitterfront | Böenläufer (rast in Schüben), Sturmvogel (fliegt, Schild und flink) |
+| IX Gewitterfront | Böenläufer (rast in Schüben), Sturmvogel (fliegt, Schild und flink), Luftschiff (schwer gepanzerter Flieger, wirft Gleiter ab) |
 | X Dschungel | Schwarmameise (weniger Schaden im Rudel), Urwaldkoloss (gepanzert, regeneriert) |
+| XI Vulkankette | Glutläufer (wird schneller, je mehr HP fehlen), Aschenschwinge (fliegt, gepanzert, immun gegen Verlangsamung) |
+| XII Kristallhöhle | Kristallwächter (härtet sich im Takt gegen Treffer, Brand wirkt voll), Splitterfalter (fliegt, zerfällt in zwei Gleiter) |
 
 Getarnte Gegner kommen nur in Missionen vor, in denen der Detektor baubar ist.
 

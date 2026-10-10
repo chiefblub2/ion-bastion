@@ -78,7 +78,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 
 ## Adding content
 
-Whole mission packs (new sectors, themes, enemies) follow the project skill `.claude/skills/mission-pack/SKILL.md`: foundation agent, parallel sector and theme agents, integration checklist.
+Whole mission packs (new sectors, themes, enemies) follow the project skill `.claude/skills/mission-pack/SKILL.md`: foundation agent, parallel sector and theme agents, integration checklist. New enemies or traits for the existing campaign follow `.claude/skills/enemy-pack/SKILL.md`.
 
 - **Mission:** add a `MissionDefinition` to a sector in `content/missions.ts` (or `content/sectors/*.ts`).
   - The fields are map, waves, `startingCredits` and `reactorEnergy`.
@@ -115,7 +115,7 @@ Whole mission packs (new sectors, themes, enemies) follow the project skill `.cl
 
   Every `params` value can then be upgraded via `effects.attack` and shows up in the UI.
 - **Status effect:** add a member of `StatusEffect` and an entry in `STATUSES` (`systems/status.ts`), with a merge rule and optional hooks.
-- **Enemy:** add it to `content/enemies.ts`, with `layer` (`ground`/`air`), `visual` and optional `traits`. The available traits are armor, regen, splitOnDeath, slowImmune, shield, sprint, evade, healer, leader, stealth, unstoppable, swift, burrow, harden, surge and swarm. A new trait is an entry in the `TRAITS` registry (`systems/traits.ts`), using the hooks `onDamage`, `onTick`, `onDeath` and `resists`. There is no inheritance tree and no global event bus. Stealth enemies may only appear in missions where the detector is buildable.
+- **Enemy:** add it to `content/enemies.ts`, with `layer` (`ground`/`air`), `visual` and optional `traits`. The available traits are armor, regen, splitOnDeath, slowImmune, shield, sprint, evade, healer, leader, stealth, unstoppable, swift, burrow, harden, surge, swarm, rage and facet. `rage` raises speed with lost HP (`speed` hook); `facet` cuts non-dot hits in a window of the global `state.time`, so burn ticks and bleed pass while Zerfall (not a dot) is reduced. A new trait is an entry in the `TRAITS` registry (`systems/traits.ts`), using the hooks `onDamage`, `onTick`, `onDeath` and `resists`. There is no inheritance tree and no global event bus. Stealth enemies may only appear in missions where the detector is buildable.
 - **Upgrades:** `UpgradeDefinition` (`id`, `label`, `description`, `cost`, `requires`, optional `path`, `effects`) in `content/upgrades.ts`.
   - `attackTower` generates the five-level path.
   - `AURA_UPGRADES` defines the three exclusive aura paths.

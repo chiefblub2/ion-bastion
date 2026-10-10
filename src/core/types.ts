@@ -302,6 +302,20 @@ export type Trait =
       per: number;
       /** Cap of the total reduction, in (0, 1). */
       max: number;
+    }
+  | {
+      kind: "rage";
+      /** Extra speed share at 0 HP: speed factor = 1 + max · (1 − hp/maxHp). Stateless; > 0. */
+      max: number;
+    }
+  | {
+      kind: "facet";
+      /** Cycle length in seconds of `state.time` (globally synced). */
+      every: number;
+      /** The last `length` seconds of each cycle are the hardened window, in (0, every). */
+      length: number;
+      /** Damage reduction of hits (not burn steps) in the window, in (0, 1). */
+      reduction: number;
     };
 export type TraitKind = Trait["kind"];
 export type EnemyVisual =
@@ -321,7 +335,7 @@ export interface EnemyDefinition {
   visual: EnemyVisual;
 }
 /** Terrain look, drawn by `render/terrain.ts`. */
-export type MapTheme = "outpost" | "lock" | "shard" | "ember" | "core" | "frost" | "toxic" | "orbit" | "ruin" | "rift" | "dune" | "abyss" | "storm" | "jungle";
+export type MapTheme = "outpost" | "lock" | "shard" | "ember" | "core" | "frost" | "toxic" | "orbit" | "ruin" | "rift" | "dune" | "abyss" | "storm" | "jungle" | "volcano" | "geode";
 export interface MapDefinition {
   id: string;
   name: string;
