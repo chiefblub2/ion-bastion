@@ -42,7 +42,7 @@ npx vite-node scripts/readme-images.ts [-- --only towers|enemies|screens]
 
 Always run `npm run test:full` and `npm run build` before you finish. The chunk-size warning from `vite build` is expected.
 
-To see a change in the real app, run `npm run dev` (and `npm run server` for multiplayer) and open `http://localhost:4173`. Use `?server=ws://host:port` to point at another relay, and `?mission=<id>` (e.g. `?mission=korallengraben`) to open a mission directly; `&wave=<n>` starts it at wave n (the remaining waves keep their real HP; the HUD counts from 1). `&credits=<n>` replaces the starting credits. Multiplayer needs several tabs, one per player.
+To see a change in the real app, run `npm run dev` (and `npm run server` for multiplayer) and open `http://localhost:4173`. Use `?server=ws://host:port` to point at another relay, and `?mission=<id>` (e.g. `?mission=korallengraben`) to open a mission directly; `&wave=<n>` starts it at wave n (the remaining waves keep their real HP; the HUD counts from 1). `&credits=<n>` replaces the starting credits. Without a valid `?mission=` the app opens on the start screen. `app/screens.ts` switches two views in one document (`<html data-view="menu|game">`, `#start-screen` / `#game-view`) through the History API: `/` is home, `/#missionen`, `/#mehrspieler`, `/#gegnerakte`, `/#spielhilfe` are its pages (the former dialogs, same element ids), `/?mission=<id>` is the game. Leaving the game pauses a solo wave and coming back resumes it; the battlefield refits on return (`Battlefield.fit`). The only persisted data is the last mission id for "Weiterspielen" (`app/progress.ts`, localStorage). Multiplayer needs several tabs, one per player.
 
 ## Language
 

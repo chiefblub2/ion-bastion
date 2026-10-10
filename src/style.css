@@ -782,26 +782,26 @@ dialog::backdrop {
   background: #040b12bb;
   backdrop-filter: blur(4px);
 }
-dialog h2 {
+:where(dialog, .menu-page) h2 {
   font:
     600 34px "Barlow Condensed",
     sans-serif;
   margin-bottom: 15px;
 }
-dialog p,
-dialog li {
+:where(dialog, .menu-page) p,
+:where(dialog, .menu-page) li {
   font-size: 15px;
   line-height: 1.65;
   color: #aebec6;
 }
-dialog ol {
+:where(dialog, .menu-page) ol {
   padding-left: 20px;
 }
-dialog li {
+:where(dialog, .menu-page) li {
   padding-left: 6px;
   margin-bottom: 15px;
 }
-dialog strong {
+:where(dialog, .menu-page) strong {
   color: #e5eeec;
 }
 .dialog-close {
@@ -1317,10 +1317,10 @@ dialog strong {
   color: #e6cfae;
 }
 /* Game modes (Kampagne, Kreislauf) above the sector tabs; Kreislauf uses violet instead of mint. */
-#mission-dialog {
+#mission-page {
   --mode: var(--mint);
 }
-#mission-dialog[data-circle] {
+#mission-page[data-circle] {
   --mode: #a5a2ff;
 }
 .mission-modes {
@@ -1381,15 +1381,15 @@ dialog strong {
   font-size: 14px;
   color: #d6d5ff;
 }
-#mission-dialog[data-circle] .mission-card:hover,
-#mission-dialog[data-circle] .mission-card[aria-current="true"] {
+#mission-page[data-circle] .mission-card:hover,
+#mission-page[data-circle] .mission-card[aria-current="true"] {
   border-color: var(--mode);
 }
-#mission-dialog[data-circle] .mission-card[aria-current="true"] {
+#mission-page[data-circle] .mission-card[aria-current="true"] {
   background: color-mix(in srgb, var(--mode) 8%, #0d1920);
   box-shadow: inset 3px 0 var(--mode);
 }
-#mission-dialog[data-circle] .mission-index,
+#mission-page[data-circle] .mission-index,
 .mission-stats .ring-badge {
   color: var(--mode);
 }
@@ -1502,10 +1502,7 @@ dialog strong {
   font: 500 12px var(--mono);
   white-space: nowrap;
 }
-/* Enemy codex: wider dialog with a tab bar and a scrolling card list. */
-.codex-dialog {
-  width: min(760px, calc(100% - 32px));
-}
+/* Enemy codex: a tab bar and a card grid. */
 .codex-tabs {
   display: flex;
   gap: 6px;
@@ -1572,7 +1569,7 @@ dialog strong {
   font-size: 12px;
   color: #a1b1ba;
 }
-dialog .codex-card p {
+:where(dialog, .menu-page) .codex-card p {
   margin: 0;
   font-size: 13px;
   line-height: 1.5;
@@ -1612,8 +1609,8 @@ dialog .codex-card p {
   flex-direction: column;
   gap: 6px;
 }
-dialog .codex-traits li,
-dialog .codex-carriers li {
+:where(dialog, .menu-page) .codex-traits li,
+:where(dialog, .menu-page) .codex-carriers li {
   display: flex;
   align-items: baseline;
   gap: 8px;
@@ -1625,13 +1622,13 @@ dialog .codex-carriers li {
 .codex-traits .unit-tag {
   flex: none;
 }
-dialog .codex-carriers li {
+:where(dialog, .menu-page) .codex-carriers li {
   align-items: center;
 }
 .codex-carriers li span {
   color: #d0dfdf;
 }
-dialog p.codex-plain {
+:where(dialog, .menu-page) p.codex-plain {
   font-size: 12px;
   color: var(--muted);
 }
@@ -1943,4 +1940,133 @@ dialog p.codex-plain {
   flex-wrap: wrap;
   gap: 5px;
   margin-top: 8px;
+}
+
+/* Start screen: its own view beside the game; `data-view` on <html> shows one of them. */
+:root[data-view="menu"] #game-view,
+:root[data-view="game"] #start-screen {
+  display: none;
+}
+.start-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 48px 16px 64px;
+  background:
+    radial-gradient(ellipse 80% 55% at 50% 0%, #a2f5be14, transparent 70%),
+    linear-gradient(#27343e33 1px, transparent 1px) 0 0 / 44px 44px,
+    linear-gradient(90deg, #27343e33 1px, transparent 1px) 0 0 / 44px 44px,
+    #0b121a;
+}
+.menu-page {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+/* Focused on navigation so screen readers land on the new page; keyboard users tab on from there. */
+.menu-page:focus {
+  outline: none;
+}
+.menu-page > .coop-modes {
+  margin-top: 28px;
+}
+.menu-page > h1 {
+  font-size: 46px;
+  margin-bottom: 22px;
+}
+.menu-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 36px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.menu-page-head .brand {
+  font-size: 22px;
+}
+.menu-page-head .brand-mark {
+  width: 26px;
+  height: 30px;
+  font-size: 17px;
+}
+.menu-page :is(.coop-modes, .coop-rules, .coop-mission, #coop-status, #coop-lobby, #coop-room, .mission-warning, .mode-rules) {
+  max-width: 640px;
+}
+#coop-status:empty {
+  display: none;
+}
+#help-page {
+  max-width: 760px;
+}
+#help-page > .primary {
+  margin-top: 24px;
+  justify-content: center;
+}
+/* The home page: the brand, then one card per way into the game. */
+.menu-home {
+  max-width: 560px;
+  padding-top: min(8vh, 72px);
+  text-align: center;
+}
+.menu-home .menu-title {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  font: 700 72px/1 "Barlow Condensed", sans-serif;
+  letter-spacing: 2px;
+  margin: 10px 0 14px;
+}
+.menu-home .menu-title .brand-mark {
+  width: 60px;
+  height: 69px;
+  font-size: 38px;
+}
+.menu-page p.menu-tagline {
+  margin: 0 0 36px;
+  font-size: 16px;
+}
+.menu-options {
+  display: grid;
+  gap: 10px;
+}
+.menu-options .mission-mode {
+  width: 100%;
+}
+.menu-continue {
+  border-color: var(--mint);
+  background: color-mix(in srgb, var(--mint) 12%, #0d1920);
+  box-shadow: inset 3px 0 var(--mint);
+}
+.menu-home .dialog-actions {
+  margin-top: 12px;
+}
+@media (min-width: 900px) {
+  #mission-page .mission-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #mission-page .sector-tabs {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .start-screen {
+    padding: 24px 16px 48px;
+  }
+  .menu-home .menu-title {
+    font-size: 48px;
+    gap: 12px;
+  }
+  .menu-home .menu-title .brand-mark {
+    width: 42px;
+    height: 48px;
+    font-size: 26px;
+  }
+  .menu-page > h1 {
+    font-size: 34px;
+  }
+  .menu-page-head {
+    margin-bottom: 24px;
+  }
 }

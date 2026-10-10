@@ -4,7 +4,7 @@ Tower-Defense im Browser, gebaut mit TypeScript, Phaser 3 und Vite. <!-- counts:
 
 ![Mission 54 Glutkammer im Sektor Vulkankette, erste Welle: Glutläufer in den Windungen und die ersten Türme](docs/images/screens/glutkammer.png)
 
-Das Spiel läuft komplett im Browser; nur der Mehrspieler braucht einen kleinen Relay-Server. Spielstände liegen bewusst nur im Arbeitsspeicher: Neuladen startet eine neue Mission.
+Das Spiel läuft komplett im Browser; nur der Mehrspieler braucht einen kleinen Relay-Server. Spielstände liegen bewusst nur im Arbeitsspeicher: Neuladen startet die aktuelle Mission neu (sie steht in der Adresse, `?mission=<id>`), `/` führt zum Startbildschirm. Der Browser merkt sich nur die zuletzt gestartete Mission, die der Startbildschirm unter „Weiterspielen“ anbietet.
 
 ## Schnellstart
 
@@ -74,9 +74,9 @@ npm run dev      # Spiel auf http://0.0.0.0:4173
 **Host**
 
 1. `http://localhost:4173` öffnen.
-2. Optional unter „Missionen“ eine Mission wählen; die Runde startet mit der aktuell geladenen Mission.
-3. „Mehrspieler“ → „Raum erstellen“. Den vierstelligen Raumcode (z. B. `KJSK`) den Mitspielern schicken.
-4. Modus wählen und „Mission starten“, sobald genug Spieler im Raum sind.
+2. Auf dem Startbildschirm „Mehrspieler“ → „Raum erstellen“. Den vierstelligen Raumcode (z. B. `KJSK`) den Mitspielern schicken.
+3. Optional „Mission wählen“; danach geht es zurück in die Lobby. Ohne Wahl startet die aktuell geladene Mission.
+4. Modus wählen und „Mission starten“, sobald genug Spieler im Raum sind. Alle wechseln dann ins Spiel.
 
 **Mitspieler**
 
@@ -108,7 +108,7 @@ Mission, Neustart und Tempo bestimmt in allen Modi der Host. Dialoge und Tabwech
 
 ## Missionen
 
-Alle Missionen sind über „Missionen“ direkt wählbar, mit einem Tab je Sektor. Nach einem Sieg führt „Nächste Mission“ weiter.
+Das Spiel startet auf dem Startbildschirm mit Weiterspielen, Kampagne, Kreislauf, Mehrspieler, Gegnerakte und Spielhilfe; jeder Punkt ist eine eigene Seite mit „← Zurück“, und auch die Zurück-Taste des Browsers funktioniert. Über „Kampagne“ bzw. „Kreislauf“ sind alle Missionen direkt wählbar, mit einem Tab je Sektor. Im Spiel führt „Menü“ zurück zum Startbildschirm und pausiert die laufende Welle; „Weiterspielen“ setzt sie fort. Nach einem Sieg führt „Nächste Mission“ weiter.
 
 <!-- missions:start -->
 | Nr. | Mission | Schwerpunkt | Map | Wellen | Credits | HP/Welle |

@@ -6,12 +6,12 @@ import { RelayClient, relayUrl } from "../net/client";
 import { MAX_PLAYERS, type ServerMessage, type Speed } from "../net/protocol";
 import type { Driver, ViewState } from "../render/scene";
 import type { Interface, MultiplayerSession } from "../ui/interface";
-import type { Dialogs } from "./dialogs";
 interface CoopDeps {
   game: Game;
   view: ViewState;
   ui: Interface;
-  dialogs: Dialogs;
+  /** "Mission wählen" in the lobby: the host picks the room's mission on the mission page. */
+  pickMission: () => void;
   /** Every command a frame applied, local or from the partner. */
   applied: (applied: Applied) => void;
   setDriver: (driver: Driver | null) => void;
@@ -24,8 +24,8 @@ const ERRORS: Record<Extract<ServerMessage, { type: "error" }>["reason"], string
   "players-mode": "Die Spielerzahl passt nicht zu diesem Modus.",
   "bad-message": "Ungültige Nachricht an den Relay-Server.",
 };
-/** Multiplayer: lobby dialog, mode choice, relay connection and the switch to lockstep frames. */
-export function createCoop({ game, view, ui, dialogs, applied, setDriver }: CoopDeps) {
+/** Multiplayer: lobby page, mode choice, relay connection and the switch to lockstep frames. */
+export function createCoop({ game, view, ui, pickMission, applied, setDriver }: CoopDeps) {
   let client: RelayClient | null = null,
     driver: LockstepDriver | null = null,
     session: MultiplayerSession | null = null,
@@ -58,6 +58,7 @@ export function createCoop({ game, view, ui, dialogs, applied, setDriver }: Coop
     const rules = MODES[session && !stopped ? session.mode : mode].rules;
     el("coop-rules").textContent = circle ? `${rules} ${CIRCLE_RULES}` : rules;
     el("coop-launch").hidden = !host || !idle;
+    el("coop-pick").hidden = (!!client && !host) || !idle;
     (el("coop-launch") as HTMLButtonElement).disabled = !room || !fitsMode(mode, room.players);
     el("coop-mission").textContent = game.mission.name;
   }
@@ -90,7 +91,6 @@ export function createCoop({ game, view, ui, dialogs, applied, setDriver }: Coop
         });
         setDriver({ advance: () => driver?.advance() });
         status = `${MODES[m.mode].name} läuft.`;
-        dialogs.dismiss("coop");
         break;
       }
       case "frames":
@@ -154,12 +154,12 @@ export function createCoop({ game, view, ui, dialogs, applied, setDriver }: Coop
     if (wasRunning) applied({ command: { type: "restart" }, result: game.command({ type: "restart" }), player: 0 });
     render();
   }
-  el("coop-dialog").addEventListener("click", (e) => {
+  el("coop-page").addEventListener("click", (e) => {
     const b = (e.target as HTMLElement).closest("button");
     if (b?.id === "coop-create") connect({ type: "create" });
     if (b?.id === "coop-launch") client?.send({ type: "launch", missionId: game.mission.id, mode });
     if (b?.id === "coop-leave") leave();
-    if (b?.id === "close-coop") dialogs.close("coop");
+    if (b?.id === "coop-pick") pickMission();
   });
   el("coop-modes").addEventListener("change", (e) => {
     const value = (e.target as HTMLInputElement).value;
@@ -170,7 +170,10 @@ export function createCoop({ game, view, ui, dialogs, applied, setDriver }: Coop
     e.preventDefault();
     const code = (el("coop-code") as HTMLInputElement).value.trim().toUpperCase();
     if (/^[A-Z]{4}$/.test(code)) connect({ type: "join", code });
-    else ui.notice("Der Raumcode hat vier Buchstaben.", true);
+    else {
+      status = "Der Raumcode hat vier Buchstaben.";
+      render();
+    }
   });
   return {
     /** True while relay frames drive the simulation. */
@@ -183,10 +186,9 @@ export function createCoop({ game, view, ui, dialogs, applied, setDriver }: Coop
     setSpeed(value: Speed) {
       client?.send({ type: "speed", value });
     },
-    open() {
-      render();
-      dialogs.open("coop");
-    },
+    /** In a room that has not launched yet: a mission pick is the room's mission and stays in the lobby. */
+    inLobby: () => !!client && !session,
+    render,
   };
 }
 export type Coop = ReturnType<typeof createCoop>;

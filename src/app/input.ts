@@ -4,7 +4,7 @@ import { TARGET_PRIORITIES } from "../systems/combat";
 import { hasPage, hotkeyTowers, isPaged, pageOf, towerOrder } from "../ui/tower-pages";
 import { isSupport } from "../systems/attacks";
 import type { MatchCommand } from "../core/match";
-import { type Interface, nextMission, renderCodex, renderMission, renderMissionList, TOWER_KEYS } from "../ui/interface";
+import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderMission, renderMissionList, TOWER_KEYS } from "../ui/interface";
 import { describeResult } from "../ui/messages";
 import { playerName } from "../ui/players";
 import type { Driver, ViewState } from "../render/scene";
@@ -12,6 +12,9 @@ import type { Applied } from "../net/lockstep";
 import type { Audio } from "./audio";
 import { createCoop } from "./coop";
 import { createDialogs } from "./dialogs";
+import { createScreens, GAME, HOME, type MenuPage, type Screen } from "./screens";
+import { lastMission, rememberMission } from "./progress";
+import { isCircleSector, missionById, sectorOf } from "../content/missions";
 import type { CodexTab } from "../ui/enemy-codex";
 interface InputDeps {
   game: Game;
@@ -20,6 +23,8 @@ interface InputDeps {
   audio: Audio;
   /** Redraws the battlefield for a new mission map. */
   reloadBattlefield: () => void;
+  /** Refits the canvas once the game view is visible again. */
+  fitBattlefield: () => void;
   /** Co-op swaps in the lockstep driver; null restores the local one. */
   setDriver: (driver: Driver | null) => void;
   toggleFullscreen: () => Promise<void>;
@@ -27,7 +32,7 @@ interface InputDeps {
   isFullscreen: () => boolean;
 }
 /** Turns clicks, keys and tab changes into commands and view changes. */
-export function createInput({ game, view, ui, audio, reloadBattlefield, setDriver, toggleFullscreen, isFullscreen }: InputDeps) {
+export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattlefield, setDriver, toggleFullscreen, isFullscreen }: InputDeps) {
   /** In multiplayer the command goes to the relay and takes effect when its frame arrives. */
   function execute(c: MatchCommand): CommandResult {
     if (coop.active()) {
@@ -61,14 +66,54 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
       if (!coop.active()) view.speed = 1;
     }
     if (c.type === "mission" && result.ok) {
+      rememberMission(c.id);
+      resumeAfterMenu = false;
       renderMission(game);
       reloadBattlefield();
+      // A launch or a host's mission change takes every player from the menu into the game.
+      if (coop.active()) screens.show(GAME);
+      screens.syncUrl();
     }
     if (c.type === "sell" && result.ok && view.selected === c.id) view.selected = null;
     ui.refresh();
   }
   const dialogs = createDialogs(game, execute, () => !coop.active());
-  const coop = createCoop({ game, view, ui, dialogs, applied, setDriver });
+  const coop = createCoop({ game, view, ui, pickMission: () => screens.show(page("missions")), applied, setDriver });
+  const page = (name: MenuPage): Screen => ({ view: "menu", page: name });
+  /** A wave the menu paused when the player left the game; it resumes on the way back. */
+  let resumeAfterMenu = false,
+    /** The sector the mission page opens on next; undefined opens the current mission's sector. */
+    missionSector: number | undefined;
+  const screens = createScreens(game.content.missions, () => game.mission.id, enter);
+  /** A mission this session has played on, which "Weiterspielen" returns to instead of reloading it. */
+  const inProgress = () => coop.active() || game.state.wave > 0 || game.state.towers.length > 0;
+  /** Shows a screen: pauses or resumes the wave between game and menu and fills the menu page. */
+  function enter(to: Screen, from: Screen | null) {
+    if (to.view === "game") {
+      if (resumeAfterMenu && game.state.paused) execute({ type: "pause" });
+      resumeAfterMenu = false;
+      requestAnimationFrame(fitBattlefield);
+      ui.refresh();
+      return;
+    }
+    // In multiplayer the others keep playing, so the wave runs on.
+    if (from?.view === "game") {
+      resumeAfterMenu = !coop.active() && isRunning(game.state) && !game.state.paused;
+      if (resumeAfterMenu) execute({ type: "pause" });
+    }
+    let section: HTMLElement | undefined;
+    for (const s of document.querySelectorAll<HTMLElement>("#start-screen .menu-page")) {
+      s.hidden = s.dataset.page !== to.page;
+      if (!s.hidden) section = s;
+    }
+    if (to.page === "home") renderMenu(game, lastMission(), inProgress());
+    if (to.page === "missions") renderMissionList(game, missionSector);
+    if (to.page === "coop") coop.render();
+    if (to.page === "codex") renderCodex(game);
+    missionSector = undefined;
+    scrollTo(0, 0);
+    section?.focus({ preventScroll: true });
+  }
   function choose(type: TowerId) {
     view.build = type;
     view.page = pageOf(game.content.towers[type]);
@@ -117,10 +162,32 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     ui.refresh();
   }
   function selectMission(id: string) {
-    dialogs.dismiss("missions");
+    // In a multiplayer lobby the pick is the room's mission; the host launches it from there.
+    if (coop.inLobby()) {
+      execute({ type: "mission", id });
+      screens.back();
+      return;
+    }
     execute({ type: "mission", id });
+    if (!coop.active()) screens.show(GAME);
   }
-  /** Switches the mission dialog to another sector tab or game mode and keeps the focus on the clicked bar. */
+  /** "Weiterspielen": back to the mission in progress, else the remembered one from an earlier visit. */
+  function resume() {
+    if (inProgress()) return screens.show(GAME);
+    const last = missionById(lastMission() ?? "", game.content.missions);
+    if (last) selectMission(last.id);
+  }
+  /** Opens the mission page on one game mode: the last mission's sector if it belongs to it, else its first sector. */
+  function chooseMode(circle: boolean) {
+    const sectors = game.content.sectors ?? [],
+      { campaign, rings } = modeGroups(sectors),
+      last = missionById(lastMission() ?? "", game.content.missions),
+      home = last && sectorOf(last, sectors),
+      sector = home && isCircleSector(home) === circle ? home : (circle ? rings : campaign)[0];
+    missionSector = sector ? sectors.indexOf(sector) : undefined;
+    screens.show(page("missions"));
+  }
+  /** Switches the mission page to another sector tab or game mode and keeps the focus on the clicked bar. */
   function showSector(index: number, bar: string) {
     renderMissionList(game, index);
     document.querySelector<HTMLElement>(`#${bar} [data-sector="${index}"]`)?.focus();
@@ -171,8 +238,16 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     if (isRunning(game.state)) execute({ type: "pause" });
   };
   document.addEventListener("click", async (event) => {
+    // The brand links home; a plain click stays in the app instead of reloading it.
+    const link = (event.target as HTMLElement).closest("a.brand");
+    if (link && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+      event.preventDefault();
+      screens.show(HOME);
+      return;
+    }
     const b = (event.target as HTMLElement).closest("button");
     if (!b) return;
+    if (b.dataset.back !== undefined) return screens.back();
     if (b.dataset.tower) return choose(b.dataset.tower as TowerId);
     if (b.dataset.mission) return selectMission(b.dataset.mission);
     if (b.dataset.send) return execute({ type: "send", enemy: b.dataset.send as EnemyId });
@@ -220,30 +295,32 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
       case "sell-btn":
         if (view.selected !== null) execute({ type: "sell", id: view.selected });
         break;
+      case "menu-campaign":
+        chooseMode(false);
+        break;
+      case "menu-circle":
+        chooseMode(true);
+        break;
+      case "menu-btn":
+        screens.show(HOME);
+        break;
+      case "menu-continue":
+        resume();
+        break;
       case "coop-btn":
-        coop.open();
+      case "menu-coop":
+        screens.show(page("coop"));
         break;
       case "help-btn":
-        dialogs.open("help");
-        break;
-      case "close-help":
-      case "help-done":
-        dialogs.close("help");
+      case "menu-help":
+        screens.show(page("help"));
         break;
       case "codex-btn":
-        renderCodex(game);
-        dialogs.open("codex");
+      case "menu-codex":
+        screens.show(page("codex"));
         break;
-      case "close-codex":
-        dialogs.close("codex");
-        break;
-      case "missions-btn":
       case "overlay-missions":
-        renderMissionList(game);
-        dialogs.open("missions");
-        break;
-      case "close-missions":
-        dialogs.close("missions");
+        screens.show(page("missions"));
         break;
       case "overlay-next": {
         const next = nextMission(game);
@@ -267,6 +344,12 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
   });
   document.addEventListener("keydown", (e) => {
     if (dialogs.anyOpen() || e.altKey || e.metaKey || e.ctrlKey || e.repeat) return;
+    // The game's hotkeys belong to the game view; on the start screen Esc leads back from a page.
+    const current = screens.current();
+    if (current.view === "menu") {
+      if (e.key === "Escape" && current.page !== "home") screens.back();
+      return;
+    }
     // Shift+1–4 opens a tab; the number keys then pick from that tab, starting at 1.
     const digit = /^Digit([1-9])$/.exec(e.code);
     if (e.shiftKey && digit) {
@@ -335,5 +418,5 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     // In multiplayer the others keep playing; pausing stays an explicit choice.
     if (document.hidden && !coop.active() && isRunning(game.state) && !game.state.paused) execute({ type: "pause" });
   });
-  return { execute, chooseCell, chooseEnemy, cancel };
+  return { execute, chooseCell, chooseEnemy, cancel, screens };
 }

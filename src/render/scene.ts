@@ -113,8 +113,11 @@ export class Battlefield extends Phaser.Scene {
     });
     this.hooks.refresh();
   }
-  /** Refits the canvas after its container changed size, e.g. entering full screen. */
+  /** Refits the canvas after its container changed size, e.g. entering full screen or leaving the start screen. */
   fit() {
+    // Before Phaser has booted the scene there is nothing to fit yet.
+    if (!this.scale) return;
+    this.scale.getParentBounds();
     this.scale.refresh();
   }
   /** Redraws the terrain after a mission change and fits the canvas to the map size. */

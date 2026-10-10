@@ -9,6 +9,7 @@ import { Audio } from "./app/audio";
 import { bindFullscreen } from "./app/fullscreen";
 import { createInput } from "./app/input";
 import { registerTools } from "./app/webmcp";
+import { screenFromUrl } from "./app/screens";
 import { waveHpScale } from "./systems/spawn";
 import type { MissionDefinition } from "./core/types";
 import "./style.css";
@@ -56,6 +57,7 @@ const input = createInput({
   ui,
   audio,
   reloadBattlefield: () => battlefield.reload(),
+  fitBattlefield: () => battlefield.fit(),
   setDriver: (driver) => {
     battlefield.driver = driver ?? new LocalDriver(game, view);
   },
@@ -75,3 +77,5 @@ new Phaser.Game({
 });
 registerTools(game, input.execute);
 ui.refresh();
+// A deep link opens the game; everything else starts on the start screen (or the page its hash names).
+input.screens.start(screenFromUrl(location.search, location.hash, game.content.missions));
