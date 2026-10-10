@@ -4,7 +4,7 @@ import { TARGET_PRIORITIES } from "../systems/combat";
 import { hasPage, hotkeyTowers, isPaged, pageOf, towerOrder } from "../ui/tower-pages";
 import { isSupport } from "../systems/attacks";
 import type { MatchCommand } from "../core/match";
-import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderMission, renderMissionList, TOWER_KEYS } from "../ui/interface";
+import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderMission, renderMissionBrief, renderMissionList, TOWER_KEYS } from "../ui/interface";
 import { describeResult } from "../ui/messages";
 import { playerName } from "../ui/players";
 import type { Driver, ViewState } from "../render/scene";
@@ -78,12 +78,17 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     ui.refresh();
   }
   const dialogs = createDialogs(game, execute, () => !coop.active());
-  const coop = createCoop({ game, view, ui, pickMission: () => screens.show(page("missions")), applied, setDriver });
+  const coop = createCoop({ game, view, ui, pickMission: () => {
+      forRoom = true;
+      screens.show(page("missions"));
+    }, applied, setDriver });
   const page = (name: MenuPage): Screen => ({ view: "menu", page: name });
   /** A wave the menu paused when the player left the game; it resumes on the way back. */
   let resumeAfterMenu = false,
     /** The sector the mission page opens on next; undefined opens the current mission's sector. */
-    missionSector: number | undefined;
+    missionSector: number | undefined,
+    /** The mission page was opened from the multiplayer page; a pick goes back there instead of into the game. */
+    forRoom = false;
   const screens = createScreens(game.content.missions, () => game.mission.id, enter);
   /** A mission this session has played on, which "Continue" returns to instead of reloading it. */
   const inProgress = () => coop.active() || game.state.wave > 0 || game.state.towers.length > 0;
@@ -107,7 +112,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       if (!s.hidden) section = s;
     }
     if (to.page === "home") renderMenu(game, lastMission(), inProgress());
-    if (to.page === "missions") renderMissionList(game, missionSector);
+    if (to.page !== "missions") forRoom = false;
+    if (to.page === "missions") renderMissionList(game, missionSector, forRoom || coop.inLobby());
     if (to.page === "coop") coop.render();
     if (to.page === "codex") renderCodex(game);
     missionSector = undefined;
@@ -162,8 +168,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     ui.refresh();
   }
   function selectMission(id: string) {
-    // In a multiplayer lobby the pick is the room's mission; the host launches it from there.
-    if (coop.inLobby()) {
+    // Picked for multiplayer (from its page or in a lobby), it is the room's mission; the host launches it from there.
+    if (forRoom || coop.inLobby()) {
       execute({ type: "mission", id });
       screens.back();
       return;
@@ -189,9 +195,21 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
   }
   /** Switches the mission page to another sector tab or game mode and keeps the focus on the clicked bar. */
   function showSector(index: number, bar: string) {
-    renderMissionList(game, index);
+    renderMissionList(game, index, forRoom || coop.inLobby());
     document.querySelector<HTMLElement>(`#${bar} [data-sector="${index}"]`)?.focus();
   }
+  /** Shows a mission's briefing without loading it; the briefing's button starts it. */
+  function pickMission(id: string) {
+    // The cards stay in place, so a double click lands on the same element.
+    for (const card of document.querySelectorAll<HTMLElement>("#mission-list [data-pick]")) card.setAttribute("aria-pressed", String(card.dataset.pick === id));
+    renderMissionBrief(game, missionById(id, game.content.missions), forRoom || coop.inLobby());
+    document.getElementById("mission-brief")!.scrollIntoView({ block: "nearest" });
+  }
+  // A double click on a card starts the mission at once.
+  document.getElementById("mission-list")!.addEventListener("dblclick", (e) => {
+    const id = (e.target as HTMLElement).closest<HTMLElement>("[data-pick]")?.dataset.pick;
+    if (id) selectMission(id);
+  });
   /** Opens another page of the build menu and keeps the focus on its tab. */
   function showTowerPage(page: number) {
     view.page = page;
@@ -250,6 +268,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     if (b.dataset.back !== undefined) return screens.back();
     if (b.dataset.tower) return choose(b.dataset.tower as TowerId);
     if (b.dataset.mission) return selectMission(b.dataset.mission);
+    if (b.dataset.pick) return pickMission(b.dataset.pick);
     if (b.dataset.send) return execute({ type: "send", enemy: b.dataset.send as EnemyId });
     if (b.dataset.sector) return showSector(Number(b.dataset.sector), b.parentElement!.id);
     if (b.dataset.codexTab) return showCodexTab(b.dataset.codexTab as CodexTab);

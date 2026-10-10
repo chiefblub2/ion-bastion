@@ -1382,10 +1382,10 @@ dialog::backdrop {
   color: #d6d5ff;
 }
 #mission-page[data-circle] .mission-card:hover,
-#mission-page[data-circle] .mission-card[aria-current="true"] {
+#mission-page[data-circle] .mission-card[aria-pressed="true"] {
   border-color: var(--mode);
 }
-#mission-page[data-circle] .mission-card[aria-current="true"] {
+#mission-page[data-circle] .mission-card[aria-pressed="true"] {
   background: color-mix(in srgb, var(--mode) 8%, #0d1920);
   box-shadow: inset 3px 0 var(--mode);
 }
@@ -1465,10 +1465,115 @@ dialog::backdrop {
   background: #1c2b34;
   border-color: var(--mint);
 }
-.mission-card[aria-current="true"] {
+/* The picked card fills the briefing; the active mission keeps a dot after its number. */
+.mission-card[aria-pressed="true"] {
   border-color: var(--mint);
   background: color-mix(in srgb, var(--mint) 8%, #0d1920);
   box-shadow: inset 3px 0 var(--mint);
+}
+.mission-card[aria-current="true"] .mission-index::after {
+  content: " ●";
+  font-size: 10px;
+  vertical-align: middle;
+}
+.mission-hint {
+  margin: -6px 0 18px;
+  color: var(--muted);
+  font-size: 14px;
+}
+/* Mission page: the briefing above the list, beside it on wide screens. */
+.mission-browser {
+  display: grid;
+  gap: 16px;
+  margin-top: 14px;
+}
+.mission-brief {
+  padding: 18px;
+  background: #0f1a22;
+  border: 1px solid var(--mode);
+  border-radius: 8px;
+  scroll-margin: 16px;
+}
+.mission-brief:empty {
+  display: none;
+}
+.mission-brief .eyebrow {
+  margin: 0;
+}
+.mission-brief h2 {
+  margin: 4px 0 6px;
+  font: 600 30px/1.1 "Barlow Condensed", sans-serif;
+}
+.mission-brief h3 {
+  margin: 16px 0 8px;
+  font: 500 11px var(--mono);
+  letter-spacing: 1.2px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.mission-brief-focus {
+  margin: 0 0 14px;
+  font-size: 14px;
+  color: #c4d0d6;
+}
+.map-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  border: 1px solid #2e3e49;
+}
+.mission-brief-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin-top: 14px;
+}
+.mission-brief-stats strong {
+  font: 600 20px "Barlow Condensed", sans-serif;
+}
+.mission-brief-stats .stat-label {
+  margin-bottom: 2px;
+}
+.mission-brief-enemies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mission-brief-enemies li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 4px 8px;
+  background: #131f29;
+  border: 1px solid #2e3e49;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.mission-brief-enemies .new-tag {
+  font: 600 9px var(--mono);
+  color: #ffbd76;
+  letter-spacing: 1px;
+}
+.mission-brief-towers {
+  margin: 0;
+  font-size: 13px;
+  color: #c4d0d6;
+}
+.mission-brief-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+.mission-brief-actions .mission-warning {
+  margin: 0;
+}
+.mission-brief-actions .primary {
+  width: 100%;
 }
 .mission-index {
   font: 600 26px "Barlow Condensed", sans-serif;
@@ -2042,9 +2147,17 @@ dialog::backdrop {
   margin-top: 12px;
 }
 @media (min-width: 900px) {
+  #mission-page .mission-browser {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.75fr);
+    align-items: start;
+  }
   #mission-page .mission-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-row: 1;
+  }
+  #mission-page .mission-brief {
+    grid-column: 2;
+    position: sticky;
+    top: 16px;
   }
   #mission-page .sector-tabs {
     grid-template-columns: repeat(5, minmax(0, 1fr));
