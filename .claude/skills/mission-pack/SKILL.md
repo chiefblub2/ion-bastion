@@ -131,7 +131,7 @@ Run the expensive checks once, after all edits. Agents' final balance runs count
    - `core/strategies/index.ts`: add `import { <ID>_STRATEGIES } from "./<id>";` and `...<ID>_STRATEGIES,` in `STRATEGIES`.
 2. Text work, all before the test run:
    - `npx vite-node scripts/mission-table.ts --write` updates the README mission table and intro counts and keeps the existing short focus texts. Shorten the focus of the rows it lists by hand (style: "Nur 10 Reaktorenergie", "Finale: drei Titanen").
-   - README enemy table: one row per new sector.
+   - README enemy table: one row per new sector, each enemy as `<img src="docs/images/enemies/<id>.png" width="24" height="24" alt=""> Name (…)`. With `npm run dev` running, `npx vite-node scripts/readme-images.ts -- --only enemies` writes the icons.
    - CLAUDE.md: the trait list under "Enemy", plus special rules of the new traits (e.g. an `isHidden` extension).
    - Player texts (mission `focus`, README) use the in-game tower names (`name` in `content/towers.ts`: Kryo, Glut, Teergrube, Stasis, Fangeisen …), never ids like frost or inferno. `grep -n "Frost\|Inferno\|Stase" src/content/sectors/<id>.ts` catches the usual slips.
 3. One `npm run test:full` (about 5 s, input cache off; the campaign runs in `replay-N.test.ts` shards, new golden snapshots are written automatically). Then `npx vite-node scripts/snapshot-diff.ts -- --expect ""`: only "Neu", nothing changed or removed.

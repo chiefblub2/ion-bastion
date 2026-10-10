@@ -443,6 +443,8 @@ export function drawEnemy(
   status: StatusFlags,
   traits: TraitFlags,
   clock: number,
+  /** The README gallery draws bare units. */
+  hpBar = true,
 ) {
   const r = d.size * size;
   // Stealthed and unrevealed: only a shimmering outline, no body or HP bar.
@@ -543,6 +545,7 @@ export function drawEnemy(
     g.fillStyle(STATUS_COLORS.burning, 0.9);
     for (const [dx, dy] of [[-0.6, -0.2], [0.5, -0.5], [0.1, 0.4]]) g.fillCircle(x + dx * r, y + dy * r, 2.2);
   }
+  if (!hpBar) return;
   g.fillStyle(0x050c12);
   g.fillRoundedRect(x - r - 1, y - r - 9, r * 2 + 2, 5, 2);
   g.fillStyle(e.hp / e.maxHp > 0.4 ? 0x93f5b8 : 0xff738a);

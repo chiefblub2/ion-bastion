@@ -114,7 +114,7 @@ Run the expensive checks once, after all edits. `git status` first: files outsid
    Only missions on the placement lines may appear. Any other mission means the trait leaks into solo state (an optional field that is not `undefined`, a changed iteration order): fix it, don't accept it.
 2. Text work, before the final test run:
    - `npx vite-node scripts/mission-table.ts --write` (enemy count in the README intro, mission table if waves changed).
-   - README "Gegner": add the enemies to their sector's row (`Name (Eigenschaft kurz)`), or a sentence below the table if they join several sectors.
+   - README "Gegner": add the enemies to their sector's row (`<img src="docs/images/enemies/<id>.png" width="24" height="24" alt=""> Name (Eigenschaft kurz)`), or a sentence below the table if they join several sectors. With `npm run dev` running, `npx vite-node scripts/readme-images.ts -- --only enemies` writes the icons (`docs/images/enemies/`).
    - Fallgrube, if a new enemy is under a pit threshold: the level descriptions in `content/towers.ts` and the README trap row both name the swallowed enemies.
    - CLAUDE.md: the trait list under "Enemy", plus special rules of new traits (an `isHidden` extension, a new `Enemy` field in `stateHash`, DISRUPTABLE).
    - Player texts use the in-game tower names (`name` in `content/towers.ts`: Kryo, Glut, Teergrube …), never ids like frost or inferno.

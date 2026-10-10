@@ -19,13 +19,17 @@ const fromWave = (m: MissionDefinition, wave: number): MissionDefinition => ({
   name: `${m.name} · ab Welle ${wave}`,
   waves: m.waves.slice(wave - 1).map((w, i) => ({ ...w, hpMultiplier: waveHpScale(m, wave + i) })),
 });
-// Deep link `?mission=<id>`: start in that mission; `&wave=<n>` (for checks) skips to wave n. Done before the UI and
-// the scene are built, so they never see the default map.
+// Deep link `?mission=<id>`: start in that mission; `&wave=<n>` (for checks) skips to wave n and `&credits=<n>`
+// (for README screenshots) replaces the starting credits. Done before the UI and the scene are built, so they never
+// see the default map.
 const params = new URLSearchParams(location.search),
   linked = params.get("mission"),
   target = linked ? missionById(linked) : undefined,
-  skip = Number(params.get("wave"));
-const game = new Game(target && skip > 1 && skip <= target.waves.length ? fromWave(target, skip) : undefined);
+  skip = Number(params.get("wave")),
+  credits = Number(params.get("credits"));
+let linkedMission = target && skip > 1 && skip <= target.waves.length ? fromWave(target, skip) : target;
+if (linkedMission && credits > 0) linkedMission = { ...linkedMission, startingCredits: credits };
+const game = new Game(linkedMission !== target ? linkedMission : undefined);
 if (target && game.mission.id !== target.id) game.command({ type: "mission", id: target.id });
 mountUI(game);
 renderMission(game);

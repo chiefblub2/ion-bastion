@@ -11,10 +11,10 @@
  */
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { chromium, type Page } from "playwright-core";
+import type { Page } from "playwright-core";
 import { MISSIONS, missionById } from "../src/content/missions";
-import { STRATEGIES } from "../src/core/strategies";
 import type { EnemyId, MissionDefinition } from "../src/core/types";
+import { buildAffordable, call, fail, launch, open as openApp, prepare } from "./browser";
 
 const args = process.argv.slice(2).filter((a) => a !== "--");
 const flag = (name: string) => {
@@ -27,10 +27,6 @@ const only = flag("--enemies")?.split(",") as EnemyId[] | undefined;
 const missions = args.map((id) => missionById(id) ?? fail(`Unbekannte Mission '${id}'.`));
 if (!missions.length) fail("Usage: npx vite-node scripts/visual-check.ts -- <missionId>... [--out <dir>] [--enemies a,b]");
 
-function fail(message: string): never {
-  console.error(message);
-  process.exit(1);
-}
 /** Enemy types whose first campaign appearance is in `mission`. */
 function introduced(mission: MissionDefinition) {
   const seen = new Set<EnemyId>();
@@ -60,46 +56,10 @@ function targets(mission: MissionDefinition) {
   return [...waves].sort((a, b) => a[0] - b[0]);
 }
 
-const call = <T>(page: Page, tool: string, input: object = {}) =>
-  page.evaluate(
-    ([name, value]) => (window as unknown as { __tools: Record<string, (v: unknown) => unknown> }).__tools[name](value),
-    [tool, input] as const,
-  ) as Promise<T>;
-
-async function buildAffordable(page: Page, mission: MissionDefinition, next: { i: number }) {
-  const builds = STRATEGIES[mission.id]?.A.builds ?? [];
-  while (next.i < builds.length) {
-    try {
-      await call(page, "build_defense_tower", builds[next.i]);
-      next.i++;
-    } catch {
-      return; // Not enough credits yet; try again before the next wave.
-    }
-  }
-}
-
 async function check(page: Page, mission: MissionDefinition) {
-  const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(String(e)));
-  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
-  // The app registers its tools only if this optional browser API exists. Pages run in parallel, so
-  // all but one count as hidden, and the app pauses a running wave when its tab is hidden.
-  await page.addInitScript(() => {
-    Object.defineProperty(document, "hidden", { get: () => false });
-    Object.defineProperty(document, "visibilityState", { get: () => "visible" });
-    const tools: Record<string, (v: unknown) => unknown> = {};
-    (window as unknown as { __tools: typeof tools }).__tools = tools;
-    (document as unknown as { modelContext: object }).modelContext = {
-      registerTool: (tool: { name: string; execute: (v: unknown) => unknown }) => {
-        tools[tool.name] = tool.execute;
-      },
-    };
-  });
-  const open = async (wave: number) => {
-    // `&wave=<n>` (src/main.ts) starts the mission at that wave with its real HP, so nothing is played through.
-    await page.goto(`${base}/?mission=${mission.id}${wave > 1 ? `&wave=${wave}` : ""}`);
-    await page.waitForFunction(() => "read_defense_state" in ((window as unknown as { __tools?: object }).__tools ?? {}));
-  };
+  const errors = await prepare(page);
+  // `&wave=<n>` (src/main.ts) starts the mission at that wave with its real HP, so nothing is played through.
+  const open = (wave: number) => openApp(page, base, wave > 1 ? { mission: mission.id, wave } : { mission: mission.id });
   await open(1);
   const files = [`${out}/${mission.id}-terrain.png`];
   await page.locator("#board-wrap").screenshot({ path: files[0] });
@@ -120,13 +80,8 @@ async function check(page: Page, mission: MissionDefinition) {
   return { files, errors };
 }
 
-try {
-  await fetch(base);
-} catch {
-  fail(`Kein Dev-Server unter ${base}: erst \`npm run dev\` starten.`);
-}
+const browser = await launch(base);
 mkdirSync(out, { recursive: true });
-const browser = await chromium.launch({ channel: "chrome", headless: true });
 try {
   const results = await Promise.all(
     missions.map(async (m) => {

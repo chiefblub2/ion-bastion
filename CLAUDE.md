@@ -33,11 +33,16 @@ npx vite-node scripts/mission-table.ts --write
 npx vite-node scripts/visual-check.ts -- <missionId>... [--enemies a,b] [--out dir]
                                           # with `npm run dev` running: headless system Chrome (playwright-core) builds strategy A via the WebMCP
                                           # tools, opens the first wave of each new (or given) enemy directly via `&wave=<n>` and saves terrain + wave PNGs (about 2 s per mission; never play through to a wave, always skip to it)
+npx vite-node scripts/readme-images.ts [-- --only towers|enemies|screens]
+                                          # with `npm run dev` running: the README images in docs/images/. Icons are clipped from the dev-only
+                                          # gallery page `/gallery.html` (`src/gallery.ts`, not part of `vite build`, draws every tower and enemy
+                                          # with the battlefield's own draw functions); screenshots skip to a wave with `&wave=<n>&credits=<n>`
+                                          # (the list is `SCREENS` in the script). Shared browser helpers live in `scripts/browser.ts`
 ```
 
 Always run `npm run test:full` and `npm run build` before you finish. The chunk-size warning from `vite build` is expected.
 
-To see a change in the real app, run `npm run dev` (and `npm run server` for multiplayer) and open `http://localhost:4173`. Use `?server=ws://host:port` to point at another relay, and `?mission=<id>` (e.g. `?mission=korallengraben`) to open a mission directly; `&wave=<n>` starts it at wave n (the remaining waves keep their real HP; the HUD counts from 1). Multiplayer needs several tabs, one per player.
+To see a change in the real app, run `npm run dev` (and `npm run server` for multiplayer) and open `http://localhost:4173`. Use `?server=ws://host:port` to point at another relay, and `?mission=<id>` (e.g. `?mission=korallengraben`) to open a mission directly; `&wave=<n>` starts it at wave n (the remaining waves keep their real HP; the HUD counts from 1). `&credits=<n>` replaces the starting credits. Multiplayer needs several tabs, one per player.
 
 ## Language
 
@@ -88,6 +93,8 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 - Support towers are recognised by `aim: "none"` of their attack module (`isSupport`). They have no `targets`, no damage and no fire rate, are never buffed by auras, and only towers with an area (aura, detector, beacon, tracker) need a range. Their specs form `SupportAttack`, which `attackTower` excludes.
 
 ## Adding content
+
+New towers and enemies need a README image: run `scripts/readme-images.ts -- --only towers` (or `enemies`) and add the `<img>` in front of the name in the README table, like the existing rows.
 
 Whole mission packs (new sectors, themes, enemies) follow the project skill `.claude/skills/mission-pack/SKILL.md`: foundation agent, parallel sector and theme agents, integration checklist. New enemies or traits for the existing campaign follow `.claude/skills/enemy-pack/SKILL.md`.
 

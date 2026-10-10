@@ -2,6 +2,8 @@
 
 Tower-Defense im Browser, gebaut mit TypeScript, Phaser 3 und Vite. <!-- counts:start -->73 Missionen in 15 Sektoren<!-- counts:end --> mit eigenen Maps, Wellen und Terrain-Stilen, über dreißig Türme und <!-- counts:start -->62 Gegnertypen<!-- counts:end --> am Boden und in der Luft. Allein spielbar oder mit 2–4 Spielern im Koop- oder Versus-Modus.
 
+![Mission 54 Glutkammer im Sektor Vulkankette, erste Welle: Glutläufer in den Windungen und die ersten Türme](docs/images/screens/glutkammer.png)
+
 Das Spiel läuft komplett im Browser; nur der Mehrspieler braucht einen kleinen Relay-Server. Spielstände liegen bewusst nur im Arbeitsspeicher: Neuladen startet eine neue Mission.
 
 ## Schnellstart
@@ -20,6 +22,25 @@ Hinweise für Entwickler und KI-Agenten (Architektur, Konventionen, Inhalte erg�
 ## Spielprinzip
 
 Gegner laufen einen festen Pfad entlang zum Reaktor. Erreicht einer den Reaktor, kostet das Reaktorenergie; bei 0 ist die Mission verloren. Zwischen und während der Wellen baust du Türme neben dem Pfad und verbesserst sie. Die erste Welle startest du selbst; danach startet die nächste Welle 10 Sekunden nach dem Ende der vorigen von selbst (mit `N` früher, ohne Bonus). Besiegte Gegner bringen Credits, jede überstandene Welle einen Bonus. Ein Verkauf erstattet 70 % der gesamten Investition.
+
+## Screenshots
+
+Jeder Sektor hat sein eigenes Terrain. Im Kreislauf (unten rechts) gibt es keinen Reaktor: Gegner kreisen, bis sie besiegt sind.
+
+<table>
+  <tr>
+    <td><img src="docs/images/screens/kernfestung.png" alt="Mission Kernfestung"><br><sub>Kernfestung · Grenzzone</sub></td>
+    <td><img src="docs/images/screens/polarnacht.png" alt="Mission Polarnacht"><br><sub>Polarnacht · Frostgürtel</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/screens/korallengraben.png" alt="Mission Korallengraben"><br><sub>Korallengraben · Tiefsee</sub></td>
+    <td><img src="docs/images/screens/glasebene.png" alt="Mission Glasebene"><br><sub>Glasebene · Dünenmeer</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/screens/kristallherz.png" alt="Mission Kristallherz"><br><sub>Kristallherz · Kristallhöhle</sub></td>
+    <td><img src="docs/images/screens/doppelschleife.png" alt="Mission Doppelschleife"><br><sub>Doppelschleife · Kreislauf</sub></td>
+  </tr>
+</table>
 
 ## Bedienung
 
@@ -201,30 +222,30 @@ Jeder Gegner bewegt sich am Boden oder in der Luft; jeder Angriffsturm trifft nu
 
 | Turm | Kosten | Angriff | Ziele |
 | --- | --- | --- | --- |
-| Impuls | 80 | Einzelziel | Boden · Luft |
-| Nova | 130 | Flächenschaden | nur Boden (auch der Explosionsradius) |
-| Kryo | 100 | Verlangsamung | Boden · Luft |
-| Aura | 160 | Unterstützung, verstärkt Türme im Radius 3 | – |
-| Flak | 90 | Einzelziel, schnell | nur Luft |
-| Tesla | 150 | Kettenblitz: springt bis zu 3× auf Gegner im Umkreis von 1,6 Feldern, je Sprung 75 % Schaden | Boden · Luft |
-| Lanze | 170 | Durchschlag: Strahl bis Reichweite 4,4, trifft alle Gegner auf der Linie, je weiterem Treffer 85 % | Boden · Luft |
-| Glut | 120 | Brand: zusätzlich das 2,5-Fache des Treffers über 3 s | Boden · Luft |
-| Stasis | 140 | Betäubung: Puls im Radius 0,9 hält Gegner 0,8 s an, danach 1,5 s immun | Boden · Luft |
-| Korrosion | 110 | Schwächung: Gegner im Radius 0,8 nehmen 3 s lang 25 % mehr Schaden | Boden · Luft |
-| Zerfall | 160 | Anti-Boss: Treffer plus 4 % der maximalen HP | Boden · Luft |
-| Fokus | 150 | Aufladung: Dauerstrahl hält sein Ziel, jeder Folgetreffer +20 % Schaden, bis zum Dreifachen | Boden · Luft |
-| Mörser | 160 | Artillerie: Reichweite 5, Explosionsradius 1,3, kann Gegner näher als 1,5 Felder nicht beschießen | nur Boden |
-| Beben | 140 | Nahbereich: Schockwelle trifft alle Gegner in Reichweite 1,8, am Rand noch 50 % | nur Boden |
-| Henker | 150 | Hinrichtung: Gegner unter 25 % HP erleiden beim Einschlag den vierfachen Schaden | Boden · Luft |
-| Schrapnell | 130 | Mehrfachziel: jede Salve trifft bis zu 3 verschiedene Gegner | Boden · Luft |
-| Störsender | 130 | Störung: Puls im Radius 1,1 schaltet 3 s lang Schild, Regeneration, Heilung, Tarnung, Ausweichen und Anführer-Bonus ab; Schilde brechen sofort | Boden · Luft |
-| Fangnetz | 110 | Luftfalle: Flieger 3 s lang 30 % langsamer und für Bodentürme wie Nova angreifbar | nur Luft |
-| Gravitron | 170 | Rückstoß: Puls im Radius 1 zieht Gegner 0,6 s lang mit 1,5-fachem Tempo zurück, danach 2,5 s immun; Berserker widerstehen | nur Boden |
-| Raffinerie | 120 | 25 Credits nach jeder Welle, kein Angriff | – |
-| Detektor | 90 | Deckt getarnte Gegner im Radius 3,5 auf, kein eigener Angriff | – |
-| Prämienbake | 100 | Abschüsse im Radius 2,5 zahlen 50 % mehr Credits (mehrere Baken zählen nicht doppelt), kein Angriff | – |
-| Reparaturdock | 150 | Stellt nach jeder Welle 1 Reaktorenergie wieder her, bis zum Startwert; nicht im Kreislauf | – |
-| Peilsender | 140 | Gegner im Radius 2,2 erleiden 15 % mehr Schaden, zusätzlich zu Korrosion, kein Angriff | – |
+| <img src="docs/images/towers/pulse.png" width="36" height="36" alt=""> Impuls | 80 | Einzelziel | Boden · Luft |
+| <img src="docs/images/towers/blast.png" width="36" height="36" alt=""> Nova | 130 | Flächenschaden | nur Boden (auch der Explosionsradius) |
+| <img src="docs/images/towers/frost.png" width="36" height="36" alt=""> Kryo | 100 | Verlangsamung | Boden · Luft |
+| <img src="docs/images/towers/aura.png" width="36" height="36" alt=""> Aura | 160 | Unterstützung, verstärkt Türme im Radius 3 | – |
+| <img src="docs/images/towers/flak.png" width="36" height="36" alt=""> Flak | 90 | Einzelziel, schnell | nur Luft |
+| <img src="docs/images/towers/tesla.png" width="36" height="36" alt=""> Tesla | 150 | Kettenblitz: springt bis zu 3× auf Gegner im Umkreis von 1,6 Feldern, je Sprung 75 % Schaden | Boden · Luft |
+| <img src="docs/images/towers/lance.png" width="36" height="36" alt=""> Lanze | 170 | Durchschlag: Strahl bis Reichweite 4,4, trifft alle Gegner auf der Linie, je weiterem Treffer 85 % | Boden · Luft |
+| <img src="docs/images/towers/inferno.png" width="36" height="36" alt=""> Glut | 120 | Brand: zusätzlich das 2,5-Fache des Treffers über 3 s | Boden · Luft |
+| <img src="docs/images/towers/stasis.png" width="36" height="36" alt=""> Stasis | 140 | Betäubung: Puls im Radius 0,9 hält Gegner 0,8 s an, danach 1,5 s immun | Boden · Luft |
+| <img src="docs/images/towers/acid.png" width="36" height="36" alt=""> Korrosion | 110 | Schwächung: Gegner im Radius 0,8 nehmen 3 s lang 25 % mehr Schaden | Boden · Luft |
+| <img src="docs/images/towers/decay.png" width="36" height="36" alt=""> Zerfall | 160 | Anti-Boss: Treffer plus 4 % der maximalen HP | Boden · Luft |
+| <img src="docs/images/towers/focus.png" width="36" height="36" alt=""> Fokus | 150 | Aufladung: Dauerstrahl hält sein Ziel, jeder Folgetreffer +20 % Schaden, bis zum Dreifachen | Boden · Luft |
+| <img src="docs/images/towers/mortar.png" width="36" height="36" alt=""> Mörser | 160 | Artillerie: Reichweite 5, Explosionsradius 1,3, kann Gegner näher als 1,5 Felder nicht beschießen | nur Boden |
+| <img src="docs/images/towers/quake.png" width="36" height="36" alt=""> Beben | 140 | Nahbereich: Schockwelle trifft alle Gegner in Reichweite 1,8, am Rand noch 50 % | nur Boden |
+| <img src="docs/images/towers/executioner.png" width="36" height="36" alt=""> Henker | 150 | Hinrichtung: Gegner unter 25 % HP erleiden beim Einschlag den vierfachen Schaden | Boden · Luft |
+| <img src="docs/images/towers/shrapnel.png" width="36" height="36" alt=""> Schrapnell | 130 | Mehrfachziel: jede Salve trifft bis zu 3 verschiedene Gegner | Boden · Luft |
+| <img src="docs/images/towers/jammer.png" width="36" height="36" alt=""> Störsender | 130 | Störung: Puls im Radius 1,1 schaltet 3 s lang Schild, Regeneration, Heilung, Tarnung, Ausweichen und Anführer-Bonus ab; Schilde brechen sofort | Boden · Luft |
+| <img src="docs/images/towers/net.png" width="36" height="36" alt=""> Fangnetz | 110 | Luftfalle: Flieger 3 s lang 30 % langsamer und für Bodentürme wie Nova angreifbar | nur Luft |
+| <img src="docs/images/towers/gravity.png" width="36" height="36" alt=""> Gravitron | 170 | Rückstoß: Puls im Radius 1 zieht Gegner 0,6 s lang mit 1,5-fachem Tempo zurück, danach 2,5 s immun; Berserker widerstehen | nur Boden |
+| <img src="docs/images/towers/refinery.png" width="36" height="36" alt=""> Raffinerie | 120 | 25 Credits nach jeder Welle, kein Angriff | – |
+| <img src="docs/images/towers/detector.png" width="36" height="36" alt=""> Detektor | 90 | Deckt getarnte Gegner im Radius 3,5 auf, kein eigener Angriff | – |
+| <img src="docs/images/towers/beacon.png" width="36" height="36" alt=""> Prämienbake | 100 | Abschüsse im Radius 2,5 zahlen 50 % mehr Credits (mehrere Baken zählen nicht doppelt), kein Angriff | – |
+| <img src="docs/images/towers/dock.png" width="36" height="36" alt=""> Reparaturdock | 150 | Stellt nach jeder Welle 1 Reaktorenergie wieder her, bis zum Startwert; nicht im Kreislauf | – |
+| <img src="docs/images/towers/tracker.png" width="36" height="36" alt=""> Peilsender | 140 | Gegner im Radius 2,2 erleiden 15 % mehr Schaden, zusätzlich zu Korrosion, kein Angriff | – |
 
 Nova, Mörser, Flak, Kryo, Henker, Schrapnell und Fangnetz verschießen Geschosse, die Zeit brauchen; schnelle Gegner können Nova-Granaten ausweichen. Tesla, Lanze, Fokus, Beben, Gravitron und Störsender treffen sofort.
 
@@ -234,15 +255,15 @@ Fallen baust du direkt auf freie Wegfelder (nicht auf Eingang oder Reaktor). Sie
 
 | Falle | Kosten | Wirkung | Stufe 4 / 5 |
 | --- | --- | --- | --- |
-| Mine | 70 | Explosion mit 80 Schaden im Radius 1,1, 5 s Nachladen | Radius 1,3 / 1,5 |
-| Krähenfüße | 60 | Blutung: 4 s lang 12 Schaden je weiter gelaufenem Feld; festgehaltene oder zurückgeworfene Gegner bluten nicht | 15 je Feld / 18 je Feld, 5 s |
-| Teergrube | 60 | Gegner laufen 1,5 s mit 45 % Tempo | 40 % für 2 s / 30 % für 2,5 s |
-| Fangeisen | 90 | Hält Gegner 1,5 s fest, danach 2,5 s immun, 4 s Nachladen | 1,8 s / 2,2 s, größerer Griff |
-| Flammenrost | 80 | Brand: das Dreifache des Treffers über 3 s | 3,5-fach / 4-fach über 4 s |
-| Sprungfeder | 100 | Wirft Gegner den Weg zurück, danach 3 s immun; Berserker widerstehen | weiter / noch weiter |
-| Haftmine | 90 | Heftet eine Bombe an den Gegner: 70 Schaden im Radius 1,2 nach 2 s oder sofort, wenn der Träger stirbt; Kettenreaktionen möglich | Radius 1,4 / 1,6, Zünder 1,5 s |
-| Fallgrube | 120 | Verschlingt kleine Gegner (Drohne, Läufer, Skater, Phantom, Blinker, Rudelwolf, Sprungkäfer, Geröllschwarm) sofort, egal wie viele HP; größere nehmen 60 Schaden; 6 s Abdecken | auch Heiler, Schildträger, Splitter, Schleim, Prismenläufer, Salamander, Märtyrer, Pionier / auch Panzer, Nullfeldträger |
-| Alarmdraht | 110 | Lädt beim Auslösen alle Angriffstürme im Radius 2,5 sofort nach; 6 s Spannen | Radius 3 / 3,5 |
+| <img src="docs/images/towers/mine.png" width="36" height="36" alt=""> Mine | 70 | Explosion mit 80 Schaden im Radius 1,1, 5 s Nachladen | Radius 1,3 / 1,5 |
+| <img src="docs/images/towers/spikes.png" width="36" height="36" alt=""> Krähenfüße | 60 | Blutung: 4 s lang 12 Schaden je weiter gelaufenem Feld; festgehaltene oder zurückgeworfene Gegner bluten nicht | 15 je Feld / 18 je Feld, 5 s |
+| <img src="docs/images/towers/tar.png" width="36" height="36" alt=""> Teergrube | 60 | Gegner laufen 1,5 s mit 45 % Tempo | 40 % für 2 s / 30 % für 2,5 s |
+| <img src="docs/images/towers/snare.png" width="36" height="36" alt=""> Fangeisen | 90 | Hält Gegner 1,5 s fest, danach 2,5 s immun, 4 s Nachladen | 1,8 s / 2,2 s, größerer Griff |
+| <img src="docs/images/towers/grill.png" width="36" height="36" alt=""> Flammenrost | 80 | Brand: das Dreifache des Treffers über 3 s | 3,5-fach / 4-fach über 4 s |
+| <img src="docs/images/towers/spring.png" width="36" height="36" alt=""> Sprungfeder | 100 | Wirft Gegner den Weg zurück, danach 3 s immun; Berserker widerstehen | weiter / noch weiter |
+| <img src="docs/images/towers/limpet.png" width="36" height="36" alt=""> Haftmine | 90 | Heftet eine Bombe an den Gegner: 70 Schaden im Radius 1,2 nach 2 s oder sofort, wenn der Träger stirbt; Kettenreaktionen möglich | Radius 1,4 / 1,6, Zünder 1,5 s |
+| <img src="docs/images/towers/pit.png" width="36" height="36" alt=""> Fallgrube | 120 | Verschlingt kleine Gegner (Drohne, Läufer, Skater, Phantom, Blinker, Rudelwolf, Sprungkäfer, Geröllschwarm) sofort, egal wie viele HP; größere nehmen 60 Schaden; 6 s Abdecken | auch Heiler, Schildträger, Splitter, Schleim, Prismenläufer, Salamander, Märtyrer, Pionier / auch Panzer, Nullfeldträger |
+| <img src="docs/images/towers/tripwire.png" width="36" height="36" alt=""> Alarmdraht | 110 | Lädt beim Auslösen alle Angriffstürme im Radius 2,5 sofort nach; 6 s Spannen | Radius 3 / 3,5 |
 
 **Angriffstürme** haben fünf Stufen:
 
@@ -309,25 +330,26 @@ Bei Gleichstand gewinnt der Gegner, der weiter vorne liegt. Die Lanze zielt weit
 
 ## Gegner
 
-Sektor I nutzt fünf Grundgegner, darunter ab Mission 02 den **Gleiter**: schnell, wenig HP und in der Luft. Eine reine Nova-Verteidigung verliert deshalb jede Mission mit Gleitern. Ab Sektor II kommen je Sektor weitere Gegner mit Eigenschaften dazu:
+Sektor I nutzt fünf Grundgegner, darunter ab Mission 02 den **Gleiter**: schnell, wenig HP und in der Luft. Eine reine Nova-Verteidigung verliert deshalb jede Mission mit Gleitern. Ab Sektor II kommen je Sektor weitere Gegner mit Eigenschaften dazu. Die Bilder zeigen die Gegner so, wie das Spielfeld sie zeichnet, mit den Markierungen ihrer Eigenschaften:
 
 | Sektor | Neue Gegner |
 | --- | --- |
-| II Frostgürtel | Splitter (zerfällt in Drohnen), Eisläufer (immun gegen Verlangsamung, flink), Rudelwolf (im Rudel schneller) |
-| III Säuremoor | Schleimer (regeneriert), Sanitäter (heilt andere), Zwillingsläufer (teilt Schaden mit Artgenossen), Schleierweber (tarnt Gegner in der Nähe) |
-| IV Orbitaldeck | Schildträger (Schild lädt sich wieder auf), Phantom (getarnt, braucht den Detektor), Sprungkäfer (springt regelmäßig nach vorn), Konvoischlepper (gepanzert, teilt Schaden im Konvoi), Nullfeldträger (schaltet Unterstützungstürme ab) |
-| V Ruinenstadt | Bollwerk (Rüstung), Kommandant (stärkt Gegner in der Nähe), Druckbunker (hält Flächenschaden aus), Lockvogel (Türme müssen ihn anvisieren), Schattenkoloss (gepanzert, tarnt Gegner in der Nähe), Pionier (entschärft Fallen) |
-| VI Singularität | Phasenläufer (weicht jedem n-ten Treffer aus), Berserker (unaufhaltsam, spurtet bei wenig HP), Warpdrohne (fliegt, springt nach vorn), Seelenfunke (fliegt, heilt beim Tod), Phasenflügler (wechselt zwischen Luft und Boden) |
-| VII Dünenmeer | Skarabäus (gepanzert und flink), Gräber (taucht regelmäßig ab; dann treffen nur Fallen und Flächenschaden), Lückenspringer (springt kurz nach vorn), Geröllschwarm (hält Flächenschaden aus, Schwarm), Sturmfalke (fliegt, im Rudel schneller), Tunnelmaulwurf (gräbt sich schnell unter der Erde voran) |
-| VIII Tiefsee | Panzerkrebs (verhärtet, je verletzter er ist), Qualle (fliegt und heilt Gegner in der Nähe), Kettenqualle (fliegt, teilt Schaden), Leuchtboje (fliegt, Schild, Türme müssen sie anvisieren) |
-| IX Gewitterfront | Böenläufer (rast in Schüben), Sturmvogel (fliegt, Schild und flink), Luftschiff (schwer gepanzerter Flieger, wirft Gleiter ab), Kolonnenläufer (im Pulk schneller), Spiegelflügler (fliegt, bricht Strahlen), Isolator (unterbricht Tesla-Ketten), Störwolke (fliegt, Türme in der Nähe feuern langsamer) |
-| X Dschungel | Schwarmameise (weniger Schaden im Rudel), Urwaldkoloss (gepanzert, regeneriert), Märtyrer (heilt beim Tod), Dornrücken (bestraft Türme in der Nähe mit Abklingzeit) |
-| XI Vulkankette | Glutläufer (wird schneller, je mehr HP fehlen), Aschenschwinge (fliegt, gepanzert, immun gegen Verlangsamung), Salamander und Magmafalter (immun gegen Brand und Blutung), Blender (senkt die Reichweite von Türmen) |
-| XII Kristallhöhle | Kristallwächter (härtet sich im Takt gegen Treffer, Brand wirkt voll), Splitterfalter (fliegt, zerfällt in zwei Gleiter), Prismenläufer (bricht Strahlen), Monolith (kein Treffer über 6 % seiner HP) |
-| XIV Zahnwerk | Zahnrad (wird schneller, je länger es kreist), Kolbenpanzer (gepanzert, nimmt mit jeder Runde weniger Schaden) |
-| XV Mondsee | Gischtflügler (fliegt, nimmt mit jeder Runde weniger Schaden), Nautilus (Schild, wird schneller, je länger er kreist) |
+| I Grenzzone | <img src="docs/images/enemies/drone.png" width="24" height="24" alt=""> Drohne, <img src="docs/images/enemies/runner.png" width="24" height="24" alt=""> Sprinter (schnell), <img src="docs/images/enemies/tank.png" width="24" height="24" alt=""> Panzer (langsam, viele HP), <img src="docs/images/enemies/boss.png" width="24" height="24" alt=""> Titan (Boss), <img src="docs/images/enemies/glider.png" width="24" height="24" alt=""> Gleiter (fliegt, schnell) |
+| II Frostgürtel | <img src="docs/images/enemies/splitter.png" width="24" height="24" alt=""> Splitter (zerfällt in Drohnen), <img src="docs/images/enemies/skater.png" width="24" height="24" alt=""> Eisläufer (immun gegen Verlangsamung, flink), <img src="docs/images/enemies/wolf.png" width="24" height="24" alt=""> Rudelwolf (im Rudel schneller) |
+| III Säuremoor | <img src="docs/images/enemies/slime.png" width="24" height="24" alt=""> Schleimer (regeneriert), <img src="docs/images/enemies/mender.png" width="24" height="24" alt=""> Sanitäter (heilt andere), <img src="docs/images/enemies/twin.png" width="24" height="24" alt=""> Zwillingsläufer (teilt Schaden mit Artgenossen), <img src="docs/images/enemies/veiler.png" width="24" height="24" alt=""> Schleierweber (tarnt Gegner in der Nähe) |
+| IV Orbitaldeck | <img src="docs/images/enemies/aegis.png" width="24" height="24" alt=""> Schildträger (Schild lädt sich wieder auf), <img src="docs/images/enemies/phantom.png" width="24" height="24" alt=""> Phantom (getarnt, braucht den Detektor), <img src="docs/images/enemies/hopper.png" width="24" height="24" alt=""> Sprungkäfer (springt regelmäßig nach vorn), <img src="docs/images/enemies/hauler.png" width="24" height="24" alt=""> Konvoischlepper (gepanzert, teilt Schaden im Konvoi), <img src="docs/images/enemies/nullbearer.png" width="24" height="24" alt=""> Nullfeldträger (schaltet Unterstützungstürme ab) |
+| V Ruinenstadt | <img src="docs/images/enemies/bulwark.png" width="24" height="24" alt=""> Bollwerk (Rüstung), <img src="docs/images/enemies/warlord.png" width="24" height="24" alt=""> Kommandant (stärkt Gegner in der Nähe), <img src="docs/images/enemies/bunker.png" width="24" height="24" alt=""> Druckbunker (hält Flächenschaden aus), <img src="docs/images/enemies/decoy.png" width="24" height="24" alt=""> Lockvogel (Türme müssen ihn anvisieren), <img src="docs/images/enemies/shade.png" width="24" height="24" alt=""> Schattenkoloss (gepanzert, tarnt Gegner in der Nähe), <img src="docs/images/enemies/sapper.png" width="24" height="24" alt=""> Pionier (entschärft Fallen) |
+| VI Singularität | <img src="docs/images/enemies/blinker.png" width="24" height="24" alt=""> Phasenläufer (weicht jedem n-ten Treffer aus), <img src="docs/images/enemies/berserker.png" width="24" height="24" alt=""> Berserker (unaufhaltsam, spurtet bei wenig HP), <img src="docs/images/enemies/warpdrone.png" width="24" height="24" alt=""> Warpdrohne (fliegt, springt nach vorn), <img src="docs/images/enemies/soulspark.png" width="24" height="24" alt=""> Seelenfunke (fliegt, heilt beim Tod), <img src="docs/images/enemies/phasewing.png" width="24" height="24" alt=""> Phasenflügler (wechselt zwischen Luft und Boden) |
+| VII Dünenmeer | <img src="docs/images/enemies/scarab.png" width="24" height="24" alt=""> Skarabäus (gepanzert und flink), <img src="docs/images/enemies/burrower.png" width="24" height="24" alt=""> Gräber (taucht regelmäßig ab; dann treffen nur Fallen und Flächenschaden), <img src="docs/images/enemies/gapper.png" width="24" height="24" alt=""> Lückenspringer (springt kurz nach vorn), <img src="docs/images/enemies/pebble.png" width="24" height="24" alt=""> Geröllschwarm (hält Flächenschaden aus, Schwarm), <img src="docs/images/enemies/raptor.png" width="24" height="24" alt=""> Sturmfalke (fliegt, im Rudel schneller), <img src="docs/images/enemies/mole.png" width="24" height="24" alt=""> Tunnelmaulwurf (gräbt sich schnell unter der Erde voran) |
+| VIII Tiefsee | <img src="docs/images/enemies/crab.png" width="24" height="24" alt=""> Panzerkrebs (verhärtet, je verletzter er ist), <img src="docs/images/enemies/jelly.png" width="24" height="24" alt=""> Qualle (fliegt und heilt Gegner in der Nähe), <img src="docs/images/enemies/chainling.png" width="24" height="24" alt=""> Kettenqualle (fliegt, teilt Schaden), <img src="docs/images/enemies/buoy.png" width="24" height="24" alt=""> Leuchtboje (fliegt, Schild, Türme müssen sie anvisieren) |
+| IX Gewitterfront | <img src="docs/images/enemies/gale.png" width="24" height="24" alt=""> Böenläufer (rast in Schüben), <img src="docs/images/enemies/stormbird.png" width="24" height="24" alt=""> Sturmvogel (fliegt, Schild und flink), <img src="docs/images/enemies/airship.png" width="24" height="24" alt=""> Luftschiff (schwer gepanzerter Flieger, wirft Gleiter ab), <img src="docs/images/enemies/drafter.png" width="24" height="24" alt=""> Kolonnenläufer (im Pulk schneller), <img src="docs/images/enemies/mirrorwing.png" width="24" height="24" alt=""> Spiegelflügler (fliegt, bricht Strahlen), <img src="docs/images/enemies/insulator.png" width="24" height="24" alt=""> Isolator (unterbricht Tesla-Ketten), <img src="docs/images/enemies/staticloud.png" width="24" height="24" alt=""> Störwolke (fliegt, Türme in der Nähe feuern langsamer) |
+| X Dschungel | <img src="docs/images/enemies/ant.png" width="24" height="24" alt=""> Schwarmameise (weniger Schaden im Rudel), <img src="docs/images/enemies/colossus.png" width="24" height="24" alt=""> Urwaldkoloss (gepanzert, regeneriert), <img src="docs/images/enemies/martyr.png" width="24" height="24" alt=""> Märtyrer (heilt beim Tod), <img src="docs/images/enemies/thornback.png" width="24" height="24" alt=""> Dornrücken (bestraft Türme in der Nähe mit Abklingzeit) |
+| XI Vulkankette | <img src="docs/images/enemies/ember.png" width="24" height="24" alt=""> Glutläufer (wird schneller, je mehr HP fehlen), <img src="docs/images/enemies/ashwing.png" width="24" height="24" alt=""> Aschenschwinge (fliegt, gepanzert, immun gegen Verlangsamung), <img src="docs/images/enemies/salamander.png" width="24" height="24" alt=""> Salamander und <img src="docs/images/enemies/cinderwing.png" width="24" height="24" alt=""> Magmafalter (immun gegen Brand und Blutung), <img src="docs/images/enemies/flare.png" width="24" height="24" alt=""> Blender (senkt die Reichweite von Türmen) |
+| XII Kristallhöhle | <img src="docs/images/enemies/golem.png" width="24" height="24" alt=""> Kristallwächter (härtet sich im Takt gegen Treffer, Brand wirkt voll), <img src="docs/images/enemies/moth.png" width="24" height="24" alt=""> Splitterfalter (fliegt, zerfällt in zwei Gleiter), <img src="docs/images/enemies/prism.png" width="24" height="24" alt=""> Prismenläufer (bricht Strahlen), <img src="docs/images/enemies/monolith.png" width="24" height="24" alt=""> Monolith (kein Treffer über 6 % seiner HP) |
+| XIV Zahnwerk | <img src="docs/images/enemies/cog.png" width="24" height="24" alt=""> Zahnrad (wird schneller, je länger es kreist), <img src="docs/images/enemies/piston.png" width="24" height="24" alt=""> Kolbenpanzer (gepanzert, nimmt mit jeder Runde weniger Schaden) |
+| XV Mondsee | <img src="docs/images/enemies/tidewing.png" width="24" height="24" alt=""> Gischtflügler (fliegt, nimmt mit jeder Runde weniger Schaden), <img src="docs/images/enemies/nautilus.png" width="24" height="24" alt=""> Nautilus (Schild, wird schneller, je länger er kreist) |
 
-Zehn weitere Gegner sind fertig, kommen aber noch in keiner Mission vor. Der Gegner-Kodex führt sie unter „in keiner Mission“: Sprungspinne (springt regelmäßig in die Luft), Tauchflosser (fliegt, taucht regelmäßig zum Boden ab, flink), Dämpfer (macht sich und Gegner in der Nähe immun gegen Verlangsamung, Betäubung und Sog), Brutmutter (gepanzert, legt unterwegs Schwarmameisen), Funkenwurm (legt beim Tod Türme in der Nähe kurz lahm), Häutling (gepanzert bis halbe HP, danach schnell), Irrlicht (fliegt, getarnt, weicht aus), Hydra (regeneriert, zerfällt in zwei Hydraköpfe), Hydrakopf (wird schneller, je mehr HP fehlen) und Gewitterzelle (fliegt, Schild, legt beim Tod Türme lahm).
+Zehn weitere Gegner sind fertig, kommen aber noch in keiner Mission vor. Der Gegner-Kodex führt sie unter „in keiner Mission“: <img src="docs/images/enemies/leaper.png" width="24" height="24" alt=""> Sprungspinne (springt regelmäßig in die Luft), <img src="docs/images/enemies/skimmer.png" width="24" height="24" alt=""> Tauchflosser (fliegt, taucht regelmäßig zum Boden ab, flink), <img src="docs/images/enemies/warden.png" width="24" height="24" alt=""> Dämpfer (macht sich und Gegner in der Nähe immun gegen Verlangsamung, Betäubung und Sog), <img src="docs/images/enemies/broodmother.png" width="24" height="24" alt=""> Brutmutter (gepanzert, legt unterwegs Schwarmameisen), <img src="docs/images/enemies/sparkworm.png" width="24" height="24" alt=""> Funkenwurm (legt beim Tod Türme in der Nähe kurz lahm), <img src="docs/images/enemies/molter.png" width="24" height="24" alt=""> Häutling (gepanzert bis halbe HP, danach schnell), <img src="docs/images/enemies/wisp.png" width="24" height="24" alt=""> Irrlicht (fliegt, getarnt, weicht aus), <img src="docs/images/enemies/hydra.png" width="24" height="24" alt=""> Hydra (regeneriert, zerfällt in zwei Hydraköpfe), <img src="docs/images/enemies/hydraling.png" width="24" height="24" alt=""> Hydrakopf (wird schneller, je mehr HP fehlen) und <img src="docs/images/enemies/stormcell.png" width="24" height="24" alt=""> Gewitterzelle (fliegt, Schild, legt beim Tod Türme lahm).
 
 Getarnte Gegner und Träger eines Tarnfelds kommen nur in Missionen vor, in denen der Detektor baubar ist.
 
@@ -335,6 +357,5 @@ Getarnte Gegner und Träger eines Tarnfelds kommen nur in Missionen vor, in dene
 
 - Fester Pfad, Gegner lassen sich nicht umleiten.
 - Kein gespeicherter Spielstand oder Missionsfortschritt.
-- Keine Zielprioritäten für Türme.
 - Im Mehrspieler kein Wiederverbinden und kein Beitritt nach dem Missionsstart.
 - Die Simulation ist deterministisch und kommt ohne Zufall aus. Die Maps nutzen geometrische Markierungen statt Bildassets.
