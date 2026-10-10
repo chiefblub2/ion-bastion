@@ -9,12 +9,24 @@ import { Audio } from "./app/audio";
 import { bindFullscreen } from "./app/fullscreen";
 import { createInput } from "./app/input";
 import { registerTools } from "./app/webmcp";
+import { waveHpScale } from "./systems/spawn";
+import type { MissionDefinition } from "./core/types";
 import "./style.css";
 // Dependencies flow top-down: state → view → UI → battlefield → input.
-const game = new Game();
-// Deep link `?mission=<id>`: start in that mission. Done before the UI and the scene are built, so they never see the default map.
-const linked = new URLSearchParams(location.search).get("mission");
-if (linked && missionById(linked)) game.command({ type: "mission", id: linked });
+/** The mission from wave `wave` on; every remaining wave keeps the HP factor it has in the full mission. */
+const fromWave = (m: MissionDefinition, wave: number): MissionDefinition => ({
+  ...m,
+  name: `${m.name} · ab Welle ${wave}`,
+  waves: m.waves.slice(wave - 1).map((w, i) => ({ ...w, hpMultiplier: waveHpScale(m, wave + i) })),
+});
+// Deep link `?mission=<id>`: start in that mission; `&wave=<n>` (for checks) skips to wave n. Done before the UI and
+// the scene are built, so they never see the default map.
+const params = new URLSearchParams(location.search),
+  linked = params.get("mission"),
+  target = linked ? missionById(linked) : undefined,
+  skip = Number(params.get("wave"));
+const game = new Game(target && skip > 1 && skip <= target.waves.length ? fromWave(target, skip) : undefined);
+if (target && game.mission.id !== target.id) game.command({ type: "mission", id: target.id });
 mountUI(game);
 renderMission(game);
 bindUpgradeTooltip();

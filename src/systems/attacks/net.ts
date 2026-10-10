@@ -1,5 +1,5 @@
 import type { NetAttack } from "../../core/types";
-import { applyDamage } from "../damage";
+import { applyDamage, hitOf } from "../damage";
 import { applyStatus } from "../status";
 import type { AttackModule } from "./types";
 /** Fangnetz: slows a flyer and pulls it into reach of ground-only towers. */
@@ -13,6 +13,6 @@ export const net: AttackModule<NetAttack> = {
   apply: (sim, src, { enemy }, damage, spec) => {
     if (!enemy) return;
     applyStatus(sim, enemy, { kind: "netted", factor: spec.factor, until: sim.state.time + spec.duration });
-    applyDamage(sim, src, enemy, damage);
+    applyDamage(sim, src, enemy, damage, false, hitOf("net", src));
   },
 };

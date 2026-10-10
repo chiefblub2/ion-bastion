@@ -1,5 +1,5 @@
 import type { Enemy, Sim, StatusEffect, StatusKind } from "../core/types";
-import { applyDamage } from "./damage";
+import { applyDamage, hitOf } from "./damage";
 import { canTarget } from "./attacks/targeting";
 import { dist } from "./path";
 import { resists, tickTraits } from "./traits";
@@ -24,7 +24,7 @@ function detonate(sim: Sim, carrier: Enemy, s: Of<"charged">) {
   sim.state.events.push({ type: "pulse", at: { x: carrier.x, y: carrier.y }, radius: s.radius, color: sim.content.towers[s.source.type].color });
   // A copy: fragments released by a death in the blast must not catch it.
   for (const target of [...sim.state.enemies])
-    if (target.hp > 0 && canTarget(sim, s.source.type, target) && dist(target, carrier) <= s.radius) applyDamage(sim, s.source, target, s.damage);
+    if (target.hp > 0 && canTarget(sim, s.source.type, target) && dist(target, carrier) <= s.radius) applyDamage(sim, s.source, target, s.damage, false, hitOf("charge", s.source));
 }
 /** Rule for effects with one strength value: stronger replaces, equal extends, weaker never overrides. */
 const strongest =

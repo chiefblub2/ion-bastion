@@ -6,7 +6,13 @@ import { Game } from "../core/game";
 import { finishWave, makeEnemy } from "../core/test-helpers";
 import { validateContent } from "../core/validation";
 import type { ContentPack, EnemyDefinition, Trait } from "../core/types";
-import { applyDamage } from "./damage";
+import { applyDamage, hitOf } from "./damage";
+import { attackEnemies } from "./combat";
+import { blast } from "./attacks/splash";
+import { attackModule } from "./attacks";
+import { MISSIONS } from "../content/missions";
+import { hasStealth } from "../core/mission-checks";
+import type { AttackKind } from "../core/types";
 import { createEnemy } from "./spawn";
 import { applyStatus, speedFactor, tickStatus } from "./status";
 import { canAcquire, canTarget } from "./attacks";
@@ -16,6 +22,9 @@ import { parseMap } from "../content/maps";
 import { g as group, wave } from "../content/waves";
 import type { Tower } from "../core/types";
 import { isBurrowed, isHidden, layerOf, tickTraits, traitFlags, traitSpeedFactor } from "./traits";
+import { moveEnemies } from "./movement";
+import { effectiveTowerStats } from "./auras";
+import { bountyBonus, markFactor, repairReactor } from "./support";
 
 /** The shipped content with extra traits on the drone. */
 function withDroneTraits(...traits: Trait[]): ContentPack {
@@ -741,5 +750,643 @@ describe("lap", () => {
     bad({ kind: "lap", per: 0.1, max: 0 });
     bad({ kind: "lap", per: 0.1, max: 1.5 });
     good({ kind: "lap", per: 0.1, max: 1 });
+  });
+});
+
+/** Pack where the drone carries `drone` traits and the runner `runner` traits. */
+const duo = (drone: Trait[], runner: Trait[] = []): ContentPack => ({
+  ...DEFAULT_CONTENT,
+  enemies: { ...ENEMIES, drone: { ...ENEMIES.drone, traits: drone }, runner: { ...ENEMIES.runner, traits: runner } },
+});
+const INSTANT_KINDS: AttackKind[] = ["chain", "pierce", "focus", "quake", "pull", "disrupt"];
+const AREA_KINDS: AttackKind[] = ["splash", "mortar", "quake", "charge"];
+const ALL_KINDS: AttackKind[] = ["direct", "slow", "chain", "pierce", "burn", "stun", "corrode", "decay", "focus", "quake", "execute", "volley", "bleed", "charge", "pit", "alarm", "mortar", "disrupt", "net", "pull", "splash"];
+/** Damage lost to a 100-point hit of this kind on the enemy (hp starts at 1000). */
+const lost = (g: Game, kind: AttackKind) => {
+  const e = makeEnemy(9, "drone", 0, 3);
+  g.state.enemies = [e];
+  applyDamage(g, src, e, 100, false, hitOf(kind, src));
+  return 1000 - e.hp;
+};
+
+describe("hit context", () => {
+  it("flags instant, area and chain per attack kind and carries the tower", () => {
+    for (const k of ALL_KINDS) {
+      const h = hitOf(k, { tower: 7, type: "pulse" });
+      expect(h.instant).toBe(INSTANT_KINDS.includes(k));
+      expect(h.area).toBe(AREA_KINDS.includes(k));
+      expect(h.chain).toBe(false);
+      expect(h.tower).toBe(7);
+    }
+  });
+  it("does not change damage without trait", () => {
+    const g = new Game();
+    for (const k of ALL_KINDS) expect(lost(g, k)).toBe(100);
+  });
+});
+
+describe("refract", () => {
+  it("scales instant hits only", () => {
+    const g = new Game(undefined, withDroneTraits({ kind: "refract", factor: 0.5 }));
+    for (const k of ALL_KINDS) expect(lost(g, k)).toBe(INSTANT_KINDS.includes(k) ? 50 : 100);
+    const e = makeEnemy(1, "drone", 0, 3);
+    applyDamage(g, src, e, 100, true);
+    applyDamage(g, src, e, 100);
+    expect(e.hp).toBe(800);
+  });
+  it("is not disruptable and rejects bad factors", () => {
+    const g = new Game(undefined, withDroneTraits({ kind: "refract", factor: 0.5 }));
+    g.state.enemies = [makeEnemy(1, "drone", 0, 3)];
+    g.state.enemies[0].status = [{ kind: "disrupted", until: 9 }];
+    expect(lost(g, "chain")).toBe(50);
+    bad({ kind: "refract", factor: 0.3 });
+    bad({ kind: "refract", factor: 0.7 });
+    good({ kind: "refract", factor: 0.4 });
+  });
+});
+
+describe("blastproof", () => {
+  it("cuts area hits only, including the Nova centre", () => {
+    const g = new Game(undefined, withDroneTraits({ kind: "blastproof", reduction: 0.6 }));
+    for (const k of ALL_KINDS) expect(lost(g, k)).toBeCloseTo(AREA_KINDS.includes(k) ? 40 : 100);
+    const e = makeEnemy(1, "drone", 2, 2);
+    g.state.enemies = [e];
+    blast(g, { tower: 0, type: "blast" }, { x: 2, y: 2 }, 1, 100, "splash");
+    expect(e.hp).toBeCloseTo(960);
+    blast(g, { tower: 0, type: "mortar" }, { x: 2, y: 2 }, 1, 100, "mortar");
+    expect(e.hp).toBeCloseTo(920);
+  });
+  it("rejects bad reductions", () => {
+    bad({ kind: "blastproof", reduction: 0.2 });
+    bad({ kind: "blastproof", reduction: 0.8 });
+    good({ kind: "blastproof", reduction: 0.5 });
+  });
+});
+
+describe("insulated", () => {
+  const fire = (g: Game, e: ReturnType<typeof makeEnemy>) =>
+    attackModule(DEFAULT_CONTENT.towers.tesla.attack)!.apply(g, { tower: 0, type: "tesla" }, { enemy: e, at: { x: e.x, y: e.y } }, 100, DEFAULT_CONTENT.towers.tesla.attack);
+  it("is never a jump target and the chain continues past it", () => {
+    const g = new Game(undefined, duo([], [{ kind: "insulated" }])),
+      a = makeEnemy(1, "drone", 0, 3),
+      b = makeEnemy(2, "runner", 0.5, 3),
+      c = makeEnemy(3, "drone", 1.5, 3);
+    g.state.enemies = [a, b, c];
+    fire(g, a);
+    expect([a.hp, b.hp, c.hp]).toEqual([900, 1000, 925]);
+  });
+  it("as primary target takes the hit and stops the chain", () => {
+    const g = new Game(undefined, duo([], [{ kind: "insulated" }])),
+      a = makeEnemy(1, "drone", 0, 3),
+      b = makeEnemy(2, "runner", 0.5, 3);
+    g.state.enemies = [a, b];
+    fire(g, b);
+    expect([a.hp, b.hp]).toEqual([1000, 900]);
+  });
+  it("validates", () => good({ kind: "insulated" }));
+});
+
+describe("heatshield", () => {
+  it("blocks burn and bleeding but not slow", () => {
+    const g = new Game(undefined, withDroneTraits({ kind: "heatshield" })),
+      e = makeEnemy(1, "drone", 0, 3),
+      who = { tower: 0, type: "pulse" as const };
+    applyStatus(g, e, { kind: "burn", dps: 10, next: 0, until: 5, source: who });
+    applyStatus(g, e, { kind: "bleeding", perCell: 5, last: 0, next: 0, until: 5, source: who });
+    expect(e.status).toEqual([]);
+    applyStatus(g, e, { kind: "slow", factor: 0.5, until: 5 });
+    expect(e.status).toHaveLength(1);
+    good({ kind: "heatshield" });
+  });
+});
+
+describe("mirror", () => {
+  const mirrored = () => new Game(undefined, withDroneTraits({ kind: "mirror", cap: 0.1 }));
+  it("caps a single hit at cap x maxHp after other reductions", () => {
+    const g = mirrored(),
+      e = makeEnemy(1, "drone", 0, 3);
+    applyDamage(g, src, e, 500);
+    expect(e.hp).toBe(900);
+    applyDamage(g, src, e, 50);
+    expect(e.hp).toBe(850);
+    const h = new Game(undefined, withDroneTraits({ kind: "armor", reduction: 0.5 }, { kind: "mirror", cap: 0.1 })),
+      f = makeEnemy(2, "drone", 0, 3);
+    applyDamage(h, src, f, 400);
+    expect(f.hp).toBe(900);
+    applyDamage(h, src, f, 100);
+    expect(f.hp).toBe(850);
+  });
+  it("still dies to a pit and ignores the cap on a Henker execution", () => {
+    const g = mirrored(),
+      e = makeEnemy(1, "drone", 0, 3),
+      f = makeEnemy(2, "drone", 0, 3);
+    g.state.enemies = [e, f];
+    applyDamage(g, src, e, Infinity, false, hitOf("pit", src));
+    expect(e.hp).toBeLessThanOrEqual(0);
+    applyDamage(g, src, f, 500, false, hitOf("execute", src, { execution: true }));
+    expect(f.hp).toBe(500);
+    applyDamage(g, src, f, 500, false, hitOf("execute", src, { execution: false }));
+    expect(f.hp).toBe(400);
+  });
+  it("rejects bad caps", () => {
+    bad({ kind: "mirror", cap: 0.01 });
+    bad({ kind: "mirror", cap: 0.3 });
+    good({ kind: "mirror", cap: 0.06 });
+  });
+});
+
+describe("link", () => {
+  const linked = (radius = 1.6) => new Game(undefined, duo([{ kind: "link", radius }], [])),
+    drones = (g: Game) => {
+      const list = [makeEnemy(3, "drone", 0, 3), makeEnemy(1, "drone", 0.5, 3), makeEnemy(2, "drone", 1, 3), makeEnemy(4, "drone", 5, 3), makeEnemy(5, "runner", 0.2, 3)];
+      g.state.enemies = list;
+      return list;
+    };
+  it("splits among same-type enemies in radius in id order without recursion", () => {
+    const g = linked(),
+      [a, b, c, far, other] = drones(g);
+    applyDamage(g, src, a, 300);
+    expect([a.hp, b.hp, c.hp, far.hp, other.hp]).toEqual([900, 900, 900, 1000, 1000]);
+    const order = g.state.events.filter((e) => e.type === "damage").map((e) => (e as { enemy: number }).enemy);
+    expect(order).toEqual([1, 2, 3]);
+  });
+  it("splits dots too, and gives the kill reward per dead member", () => {
+    const g = linked(),
+      [a, b, c] = drones(g);
+    applyDamage(g, src, a, 300, true);
+    expect([a.hp, b.hp, c.hp]).toEqual([900, 900, 900]);
+    a.hp = b.hp = 100;
+    c.hp = 5000;
+    const kills = g.state.kills;
+    applyDamage(g, src, c, 600);
+    expect(g.state.kills).toBe(kills + 2);
+  });
+  it("does not split an infinite hit and stops when disrupted", () => {
+    const g = linked(),
+      [a, b, c] = drones(g);
+    applyDamage(g, src, a, Infinity, false, hitOf("pit", src));
+    expect([a.hp <= 0, b.hp, c.hp]).toEqual([true, 1000, 1000]);
+    const h = linked(),
+      [d, e2] = drones(h);
+    d.status = [{ kind: "disrupted", until: 9 }];
+    applyDamage(h, src, d, 300);
+    expect([d.hp, e2.hp]).toEqual([700, 1000]);
+  });
+  it("validates", () => {
+    bad({ kind: "link", radius: 1 });
+    bad({ kind: "link", radius: 2.5 });
+    good({ kind: "link", radius: 1.6 });
+  });
+});
+
+describe("taunt", () => {
+  const taunting = (radius = 2) => {
+      const g = new Game(undefined, duo([{ kind: "taunt", radius }], [])),
+        tower = towerAt(1, "pulse", 5, 5);
+      g.state.towers = [tower];
+      return { g, tower };
+    },
+    shotAt = (g: Game) => g.state.events.filter((e) => e.type === "shot").map((e) => (e as { to: { x: number; y: number } }).to);
+  it("forces the target only inside the taunter's radius", () => {
+    const { g, tower } = taunting(),
+      runner = makeEnemy(1, "runner", 6, 5, 20),
+      near = makeEnemy(2, "drone", 5, 6.5, 5);
+    g.state.enemies = [runner, near];
+    attackEnemies(g, 1 / 30);
+    expect(shotAt(g)).toEqual([{ x: 5, y: 6.5 }]);
+    // Out of the taunt radius (2.3 > 2) but still in tower range 2.65.
+    near.x = 5;
+    near.y = 7.3;
+    tower.cooldown = 0;
+    g.state.events = [];
+    attackEnemies(g, 1 / 30);
+    expect(shotAt(g)).toEqual([{ x: 6, y: 5 }]);
+  });
+  it("is ignored when disrupted, and picks by priority among taunters", () => {
+    const { g, tower } = taunting(),
+      runner = makeEnemy(1, "runner", 6, 5, 20),
+      t1 = makeEnemy(2, "drone", 5, 6.5, 5),
+      t2 = makeEnemy(3, "drone", 4, 5, 7);
+    g.state.enemies = [runner, t1, t2];
+    t1.status = [{ kind: "disrupted", until: 9 }];
+    t2.status = [{ kind: "disrupted", until: 9 }];
+    attackEnemies(g, 1 / 30);
+    expect(shotAt(g)).toEqual([{ x: 6, y: 5 }]);
+    t1.status = [];
+    t2.status = [];
+    tower.cooldown = 0;
+    g.state.events = [];
+    attackEnemies(g, 1 / 30);
+    expect(shotAt(g)).toEqual([{ x: 4, y: 5 }]);
+  });
+  it("leaves volley extras to the full candidate list", () => {
+    const g = new Game(undefined, duo([{ kind: "taunt", radius: 2 }], [])),
+      runner = makeEnemy(1, "runner", 6, 5, 20),
+      t = makeEnemy(2, "drone", 5, 6.5, 5);
+    g.state.towers = [towerAt(1, "shrapnel", 5, 5)];
+    g.state.enemies = [runner, t];
+    attackEnemies(g, 1 / 30);
+    expect(shotAt(g)).toEqual([{ x: 5, y: 6.5 }, { x: 6, y: 5 }]);
+  });
+  it("never forces traps and not support towers", () => {
+    const { g } = taunting(),
+      runner = makeEnemy(1, "runner", 5, 5.2, 20),
+      t = makeEnemy(2, "drone", 5, 5.3, 5);
+    g.state.towers = [towerAt(1, "tar", 5, 5)];
+    g.state.enemies = [runner, t];
+    attackEnemies(g, 1 / 30);
+    expect(shotAt(g)).toEqual([{ x: 5, y: 5.2 }]);
+  });
+  it("validates", () => {
+    bad({ kind: "taunt", radius: 1 });
+    good({ kind: "taunt", radius: 2.5 });
+  });
+});
+
+describe("martyr", () => {
+  const martyrs = () => new Game(undefined, duo([{ kind: "martyr", radius: 1.8, heal: 0.25 }], []));
+  it("heals living neighbours in radius on death, capped at max HP", () => {
+    const g = martyrs(),
+      m = makeEnemy(1, "drone", 0, 3),
+      near = makeEnemy(2, "runner", 1, 3),
+      full = makeEnemy(3, "runner", 1.5, 3),
+      far = makeEnemy(4, "runner", 4, 3);
+    near.hp = 400;
+    full.hp = 900;
+    far.hp = 400;
+    g.state.enemies = [m, near, full, far];
+    applyDamage(g, src, m, 5000);
+    expect([near.hp, full.hp, far.hp]).toEqual([650, 1000, 400]);
+  });
+  it("does nothing when disrupted", () => {
+    const g = martyrs(),
+      m = makeEnemy(1, "drone", 0, 3),
+      near = makeEnemy(2, "runner", 1, 3);
+    near.hp = 400;
+    m.status = [{ kind: "disrupted", until: 9 }];
+    g.state.enemies = [m, near];
+    applyDamage(g, src, m, 5000);
+    expect(near.hp).toBe(400);
+  });
+  it("validates", () => {
+    bad({ kind: "martyr", radius: 3, heal: 0.2 });
+    bad({ kind: "martyr", radius: 1.8, heal: 0.5 });
+    good({ kind: "martyr", radius: 1.8, heal: 0.2 });
+  });
+});
+
+describe("cloakField", () => {
+  const cloaking = () => new Game(undefined, duo([{ kind: "cloakField", radius: 1.6 }], []));
+  it("hides neighbours but not the carrier, unless revealed", () => {
+    const g = cloaking(),
+      c = makeEnemy(1, "drone", 0, 3),
+      n = makeEnemy(2, "runner", 1, 3),
+      far = makeEnemy(3, "runner", 4, 3);
+    g.state.enemies = [c, n, far];
+    expect(isHidden(g, c)).toBe(false);
+    expect(isHidden(g, n)).toBe(true);
+    expect(isHidden(g, far)).toBe(false);
+    expect(canAcquire(g, "pulse", n)).toBe(false);
+    expect(canTarget(g, "pulse", n)).toBe(true);
+    n.revealed = true;
+    expect(isHidden(g, n)).toBe(false);
+  });
+  it("is lifted by a disrupted or dead carrier", () => {
+    const g = cloaking(),
+      c = makeEnemy(1, "drone", 0, 3),
+      n = makeEnemy(2, "runner", 1, 3);
+    g.state.enemies = [c, n];
+    c.status = [{ kind: "disrupted", until: 9 }];
+    expect(isHidden(g, n)).toBe(false);
+    c.status = [];
+    expect(isHidden(g, n)).toBe(true);
+    c.hp = 0;
+    expect(isHidden(g, n)).toBe(false);
+  });
+  it("is revealed by a detector in range, which leaves other enemies untouched", () => {
+    const g = cloaking(),
+      c = makeEnemy(1, "drone", 0, 3),
+      n = makeEnemy(2, "runner", 1, 3);
+    g.state.enemies = [c, n];
+    g.state.towers = [towerAt(1, "detector", 1, 4)];
+    updateDetection(g);
+    expect(n.revealed).toBe(true);
+    expect(isHidden(g, n)).toBe(false);
+    const plain = new Game(),
+      e = makeEnemy(1, "drone", 0, 3);
+    plain.state.enemies = [e];
+    plain.state.towers = [towerAt(1, "detector", 1, 4)];
+    updateDetection(plain);
+    expect(e.revealed).toBeUndefined();
+  });
+  it("counts as stealth for the mission rule", () => {
+    const m = { ...MISSIONS[0], waves: [wave(0, group("drone", 1, 1, 0))] };
+    expect(hasStealth(m, duo([]))).toBe(false);
+    expect(hasStealth(m, duo([{ kind: "cloakField", radius: 1.6 }]))).toBe(true);
+    good({ kind: "cloakField", radius: 1.6 });
+    bad({ kind: "cloakField", radius: 3 });
+  });
+});
+
+describe("retaliate", () => {
+  const retaliating = () => {
+    const g = new Game(undefined, withDroneTraits({ kind: "retaliate", radius: 1.8, cycles: 0.5 })),
+      e = makeEnemy(1, "drone", 5, 5);
+    g.state.enemies = [e];
+    g.state.towers = [towerAt(1, "pulse", 6, 5), towerAt(2, "pulse", 9, 5), towerAt(3, "aura", 5, 6), towerAt(4, "mine", 5, 4)];
+    return { g, e };
+  };
+  const hit = (g: Game, e: ReturnType<typeof makeEnemy>, tower: number, dot = false) => {
+    const who = { tower, type: g.state.towers.find((t) => t.id === tower)!.type };
+    applyDamage(g, who, e, 10, dot, dot ? undefined : hitOf("direct", who));
+  };
+  it("slows attack towers in radius only, capped at 1 + cycles", () => {
+    const { g, e } = retaliating();
+    hit(g, e, 1);
+    expect(g.state.towers[0].cooldown).toBe(0.5);
+    hit(g, e, 1);
+    expect(g.state.towers[0].cooldown).toBe(1);
+    hit(g, e, 1);
+    expect(g.state.towers[0].cooldown).toBe(1.5);
+    hit(g, e, 1);
+    expect(g.state.towers[0].cooldown).toBe(1.5);
+    hit(g, e, 2);
+    expect(g.state.towers[1].cooldown).toBe(0);
+  });
+  it("never touches traps or support towers, and ignores dots", () => {
+    const { g, e } = retaliating();
+    hit(g, e, 3);
+    hit(g, e, 4);
+    hit(g, e, 1, true);
+    expect(g.state.towers.map((t) => t.cooldown)).toEqual([0, 0, 0, 0]);
+  });
+  it("is off when disrupted and validates", () => {
+    const { g, e } = retaliating();
+    e.status = [{ kind: "disrupted", until: 9 }];
+    hit(g, e, 1);
+    expect(g.state.towers[0].cooldown).toBe(0);
+    bad({ kind: "retaliate", radius: 1, cycles: 0.5 });
+    bad({ kind: "retaliate", radius: 1.8, cycles: 1 });
+    good({ kind: "retaliate", radius: 1.8, cycles: 0.5 });
+  });
+});
+
+describe("pack", () => {
+  const packed = () => new Game(undefined, duo([], [{ kind: "pack", radius: 1.5, perAlly: 0.08, max: 0.4 }]));
+  it("speeds up per living same-type neighbour, capped, without self or other types", () => {
+    const g = packed(),
+      a = makeEnemy(1, "runner", 0, 3),
+      base = traitSpeedFactor(g, a);
+    expect(base).toBe(1);
+    g.state.enemies = [a, makeEnemy(2, "runner", 1, 3), makeEnemy(3, "drone", 0.5, 3), makeEnemy(4, "runner", 9, 3)];
+    expect(traitSpeedFactor(g, a)).toBeCloseTo(1.08);
+    for (let i = 0; i < 8; i++) g.state.enemies.push(makeEnemy(10 + i, "runner", 0.2, 3));
+    expect(traitSpeedFactor(g, a)).toBeCloseTo(1.4);
+    g.state.enemies[1].hp = 0;
+    expect(traitFlags(g, a).pack).toBeCloseTo(0.4);
+  });
+  it("is not disruptable and validates", () => {
+    const g = packed(),
+      a = makeEnemy(1, "runner", 0, 3);
+    g.state.enemies = [a, makeEnemy(2, "runner", 1, 3)];
+    a.status = [{ kind: "disrupted", until: 9 }];
+    expect(traitSpeedFactor(g, a)).toBeCloseTo(1.08);
+    bad({ kind: "pack", radius: 1.5, perAlly: 0.2, max: 0.4 });
+    bad({ kind: "pack", radius: 1.5, perAlly: 0.08, max: 0.9 });
+    good({ kind: "pack", radius: 1.5, perAlly: 0.08, max: 0.4 });
+  });
+});
+
+describe("blink", () => {
+  const blinking = () => new Game(undefined, withDroneTraits({ kind: "blink", every: 4, jump: 2 }));
+  const step = (g: Game, e: ReturnType<typeof makeEnemy>, from: number) => {
+    e.distance = from;
+    g.state.enemies = [e];
+    moveEnemies(g, 1 / 30);
+    return e.distance;
+  };
+  it("jumps once when a forward move crosses a multiple of `every`", () => {
+    const g = blinking(),
+      e = makeEnemy(1, "drone", 0, 3);
+    const speed = ENEMIES.drone.speed / 30;
+    expect(step(g, e, 3.99)).toBeCloseTo(3.99 + speed + 2);
+    expect(step(g, e, 1)).toBeCloseTo(1 + speed);
+    // Even a jump over the next boundary happens only once per tick.
+    expect(step(g, e, 3.99)).toBeLessThan(3.99 + speed + 2.01);
+  });
+  it("never jumps on a pull-back and respects the stun", () => {
+    const g = blinking(),
+      e = makeEnemy(1, "drone", 0, 3);
+    e.status = [{ kind: "pull", factor: 1, release: 99, until: 99 }];
+    const d = step(g, e, 4.01);
+    expect(d).toBeLessThan(4.01);
+    e.status = [{ kind: "stun", release: 99, until: 99 }];
+    expect(step(g, e, 3.99)).toBe(3.99);
+  });
+  it("clamps at the reactor so the leak is handled normally", () => {
+    const g = blinking(),
+      last = g.mission.map.path.length - 1,
+      lives = g.state.lives;
+    // Walking to the reactor: no jump ever carries a leak past the last cell.
+    const f = makeEnemy(2, "drone", 0, 3, 0);
+    f.distance = last - 1;
+    g.state.enemies = [f];
+    for (let i = 0; i < 60 && f.hp > 0; i++) moveEnemies(g, 1 / 30);
+    expect(f.hp).toBe(0);
+    expect(g.state.lives).toBeLessThan(lives);
+  });
+  it("is off when disrupted and validates", () => {
+    const g = blinking(),
+      e = makeEnemy(1, "drone", 0, 3);
+    e.status = [{ kind: "disrupted", until: 99 }];
+    expect(step(g, e, 3.99)).toBeLessThan(4.1);
+    bad({ kind: "blink", every: 2, jump: 2 });
+    bad({ kind: "blink", every: 4, jump: 5 });
+    good({ kind: "blink", every: 4, jump: 2 });
+  });
+});
+
+describe("tunnel", () => {
+  const tunneling = () => new Game(undefined, withDroneTraits({ kind: "tunnel", every: 5, length: 2, speed: 2 }));
+  it("is hidden and faster in the last `length` cells of each cycle, traps still hit", () => {
+    const g = tunneling(),
+      under = makeEnemy(1, "drone", 0, 3, 3.5),
+      up = makeEnemy(2, "drone", 0, 3, 2.9);
+    expect(isHidden(g, under)).toBe(true);
+    expect(isHidden(g, up)).toBe(false);
+    expect(traitSpeedFactor(g, under)).toBe(2);
+    expect(traitSpeedFactor(g, up)).toBe(1);
+    expect(canAcquire(g, "pulse", under)).toBe(false);
+    expect(canTarget(g, "spikes", under)).toBe(true);
+    under.revealed = true;
+    expect(isHidden(g, under)).toBe(true);
+    expect(traitFlags(g, under)).toMatchObject({ burrowed: true, tunnel: true });
+  });
+  it("validates", () => {
+    bad({ kind: "tunnel", every: 5, length: 2, speed: 3 });
+    bad({ kind: "tunnel", every: 5, length: 5, speed: 2 });
+    good({ kind: "tunnel", every: 5, length: 2, speed: 2 });
+  });
+});
+
+describe("phase", () => {
+  const phasing = () => new Game(undefined, withDroneTraits({ kind: "phase", period: 3.5, air: 1.5 }));
+  it("is in the air for the first `air` seconds of each period, and canTarget follows", () => {
+    const g = phasing(),
+      e = makeEnemy(1, "drone", 0, 3);
+    const at = (time: number) => {
+      g.state.time = time;
+      return layerOf(g, e);
+    };
+    expect(at(0)).toBe("air");
+    expect(at(1.49)).toBe("air");
+    expect(at(1.5)).toBe("ground");
+    expect(at(3.49)).toBe("ground");
+    expect(at(3.5)).toBe("air");
+    g.state.time = 1;
+    expect(canTarget(g, "flak", e)).toBe(true);
+    expect(canTarget(g, "spikes", e)).toBe(false);
+    expect(traitFlags(g, e).phase).toBe("air");
+    g.state.time = 2;
+    expect(canTarget(g, "flak", e)).toBe(false);
+    expect(canTarget(g, "spikes", e)).toBe(true);
+  });
+  it("validates", () => {
+    bad({ kind: "phase", period: 5, air: 1.5 });
+    bad({ kind: "phase", period: 3.5, air: 0.5 });
+    good({ kind: "phase", period: 3.5, air: 1.5 });
+  });
+});
+
+describe("blind and jam", () => {
+  const field = (...carriers: Trait[]) => {
+    const g = new Game(undefined, duo(carriers.slice(0, 1), carriers.slice(1)));
+    g.state.enemies = [makeEnemy(1, "drone", 5, 5), makeEnemy(2, "runner", 5, 6)];
+    g.state.towers = [towerAt(1, "pulse", 6, 5), towerAt(2, "pulse", 12, 5), towerAt(3, "spikes", 5, 5), towerAt(4, "detector", 6, 6)];
+    return g;
+  };
+  const stats = (g: Game, i: number, sim = true) => effectiveTowerStats(g.state.towers[i], g.state.towers, g.content, sim ? g : undefined);
+  it("blind cuts range, uses the strongest carrier, spares far towers, traps and support towers", () => {
+    const g = field({ kind: "blind", radius: 2.5, range: 0.2 }, { kind: "blind", radius: 2.5, range: 0.3 }),
+      plain = new Game();
+    const range = effectiveTowerStats(g.state.towers[0], g.state.towers, g.content).range;
+    expect(stats(g, 0).range).toBeCloseTo(range * 0.7);
+    expect(stats(g, 1).range).toBe(range);
+    expect(stats(g, 2).range).toBe(effectiveTowerStats(g.state.towers[2], g.state.towers, g.content).range);
+    expect(stats(g, 3).range).toBe(effectiveTowerStats(g.state.towers[3], g.state.towers, g.content).range);
+    // Previews without the sim and games without carriers are unchanged.
+    expect(stats(g, 0, false).range).toBe(range);
+    expect(effectiveTowerStats(plain.state.towers[0] ?? towerAt(1, "pulse", 6, 5), [], plain.content, plain).range).toBe(range);
+  });
+  it("jam slows the interval, strongest wins, interval only", () => {
+    const g = field({ kind: "jam", radius: 2, slow: 0.3 }, { kind: "jam", radius: 2, slow: 0.5 }),
+      base = effectiveTowerStats(g.state.towers[0], g.state.towers, g.content);
+    expect(stats(g, 0).interval).toBeCloseTo(base.interval * 1.5);
+    expect(stats(g, 0).range).toBe(base.range);
+    expect(stats(g, 1).interval).toBe(base.interval);
+    expect(stats(g, 2).interval).toBe(effectiveTowerStats(g.state.towers[2], g.state.towers, g.content).interval);
+  });
+  it("a jammed tower reloads slower in the real tick", () => {
+    const g = field({ kind: "jam", radius: 2, slow: 0.5 }),
+      t = g.state.towers[0];
+    t.cooldown = 1;
+    attackEnemies(g, 0.1);
+    const jammed = 1 - t.cooldown;
+    t.cooldown = 1;
+    g.state.enemies = [];
+    attackEnemies(new Game(), 0);
+    const plain = new Game();
+    plain.state.towers = [towerAt(1, "pulse", 6, 5)];
+    plain.state.towers[0].cooldown = 1;
+    attackEnemies(plain, 0.1);
+    expect(jammed).toBeCloseTo((1 - plain.state.towers[0].cooldown) / 1.5);
+  });
+  it("are switched off by disruption or death and validate", () => {
+    const g = field({ kind: "blind", radius: 2.5, range: 0.3 }, { kind: "jam", radius: 2, slow: 0.5 }),
+      base = effectiveTowerStats(g.state.towers[0], g.state.towers, g.content);
+    g.state.enemies[0].status = [{ kind: "disrupted", until: 99 }];
+    expect(stats(g, 0).range).toBe(base.range);
+    g.state.enemies[1].hp = 0;
+    expect(stats(g, 0).interval).toBe(base.interval);
+    bad({ kind: "blind", radius: 2.5, range: 0.5 });
+    bad({ kind: "jam", radius: 2, slow: 0.1 });
+    good({ kind: "blind", radius: 2.5, range: 0.3 });
+    good({ kind: "jam", radius: 2, slow: 0.4 });
+  });
+});
+
+describe("defuse", () => {
+  const defusing = () => {
+    const g = new Game(undefined, duo([{ kind: "defuse", radius: 1.5 }], [])),
+      mine = towerAt(1, "mine", 5, 5),
+      far = towerAt(2, "mine", 9, 5);
+    g.state.towers = [mine, far, towerAt(3, "pulse", 6, 5)];
+    g.state.enemies = [makeEnemy(1, "drone", 5.5, 5), makeEnemy(2, "runner", 5, 5), makeEnemy(3, "runner", 9, 5)];
+    return { g, mine, far };
+  };
+  it("keeps traps in its radius from triggering for every enemy, others fire normally", () => {
+    const { g, mine, far } = defusing();
+    attackEnemies(g, 1 / 30);
+    expect(mine.cooldown).toBe(0);
+    expect(g.state.enemies[1].hp).toBe(1000);
+    expect(far.cooldown).toBe(1);
+    expect(g.state.towers[2].cooldown).toBe(1);
+  });
+  it("is lifted by disruption or death and validates", () => {
+    const { g, mine } = defusing();
+    g.state.enemies[0].status = [{ kind: "disrupted", until: 99 }];
+    attackEnemies(g, 1 / 30);
+    expect(mine.cooldown).toBe(1);
+    mine.cooldown = 0;
+    g.state.enemies[0].status = [];
+    g.state.enemies[0].hp = 0;
+    attackEnemies(g, 1 / 30);
+    expect(mine.cooldown).toBe(1);
+    bad({ kind: "defuse", radius: 3 });
+    good({ kind: "defuse", radius: 1.5 });
+  });
+});
+
+describe("suppress", () => {
+  const suppressing = () => {
+    const g = new Game(undefined, duo([{ kind: "suppress", radius: 2.5 }], [{ kind: "stealth" }])),
+      aura = { ...towerAt(1, "aura", 5, 5), upgrades: ["damage"] },
+      pulse = towerAt(2, "pulse", 6, 5);
+    g.state.towers = [aura, pulse, towerAt(3, "detector", 5, 6), towerAt(4, "beacon", 4, 5), towerAt(5, "tracker", 5, 4), towerAt(6, "dock", 5, 3)];
+    const carrier = makeEnemy(1, "drone", 5, 5),
+      stealthy = makeEnemy(2, "runner", 5, 7);
+    g.state.enemies = [carrier, stealthy];
+    g.state.lives = g.mission.reactorEnergy - 5;
+    return { g, aura, pulse, carrier, stealthy };
+  };
+  it("silences aura, detector, beacon and tracker in range", () => {
+    const { g, pulse, stealthy } = suppressing();
+    expect(effectiveTowerStats(pulse, g.state.towers, g.content, g).bonuses.damage).toBe(0);
+    expect(effectiveTowerStats(pulse, g.state.towers, g.content).bonuses.damage).toBeGreaterThan(0);
+    updateDetection(g);
+    expect(stealthy.revealed).toBe(false);
+    expect(bountyBonus(g, stealthy, 100)).toBe(0);
+    expect(markFactor(g, makeEnemy(9, "runner", 5, 5))).toBe(1);
+  });
+  it("does not silence the repair dock and ignores towers out of range", () => {
+    const { g, carrier, stealthy } = suppressing();
+    const lives = g.state.lives;
+    repairReactor(g);
+    expect(g.state.lives).toBe(lives + 1);
+    carrier.x = 20;
+    updateDetection(g);
+    expect(stealthy.revealed).toBe(true);
+    expect(markFactor(g, makeEnemy(9, "runner", 5, 5))).toBeGreaterThan(1);
+    expect(bountyBonus(g, stealthy, 100)).toBeGreaterThan(0);
+  });
+  it("is off when disrupted or dead and validates", () => {
+    const { g, pulse, carrier } = suppressing();
+    carrier.status = [{ kind: "disrupted", until: 99 }];
+    expect(effectiveTowerStats(pulse, g.state.towers, g.content, g).bonuses.damage).toBeGreaterThan(0);
+    carrier.status = [];
+    carrier.hp = 0;
+    expect(effectiveTowerStats(pulse, g.state.towers, g.content, g).bonuses.damage).toBeGreaterThan(0);
+    bad({ kind: "suppress", radius: 1 });
+    good({ kind: "suppress", radius: 2.5 });
   });
 });

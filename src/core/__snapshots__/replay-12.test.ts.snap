@@ -49,23 +49,23 @@ w3 ready lives=20 gold=310 kills=41 towerKills=35/6
 w4 ready lives=20 gold=213 kills=49 towerKills=38/11
 w5 ready lives=20 gold=304 kills=66 towerKills=44/22/0
 w6 ready lives=20 gold=416 kills=96 towerKills=62/34/0/0
-w7 ready lives=20 gold=357 kills=107 towerKills=71/34/0/2
-w8 ready lives=20 gold=495 kills=135 towerKills=83/49/1/2
-w9 ready lives=20 gold=408 kills=146 towerKills=88/53/1/4
-w10 ready lives=20 gold=535 kills=187 towerKills=108/70/2/7
-w11 ready lives=14 gold=294 kills=192 towerKills=109/70/3/10
-w12 ready lives=14 gold=747 kills=242 towerKills=124/97/6/14/1
-w13 ready lives=14 gold=455 kills=260 towerKills=132/97/8/18/5
-w14 ready lives=14 gold=839 kills=313 towerKills=147/120/10/21/15/0
-w15 ready lives=14 gold=754 kills=357 towerKills=161/135/12/28/19/2/0
-w16 ready lives=14 gold=1057 kills=427 towerKills=169/158/17/33/24/18/4/4
-w17 ready lives=14 gold=449 kills=437 towerKills=170/158/19/34/24/19/6/7/0
-w18 ready lives=14 gold=554 kills=464 towerKills=177/168/19/34/26/19/9/12/0/0
-w19 ready lives=14 gold=951 kills=525 towerKills=191/184/20/35/33/20/15/22/1/4/0
-w20 won lives=14 gold=1809 kills=592 towerKills=201/202/23/41/39/22/19/33/3/5/4"
+w7 ready lives=20 gold=381 kills=107 towerKills=72/34/0/1
+w8 ready lives=20 gold=519 kills=135 towerKills=84/49/1/1
+w9 ready lives=20 gold=282 kills=146 towerKills=89/53/1/3/0
+w10 ready lives=20 gold=549 kills=187 towerKills=113/64/2/5/0/3
+w11 ready lives=20 gold=349 kills=198 towerKills=116/64/5/9/0/4
+w12 ready lives=20 gold=859 kills=248 towerKills=132/82/8/14/4/4/4
+w13 ready lives=20 gold=457 kills=267 towerKills=143/82/9/17/6/4/5/1
+w14 ready lives=20 gold=898 kills=320 towerKills=152/96/12/21/13/4/9/12/1
+w15 ready lives=20 gold=757 kills=363 towerKills=166/102/14/28/13/6/16/17/1/0
+w16 ready lives=20 gold=991 kills=433 towerKills=185/114/18/32/15/19/20/21/3/6/0
+w17 ready lives=20 gold=505 kills=446 towerKills=188/114/20/32/16/21/22/24/3/6/0
+w18 ready lives=20 gold=536 kills=473 towerKills=192/126/22/33/18/22/24/25/3/8/0/0
+w19 ready lives=20 gold=1026 kills=534 towerKills=205/142/23/36/22/22/28/31/3/11/3/8
+w20 won lives=10 gold=1492 kills=600 towerKills=215/162/24/41/25/23/32/35/4/12/5/22/0"
 `;
 
-exports[`golden replays > kristallherz defense A 2`] = `"w20 won lives=14 gold=1809 kills=592 towerKills=201/202/23/41/39/22/19/33/3/5/4"`;
+exports[`golden replays > kristallherz defense A 2`] = `"w20 won lives=10 gold=1492 kills=600 towerKills=215/162/24/41/25/23/32/35/4/12/5/22/0"`;
 
 exports[`golden replays > kristallherz defense B 1`] = `
 "w1 ready lives=20 gold=143 kills=9 towerKills=9
@@ -74,23 +74,23 @@ w3 ready lives=20 gold=310 kills=41 towerKills=35/6
 w4 ready lives=20 gold=213 kills=49 towerKills=38/11
 w5 ready lives=20 gold=364 kills=66 towerKills=44/22/0
 w6 ready lives=20 gold=434 kills=96 towerKills=62/31/3
-w7 ready lives=20 gold=273 kills=107 towerKills=68/31/8
-w8 ready lives=20 gold=445 kills=135 towerKills=80/46/9/0
-w9 ready lives=20 gold=358 kills=146 towerKills=82/52/12/0/0
-w10 ready lives=20 gold=546 kills=187 towerKills=97/67/21/0/0/2
-w11 ready lives=20 gold=335 kills=195 towerKills=101/67/24/0/0/3/0
-w12 ready lives=14 gold=737 kills=239 towerKills=113/83/27/4/7/5/0
-w13 ready lives=14 gold=520 kills=257 towerKills=122/83/34/4/7/7/0
-w14 ready lives=9 gold=886 kills=305 towerKills=139/100/38/5/12/11/0
-w15 ready lives=9 gold=729 kills=349 towerKills=150/118/43/5/19/14/0
-w16 ready lives=9 gold=1032 kills=419 towerKills=160/143/52/8/26/29/0/1
-w17 ready lives=9 gold=433 kills=429 towerKills=162/143/54/8/29/29/0/4/0
-w18 ready lives=9 gold=565 kills=456 towerKills=176/147/54/9/31/35/0/4/0
-w19 ready lives=9 gold=1007 kills=517 towerKills=188/165/55/10/37/45/0/16/1
-w20 won lives=9 gold=1622 kills=584 towerKills=194/195/60/11/43/51/0/25/4/1"
+w7 ready lives=20 gold=297 kills=107 towerKills=68/31/8
+w8 ready lives=20 gold=469 kills=135 towerKills=80/46/9/0
+w9 ready lives=20 gold=382 kills=146 towerKills=83/52/11/0/0
+w10 ready lives=20 gold=554 kills=187 towerKills=101/68/16/0/2
+w11 ready lives=20 gold=376 kills=198 towerKills=106/68/19/0/5/0
+w12 ready lives=20 gold=790 kills=248 towerKills=129/86/22/0/11/0/0
+w13 ready lives=20 gold=469 kills=267 towerKills=139/86/29/0/12/0/1/0
+w14 ready lives=19 gold=924 kills=319 towerKills=159/106/30/1/13/2/1/7
+w15 ready lives=19 gold=737 kills=362 towerKills=173/122/33/3/18/2/1/10/0
+w16 ready lives=15 gold=951 kills=428 towerKills=189/139/46/3/20/10/1/16/1/3
+w17 ready lives=15 gold=735 kills=441 towerKills=193/139/49/3/21/10/1/21/1/3
+w18 ready lives=15 gold=801 kills=468 towerKills=202/145/50/4/27/11/1/23/1/4
+w19 ready lives=15 gold=1273 kills=529 towerKills=211/160/50/4/35/16/1/34/1/17
+w20 won lives=15 gold=1804 kills=596 towerKills=221/187/51/5/44/19/1/44/3/21"
 `;
 
-exports[`golden replays > kristallherz defense B 2`] = `"w20 won lives=9 gold=1622 kills=584 towerKills=194/195/60/11/43/51/0/25/4/1"`;
+exports[`golden replays > kristallherz defense B 2`] = `"w20 won lives=15 gold=1804 kills=596 towerKills=221/187/51/5/44/19/1/44/3/21"`;
 
 exports[`golden replays > mondfinsternis defense A 1`] = `
 "w2 wave lives=20 gold=168 kills=10 towerKills=10/0

@@ -546,7 +546,7 @@ export const TOWER_CONTENT = {
     id: "pit",
     name: "Fallgrube",
     role: "VERSCHLINGEN",
-    description: "Kleine Gegner wie Drohnen, Läufer, Skater, Phantome und Blinker stürzen hinein und sind sofort besiegt, egal wie viele HP sie haben. Größere nehmen nur Schaden. Braucht 6 s zum Abdecken.",
+    description: "Kleine Gegner wie Drohnen, Läufer, Skater, Phantome, Blinker, Rudelwölfe und Sprungkäfer stürzen hinein und sind sofort besiegt, egal wie viele HP sie haben. Größere nehmen nur Schaden. Braucht 6 s zum Abdecken.",
     cost: 120,
     damage: 60,
     range: 0.45,
@@ -556,8 +556,8 @@ export const TOWER_CONTENT = {
     targets: ["ground"],
     visual: { icon: "◌", turret: "pit" },
   }, {
-    4: { attack: { size: 0.25 }, description: "Tiefere Grube: verschlingt auch Heiler, Schildträger, Splitter und Schleime." },
-    5: { attack: { size: 0.28 }, description: "Abgrund: verschlingt sogar Panzer. Berserker und Titanen fallen nie hinein." },
+    4: { attack: { size: 0.25 }, description: "Tiefere Grube: verschlingt auch Heiler, Schildträger, Splitter, Schleime, Prismenläufer, Salamander und Pioniere." },
+    5: { attack: { size: 0.28 }, description: "Abgrund: verschlingt sogar Panzer und Nullfeldträger. Berserker und Titanen fallen nie hinein." },
   }),
   tripwire: trapTower({
     id: "tripwire",

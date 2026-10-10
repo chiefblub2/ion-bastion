@@ -1,5 +1,5 @@
 import type { BleedAttack } from "../../core/types";
-import { applyDamage } from "../damage";
+import { applyDamage, hitOf } from "../damage";
 import { dist } from "../path";
 import { applyStatus, BURN_TICK } from "../status";
 import { canTarget } from "./targeting";
@@ -19,7 +19,7 @@ export const bleed: AttackModule<BleedAttack> = {
     // A copy: enemies released on death must not catch the same strike.
     for (const target of [...sim.state.enemies])
       if (target.hp > 0 && canTarget(sim, src.type, target) && dist(target, from) <= reach) {
-        applyDamage(sim, src, target, damage);
+        applyDamage(sim, src, target, damage, false, hitOf("bleed", src));
         if (target.hp > 0)
           applyStatus(sim, target, {
             kind: "bleeding",

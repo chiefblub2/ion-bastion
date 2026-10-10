@@ -47,21 +47,21 @@ w3 ready lives=20 gold=275 kills=41 towerKills=32/9/0/0
 w4 ready lives=20 gold=258 kills=50 towerKills=41/9/0/0
 w5 ready lives=20 gold=314 kills=67 towerKills=47/18/2/0
 w6 ready lives=20 gold=396 kills=93 towerKills=61/25/7/0
-w7 ready lives=20 gold=225 kills=98 towerKills=66/25/7/0
-w8 ready lives=20 gold=445 kills=127 towerKills=82/36/8/0/1/0
-w9 ready lives=16 gold=322 kills=136 towerKills=84/41/9/0/2/0
-w10 ready lives=16 gold=550 kills=179 towerKills=104/54/15/0/5/1/0
-w11 ready lives=16 gold=325 kills=185 towerKills=105/54/17/0/5/1/2/1
-w12 ready lives=16 gold=600 kills=222 towerKills=123/66/19/0/5/2/5/2/0
-w13 ready lives=16 gold=558 kills=238 towerKills=130/66/20/0/6/2/6/8/0
-w14 ready lives=16 gold=598 kills=275 towerKills=139/81/22/0/7/4/7/14/1
-w15 ready lives=9 gold=712 kills=302 towerKills=143/94/23/0/8/5/8/18/3
-w16 ready lives=8 gold=929 kills=349 towerKills=152/104/30/0/13/5/14/27/4
-w17 ready lives=8 gold=389 kills=357 towerKills=152/104/31/0/14/5/17/29/5
-w18 won lives=8 gold=1101 kills=389 towerKills=157/116/37/0/15/6/19/34/5"
+w7 ready lives=20 gold=249 kills=100 towerKills=66/25/9/0
+w8 ready lives=20 gold=461 kills=129 towerKills=79/39/10/0/1
+w9 ready lives=16 gold=316 kills=138 towerKills=84/42/10/0/2/0
+w10 ready lives=16 gold=574 kills=181 towerKills=104/55/16/0/5/1/0
+w11 ready lives=14 gold=365 kills=189 towerKills=107/55/17/0/5/2/1/2
+w12 ready lives=14 gold=575 kills=226 towerKills=121/66/23/0/6/3/3/4
+w13 ready lives=14 gold=486 kills=244 towerKills=129/66/25/0/6/3/5/9/1
+w14 ready lives=14 gold=682 kills=281 towerKills=139/81/27/0/7/5/6/14/2
+w15 ready lives=9 gold=824 kills=309 towerKills=143/94/29/0/8/6/7/18/4
+w16 ready lives=9 gold=647 kills=357 towerKills=148/109/36/0/12/9/14/25/4
+w17 ready lives=9 gold=552 kills=368 towerKills=150/109/38/0/12/9/16/29/5
+w18 won lives=5 gold=958 kills=409 towerKills=154/125/44/0/15/10/21/33/7"
 `;
 
-exports[`golden replays > prismenschacht defense A 2`] = `"w18 won lives=8 gold=1101 kills=389 towerKills=157/116/37/0/15/6/19/34/5"`;
+exports[`golden replays > prismenschacht defense A 2`] = `"w18 won lives=5 gold=958 kills=409 towerKills=154/125/44/0/15/10/21/33/7"`;
 
 exports[`golden replays > prismenschacht defense B 1`] = `
 "w1 ready lives=20 gold=177 kills=9 towerKills=9/0
@@ -70,21 +70,21 @@ w3 ready lives=20 gold=275 kills=41 towerKills=32/9/0/0
 w4 ready lives=20 gold=258 kills=50 towerKills=41/9/0/0
 w5 ready lives=20 gold=314 kills=67 towerKills=47/18/2/0
 w6 ready lives=20 gold=396 kills=93 towerKills=61/25/7/0
-w7 ready lives=20 gold=225 kills=98 towerKills=66/25/7/0
-w8 ready lives=20 gold=535 kills=127 towerKills=82/37/8/0/0
-w9 ready lives=20 gold=356 kills=138 towerKills=86/41/9/0/2/0
-w10 ready lives=20 gold=558 kills=181 towerKills=111/51/11/0/7/1
-w11 ready lives=20 gold=295 kills=187 towerKills=114/51/11/0/10/1/0
-w12 ready lives=20 gold=601 kills=224 towerKills=126/65/16/0/15/1/1
-w13 ready lives=20 gold=448 kills=240 towerKills=132/65/16/0/23/1/3/0
-w14 ready lives=20 gold=668 kills=277 towerKills=141/82/18/0/25/1/5/5
-w15 ready lives=20 gold=824 kills=308 towerKills=146/98/22/0/27/1/5/9
-w16 ready lives=20 gold=1022 kills=356 towerKills=163/109/23/0/39/1/10/11
-w17 ready lives=20 gold=437 kills=364 towerKills=165/109/24/0/40/1/10/15
-w18 won lives=10 gold=1049 kills=395 towerKills=172/123/26/0/41/1/11/21"
+w7 ready lives=20 gold=249 kills=100 towerKills=66/25/9/0
+w8 ready lives=20 gold=442 kills=129 towerKills=81/37/10/0/1
+w9 ready lives=20 gold=380 kills=140 towerKills=85/41/11/0/3/0
+w10 ready lives=20 gold=582 kills=183 towerKills=110/51/13/0/8/1
+w11 ready lives=20 gold=363 kills=192 towerKills=115/51/13/0/11/1/1
+w12 ready lives=20 gold=669 kills=229 towerKills=128/65/17/0/16/1/2
+w13 ready lives=20 gold=425 kills=247 towerKills=134/65/19/0/21/1/3/4
+w14 ready lives=20 gold=780 kills=284 towerKills=144/82/21/0/24/1/4/8
+w15 ready lives=20 gold=936 kills=315 towerKills=148/100/22/0/24/1/9/11
+w16 ready lives=20 gold=684 kills=363 towerKills=163/109/27/0/36/1/13/14
+w17 ready lives=20 gold=589 kills=374 towerKills=165/109/28/0/37/1/13/21
+w18 won lives=10 gold=906 kills=416 towerKills=172/123/34/0/38/2/14/33"
 `;
 
-exports[`golden replays > prismenschacht defense B 2`] = `"w18 won lives=10 gold=1049 kills=395 towerKills=172/123/26/0/41/1/11/21"`;
+exports[`golden replays > prismenschacht defense B 2`] = `"w18 won lives=10 gold=906 kills=416 towerKills=172/123/34/0/38/2/14/33"`;
 
 exports[`golden replays > treibsand defense A 1`] = `
 "w1 ready lives=20 gold=171 kills=12 towerKills=6/0/0/0/6

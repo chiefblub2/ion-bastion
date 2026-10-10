@@ -1,5 +1,5 @@
 import type { Enemy, PitAttack, Sim } from "../../core/types";
-import { applyDamage } from "../damage";
+import { applyDamage, hitOf } from "../damage";
 import { hasTrait } from "../traits";
 import type { AttackModule } from "./types";
 /** Small enough to fall in: body size up to the pit's size, and not unstoppable. */
@@ -14,6 +14,6 @@ export const pit: AttackModule<PitAttack> = {
   },
   choose: (sim, _type, _from, _reach, candidates, spec) => candidates.find((c) => fits(sim, c, spec)) ?? candidates[0],
   apply: (sim, src, { enemy }, damage, spec) => {
-    if (enemy) applyDamage(sim, src, enemy, fits(sim, enemy, spec) ? Infinity : damage);
+    if (enemy) applyDamage(sim, src, enemy, fits(sim, enemy, spec) ? Infinity : damage, false, hitOf("pit", src));
   },
 };

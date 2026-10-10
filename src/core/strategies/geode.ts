@@ -73,7 +73,7 @@ export const GEODE_STRATEGIES: Strategies = {
       builds: [
         b("pulse", 6, 3), b("flak", 6, 1), b("frost", 10, 5), b("inferno", 4, 3), b("tesla", 8, 5),
         b("blast", 10, 1), b("inferno", 9, 3), b("executioner", 5, 7), b("decay", 4, 9), b("flak", 11, 9),
-        b("inferno", 8, 7),
+        b("inferno", 8, 7), b("pulse", 8, 3), b("blast", 3, 5),
       ],
     },
     B: {

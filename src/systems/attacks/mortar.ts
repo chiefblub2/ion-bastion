@@ -1,5 +1,5 @@
 import type { MortarAttack } from "../../core/types";
-import { splash } from "./splash";
+import { blast } from "./splash";
 import type { AttackModule } from "./types";
 /** Artillery: a slow shell with a big blast, unable to aim at enemies inside its dead zone. */
 export const mortar: AttackModule<MortarAttack> = {
@@ -10,5 +10,5 @@ export const mortar: AttackModule<MortarAttack> = {
     minRange: { label: "Toter Winkel", valid: (v) => v >= 0, unit: " Felder" },
   },
   minRange: (spec) => spec.minRange,
-  apply: (sim, src, impact, damage, spec) => splash.apply(sim, src, impact, damage, { kind: "splash", radius: spec.radius }),
+  apply: (sim, src, impact, damage, spec) => blast(sim, src, impact.at, spec.radius, damage, "mortar"),
 };

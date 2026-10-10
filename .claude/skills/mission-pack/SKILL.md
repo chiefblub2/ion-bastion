@@ -139,7 +139,8 @@ Run the expensive checks once, after all edits. Agents' final balance runs count
 5. **Visual check, mandatory:**
    - `npm run dev` in the background, then
      `npx vite-node scripts/visual-check.ts -- <intro mission of each new enemy> --out <scratchpad>/vc`
-     (it builds strategy A, plays at 2× to the first wave of each newly introduced enemy and screenshots terrain and that wave; missions run in parallel).
+     (it opens the first wave of each newly introduced enemy directly via `&wave=<n>`, builds what strategy A affords and screenshots terrain and that wave; missions run in parallel).
+   - Always skip straight to the target wave; never play a mission through to reach it (no upgrade loops, no waiting on earlier waves). Pass all missions and all new enemy ids in ONE call (`--enemies a,b,…`); the script opens each target wave in parallel.
    - Read every PNG: terrain of each new theme, every new enemy body and trait marker.
    - If that is not possible, say so explicitly in the final report.
 6. Stop the dev server (`lsof -ti:4173 -sTCP:LISTEN | xargs kill`).

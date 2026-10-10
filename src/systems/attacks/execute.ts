@@ -1,5 +1,5 @@
 import type { ExecuteAttack } from "../../core/types";
-import { applyDamage } from "../damage";
+import { applyDamage, hitOf } from "../damage";
 import type { AttackModule } from "./types";
 /** Henker: a heavy shot that hits much harder once the target is badly wounded. */
 export const execute: AttackModule<ExecuteAttack> = {
@@ -13,6 +13,6 @@ export const execute: AttackModule<ExecuteAttack> = {
     if (!enemy) return;
     // Judged on impact, so a target weakened in flight is executed.
     const wounded = enemy.hp < spec.threshold * enemy.maxHp;
-    applyDamage(sim, src, enemy, wounded ? damage * spec.multiplier : damage);
+    applyDamage(sim, src, enemy, wounded ? damage * spec.multiplier : damage, false, hitOf("execute", src, { execution: wounded }));
   },
 };

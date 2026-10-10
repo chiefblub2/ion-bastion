@@ -86,7 +86,20 @@ const BODIES: { [K in EnemyVisual["shape"]]: (ctx: BodyContext, visual: Extract<
 };
 /** Status marker colours; they match the towers that cause the effect. */
 const STATUS_COLORS = { slowed: 0xa5a2ff, stunned: 0x5cf2d6, burning: 0xff6a3d, vulnerable: 0xb6f04a, pulled: 0x4d7cff, disrupted: 0xff3df2, netted: 0xe0c068, bleeding: 0xd7263d, charged: 0xff4d4d };
-const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff9e, scan: 0x6fd3ff, regen: 0x93f5b8, armor: 0xc9d1d9, immune: 0x9fe6ff, split: 0x442e36, sand: 0xc9a46a, plate: 0xff9a7a, gust: 0x9fd8ff, swarm: 0xb6ff6a, rage: 0xff5a1a, facet: 0x7ff4ea, leap: 0xbfe9ff, dampen: 0x8a7dff, brood: 0xe8d27a, overload: 0xffe14d, molt: 0xe6a0b4, momentum: 0xffb347, lap: 0xd9a441 };
+const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff9e, scan: 0x6fd3ff, regen: 0x93f5b8, armor: 0xc9d1d9, immune: 0x9fe6ff, split: 0x442e36, sand: 0xc9a46a, plate: 0xff9a7a, gust: 0x9fd8ff, swarm: 0xb6ff6a, rage: 0xff5a1a, facet: 0x7ff4ea, leap: 0xbfe9ff, dampen: 0x8a7dff, brood: 0xe8d27a, overload: 0xffe14d, molt: 0xe6a0b4, momentum: 0xffb347, lap: 0xd9a441, refract: 0xe6f7ff, blastproof: 0xb59a7a, insulated: 0xf2d95c, heatshield: 0xff7a3d, mirror: 0xdfe8f2, link: 0x7ae0c8, taunt: 0xff6b8a, martyr: 0xf2e6c9, pack: 0xb8c4d0, cloak: 0x8e7cc3, blink: 0x6fe39a, tunnel: 0x9c7a54, phase: 0xc792ea, blind: 0xfff27a, jam: 0x90a4b8, defuse: 0xd4a373, suppress: 0x7a8899, retaliate: 0x8bb174 };
+/** Faint filled field of an area trait with a dashed rim (`dashes` and `speed` tell the kinds apart). */
+function field(g: Ink, x: number, y: number, radius: number, cell: number, color: number, clock: number, dashes: number, speed: number) {
+  const rad = radius * cell;
+  g.fillStyle(color, 0.04);
+  g.fillCircle(x, y, rad);
+  g.lineStyle(1, color, 0.35);
+  for (let i = 0; i < dashes; i++) {
+    const a = (i * Math.PI * 2) / dashes + clock * speed;
+    g.beginPath();
+    g.arc(x, y, rad, a, a + (Math.PI * 2) / dashes * 0.45);
+    g.strokePath();
+  }
+}
 /** Markers under the body: auras of leaders and healers, motion trails, outlines. */
 function traitsBelow(g: Ink, x: number, y: number, r: number, cell: number, color: number, heading: number, t: TraitFlags, clock: number) {
   if (t.leader) {
@@ -100,7 +113,29 @@ function traitsBelow(g: Ink, x: number, y: number, r: number, cell: number, colo
     g.lineStyle(1, TRAIT_COLORS.healer, 0.35 * (1 - pulse));
     g.strokeCircle(x, y, t.healer * cell * pulse);
   }
+  // Area traits: faint fields, told apart by colour and dash count.
+  if (t.link) field(g, x, y, t.link, cell, TRAIT_COLORS.link, clock, 24, 0);
+  if (t.taunt) field(g, x, y, t.taunt, cell, TRAIT_COLORS.taunt, clock, 10, -0.3);
+  if (t.cloak) field(g, x, y, t.cloak, cell, TRAIT_COLORS.cloak, clock, 5, 0.15);
+  if (t.blind) field(g, x, y, t.blind, cell, TRAIT_COLORS.blind, clock, 18, 0.1);
+  if (t.jam) field(g, x, y, t.jam, cell, TRAIT_COLORS.jam, clock, 7, 0.6);
+  if (t.defuse) field(g, x, y, t.defuse, cell, TRAIT_COLORS.defuse, clock, 4, 0);
+  if (t.suppress) field(g, x, y, t.suppress, cell, TRAIT_COLORS.suppress, clock, 32, 0);
   const back = { x: -Math.cos(heading), y: -Math.sin(heading) };
+  // Pack: neighbour spokes whose length follows the speed bonus.
+  if (t.pack > 0) {
+    g.lineStyle(1.5, TRAIT_COLORS.pack, 0.4 + t.pack);
+    for (const side of [-0.5, 0.5]) g.lineBetween(x + back.x * r - back.y * side * r, y + back.y * r + back.x * side * r, x + back.x * r * (1.8 + 4 * t.pack) - back.y * side * r * 1.4, y + back.y * r * (1.8 + 4 * t.pack) + back.x * side * r * 1.4);
+  }
+  // Blink: ghost marks ahead on the path that brighten towards the next jump.
+  if (t.blink > 0) {
+    g.lineStyle(1.5, TRAIT_COLORS.blink, 0.2 + 0.7 * t.blink);
+    for (const k of [1, 2]) {
+      const fx = x - back.x * r * (1 + k * 0.9),
+        fy = y - back.y * r * (1 + k * 0.9);
+      g.lineBetween(fx - back.y * r * 0.5, fy + back.x * r * 0.5, fx + back.y * r * 0.5, fy - back.x * r * 0.5);
+    }
+  }
   if (t.swift)
     for (let i = 1; i <= 2; i++) {
       g.fillStyle(color, 0.22 / i);
@@ -306,6 +341,72 @@ function traitsAbove(g: Ink, x: number, y: number, r: number, t: TraitFlags, clo
       g.lineBetween(x1, y1, x0 + Math.cos(a - 0.2) * 8, y0 + Math.sin(a - 0.2) * 8);
     }
   }
+  // Refract: a bright diamond inside the body.
+  if (t.refract) {
+    g.lineStyle(1.5, TRAIT_COLORS.refract, 0.9);
+    g.strokePoints([{ x, y: y - r * 0.55 }, { x: x + r * 0.4, y }, { x, y: y + r * 0.55 }, { x: x - r * 0.4, y }], true);
+  }
+  // Blastproof: a heavy sand-coloured outer ring.
+  if (t.blastproof) {
+    g.lineStyle(3, TRAIT_COLORS.blastproof, 0.85);
+    g.strokeCircle(x, y, r + 5);
+  }
+  // Insulated: a yellow ring with a crossed-out bolt.
+  if (t.insulated) {
+    g.lineStyle(1.5, TRAIT_COLORS.insulated, 0.9);
+    g.strokePoints([{ x: x + 1.5, y: y - r * 0.6 }, { x: x - 1.5, y }, { x: x + 1.5, y }, { x: x - 1.5, y: y + r * 0.6 }], false);
+    g.lineBetween(x - r * 0.6, y + r * 0.6, x + r * 0.6, y - r * 0.6);
+  }
+  // Heatshield: a thin orange shell.
+  if (t.heatshield) {
+    g.lineStyle(1.5, TRAIT_COLORS.heatshield, 0.8);
+    g.beginPath();
+    g.arc(x, y, r + 4, Math.PI * 1.1, Math.PI * 1.9);
+    g.strokePath();
+  }
+  // Mirror: a bright highlight streak across the body.
+  if (t.mirror) {
+    g.lineStyle(2, TRAIT_COLORS.mirror, 0.55 + 0.35 * Math.sin(clock * 3));
+    g.lineBetween(x - r * 0.7, y + r * 0.2, x + r * 0.1, y - r * 0.7);
+    g.lineBetween(x - r * 0.3, y + r * 0.6, x + r * 0.6, y - r * 0.3);
+  }
+  // Martyr: a pale halo above the body.
+  if (t.martyr) {
+    g.lineStyle(1.5, TRAIT_COLORS.martyr, 0.9);
+    g.strokeEllipse(x, y - r - 5, r * 1.1, 3);
+  }
+  // Taunt: a bright bullseye in the body.
+  if (t.taunt) {
+    g.lineStyle(1.5, TRAIT_COLORS.taunt, 0.9);
+    g.strokeCircle(x, y, r * 0.55);
+    g.fillStyle(TRAIT_COLORS.taunt, 0.9);
+    g.fillCircle(x, y, r * 0.2);
+  }
+  // Retaliate: small thorns pointing outwards.
+  if (t.retaliate) {
+    g.fillStyle(TRAIT_COLORS.retaliate, 0.9);
+    for (let i = 0; i < 4; i++) {
+      const a = (i * Math.PI) / 2 + Math.PI / 4;
+      g.fillTriangle(x + Math.cos(a - 0.25) * (r + 1), y + Math.sin(a - 0.25) * (r + 1), x + Math.cos(a + 0.25) * (r + 1), y + Math.sin(a + 0.25) * (r + 1), x + Math.cos(a) * (r + 5), y + Math.sin(a) * (r + 5));
+    }
+  }
+  // Tunnel: drill chevrons in front of the body.
+  if (t.tunnel) {
+    g.lineStyle(1.5, TRAIT_COLORS.tunnel, 0.9);
+    g.strokePoints([{ x: x + r * 0.9, y: y - r * 0.5 }, { x: x + r * 1.4, y }, { x: x + r * 0.9, y: y + r * 0.5 }], false);
+  }
+  // Phase: a ring that is dashed in the air and solid on the ground.
+  if (t.phase) {
+    g.lineStyle(1.5, TRAIT_COLORS.phase, 0.9);
+    if (t.phase === "ground") g.strokeCircle(x, y, r + 3);
+    else
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI) / 4 + clock;
+        g.beginPath();
+        g.arc(x, y, r + 3, a, a + 0.4);
+        g.strokePath();
+      }
+  }
   // Splitting: three small dots inside the body.
   if (t.split) {
     g.fillStyle(TRAIT_COLORS.split);
@@ -420,7 +521,7 @@ export function drawEnemy(
   if (traits.burrowed) {
     polygon(g, x, y, r * 0.8, d.visual.shape === "polygon" ? d.visual.sides : 4, d.color, d.visual.shape === "polygon" ? (d.visual.rotation ?? 0) : 0, 0.3);
   } else
-    (BODIES[d.visual.shape] as (ctx: BodyContext, visual: EnemyVisual) => void)({ g, x, y, r, color: d.color, heading, air: traits.leaping ? d.layer !== "air" : d.layer === "air", clock }, d.visual);
+    (BODIES[d.visual.shape] as (ctx: BodyContext, visual: EnemyVisual) => void)({ g, x, y, r, color: d.color, heading, air: traits.phase ? traits.phase === "air" : traits.leaping ? d.layer !== "air" : d.layer === "air", clock }, d.visual);
   traitsAbove(g, x, y, r, traits, clock);
   // Netted: a mesh drawn over the body.
   if (status.netted) {

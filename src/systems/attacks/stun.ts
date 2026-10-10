@@ -1,5 +1,5 @@
 import type { StunAttack } from "../../core/types";
-import { applyDamage } from "../damage";
+import { applyDamage, hitOf } from "../damage";
 import { dist } from "../path";
 import { applyStatus } from "../status";
 import { canTarget } from "./targeting";
@@ -19,7 +19,7 @@ export const stun: AttackModule<StunAttack> = {
     // A copy: enemies released on death must not catch the same pulse.
     for (const target of [...sim.state.enemies])
       if (target.hp > 0 && canTarget(sim, src.type, target) && dist(target, at) <= spec.radius) {
-        applyDamage(sim, src, target, damage);
+        applyDamage(sim, src, target, damage, false, hitOf("stun", src));
         if (target.hp > 0)
           applyStatus(sim, target, {
             kind: "stun",

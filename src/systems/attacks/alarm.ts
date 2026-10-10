@@ -1,5 +1,5 @@
 import type { AlarmAttack } from "../../core/types";
-import { applyDamage } from "../damage";
+import { applyDamage, hitOf } from "../damage";
 import { dist } from "../path";
 import type { AttackModule } from "./types";
 /** Alarmdraht: the tripped wire reloads every attack tower around it at once. */
@@ -20,6 +20,6 @@ export const alarm: AttackModule<AlarmAttack> = {
       t.cooldown = 0;
       sim.state.events.push({ type: "chain", from: { ...from }, to: { x: t.x, y: t.y }, color });
     }
-    applyDamage(sim, src, enemy, damage);
+    applyDamage(sim, src, enemy, damage, false, hitOf("alarm", src));
   },
 };

@@ -1,5 +1,5 @@
 import type { CorrodeAttack } from "../../core/types";
-import { applyDamage } from "../damage";
+import { applyDamage, hitOf } from "../damage";
 import { dist } from "../path";
 import { applyStatus } from "../status";
 import { canTarget } from "./targeting";
@@ -19,7 +19,7 @@ export const corrode: AttackModule<CorrodeAttack> = {
       if (target.hp > 0 && canTarget(sim, src.type, target) && dist(target, at) <= spec.radius) {
         // Weakened first, so the acid hit itself already counts.
         applyStatus(sim, target, { kind: "vulnerable", amount: spec.amount, until });
-        applyDamage(sim, src, target, damage);
+        applyDamage(sim, src, target, damage, false, hitOf("corrode", src));
       }
   },
 };

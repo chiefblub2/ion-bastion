@@ -1,5 +1,5 @@
 import type { FocusAttack } from "../../core/types";
-import { applyDamage } from "../damage";
+import { applyDamage, hitOf } from "../damage";
 import type { AttackModule } from "./types";
 /** Fokus: an instant beam that grows stronger with every consecutive hit on the same target. */
 export const focus: AttackModule<FocusAttack> = {
@@ -27,6 +27,6 @@ export const focus: AttackModule<FocusAttack> = {
       color: sim.content.towers[src.type].color,
       power: stacks / spec.stacks,
     });
-    applyDamage(sim, src, enemy, damage * (1 + spec.ramp * stacks));
+    applyDamage(sim, src, enemy, damage * (1 + spec.ramp * stacks), false, hitOf("focus", src));
   },
 };

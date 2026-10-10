@@ -122,7 +122,8 @@ Run the expensive checks once, after all edits. `git status` first: files outsid
 4. **Visual check, mandatory:**
    - `npm run dev` in the background, then
      `npx vite-node scripts/visual-check.ts -- <placement mission> --enemies <id>[,<id>] --out <scratchpad>/vc`
-     (builds strategy A, plays at 2× to the first wave with each enemy, screenshots terrain and the field with the forecast).
+     (opens the first wave with each enemy directly via `&wave=<n>`, builds what strategy A affords, screenshots terrain and the field with the forecast; ~40 s for 18 missions).
+   - Always skip straight to the target wave; never play a mission through to reach it (no upgrade loops, no waiting on earlier waves). Pass all missions and all new enemy ids in ONE call (`--enemies a,b,…`); the script opens each target wave in parallel.
    - Read every PNG: the body and the trait marker (a damaged enemy shows HP-driven markers). For a changing state (window, HP share) run it twice or compare two enemies.
    - If that is not possible, say so explicitly in the final report. Stop the dev server afterwards.
 5. Final report to the user:

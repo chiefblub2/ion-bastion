@@ -1,5 +1,5 @@
 import type { BurnAttack } from "../../core/types";
-import { applyDamage } from "../damage";
+import { applyDamage, hitOf } from "../damage";
 import { applyStatus, BURN_TICK } from "../status";
 import type { AttackModule } from "./types";
 /** Incendiary hit: direct damage, then burning that scales with the hit, so levels and auras count. */
@@ -12,7 +12,7 @@ export const burn: AttackModule<BurnAttack> = {
   },
   apply: (sim, src, { enemy }, damage, spec) => {
     if (!enemy) return;
-    applyDamage(sim, src, enemy, damage);
+    applyDamage(sim, src, enemy, damage, false, hitOf("burn", src));
     const time = sim.state.time;
     applyStatus(sim, enemy, {
       kind: "burn",

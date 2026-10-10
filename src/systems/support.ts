@@ -1,6 +1,7 @@
 import { resolveUpgrades } from "../core/upgrades";
 import type { AttackKind, Enemy, Sim } from "../core/types";
 import { dist } from "./path";
+import { isSuppressed } from "./traits";
 /**
  * Effects of the passive support towers. Like auras they are derived from the current
  * towers on every query, without a cache, and overlapping towers count only the strongest.
@@ -9,7 +10,7 @@ function strongest(sim: Sim, kind: AttackKind, key: string, e?: Enemy) {
   let best = 0;
   for (const t of sim.state.towers) {
     const resolved = resolveUpgrades(t, sim.content);
-    if (resolved.attack.kind !== kind || (e && dist(e, t) > resolved.stats.range)) continue;
+    if (resolved.attack.kind !== kind || (e && dist(e, t) > resolved.stats.range) || isSuppressed(sim, t)) continue;
     best = Math.max(best, (resolved.attack as unknown as Record<string, number>)[key]);
   }
   return best;

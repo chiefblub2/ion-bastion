@@ -1,6 +1,7 @@
 import type { ChainAttack, Enemy } from "../../core/types";
-import { applyDamage } from "../damage";
+import { applyDamage, hitOf } from "../damage";
 import { dist } from "../path";
+import { hasTrait } from "../traits";
 import { canAcquire } from "./targeting";
 import type { AttackModule } from "./types";
 /** Lightning: hits instantly, then jumps to the nearest unstruck enemy with falloff. */
@@ -17,7 +18,9 @@ export const chain: AttackModule<ChainAttack> = {
     const s = sim.state,
       color = sim.content.towers[src.type].color,
       struck = new Set([enemy.id]);
-    applyDamage(sim, src, enemy, damage);
+    applyDamage(sim, src, enemy, damage, false, hitOf("chain", src));
+    // An insulated primary target takes its hit and stops the chain.
+    if (hasTrait(sim, enemy, "insulated")) return;
     let from: Enemy = enemy;
     for (let jump = 0; jump < spec.jumps; jump++) {
       const next = s.enemies
@@ -25,6 +28,7 @@ export const chain: AttackModule<ChainAttack> = {
           (c) =>
             c.hp > 0 &&
             !struck.has(c.id) &&
+            !hasTrait(sim, c, "insulated") &&
             canAcquire(sim, src.type, c) &&
             dist(c, from) <= spec.range,
         )
@@ -33,7 +37,7 @@ export const chain: AttackModule<ChainAttack> = {
       damage *= spec.falloff;
       struck.add(next.id);
       s.events.push({ type: "chain", from: { x: from.x, y: from.y }, to: { x: next.x, y: next.y }, color });
-      applyDamage(sim, src, next, damage);
+      applyDamage(sim, src, next, damage, false, hitOf("chain", src, { chain: true }));
       from = next;
     }
   },

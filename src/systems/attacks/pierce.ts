@@ -1,5 +1,5 @@
 import type { Enemy, PierceAttack, Point, Sim, TowerId } from "../../core/types";
-import { applyDamage } from "../damage";
+import { applyDamage, hitOf } from "../damage";
 import { canTarget } from "./targeting";
 import type { AttackModule } from "./types";
 /** The line from `from` through `target` to `reach`: its end point and every enemy on it, nearest first. */
@@ -42,7 +42,7 @@ export const pierce: AttackModule<PierceAttack> = {
     const { hits, to } = line(sim, src.type, from, enemy, reach ?? 0, spec.width);
     sim.state.events.push({ type: "beam", from: { ...from }, to, color: sim.content.towers[src.type].color });
     for (const e of hits) {
-      applyDamage(sim, src, e, damage);
+      applyDamage(sim, src, e, damage, false, hitOf("pierce", src));
       damage *= spec.falloff;
     }
   },

@@ -61,6 +61,7 @@ export const VOLCANO_STRATEGIES: Strategies = {
       builds: [
         b("blast", 6, 3), b("pulse", 6, 7), b("flak", 4, 1), b("frost", 8, 5), b("tesla", 8, 1), b("executioner", 4, 5),
         b("tar", 5, 4), b("decay", 8, 9), b("blast", 8, 7), b("flak", 11, 3), b("executioner", 11, 5), b("pulse", 3, 9),
+        b("blast", 3, 5), b("tesla", 9, 3), b("executioner", 5, 9),
       ],
     },
     B: {

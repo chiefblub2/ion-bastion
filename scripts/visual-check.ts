@@ -6,8 +6,8 @@
  *
  * Targets default to the enemies that first appear in that mission across the campaign.
  * Drives headless system Chrome (playwright-core, channel "chrome") through the app's optional
- * WebMCP tools (`app/webmcp.ts`): builds strategy A's towers so enemies take damage and the reactor
- * survives, then starts waves and waits on the game state instead of guessed timeouts.
+ * WebMCP tools (`app/webmcp.ts`): opens each target wave directly (`?mission=<id>&wave=<n>`), builds the
+ * strategy A towers the starting credits afford so enemies take damage, starts the wave and screenshots it.
  */
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
@@ -60,18 +60,11 @@ function targets(mission: MissionDefinition) {
   return [...waves].sort((a, b) => a[0] - b[0]);
 }
 
-interface DefenseState {
-  status: "ready" | "wave" | "won" | "lost";
-  wave: number;
-  gold: number;
-  remainingEnemies: number;
-}
 const call = <T>(page: Page, tool: string, input: object = {}) =>
   page.evaluate(
     ([name, value]) => (window as unknown as { __tools: Record<string, (v: unknown) => unknown> }).__tools[name](value),
     [tool, input] as const,
   ) as Promise<T>;
-const state = (page: Page) => call<DefenseState>(page, "read_defense_state");
 
 async function buildAffordable(page: Page, mission: MissionDefinition, next: { i: number }) {
   const builds = STRATEGIES[mission.id]?.A.builds ?? [];
@@ -102,30 +95,21 @@ async function check(page: Page, mission: MissionDefinition) {
       },
     };
   });
-  await page.goto(`${base}/?mission=${mission.id}`);
-  await page.waitForFunction(() => "read_defense_state" in ((window as unknown as { __tools?: object }).__tools ?? {}));
+  const open = async (wave: number) => {
+    // `&wave=<n>` (src/main.ts) starts the mission at that wave with its real HP, so nothing is played through.
+    await page.goto(`${base}/?mission=${mission.id}${wave > 1 ? `&wave=${wave}` : ""}`);
+    await page.waitForFunction(() => "read_defense_state" in ((window as unknown as { __tools?: object }).__tools ?? {}));
+  };
+  await open(1);
   const files = [`${out}/${mission.id}-terrain.png`];
   await page.locator("#board-wrap").screenshot({ path: files[0] });
-  await page.click("#speed-btn");
-  const next = { i: 0 };
   for (const [wave, target] of targets(mission)) {
-    while ((await state(page)).wave < wave) {
-      await page.waitForFunction(
-        () => (window as unknown as { __tools: Record<string, () => { status: string }> }).__tools.read_defense_state().status !== "wave",
-        null,
-        { timeout: 180_000, polling: 250 },
-      );
-      const s = await state(page);
-      if (s.status === "won" || s.status === "lost") break;
-      await buildAffordable(page, mission, next);
-      await call(page, "start_defense_wave");
-      console.log(`${mission.id}: Welle ${s.wave + 1} gestartet, ${next.i} Türme`);
-    }
-    const s = await state(page);
-    if (s.wave < wave) {
-      console.warn(`${mission.id}: Mission endete (${s.status}) vor Welle ${wave}.`);
-      break;
-    }
+    await open(wave);
+    await page.click("#speed-btn");
+    const next = { i: 0 };
+    await buildAffordable(page, mission, next);
+    await call(page, "start_defense_wave");
+    console.log(`${mission.id}: Welle ${wave} gestartet, ${next.i} Türme`);
     // At 2× a group delay of d game seconds passes in d/2 real seconds; then let a few units enter.
     await page.waitForTimeout(target.delay * 500 + 3000);
     const file = `${out}/${mission.id}-w${wave}-${target.enemies.join("-")}.png`;

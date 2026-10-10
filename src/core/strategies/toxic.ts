@@ -73,7 +73,7 @@ export const TOXIC_STRATEGIES: Strategies = {
     A: {
       upgradeFirst: true,
       builds: [
-        b("blast", 10, 8), b("acid", 9, 7), b("tesla", 11, 7), b("pulse", 11, 6), b("decay", 13, 7),
+        b("blast", 10, 8), b("acid", 9, 7), b("tesla", 11, 7), b("pulse", 11, 6), b("detector", 12, 8), b("decay", 13, 7),
         b("blast", 13, 8), b("flak", 14, 4), b("decay", 9, 4),
       ],
     },
@@ -81,7 +81,7 @@ export const TOXIC_STRATEGIES: Strategies = {
     B: {
       upgradeFirst: true,
       builds: [
-        b("tesla", 10, 8), b("pulse", 9, 7), b("pulse", 11, 6), b("blast", 13, 8), b("decay", 11, 8),
+        b("tesla", 10, 8), b("pulse", 9, 7), b("detector", 12, 8), b("pulse", 11, 6), b("blast", 13, 8), b("decay", 11, 8),
         b("flak", 14, 4), b("frost", 9, 6), b("decay", 6, 8),
       ],
     },

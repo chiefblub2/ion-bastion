@@ -1,5 +1,5 @@
 import type { QuakeAttack } from "../../core/types";
-import { applyDamage } from "../damage";
+import { applyDamage, hitOf } from "../damage";
 import { dist } from "../path";
 import { canTarget } from "./targeting";
 import type { AttackModule } from "./types";
@@ -17,7 +17,7 @@ export const quake: AttackModule<QuakeAttack> = {
     for (const target of [...sim.state.enemies]) {
       const d = dist(target, from);
       if (target.hp > 0 && canTarget(sim, src.type, target) && d <= reach)
-        applyDamage(sim, src, target, damage * (1 - (1 - spec.edge) * (d / reach)));
+        applyDamage(sim, src, target, damage * (1 - (1 - spec.edge) * (d / reach)), false, hitOf("quake", src));
     }
   },
 };

@@ -367,6 +367,107 @@ export type Trait =
       per: number;
       /** Cap of the damage reduction, in (0, 1]. */
       max: number;
+    }
+  | {
+      kind: "refract";
+      /** Damage factor of instant hits (Tesla, Lanze, Fokus, Beben, Gravitron, Störsender), in [0.4, 0.6]. Not disruptable. */
+      factor: number;
+    }
+  | {
+      kind: "blastproof";
+      /** Damage reduction of area hits (splash incl. the centre, mortar, quake, charge), in [0.4, 0.7]. Not disruptable. */
+      reduction: number;
+    }
+  | { kind: "insulated" /** A Tesla chain never jumps to it; as the primary target it stops the chain. Not disruptable. */ }
+  | { kind: "heatshield" /** Resists burn and bleeding. Not disruptable. */ }
+  | {
+      kind: "mirror";
+      /** A single hit deals at most this share of max HP after all other reductions, in [0.05, 0.12]. Pit and execution ignore it. Not disruptable. */
+      cap: number;
+    }
+  | {
+      kind: "link";
+      /** Radius in cells (1.2-2) in which same-type enemies share every hit (dots included) evenly. Disruptable. */
+      radius: number;
+    }
+  | {
+      kind: "taunt";
+      /** Radius in cells (2-3): attack towers within it that can target the taunter must target taunters. Not traps. Disruptable. */
+      radius: number;
+    }
+  | {
+      kind: "martyr";
+      /** Radius in cells (1.5-2) around the dying carrier. */
+      radius: number;
+      /** Share of max HP (0.1-0.3) healed on every other living enemy in the radius on death. Disruptable. */
+      heal: number;
+    }
+  | {
+      kind: "cloakField";
+      /** Radius in cells (1.2-2): other enemies near a living carrier are hidden unless revealed by a detector. Disruptable. */
+      radius: number;
+    }
+  | {
+      kind: "retaliate";
+      /** Radius in cells (1.5-2) around the enemy: attack towers inside it that hit it (no dots, no traps) are slowed. */
+      radius: number;
+      /** Cooldown cycles added per hit (0.3-0.6), capped at 1 + cycles. Disruptable. */
+      cycles: number;
+    }
+  | {
+      kind: "pack";
+      /** Radius in cells (1-2) in which living same-type enemies count as neighbours. */
+      radius: number;
+      /** Speed bonus per neighbour (0.06-0.1). */
+      perAlly: number;
+      /** Cap of the speed bonus (0.3-0.5). Not disruptable. */
+      max: number;
+    }
+  | {
+      kind: "blink";
+      /** A forward move across a multiple of this many cells (3-5) triggers the jump. */
+      every: number;
+      /** Cells jumped ahead (1.5-3), at most once per tick, never on a pull-back. Disruptable. */
+      jump: number;
+    }
+  | {
+      kind: "tunnel";
+      /** Like burrow: hidden in the last `length` cells of every `every` cells (traps and area damage still hit). */
+      every: number;
+      length: number;
+      /** Speed factor while underground (1.8-2.2). Not disruptable. */
+      speed: number;
+    }
+  | {
+      kind: "phase";
+      /** Cycle length in seconds (3-4) of the global clock. */
+      period: number;
+      /** Seconds of each cycle (1.2-2) spent in the air; the rest on the ground. Not disruptable. */
+      air: number;
+    }
+  | {
+      kind: "blind";
+      /** Radius in cells (2-3): attack towers within it lose range (not support towers or traps). */
+      radius: number;
+      /** Range share lost (0.2-0.35); the strongest carrier counts. Disruptable. */
+      range: number;
+    }
+  | {
+      kind: "jam";
+      /** Radius in cells (1.5-2.5): attack towers within it fire slower (not support towers or traps). */
+      radius: number;
+      /** Interval grows by this share (0.3-0.5); the strongest carrier counts. Disruptable. */
+      slow: number;
+    }
+  | {
+      kind: "defuse";
+      /** Radius in cells (1-2): traps within it do not trigger, for anyone. Disruptable. */
+      radius: number;
+    }
+  | {
+      kind: "suppress";
+      /** Radius in cells (2-3): aura, detector, bounty beacon and tracker towers within it have no effect (not the repair dock). Disruptable. */
+      radius: number;
     };
 export type TraitKind = Trait["kind"];
 export type EnemyVisual =

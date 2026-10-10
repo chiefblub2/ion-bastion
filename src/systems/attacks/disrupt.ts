@@ -1,5 +1,5 @@
 import type { DisruptAttack } from "../../core/types";
-import { applyDamage } from "../damage";
+import { applyDamage, hitOf } from "../damage";
 import { dist } from "../path";
 import { applyStatus } from "../status";
 import { canTarget } from "./targeting";
@@ -24,7 +24,7 @@ export const disrupt: AttackModule<DisruptAttack> = {
           target.shield = 0;
           target.lastHit = Math.max(target.lastHit ?? -Infinity, until);
         }
-        applyDamage(sim, src, target, damage);
+        applyDamage(sim, src, target, damage, false, hitOf("disrupt", src));
       }
   },
 };

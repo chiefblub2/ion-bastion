@@ -1,5 +1,5 @@
 import type { SlowAttack } from "../../core/types";
-import { applyDamage } from "../damage";
+import { applyDamage, hitOf } from "../damage";
 import { applyStatus } from "../status";
 import type { AttackModule } from "./types";
 export const slow: AttackModule<SlowAttack> = {
@@ -11,7 +11,7 @@ export const slow: AttackModule<SlowAttack> = {
   },
   apply: (sim, src, { enemy }, damage, spec) => {
     if (!enemy) return;
-    applyDamage(sim, src, enemy, damage);
+    applyDamage(sim, src, enemy, damage, false, hitOf("slow", src));
     applyStatus(sim, enemy, { kind: "slow", factor: spec.factor, until: sim.state.time + spec.duration });
   },
 };

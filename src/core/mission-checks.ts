@@ -12,7 +12,7 @@ export const hasAir = (m: MissionDefinition, content: ContentPack = DEFAULT_CONT
   enemiesOf(m, content).some((e) => e.layer === "air");
 
 export const hasStealth = (m: MissionDefinition, content: ContentPack = DEFAULT_CONTENT) =>
-  enemiesOf(m, content).some((e) => e.traits?.some((t) => t.kind === "stealth"));
+  enemiesOf(m, content).some((e) => e.traits?.some((t) => t.kind === "stealth" || t.kind === "cloakField"));
 
 /** Builds that fail `canBuild` for their tower or are not offered by the mission. */
 export function unbuildable(m: MissionDefinition, strategy: Pick<Strategy, "builds">): Build[] {

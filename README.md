@@ -1,6 +1,6 @@
 # ION BASTION
 
-Tower-Defense im Browser, gebaut mit TypeScript, Phaser 3 und Vite. <!-- counts:start -->73 Missionen in 15 Sektoren<!-- counts:end --> mit eigenen Maps, Wellen und Terrain-Stilen, über dreißig Türme und <!-- counts:start -->32 Gegnertypen<!-- counts:end --> am Boden und in der Luft. Allein spielbar oder mit 2–4 Spielern im Koop- oder Versus-Modus.
+Tower-Defense im Browser, gebaut mit TypeScript, Phaser 3 und Vite. <!-- counts:start -->73 Missionen in 15 Sektoren<!-- counts:end --> mit eigenen Maps, Wellen und Terrain-Stilen, über dreißig Türme und <!-- counts:start -->62 Gegnertypen<!-- counts:end --> am Boden und in der Luft. Allein spielbar oder mit 2–4 Spielern im Koop- oder Versus-Modus.
 
 Das Spiel läuft komplett im Browser; nur der Mehrspieler braucht einen kleinen Relay-Server. Spielstände liegen bewusst nur im Arbeitsspeicher: Neuladen startet eine neue Mission.
 
@@ -241,7 +241,7 @@ Fallen baust du direkt auf freie Wegfelder (nicht auf Eingang oder Reaktor). Sie
 | Flammenrost | 80 | Brand: das Dreifache des Treffers über 3 s | 3,5-fach / 4-fach über 4 s |
 | Sprungfeder | 100 | Wirft Gegner den Weg zurück, danach 3 s immun; Berserker widerstehen | weiter / noch weiter |
 | Haftmine | 90 | Heftet eine Bombe an den Gegner: 70 Schaden im Radius 1,2 nach 2 s oder sofort, wenn der Träger stirbt; Kettenreaktionen möglich | Radius 1,4 / 1,6, Zünder 1,5 s |
-| Fallgrube | 120 | Verschlingt kleine Gegner (Drohne, Läufer, Skater, Phantom, Blinker) sofort, egal wie viele HP; größere nehmen 60 Schaden; 6 s Abdecken | auch Heiler, Schildträger, Splitter, Schleim / auch Panzer |
+| Fallgrube | 120 | Verschlingt kleine Gegner (Drohne, Läufer, Skater, Phantom, Blinker, Rudelwolf, Sprungkäfer, Geröllschwarm) sofort, egal wie viele HP; größere nehmen 60 Schaden; 6 s Abdecken | auch Heiler, Schildträger, Splitter, Schleim, Prismenläufer, Salamander, Märtyrer, Pionier / auch Panzer, Nullfeldträger |
 | Alarmdraht | 110 | Lädt beim Auslösen alle Angriffstürme im Radius 2,5 sofort nach; 6 s Spannen | Radius 3 / 3,5 |
 
 **Angriffstürme** haben fünf Stufen:
@@ -309,27 +309,27 @@ Bei Gleichstand gewinnt der Gegner, der weiter vorne liegt. Die Lanze zielt weit
 
 ## Gegner
 
-Sektor I nutzt fünf Grundgegner, darunter ab Mission 02 den **Gleiter**: schnell, wenig HP und in der Luft. Eine reine Nova-Verteidigung verliert deshalb jede Mission mit Gleitern. Ab Sektor II kommen je Sektor zwei Gegner mit Eigenschaften dazu:
+Sektor I nutzt fünf Grundgegner, darunter ab Mission 02 den **Gleiter**: schnell, wenig HP und in der Luft. Eine reine Nova-Verteidigung verliert deshalb jede Mission mit Gleitern. Ab Sektor II kommen je Sektor weitere Gegner mit Eigenschaften dazu:
 
 | Sektor | Neue Gegner |
 | --- | --- |
-| II Frostgürtel | Splitter (zerfällt in Drohnen), Eisläufer (immun gegen Verlangsamung, flink) |
-| III Säuremoor | Schleimer (regeneriert), Sanitäter (heilt andere) |
-| IV Orbitaldeck | Schildträger (Schild lädt sich wieder auf), Phantom (getarnt, braucht den Detektor) |
-| V Ruinenstadt | Bollwerk (Rüstung), Kommandant (stärkt Gegner in der Nähe) |
-| VI Singularität | Phasenläufer (weicht jedem n-ten Treffer aus), Berserker (unaufhaltsam, spurtet bei wenig HP) |
-| VII Dünenmeer | Skarabäus (gepanzert und flink), Gräber (taucht regelmäßig ab; dann treffen nur Fallen und Flächenschaden) |
-| VIII Tiefsee | Panzerkrebs (verhärtet, je verletzter er ist), Qualle (fliegt und heilt Gegner in der Nähe) |
-| IX Gewitterfront | Böenläufer (rast in Schüben), Sturmvogel (fliegt, Schild und flink), Luftschiff (schwer gepanzerter Flieger, wirft Gleiter ab) |
-| X Dschungel | Schwarmameise (weniger Schaden im Rudel), Urwaldkoloss (gepanzert, regeneriert) |
-| XI Vulkankette | Glutläufer (wird schneller, je mehr HP fehlen), Aschenschwinge (fliegt, gepanzert, immun gegen Verlangsamung) |
-| XII Kristallhöhle | Kristallwächter (härtet sich im Takt gegen Treffer, Brand wirkt voll), Splitterfalter (fliegt, zerfällt in zwei Gleiter) |
+| II Frostgürtel | Splitter (zerfällt in Drohnen), Eisläufer (immun gegen Verlangsamung, flink), Rudelwolf (im Rudel schneller) |
+| III Säuremoor | Schleimer (regeneriert), Sanitäter (heilt andere), Zwillingsläufer (teilt Schaden mit Artgenossen), Schleierweber (tarnt Gegner in der Nähe) |
+| IV Orbitaldeck | Schildträger (Schild lädt sich wieder auf), Phantom (getarnt, braucht den Detektor), Sprungkäfer (springt regelmäßig nach vorn), Konvoischlepper (gepanzert, teilt Schaden im Konvoi), Nullfeldträger (schaltet Unterstützungstürme ab) |
+| V Ruinenstadt | Bollwerk (Rüstung), Kommandant (stärkt Gegner in der Nähe), Druckbunker (hält Flächenschaden aus), Lockvogel (Türme müssen ihn anvisieren), Schattenkoloss (gepanzert, tarnt Gegner in der Nähe), Pionier (entschärft Fallen) |
+| VI Singularität | Phasenläufer (weicht jedem n-ten Treffer aus), Berserker (unaufhaltsam, spurtet bei wenig HP), Warpdrohne (fliegt, springt nach vorn), Seelenfunke (fliegt, heilt beim Tod), Phasenflügler (wechselt zwischen Luft und Boden) |
+| VII Dünenmeer | Skarabäus (gepanzert und flink), Gräber (taucht regelmäßig ab; dann treffen nur Fallen und Flächenschaden), Lückenspringer (springt kurz nach vorn), Geröllschwarm (hält Flächenschaden aus, Schwarm), Sturmfalke (fliegt, im Rudel schneller), Tunnelmaulwurf (gräbt sich schnell unter der Erde voran) |
+| VIII Tiefsee | Panzerkrebs (verhärtet, je verletzter er ist), Qualle (fliegt und heilt Gegner in der Nähe), Kettenqualle (fliegt, teilt Schaden), Leuchtboje (fliegt, Schild, Türme müssen sie anvisieren) |
+| IX Gewitterfront | Böenläufer (rast in Schüben), Sturmvogel (fliegt, Schild und flink), Luftschiff (schwer gepanzerter Flieger, wirft Gleiter ab), Kolonnenläufer (im Pulk schneller), Spiegelflügler (fliegt, bricht Strahlen), Isolator (unterbricht Tesla-Ketten), Störwolke (fliegt, Türme in der Nähe feuern langsamer) |
+| X Dschungel | Schwarmameise (weniger Schaden im Rudel), Urwaldkoloss (gepanzert, regeneriert), Märtyrer (heilt beim Tod), Dornrücken (bestraft Türme in der Nähe mit Abklingzeit) |
+| XI Vulkankette | Glutläufer (wird schneller, je mehr HP fehlen), Aschenschwinge (fliegt, gepanzert, immun gegen Verlangsamung), Salamander und Magmafalter (immun gegen Brand und Blutung), Blender (senkt die Reichweite von Türmen) |
+| XII Kristallhöhle | Kristallwächter (härtet sich im Takt gegen Treffer, Brand wirkt voll), Splitterfalter (fliegt, zerfällt in zwei Gleiter), Prismenläufer (bricht Strahlen), Monolith (kein Treffer über 6 % seiner HP) |
 | XIV Zahnwerk | Zahnrad (wird schneller, je länger es kreist), Kolbenpanzer (gepanzert, nimmt mit jeder Runde weniger Schaden) |
 | XV Mondsee | Gischtflügler (fliegt, nimmt mit jeder Runde weniger Schaden), Nautilus (Schild, wird schneller, je länger er kreist) |
 
 Zehn weitere Gegner sind fertig, kommen aber noch in keiner Mission vor. Der Gegner-Kodex führt sie unter „in keiner Mission“: Sprungspinne (springt regelmäßig in die Luft), Tauchflosser (fliegt, taucht regelmäßig zum Boden ab, flink), Dämpfer (macht sich und Gegner in der Nähe immun gegen Verlangsamung, Betäubung und Sog), Brutmutter (gepanzert, legt unterwegs Schwarmameisen), Funkenwurm (legt beim Tod Türme in der Nähe kurz lahm), Häutling (gepanzert bis halbe HP, danach schnell), Irrlicht (fliegt, getarnt, weicht aus), Hydra (regeneriert, zerfällt in zwei Hydraköpfe), Hydrakopf (wird schneller, je mehr HP fehlen) und Gewitterzelle (fliegt, Schild, legt beim Tod Türme lahm).
 
-Getarnte Gegner kommen nur in Missionen vor, in denen der Detektor baubar ist.
+Getarnte Gegner und Träger eines Tarnfelds kommen nur in Missionen vor, in denen der Detektor baubar ist.
 
 ## Grenzen
 
