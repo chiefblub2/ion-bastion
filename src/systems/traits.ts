@@ -121,6 +121,23 @@ const TRAITS: Registry = {
     validate: (t) => share("max", t.max),
     onDamage: (t, amount, e) => amount * (1 - hardenShare(t.max, e)),
   },
+  surge: {
+    validate: (t) =>
+      first(positive("every", t.every), positive("length", t.length), t.length < t.every ? undefined : "length muss kleiner als every sein.", t.factor > 1 ? undefined : "factor muss > 1 sein."),
+    speed: (t, e) => (isSurging(t, e) ? t.factor : 1),
+  },
+  swarm: {
+    validate: (t) => first(positive("radius", t.radius), share("per", t.per), share("max", t.max)),
+    onDamage: (t, amount, e, sim) => amount * (1 - swarmShare(t, e, sim)),
+  },
+};
+/** In the burst window of its cycle: derived from the path distance, so a pull-back leaves it correctly. */
+const isSurging = (t: { every: number; length: number }, e: Enemy) => e.distance % t.every >= t.every - t.length;
+/** Current damage reduction of a swarming enemy: `per` for each other living enemy of its type in `radius`, capped at `max`. */
+const swarmShare = (t: { radius: number; per: number; max: number }, e: Enemy, sim: Sim) => {
+  let n = 0;
+  for (const o of sim.state.enemies) if (o !== e && o.hp > 0 && o.type === e.type && dist(o, e) <= t.radius) n++;
+  return Math.min(t.max, t.per * n);
 };
 /** Current damage reduction of a hardening enemy: 0 at full HP, `max` at 0 HP. */
 const hardenShare = (max: number, e: Enemy) => max * (1 - e.hp / e.maxHp);
@@ -210,6 +227,10 @@ export interface TraitFlags {
   burrowed: boolean;
   /** Current damage reduction share of a hardening enemy, 0..max; 0 without the trait. */
   harden: number;
+  /** Currently in the burst window of a surge. */
+  surging: boolean;
+  /** Current damage reduction share of a swarming enemy, 0..max; 0 without the trait. */
+  swarm: number;
 }
 /** Visible traits for drawing; `leader` and `healer` are their radii in cells (0 if absent). */
 export function traitFlags(sim: Sim, e: Enemy): TraitFlags {
@@ -229,6 +250,8 @@ export function traitFlags(sim: Sim, e: Enemy): TraitFlags {
     slowImmune: false,
     burrowed: isBurrowed(sim, e),
     harden: 0,
+    surging: false,
+    swarm: 0,
   };
   for (const t of traitsOf(sim, e)) {
     if (t.kind === "shield") flags.shield = (e.shield ?? 0) / (t.capacity * e.maxHp);
@@ -236,6 +259,8 @@ export function traitFlags(sim: Sim, e: Enemy): TraitFlags {
     else if (t.kind === "armor" || t.kind === "slowImmune") flags[t.kind] = true;
     else if (t.kind === "splitOnDeath") flags.split = true;
     else if (t.kind === "harden") flags.harden = hardenShare(t.max, e);
+    else if (t.kind === "surge") flags.surging = isSurging(t, e);
+    else if (t.kind === "swarm") flags.swarm = swarmShare(t, e, sim);
     else if (t.kind === "stealth" || t.kind === "unstoppable" || t.kind === "swift" || t.kind === "evade" || t.kind === "regen") flags[t.kind] = true;
   }
   return flags;

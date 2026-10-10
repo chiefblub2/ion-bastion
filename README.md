@@ -1,6 +1,6 @@
 # ION BASTION
 
-Tower-Defense im Browser, gebaut mit TypeScript, Phaser 3 und Vite. 43 Missionen in neun Sektoren mit eigenen Maps, Wellen und Terrain-Stilen, über dreißig Türme und neunzehn Gegnertypen am Boden und in der Luft. Allein spielbar oder mit 2–4 Spielern im Koop- oder Versus-Modus.
+Tower-Defense im Browser, gebaut mit TypeScript, Phaser 3 und Vite. <!-- counts:start -->53 Missionen in 11 Sektoren<!-- counts:end --> mit eigenen Maps, Wellen und Terrain-Stilen, über dreißig Türme und <!-- counts:start -->23 Gegnertypen<!-- counts:end --> am Boden und in der Luft. Allein spielbar oder mit 2–4 Spielern im Koop- oder Versus-Modus.
 
 Das Spiel läuft komplett im Browser; nur der Mehrspieler braucht einen kleinen Relay-Server. Spielstände liegen bewusst nur im Arbeitsspeicher: Neuladen startet eine neue Mission.
 
@@ -71,7 +71,7 @@ npm run dev      # Spiel auf http://0.0.0.0:4173
 | Wettlauf | 2–4 | Jeder verteidigt eine eigene Kopie der Mission mit vollen Start-Credits. Die Wellen starten für alle gleichzeitig, sobald alle „Bereit“ gedrückt haben, spätestens nach 30 s. Es gibt keine Pause. Wer seinen Reaktor als Letzter hält, gewinnt. Überstehen mehrere alle Wellen, entscheidet die Reaktorenergie, danach die Zahl der Abschüsse. |
 | Belagerung | 2–4 | Wie Wettlauf. Zusätzlich schickt man unter „Schicken“ Gegner in das Feld des nächsten Mitspielers, der noch im Spiel ist. Das kostet das Vierfache der Abschussprämie. Schicken kann man nur Gegnertypen, die schon in einer Welle vorkamen. Geschickte Gegner bringen dem Verteidiger keine Prämie. |
 
-Kreislauf-Missionen (Sektor IX) laufen im Mehrspieler nur als Koop: Alle verteidigen denselben Ring, das Gegnerlimit gilt für alle zusammen, und jeder kann die nächste Welle früh rufen.
+Kreislauf-Missionen laufen im Mehrspieler nur als Koop: Alle verteidigen denselben Ring, das Gegnerlimit gilt für alle zusammen, und jeder kann die nächste Welle früh rufen.
 
 Mission, Neustart und Tempo bestimmt in allen Modi der Host. Dialoge und Tabwechsel pausieren im Mehrspieler nicht.
 
@@ -89,6 +89,7 @@ Mission, Neustart und Tempo bestimmt in allen Modi der Host. Dialoge und Tabwech
 
 Alle Missionen sind über „Missionen“ direkt wählbar, mit einem Tab je Sektor. Nach einem Sieg führt „Nächste Mission“ weiter.
 
+<!-- missions:start -->
 | Nr. | Mission | Schwerpunkt | Map | Wellen | Credits | HP/Welle |
 | --- | --- | --- | --- | --- | --- | --- |
 | **I** | **Grenzzone** | | | | | |
@@ -139,17 +140,29 @@ Alle Missionen sind über „Missionen“ direkt wählbar, mit einem Tab je Sekt
 | 38 | Druckkammer | Enge Spirale, 10 Reaktorenergie, Echo-Wellen | 15 × 11 | 18 | 690 | 110 %¹ |
 | 39 | Schwarzer Raucher | Phantome, ohne Aura und Raffinerie | 11 × 14 | 18 | 700 | 110 % |
 | 40 | Abgrund | Finale: alle Tiefseegegner, drei Titanen | 20 × 13 | 20 | 750 | 110 %¹ |
-
-| **IX** | **Kreislauf** | | | | | |
-| 41 | Umlaufbahn | Einfacher Ring, max. 30 Gegner, Welle alle 22 s | 18 × 12 | 8 | 400 | 35 % |
-| 42 | Doppelschleife | Einbuchtung bündelt zwei Bahnen, max. 30, alle 20 s | 20 × 12 | 9 | 450 | 45 % |
-| 43 | Mahlstrom | Zwei Einbuchtungen, max. 35, alle 18 s | 20 × 13 | 10 | 500 | 30 % |
+| **IX** | **Gewitterfront** | | | | | |
+| 41 | Wetterleuchten | Böenläufer rasen in Schüben, Bremsen und Fallen | 16 × 9 | 17 | 680 | 120 %¹ |
+| 42 | Hagelfeld | Sturmvögel, nur 10 Reaktorenergie | 15 × 11 | 18 | 700 | 110 %¹ |
+| 43 | Blitzableiter | Ohne Lanze, Fokus und Gravitron | 15 × 11 | 18 | 710 | 110 % |
+| 44 | Böenschneise | Echo-Wellen in schmalen Gassen | 11 × 14 | 18 | 730 | 120 %¹ |
+| 45 | Auge des Sturms | Finale: drei Titanen | 20 × 13 | 20 | 780 | 120 %¹ |
+| **X** | **Dschungel** | | | | | |
+| 46 | Lianenpfad | Schwarmameisen, Flächenschaden lichtet sie | 15 × 9 | 18 | 720 | 240 % |
+| 47 | Tempelstufen | Regenerierende Kolosse, Echo-Wellen | 13 × 9 | 19 | 750 | 100 %¹ |
+| 48 | Mangrovensumpf | Nur Flächen- und Wuchttürme | 11 × 10 | 18 | 770 | 80 % |
+| 49 | Schlangengrube | Nur 10 Reaktorenergie | 14 × 11 | 18 | 790 | 100 % |
+| 50 | Herz des Dschungels | Finale: drei Titanen | 15 × 13 | 20 | 820 | 58 %¹ |
+| **XI** | **Kreislauf** | | | | | |
+| 51 | Umlaufbahn | Einfacher Ring, max. 30 Gegner, Welle alle 22 s | 18 × 12 | 8 | 400 | 35 % |
+| 52 | Doppelschleife | Einbuchtung bündelt zwei Bahnen, max. 30, alle 20 s | 20 × 12 | 9 | 450 | 45 % |
+| 53 | Mahlstrom | Zwei Einbuchtungen, max. 35, alle 18 s | 20 × 13 | 10 | 500 | 30 % |
 
 ¹ Einzelne Wellen haben einen eigenen HP-Faktor statt des linearen Zuwachses.
+<!-- missions:end -->
 
 ### Kreislauf
 
-Die Missionen in Sektor IX spielen auf geschlossenen Ringen ohne Reaktor:
+Die Kreislauf-Missionen im letzten Sektor spielen auf geschlossenen Ringen ohne Reaktor:
 
 - Die erste Welle startest du selbst. Danach startet ein Timer jede weitere Welle, auch wenn die vorige noch läuft.
 - Gegner laufen im Kreis, bis sie fallen. Sie richten keinen Reaktorschaden an.
@@ -283,6 +296,8 @@ Sektor I nutzt fünf Grundgegner, darunter ab Mission 02 den **Gleiter**: schnel
 | VI Singularität | Phasenläufer (weicht jedem n-ten Treffer aus), Berserker (unaufhaltsam, spurtet bei wenig HP) |
 | VII Dünenmeer | Skarabäus (gepanzert und flink), Gräber (taucht regelmäßig ab; dann treffen nur Fallen und Flächenschaden) |
 | VIII Tiefsee | Panzerkrebs (verhärtet, je verletzter er ist), Qualle (fliegt und heilt Gegner in der Nähe) |
+| IX Gewitterfront | Böenläufer (rast in Schüben), Sturmvogel (fliegt, Schild und flink) |
+| X Dschungel | Schwarmameise (weniger Schaden im Rudel), Urwaldkoloss (gepanzert, regeneriert) |
 
 Getarnte Gegner kommen nur in Missionen vor, in denen der Detektor baubar ist.
 

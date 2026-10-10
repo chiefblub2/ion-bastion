@@ -1,6 +1,6 @@
 import { DEFAULT_CONTENT } from "../content";
-import { MISSIONS } from "../content/missions";
-import type { ContentPack, MissionDefinition } from "./types";
+import { MISSIONS, SECTORS } from "../content/missions";
+import type { ContentPack, MissionDefinition, MissionSector } from "./types";
 import { Game } from "./game";
 import type { Build, Strategy } from "./play";
 
@@ -31,3 +31,18 @@ export const thinBuilds = (m: MissionDefinition, strategy: Pick<Strategy, "build
 /** Same positions, ground-only Nova everywhere. */
 export const novaOnly = (strategy: Pick<Strategy, "builds">): Build[] =>
   strategy.builds.map((b) => ({ ...b, tower: "blast" as const }));
+
+/**
+ * Mission ids and map ids of `sector` that other registered missions already use. Missions of the
+ * registered sector with the same id are skipped, so a registered sector checks clean against itself.
+ */
+export function duplicateIds(sector: MissionSector, missions: readonly MissionDefinition[] = MISSIONS): string[] {
+  const same = new Set(SECTORS.find((s) => s.id === sector.id)?.missions ?? []),
+    others = missions.filter((m) => !same.has(m));
+  const bad: string[] = [];
+  for (const m of sector.missions) {
+    if (others.some((o) => o.id === m.id)) bad.push(`Mission ${m.id}`);
+    if (others.some((o) => o.map.id === m.map.id)) bad.push(`Map ${m.map.id}`);
+  }
+  return bad;
+}

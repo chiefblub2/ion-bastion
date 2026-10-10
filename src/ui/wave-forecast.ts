@@ -96,6 +96,14 @@ const TRAIT_TAGS: { [K in TraitKind]: (t: Extract<Trait, { kind: K }>, content: 
     title: `Taucht alle ${number(t.every)} Felder für ${number(t.length)} Felder ab: nur Fallen und Flächenschaden treffen`,
   }),
   harden: (t) => ({ label: "VERHÄRTET", title: `Bis zu ${number(t.max * 100)} % Schadensreduktion, je verletzter er ist` }),
+  surge: (t) => ({
+    label: "BÖEN",
+    title: `Rast alle ${number(t.every)} Felder für ${number(t.length)} Felder mit +${number((t.factor - 1) * 100)} % Tempo`,
+  }),
+  swarm: (t) => ({
+    label: "SCHWARM",
+    title: `Pro Artgenosse in ${number(t.radius)} Feldern ${number(t.per * 100)} % weniger Schaden, höchstens ${number(t.max * 100)} %`,
+  }),
   healer: (t) => ({
     label: "HEILER",
     title: `Heilt Gegner in ${number(t.radius)} Feldern um ${number(t.percent * 100)} % ihrer HP pro Sekunde`,

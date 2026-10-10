@@ -5,12 +5,13 @@
  * or     npx vite-node scripts/balance.ts -- src/content/missions.ts src/core/strategies/index.ts 0
  * Prints reactor energy after every wave for defenses A and B (on a ring: peak enemies per wave),
  * difficulty-band WARNs, a map check and (with --why, or on failure) a leak/kill diagnosis.
- * Options: --mission <id> checks one mission, --why always prints the diagnosis.
+ * Options: --mission <id> checks one mission, --why always prints the diagnosis,
+ * --curve credits=680-780,waves=17-20[,growth=1.1-1.2] WARNs about values outside the range (growth as factor, 1.1 = 110 %).
  */
 import { resolve } from "node:path";
 import { Game } from "../src/core/game";
 import { play } from "../src/core/play";
-import { hasAir, isTutorial, novaOnly, thinBuilds, unbuildable } from "../src/core/mission-checks";
+import { duplicateIds, hasAir, isTutorial, novaOnly, thinBuilds, unbuildable } from "../src/core/mission-checks";
 import type { Enemy, MissionDefinition, MissionSector } from "../src/core/types";
 import type { Strategy } from "../src/core/play";
 import type { Strategies } from "../src/core/strategies/build";
@@ -67,8 +68,16 @@ function mapCheck(m: MissionDefinition) {
 const argv = process.argv.slice(2).filter((a) => a !== "--"),
   flag = (name: string) => argv.includes(name),
   only = argv.includes("--mission") ? argv[argv.indexOf("--mission") + 1] : undefined,
-  positional = argv.filter((a, i) => !a.startsWith("--") && argv[i - 1] !== "--mission"),
-  [sectorPath, strategiesPath, sectorIndex = "0"] = positional;
+  curveArg = argv.includes("--curve") ? argv[argv.indexOf("--curve") + 1] : undefined,
+  positional = argv.filter((a, i) => !a.startsWith("--") && argv[i - 1] !== "--mission" && argv[i - 1] !== "--curve"),
+  curve = Object.fromEntries(
+    (curveArg?.split(",") ?? []).map((part) => {
+      const [key, range = ""] = part.split("="),
+        [lo, hi = lo] = range.split("-").map(Number);
+      return [key, { lo, hi }];
+    }),
+  ) as Record<string, { lo: number; hi: number }>;
+const [sectorPath, strategiesPath, sectorIndex = "0"] = positional;
 const sectorModule = await import(resolve(sectorPath));
 const strategies: Strategies = Object.values(await import(resolve(strategiesPath))).find(
   (v) => v && typeof v === "object",
@@ -81,6 +90,7 @@ const verdict = (ok: boolean, label: string) => {
   if (!ok) failures++;
   return `${ok ? "ok  " : "FAIL"} ${label}`;
 };
+for (const id of duplicateIds(sector)) console.log(verdict(false, `id bereits vergeben: ${id}`));
 const pct = (v: number, of: number) => Math.round((v / of) * 100);
 for (const m of sector.missions) {
   if (only && m.id !== only) continue;
@@ -88,6 +98,14 @@ for (const m of sector.missions) {
   console.log(
     `\n== ${m.id} (${m.name}) · ${m.waves.length} Wellen · ◇${m.startingCredits} · ${m.circle ? `⟳ max. ${m.circle.limit}` : `⚡${m.reactorEnergy}`}`,
   );
+  const outside = (label: string, value: number, key: string) => {
+    const r = curve[key];
+    if (r && (value < r.lo || value > r.hi)) console.log(`WARN Kurve außerhalb: ${label} ${value} (Soll ${r.lo}-${r.hi})`);
+  };
+  outside("Credits", m.startingCredits, "credits");
+  outside("Wellen", m.waves.length, "waves");
+  outside("hpGrowth", m.hpGrowth ?? 0.14, "growth");
+  if (m.waves.length && m.waves.every((w) => w.hpMultiplier !== undefined)) console.log("WARN hpGrowth wird ignoriert: jede Welle hat hpMultiplier");
   const map = mapCheck(m);
   console.log(`Karte: Pfad ${map.length} · baubar ${map.buildable} · Doppelzellen ${map.double}${map.double < 6 ? "  WARN zu wenig Doppelzellen (<6)" : ""}`);
   if (!s) {

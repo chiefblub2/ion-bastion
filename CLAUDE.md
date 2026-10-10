@@ -15,9 +15,13 @@ npm run build      # tsc --noEmit && vite build → dist/
 npx vitest run src/core/match.test.ts     # single file
 npx vitest run -u                         # update snapshots (golden replays: only on purpose, review the diff)
 npx vite-node scripts/balance.ts -- src/content/sectors/frost.ts src/core/strategies/frost.ts
-                                          # balance check for one sector; sector I: -- src/content/missions.ts src/core/strategies/index.ts 0
+                                          # balance check for one sector (optional `--curve credits=680-780,waves=17-20[,growth=1.1-1.2]` adds WARNs); sector I: -- src/content/missions.ts src/core/strategies/index.ts 0
                                           # flags: --mission <id> (one mission), --why (leaks per enemy type, kills per tower)
-npx vite-node scripts/mission-table.ts    # README mission table from the content
+npx vite-node scripts/mission-table.ts    # README mission table from the content (stdout)
+npx vite-node scripts/mission-table.ts --enemies
+                                          # markdown reference table of all enemies (stats, traits) for designing new ones
+npx vite-node scripts/mission-table.ts --write
+                                          # rewrite the README table and intro counts in place (keeps shortened focus texts by mission name; prints "Schwerpunkt kürzen: <name>" for new missions)
 ```
 
 Always run `npm test` and `npm run build` before you finish. The chunk-size warning from `vite build` is expected.
@@ -36,7 +40,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 | --- | --- |
 | `src/core/` | Pure simulation: no DOM, no Phaser. `game.ts` (`Game`, command `HANDLERS`, `tick`), `types.ts`, `economy.ts` (wallets), `upgrades.ts`, `validation.ts` (`ContentError` with paths like "Mission kernfestung › Welle 7 › Gruppe 2"), `hash.ts` (`stateHash`, `fnv`), `modes.ts` (multiplayer mode registry), `match.ts` (versus engine), `strategies/` (test bots) |
 | `src/systems/` | Tick systems on `Sim` (`{ state, mission, content }`): spawn, status, movement, detection, combat, waves, traits, auras. `attacks/` has one module per attack kind, `damage.ts` the single damage pipeline |
-| `src/content/` | Towers, enemies, upgrades, maps, waves, missions; sectors II–VIII in `content/sectors/*.ts`. `content/index.ts` exports `DEFAULT_CONTENT` (`ContentPack`) |
+| `src/content/` | Towers, enemies, upgrades, maps, waves, missions; sectors II and later in `content/sectors/*.ts`. `content/index.ts` exports `DEFAULT_CONTENT` (`ContentPack`) |
 | `src/render/` | Phaser scene (`scene.ts`, `Battlefield`, `LocalDriver`) and draw registries (`towers.ts`, `enemies.ts`, `projectiles.ts`, `effects.ts`, `terrain.ts`) |
 | `src/ui/` | DOM HUD (`interface.ts`, all markup is one template string), messages, tooltips, wave forecast, live units, multiplayer HUD (`players.ts`) |
 | `src/app/` | Input (`input.ts`), dialogs, multiplayer lobby/session (`coop.ts`), audio, fullscreen, WebMCP tools (`webmcp.ts`) |
@@ -84,7 +88,7 @@ Whole mission packs (new sectors, themes, enemies) follow the project skill `.cl
   - The ASCII sketch is the only source of truth: `S` entry, `R` reactor, `=` path, `#` obstacle, `.` buildable.
   - Size and path order are derived from it. Branches, dead ends and loose path cells are rejected with their coordinates.
   - A new terrain style needs an entry in `THEMES` (`render/terrain.ts`) and a value in `MapTheme`.
-- **Circle mission (Kreislauf, sector IX in `content/sectors/circle.ts`):**
+- **Circle mission (Kreislauf, the last sector, in `content/sectors/circle.ts`):**
   - A map sketch without `R` is a closed ring (`MapDefinition.loop`). `S` sits on the ring, and enemies leave it in the first free direction (right, down, left, up).
   - The mission sets `circle: { interval, limit, earlyBonus }`; validation requires `circle` and `loop` together.
   - `systems/circle.ts` replaces `settleWave`. The status stays `"wave"` from the first start to the end.
@@ -111,7 +115,7 @@ Whole mission packs (new sectors, themes, enemies) follow the project skill `.cl
 
   Every `params` value can then be upgraded via `effects.attack` and shows up in the UI.
 - **Status effect:** add a member of `StatusEffect` and an entry in `STATUSES` (`systems/status.ts`), with a merge rule and optional hooks.
-- **Enemy:** add it to `content/enemies.ts`, with `layer` (`ground`/`air`), `visual` and optional `traits`. The available traits are armor, regen, splitOnDeath, slowImmune, shield, sprint, evade, healer, leader, stealth, unstoppable, swift, burrow and harden. A new trait is an entry in the `TRAITS` registry (`systems/traits.ts`), using the hooks `onDamage`, `onTick`, `onDeath` and `resists`. There is no inheritance tree and no global event bus. Stealth enemies may only appear in missions where the detector is buildable.
+- **Enemy:** add it to `content/enemies.ts`, with `layer` (`ground`/`air`), `visual` and optional `traits`. The available traits are armor, regen, splitOnDeath, slowImmune, shield, sprint, evade, healer, leader, stealth, unstoppable, swift, burrow, harden, surge and swarm. A new trait is an entry in the `TRAITS` registry (`systems/traits.ts`), using the hooks `onDamage`, `onTick`, `onDeath` and `resists`. There is no inheritance tree and no global event bus. Stealth enemies may only appear in missions where the detector is buildable.
 - **Upgrades:** `UpgradeDefinition` (`id`, `label`, `description`, `cost`, `requires`, optional `path`, `effects`) in `content/upgrades.ts`.
   - `attackTower` generates the five-level path.
   - `AURA_UPGRADES` defines the three exclusive aura paths.

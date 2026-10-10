@@ -33,7 +33,7 @@ const BODIES: { [K in EnemyVisual["shape"]]: (ctx: BodyContext, visual: Extract<
 };
 /** Status marker colours; they match the towers that cause the effect. */
 const STATUS_COLORS = { slowed: 0xa5a2ff, stunned: 0x5cf2d6, burning: 0xff6a3d, vulnerable: 0xb6f04a, pulled: 0x4d7cff, disrupted: 0xff3df2, netted: 0xe0c068, bleeding: 0xd7263d, charged: 0xff4d4d };
-const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff9e, scan: 0x6fd3ff, regen: 0x93f5b8, armor: 0xc9d1d9, immune: 0x9fe6ff, split: 0x442e36, sand: 0xc9a46a, plate: 0xff9a7a };
+const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff9e, scan: 0x6fd3ff, regen: 0x93f5b8, armor: 0xc9d1d9, immune: 0x9fe6ff, split: 0x442e36, sand: 0xc9a46a, plate: 0xff9a7a, gust: 0x9fd8ff, swarm: 0xb6ff6a };
 /** Markers under the body: auras of leaders and healers, motion trails, outlines. */
 function traitsBelow(g: Ink, x: number, y: number, r: number, cell: number, color: number, heading: number, t: TraitFlags, clock: number) {
   if (t.leader) {
@@ -59,6 +59,25 @@ function traitsBelow(g: Ink, x: number, y: number, r: number, cell: number, colo
       const sx = x + back.x * r * 1.2 - back.y * side * r,
         sy = y + back.y * r * 1.2 + back.x * side * r;
       g.lineBetween(sx, sy, sx + back.x * r * 1.1, sy + back.y * r * 1.1);
+    }
+  }
+  // Surging: long electric-blue streaks behind the body.
+  if (t.surging) {
+    g.lineStyle(1.5, TRAIT_COLORS.gust, 0.7);
+    for (const side of [-0.7, -0.25, 0.25, 0.7]) {
+      const sx = x + back.x * r * 1.1 - back.y * side * r,
+        sy = y + back.y * r * 1.1 + back.x * side * r;
+      g.lineBetween(sx, sy, sx + back.x * r * 2.2, sy + back.y * r * 2.2);
+    }
+  }
+  // Swarming: a glow whose strength follows the damage reduction, with link spokes.
+  if (t.swarm > 0) {
+    g.fillStyle(TRAIT_COLORS.swarm, 0.1 + 0.25 * t.swarm);
+    g.fillCircle(x, y, r + 5);
+    g.lineStyle(1, TRAIT_COLORS.swarm, 0.2 + 0.6 * t.swarm);
+    for (let i = 0; i < 4; i++) {
+      const a = (i * Math.PI) / 2 + clock * 0.5;
+      g.lineBetween(x + Math.cos(a) * r, y + Math.sin(a) * r, x + Math.cos(a) * (r + 7), y + Math.sin(a) * (r + 7));
     }
   }
   // Evasive: a faint afterimage beside the body.

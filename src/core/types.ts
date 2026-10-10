@@ -284,7 +284,25 @@ export type Trait =
       /** Cells underground per cycle, in (0, every). Burrowed: no tower can pick it, only traps and area damage hit. */
       length: number;
     }
-  | { kind: "harden"; /** Damage reduction at 0 HP; it grows linearly with the HP lost. */ max: number };
+  | { kind: "harden"; /** Damage reduction at 0 HP; it grows linearly with the HP lost. */ max: number }
+  | {
+      kind: "surge";
+      /** Cycle length in cells of path distance; the last `length` cells of each cycle are run at `factor` speed. */
+      every: number;
+      /** Cells of the burst per cycle, in (0, every). */
+      length: number;
+      /** Speed multiplier during the burst, > 1. */
+      factor: number;
+    }
+  | {
+      kind: "swarm";
+      /** Radius in cells in which other living enemies of the same type count. */
+      radius: number;
+      /** Damage reduction per neighbour, in (0, 1). */
+      per: number;
+      /** Cap of the total reduction, in (0, 1). */
+      max: number;
+    };
 export type TraitKind = Trait["kind"];
 export type EnemyVisual =
   | { shape: "polygon"; sides: number; rotation?: number; /** Render only: number of tentacles trailing behind the body. */ tentacles?: number }
@@ -303,7 +321,7 @@ export interface EnemyDefinition {
   visual: EnemyVisual;
 }
 /** Terrain look, drawn by `render/terrain.ts`. */
-export type MapTheme = "outpost" | "lock" | "shard" | "ember" | "core" | "frost" | "toxic" | "orbit" | "ruin" | "rift" | "dune" | "abyss";
+export type MapTheme = "outpost" | "lock" | "shard" | "ember" | "core" | "frost" | "toxic" | "orbit" | "ruin" | "rift" | "dune" | "abyss" | "storm" | "jungle";
 export interface MapDefinition {
   id: string;
   name: string;

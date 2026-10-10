@@ -307,3 +307,71 @@ describe("harden", () => {
     expect(e.hp).toBeCloseTo(430);
   });
 });
+
+describe("surge", () => {
+  const surging = () => new Game(undefined, withDroneTraits({ kind: "surge", every: 4, length: 1, factor: 2.2 }));
+  it("starts at normal speed and bursts only in the last `length` cells of each cycle", () => {
+    const g = surging(), e = makeEnemy(1, "drone", 0, 3, 0);
+    expect(traitSpeedFactor(g, e)).toBe(1);
+    expect(traitFlags(g, e).surging).toBe(false);
+    e.distance = 2.9;
+    expect(traitSpeedFactor(g, e)).toBe(1);
+    e.distance = 3;
+    expect(traitSpeedFactor(g, e)).toBe(2.2);
+    expect(traitFlags(g, e).surging).toBe(true);
+    e.distance = 3.99;
+    expect(traitSpeedFactor(g, e)).toBe(2.2);
+    e.distance = 4;
+    expect(traitSpeedFactor(g, e)).toBe(1);
+    e.distance = 7.5;
+    expect(traitSpeedFactor(g, e)).toBe(2.2);
+  });
+  it("is rejected by validation when malformed", () => {
+    for (const t of [
+      { every: 0, length: 0.5, factor: 2 },
+      { every: 4, length: 0, factor: 2 },
+      { every: 4, length: 4, factor: 2 },
+      { every: 4, length: 1, factor: 1 },
+    ])
+      expect(() => validateContent(withDroneTraits({ kind: "surge", ...t }))).toThrow();
+    expect(() => validateContent(withDroneTraits({ kind: "surge", every: 4, length: 1, factor: 2.2 }))).not.toThrow();
+  });
+});
+
+describe("swarm", () => {
+  const swarming = () => new Game(undefined, withDroneTraits({ kind: "swarm", radius: 1, per: 0.1, max: 0.5 }));
+  /** A swarm of `n` extra drones next to the target; returns the damage that landed on the target. */
+  const hitWith = (n: number, burn = false) => {
+    const g = swarming(), e = makeEnemy(1, "drone", 5, 5);
+    g.state.enemies = [e];
+    for (let i = 0; i < n; i++) g.state.enemies.push(makeEnemy(2 + i, "drone", 5 + 0.05 * i, 5));
+    applyDamage(g, src, e, 100, burn);
+    return { taken: 1000 - e.hp, flags: traitFlags(g, e) };
+  };
+  it("takes full damage alone, 10 % less with one neighbour and more with many", () => {
+    expect(hitWith(0).taken).toBeCloseTo(100);
+    expect(hitWith(1).taken).toBeCloseTo(90);
+    expect(hitWith(3).taken).toBeCloseTo(70);
+  });
+  it("caps the reduction", () => {
+    expect(hitWith(5).taken).toBeCloseTo(50);
+    expect(hitWith(9).taken).toBeCloseTo(50);
+    expect(hitWith(9).flags.swarm).toBeCloseTo(0.5);
+  });
+  it("ignores other types, dead enemies and far ones", () => {
+    const g = swarming(), e = makeEnemy(1, "drone", 5, 5), other = makeEnemy(2, "runner", 5, 5), dead = makeEnemy(3, "drone", 5, 5), far = makeEnemy(4, "drone", 7, 5);
+    dead.hp = 0;
+    g.state.enemies = [e, other, dead, far];
+    expect(traitFlags(g, e).swarm).toBe(0);
+    applyDamage(g, src, e, 100);
+    expect(e.hp).toBeCloseTo(900);
+  });
+  it("reduces burn damage as well", () => {
+    expect(hitWith(2, true).taken).toBeCloseTo(80);
+  });
+  it("is rejected by validation when malformed", () => {
+    for (const t of [{ radius: 0, per: 0.1, max: 0.5 }, { radius: 1, per: 0, max: 0.5 }, { radius: 1, per: 0.1, max: 1 }])
+      expect(() => validateContent(withDroneTraits({ kind: "swarm", ...t }))).toThrow();
+    expect(() => validateContent(withDroneTraits({ kind: "swarm", radius: 1, per: 0.1, max: 0.5 }))).not.toThrow();
+  });
+});

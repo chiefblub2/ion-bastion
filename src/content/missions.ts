@@ -10,9 +10,11 @@ import {
 import { TIEFSEE } from "./sectors/abyss";
 import { KREISLAUF } from "./sectors/circle";
 import { DUENENMEER } from "./sectors/dune";
+import { DSCHUNGEL } from "./sectors/jungle";
 import { FROSTGUERTEL } from "./sectors/frost";
 import { ORBITALDECK } from "./sectors/orbit";
 import { SINGULARITAET } from "./sectors/rift";
+import { GEWITTERFRONT } from "./sectors/storm";
 import { RUINENSTADT } from "./sectors/ruin";
 import { SAEUREMOOR } from "./sectors/toxic";
 const GRENZZONE: readonly MissionDefinition[] = [
@@ -76,6 +78,8 @@ export const SECTORS: readonly MissionSector[] = [
   SINGULARITAET,
   DUENENMEER,
   TIEFSEE,
+  GEWITTERFRONT,
+  DSCHUNGEL,
   KREISLAUF,
 ];
 export const MISSIONS: readonly MissionDefinition[] = SECTORS.flatMap((s) => s.missions);
