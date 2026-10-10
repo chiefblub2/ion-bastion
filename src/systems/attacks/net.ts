@@ -1,6 +1,8 @@
 import type { NetAttack } from "../../core/types";
 import { applyDamage, hitOf } from "../damage";
 import { applyStatus } from "../status";
+import { layerOf } from "../traits";
+import { canAcquire, nearest } from "./targeting";
 import type { AttackModule } from "./types";
 /** Fangnetz: slows a flyer and pulls it into reach of ground-only towers. */
 export const net: AttackModule<NetAttack> = {
@@ -12,7 +14,18 @@ export const net: AttackModule<NetAttack> = {
   },
   apply: (sim, src, { enemy }, damage, spec) => {
     if (!enemy) return;
-    applyStatus(sim, enemy, { kind: "netted", factor: spec.factor, until: sim.state.time + spec.duration });
+    const until = sim.state.time + spec.duration,
+      special = src.special;
+    // Exposed Target: a net that took hold also weakens the flyer until it ends.
+    if (applyStatus(sim, enemy, { kind: "netted", factor: spec.factor, until }) && special?.kind === "exposed-target")
+      applyStatus(sim, enemy, { kind: "vulnerable", amount: special.bonus, until });
     applyDamage(sim, src, enemy, damage, false, hitOf("net", src));
+    // Net Cloud: other flyers nearby are caught in the same net, without damage.
+    if (special?.kind !== "net-cloud") return;
+    const color = sim.content.towers[src.type].color;
+    for (const other of nearest(sim, enemy, special.radius, special.count, (c) => c !== enemy && layerOf(sim, c) === "air" && canAcquire(sim, src.type, c))) {
+      sim.state.events.push({ type: "chain", from: { x: enemy.x, y: enemy.y }, to: { x: other.x, y: other.y }, color });
+      applyStatus(sim, other, { kind: "netted", factor: spec.factor, until });
+    }
   },
 };

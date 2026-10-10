@@ -568,14 +568,16 @@ export interface ContentPack {
 export interface DamageSource {
   tower: number;
   type: TowerId;
+  /** Specialization of the firing tower, snapshotted at fire time; absent for secondary hits, so they never chain. */
+  special?: SpecializationSpec;
 }
 /** Effects on an enemy; each kind has merge and tick rules in `systems/status.ts`. Expires at `until`. */
 export type StatusEffect =
   | { kind: "slow"; factor: number; until: number }
   /** Frozen until `release`; immune to further stuns until `until`. */
-  | { kind: "stun"; release: number; until: number }
+  | { kind: "stun"; release: number; until: number; /** Temporal Exposure: vulnerability granted once at `release`. */ exposure?: { amount: number; duration: number } }
   /** Damage per second, dealt in steps; `next` is the time of the next step. */
-  | { kind: "burn"; dps: number; next: number; until: number; source: DamageSource }
+  | { kind: "burn"; dps: number; next: number; until: number; source: DamageSource; /** Wildfire: passed on when the carrier dies. */ spread?: { factor: number; radius: number; count: number } }
   | { kind: "vulnerable"; amount: number; until: number }
   /** Walks backwards at `factor` × speed until `release`; immune to further pulls until `until`. */
   | { kind: "pull"; factor: number; release: number; until: number }
@@ -586,7 +588,9 @@ export type StatusEffect =
   /** Caltrops: every `BURN_TICK` the cells walked since `last` cost `perCell` each. */
   | { kind: "bleeding"; perCell: number; last: number; next: number; until: number; source: DamageSource }
   /** Sticky Mine: explodes at `until` or when the carrier dies; `until` is -Infinity once it has gone off. */
-  | { kind: "charged"; damage: number; radius: number; until: number; source: DamageSource };
+  | { kind: "charged"; damage: number; radius: number; until: number; source: DamageSource }
+  /** Armor Dissolver: the `armor` trait loses `fraction` of its reduction. */
+  | { kind: "armorDissolved"; fraction: number; until: number };
 export type StatusKind = StatusEffect["kind"];
 export interface Enemy extends Point {
   id: number;
@@ -624,6 +628,8 @@ export interface Tower extends Point {
   priority?: TargetPriority;
   /** Focus only: the locked target and its consecutive hits. */
   focus?: { target: number; stacks: number };
+  /** Ricochet and Twin Arc: shots since the last proc; absent without those specializations. */
+  specialShots?: number;
 }
 /** Target selection of an attack tower; ties fall back to path progress, then id. */
 export type TargetPriority = "first" | "last" | "strong" | "weak" | "close";
@@ -640,6 +646,10 @@ export interface Projectile extends Point {
   damage: number;
   /** Attack parameters of the firing tower's upgrades, snapshotted at fire time. */
   attack: AttackSpec;
+  /** Specialization snapshot at fire time. */
+  special?: SpecializationSpec;
+  /** Fire-time proc: 1 for a Ricochet shot, the unused shards for Concentrated Volley. */
+  proc?: number;
 }
 export interface Spawn {
   at: number;
@@ -692,6 +702,17 @@ export interface GameState {
   circle?: { next: number };
   /** Reactor missions between waves: seconds until the next wave starts by itself; absent before wave 1 and in versus. */
   nextWave?: number;
+  /** Delayed hits (Aftershock) in due order; absent while empty. */
+  pending?: PendingWave[];
+}
+/** A second Quake wave, frozen when the first one went off. */
+export interface PendingWave {
+  due: number;
+  source: DamageSource;
+  at: Point;
+  radius: number;
+  damage: number;
+  edge: number;
 }
 /** Everything a simulation system needs; `Game` implements it. */
 export interface Sim {

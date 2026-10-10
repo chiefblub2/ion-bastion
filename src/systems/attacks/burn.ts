@@ -20,6 +20,8 @@ export const burn: AttackModule<BurnAttack> = {
       next: time + BURN_TICK,
       until: time + spec.duration,
       source: { ...src },
+      // Wildfire: only burns of this path spread when their carrier dies.
+      ...(src.special?.kind === "wildfire" ? { spread: { factor: src.special.remainingFactor, radius: src.special.radius, count: src.special.count } } : {}),
     });
   },
 };

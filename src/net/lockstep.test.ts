@@ -72,6 +72,31 @@ describe("lockstep", () => {
     expect(clients[0].game.state.wave).toBeGreaterThan(2);
     expect(clients[0].hashes).toEqual(clients[2].hashes);
   });
+  it("keeps co-op clients identical with specialized towers", () => {
+    const { room, clients, step } = session();
+    room.launch("outpost-07");
+    step();
+    // The same grant on every client keeps them identical, like a starting bonus.
+    for (const c of clients) c.game.state.wallets = [20000, 20000];
+    const levels = ["level-2", "level-3", "level-4", "level-5"];
+    room.queue(0, { type: "build", tower: "pulse", x: 4, y: 4 });
+    room.queue(1, { type: "build", tower: "quake", x: 6, y: 5 });
+    step();
+    const [pulse, quake] = clients[0].game.state.towers.map((t) => t.id);
+    for (const upgrade of [...levels, "ricochet-1", "ricochet-2", "ricochet-3"]) room.queue(0, { type: "upgrade", id: pulse, upgrade });
+    for (const upgrade of [...levels, "aftershock-1"]) room.queue(1, { type: "upgrade", id: quake, upgrade });
+    // A foreign purchase is rejected on every client alike.
+    room.queue(0, { type: "upgrade", id: quake, upgrade: "fracture-1" });
+    room.queue(0, { type: "start" });
+    let guard = 0;
+    do {
+      step();
+      expect(clients[0].sim.hash()).toBe(clients[1].sim.hash());
+      expect(guard++).toBeLessThan(20000);
+    } while (clients[0].game.state.status === "wave");
+    expect(clients[1].game.state.towers.map((t) => t.upgrades.at(-1))).toEqual(["ricochet-3", "aftershock-1"]);
+    expect(clients[0].hashes).toEqual(clients[1].hashes);
+  });
   it("reports every applied command with its player", () => {
     const { room, clients, step } = session();
     room.launch("outpost-07");

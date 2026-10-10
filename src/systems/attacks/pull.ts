@@ -21,13 +21,18 @@ export const pull: AttackModule<PullAttack> = {
     for (const target of [...sim.state.enemies])
       if (target.hp > 0 && canTarget(sim, src.type, target) && dist(target, at) <= spec.radius) {
         applyDamage(sim, src, target, damage, false, hitOf("pull", src));
-        if (target.hp > 0)
+        if (
+          target.hp > 0 &&
           applyStatus(sim, target, {
             kind: "pull",
             factor: spec.strength,
             release: time + spec.duration,
             until: time + spec.duration + spec.recovery,
-          });
+          }) &&
+          src.special?.kind === "compression"
+        )
+          // Compression: only a pull that took hold opens the damage window.
+          applyStatus(sim, target, { kind: "vulnerable", amount: src.special.bonus, until: time + src.special.duration });
       }
   },
 };
