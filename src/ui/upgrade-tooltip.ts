@@ -65,8 +65,6 @@ export function upgradeControl(tower: Tower, towers: readonly Tower[] = [], cont
     const unchanged = describeAttack(resolveUpgrades(tower, content).attack).filter(r => !changedAttack.includes(r.key));
     const special = support
       ? `${tower.upgrades.length ? "" : "The first purchase sets the path; the other paths are locked. "}The Aura radius stays at ${number(current.range)} cells. Only the strongest Aura bonus applies per stat.`
-      : specialized && upgrade.requires.includes("level-5")
-      ? "Locks the other two paths: this tower keeps the chosen path for good."
       : unchanged.length ? `Unchanged: ${unchanged.map(r => `${r.label} ${statValue(r)}`).join(", ")}.` : "";
     return `<div class="upgrade-control">
       <button class="upgrade ${support || specialized ? "aura-upgrade" : ""}" data-upgrade="${upgrade.id}"${pathColor(upgrade.path)} aria-describedby="${tooltipId}" ${purchased ? "disabled" : ""}>

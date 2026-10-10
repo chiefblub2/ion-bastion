@@ -141,6 +141,12 @@ Whole mission packs (new sectors, themes, enemies) follow the project skill `.cl
   - Validation rejects duplicate ids, missing or cyclic requirements, and invalid costs or effects.
   - Every upgrade is bought with the same command, `{ type: "upgrade", id, upgrade }`.
   - `previewUpgrade` resolves a hypothetical purchase without changing state.
+- **Specializations (levels 6–8):** `attackTower` appends three exclusive paths × three tiers from `content/specializations.ts` (`SPECIALIZATIONS` per tower id; ids `<slug>-<tier>`, tier I requires `level-5`, so a path may start from an upgrade without a path but never leave its path) and sets `visual.paths` (color, motif, name, role). Traps (`trapTower`) and support towers have none.
+  - A tier holds final values: `effects.stats`/`effects.attack` as usual, plus `effects.specialization` (`SpecializationSpec` in `core/specialization-types.ts`, validated by `specializationError`), which `resolveUpgrades` replaces per tier.
+  - `attackEnemies` snapshots it on `DamageSource.special` (and on the projectile), so it survives a sale; `hitOf` copies it to `Hit.special` for conditional damage (`deal`) and armor pierce (the armor trait). Secondary hits use `plain(src)`, so they never proc again. Fire-time procs travel as `Impact.proc` (Ricochet, Twin Arc via `Tower.specialShots`; Concentrated Volley). Overload's lone-target check happens at fire time.
+  - `applyDamage` returns the primary `DamageOutcome` (Blood Transfer, Chain Reaction) and `applyStatus` whether the effect took hold (Brittle Ice, Compression, Weak Signal, Exposed Target; a rejected stun/pull merge is false). New status: `armorDissolved`; optional `stun.exposure` and `burn.spread`.
+  - Aftershock waves queue in `GameState.pending`, fired by `fireAftershocks` between projectiles and attacks and cleared at wave end. `specialShots` and `pending` are hashed only when present.
+  - `play()` never buys specializations, so the golden replays and the mission balance ignore them.
 
 ## Tests
 

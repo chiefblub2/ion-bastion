@@ -294,6 +294,33 @@ Levels 4 and 5 are expensive, but bring more damage per credit than additional t
 | Snare Net | 3.5 s | 40 % slower, 4.5 s |
 | Gravitron | radius 1.2, 1.8 times pull | radius 1.4, 2.2 times, 0.7 s |
 
+### Specializations (levels 6–8)
+
+After level 5 every attack and control tower above offers three specializations. Buying the first tier commits that tower to the path; the other two are locked until you sell it. Each path has three tiers (levels 6, 7 and 8) costing 2.5, 4 and 6 times the build cost; a fully specialized Pulse costs 200 + 320 + 480 credits on top. Traps and support towers have no specializations. Tooltips show the final values of every tier.
+
+| Tower | Path A | Path B | Path C |
+| --- | --- | --- | --- |
+| Pulse | Sharpshooter: +70 % against heavy targets | Overclock: 35 % less time between shots | Ricochet: every 2nd hit bounces for 65 % |
+| Nova | Supernova: blast radius 2 | Siegebreaker: +60 % against armor | Chain Reaction: up to 3 kills explode again |
+| Flak | Skyhunter: +70 % against heavy flyers | Flak Curtain: 3 extra flyers for 45 % | Wingclip: hit flyers 30 % slower |
+| Tesla | Storm Network: 8 jumps, 2.6 cells | Overload: +85 % on a lone enemy | Twin Arc: every 2nd salvo a second chain |
+| Lance | Longshot: +2.3 cells range | Broadbeam: half-width 0.95 | Rail Penetrator: ignores 60 % of armor |
+| Ember | Incinerator: 6× the hit over 4 s | Wildfire: burns spread on death | Searing Heat: +40 % against burning enemies |
+| Decay | Entropy Beam: 7.5 % of max HP | Final Decay: 8 % below 55 % HP | Contagion: 3 nearby enemies take damage too |
+| Focus | Deep Focus: +45 % per stack | Adaptive Lens: keeps 75 % of its stacks | Prism Beam: hits the enemy behind for 60 % |
+| Mortar | Saturation: blast radius 2.3 | Bunker Buster: +75 % against armor | Mobile Artillery: no dead zone, 30 % faster |
+| Quake | Fracture: hit enemies take +20 % for 3 s | Resonance: 35 % faster pulses | Aftershock: a second wave for 55 % |
+| Executioner | Hunter's Mark: executes below 50 % HP | Guillotine: 8× execution damage | Blood Transfer: 60 % of the overkill jumps on |
+| Shrapnel | Scatterstorm: 8 targets | Tungsten Shards: ignore 60 % of armor | Concentrated Volley: unused shards hit the main target |
+| Cryo | Permafrost: slows to 20 % speed | Brittle Ice: slowed enemies take +16 % | Frostburst: slows enemies around the target |
+| Stasis | Deep Stasis: 1.8 s stun | Time Field: pulse radius 1.9 | Temporal Exposure: +20 % damage after a stun |
+| Corrosion | Superacid: +55 % damage taken | Acid Fog: radius 1.6 | Armor Dissolver: corroded armor loses 30 % |
+| Gravitron | Reverse Drive: 3.4× pull | Gravity Well: radius 2 | Compression: pulled enemies take +20 % |
+| Jammer | Wideband: radius 2.1 | Blackout: 7 s disruption | Weak Signal: disrupted enemies take +16 % |
+| Snare Net | Anchor Net: netted flyers at 30 % speed | Net Cloud: catches 3 more flyers | Exposed Target: netted flyers take +20 % |
+
+Damage-taken bonuses do not stack with each other or with Corrosion: the strongest one counts. Armor pierce and Armor Dissolver only weaken the armor trait, never shields, mirrors or other defences.
+
 The **Refinery** has three levels and pays 25 / 40 / 60 credits per wave (upgrades cost 100 and 160 credits).
 
 More support towers with three levels:
