@@ -11,7 +11,11 @@ import { createEnemy } from "./spawn";
 import { applyStatus, speedFactor, tickStatus } from "./status";
 import { canAcquire, canTarget } from "./attacks";
 import { updateDetection } from "./detection";
-import { isBurrowed, isHidden, traitFlags, traitSpeedFactor } from "./traits";
+import { stateHash } from "../core/hash";
+import { parseMap } from "../content/maps";
+import { g as group, wave } from "../content/waves";
+import type { Tower } from "../core/types";
+import { isBurrowed, isHidden, layerOf, tickTraits, traitFlags, traitSpeedFactor } from "./traits";
 
 /** The shipped content with extra traits on the drone. */
 function withDroneTraits(...traits: Trait[]): ContentPack {
@@ -431,5 +435,311 @@ describe("facet", () => {
     ])
       expect(() => validateContent(withDroneTraits({ kind: "facet", ...t }))).toThrow();
     expect(() => validateContent(withDroneTraits({ kind: "facet", every: 4, length: 2, reduction: 0.7 }))).not.toThrow();
+  });
+});
+
+const bad = (trait: Trait) => expect(() => validateContent(withDroneTraits(trait))).toThrow();
+const good = (trait: Trait) => expect(() => validateContent(withDroneTraits(trait))).not.toThrow();
+const towerAt = (id: number, type: Tower["type"], x: number, y: number): Tower => ({ id, type, x, y, upgrades: [], cooldown: 0, spent: 0, angle: 0, kills: 0, owner: 0 });
+
+describe("leap", () => {
+  const leaping = () => new Game(undefined, withDroneTraits({ kind: "leap", every: 4, length: 1.5 }));
+  it("flips the layer in the last `length` cells of each cycle", () => {
+    const g = leaping(), at = (d: number) => layerOf(g, makeEnemy(1, "drone", 0, 3, d));
+    expect(at(0)).toBe("ground");
+    expect(at(2.49)).toBe("ground");
+    expect(at(2.5)).toBe("air");
+    expect(at(3.99)).toBe("air");
+    expect(at(4)).toBe("ground");
+    expect(at(6.6)).toBe("air");
+    expect(traitFlags(g, makeEnemy(1, "drone", 0, 3, 3)).leaping).toBe(true);
+    expect(traitFlags(g, makeEnemy(1, "drone", 0, 3, 1)).leaping).toBe(false);
+  });
+  it("makes ground-only towers and traps miss a leaping ground enemy, air-only towers hit it", () => {
+    const g = leaping(), up = makeEnemy(1, "drone", 0, 3, 3), down = makeEnemy(2, "drone", 0, 3, 1);
+    expect(canTarget(g, "blast", up)).toBe(false);
+    expect(canTarget(g, "spikes", up)).toBe(false);
+    expect(canTarget(g, "flak", up)).toBe(true);
+    expect(canTarget(g, "blast", down)).toBe(true);
+    expect(canTarget(g, "spikes", down)).toBe(true);
+    expect(canTarget(g, "flak", down)).toBe(false);
+  });
+  it("flips an air enemy to the ground", () => {
+    const g = new Game(undefined, { ...DEFAULT_CONTENT, enemies: { ...ENEMIES, drone: { ...ENEMIES.drone, layer: "air", traits: [{ kind: "leap", every: 4, length: 1.5 }] } } });
+    const up = makeEnemy(1, "drone", 0, 3, 1), down = makeEnemy(2, "drone", 0, 3, 3);
+    expect(canTarget(g, "flak", up)).toBe(true);
+    expect(canTarget(g, "blast", up)).toBe(false);
+    expect(canTarget(g, "blast", down)).toBe(true);
+    expect(canTarget(g, "flak", down)).toBe(false);
+  });
+  it("keeps the net rule: a netted leaping ground enemy is hit by ground towers", () => {
+    const g = leaping(), up = makeEnemy(1, "drone", 0, 3, 3);
+    expect(canTarget(g, "blast", up)).toBe(false);
+    applyStatus(g, up, { kind: "netted", factor: 0.5, until: 5 });
+    expect(canTarget(g, "blast", up)).toBe(true);
+  });
+  it("is rejected by validation when malformed", () => {
+    for (const t of [{ every: 0, length: 0.5 }, { every: 4, length: 0 }, { every: 4, length: 4 }]) bad({ kind: "leap", ...t });
+    good({ kind: "leap", every: 4, length: 1.5 });
+  });
+});
+
+describe("dampen", () => {
+  const dampening = () => new Game(undefined, withDroneTraits({ kind: "dampen", radius: 1.5 }));
+  const effects = [
+    { kind: "slow", factor: 0.5, until: 5 },
+    { kind: "stun", release: 0, until: 5 },
+    { kind: "pull", factor: -1, release: 0, until: 5 },
+  ] as const;
+  it("makes itself immune to slow, stun and pull", () => {
+    const g = dampening(), e = makeEnemy(1, "drone", 0, 3);
+    g.state.enemies = [e];
+    for (const fx of effects) applyStatus(g, e, { ...fx });
+    expect(e.status).toEqual([]);
+  });
+  it("covers enemies of any type within the radius but not outside", () => {
+    const g = dampening(), d = makeEnemy(1, "drone", 0, 3), near = makeEnemy(2, "runner", 1.5, 3), far = makeEnemy(3, "runner", 1.6, 3);
+    g.state.enemies = [d, near, far];
+    // The runner has no dampen trait of its own.
+    expect(g.content.enemies.runner.traits ?? []).toEqual([]);
+    for (const fx of effects) {
+      applyStatus(g, near, { ...fx });
+      applyStatus(g, far, { ...fx });
+    }
+    expect(near.status).toEqual([]);
+    expect(far.status.map((s) => s.kind).sort()).toEqual(["pull", "slow", "stun"]);
+  });
+  it("lets other statuses through, and stops when the dampener is dead or disrupted", () => {
+    const g = dampening(), d = makeEnemy(1, "drone", 0, 3), near = makeEnemy(2, "runner", 1, 3);
+    g.state.enemies = [d, near];
+    applyStatus(g, near, { kind: "vulnerable", factor: 1.3, until: 5 } as never);
+    expect(near.status).toHaveLength(1);
+    near.status = [];
+    applyStatus(g, d, { kind: "disrupted", until: 5 });
+    d.status = [{ kind: "disrupted", until: 5 }];
+    applyStatus(g, near, { kind: "slow", factor: 0.5, until: 5 });
+    expect(near.status.map((s) => s.kind)).toEqual(["slow"]);
+    d.status = [];
+    near.status = [];
+    d.hp = 0;
+    applyStatus(g, near, { kind: "slow", factor: 0.5, until: 5 });
+    expect(near.status).toHaveLength(1);
+  });
+  it("reports its radius and is rejected when malformed", () => {
+    expect(traitFlags(dampening(), makeEnemy(1, "drone", 0, 3)).dampen).toBe(1.5);
+    expect(traitFlags(new Game(), makeEnemy(1, "drone", 0, 3)).dampen).toBe(0);
+    bad({ kind: "dampen", radius: 0 });
+    good({ kind: "dampen", radius: 1.5 });
+  });
+});
+
+describe("brood", () => {
+  const brooding = (max = 2) => new Game(undefined, withDroneTraits({ kind: "brood", type: "runner", every: 2, max }));
+  const eggs = (g: Game) => g.state.enemies.filter((e) => e.type === "runner");
+  it("lays one egg per `every` cells up to `max`, at its own distance", () => {
+    const g = brooding(), e = createEnemy(g, "drone", 0);
+    expect(e.brood).toBe(0);
+    tickTraits(g, 1 / 30);
+    expect(eggs(g)).toHaveLength(0);
+    e.distance = 2;
+    tickTraits(g, 1 / 30);
+    expect(eggs(g)).toHaveLength(1);
+    expect(eggs(g)[0].distance).toBe(2);
+    expect(e.brood).toBe(1);
+    e.distance = 9;
+    for (let i = 0; i < 5; i++) tickTraits(g, 1 / 30);
+    expect(eggs(g)).toHaveLength(2);
+    expect(e.brood).toBe(2);
+    expect(traitFlags(g, e).brood).toBe(0);
+  });
+  it("never re-lays after being pulled back, and does not tick the new egg in its own tick", () => {
+    const g = brooding(3), e = createEnemy(g, "drone", 4);
+    tickTraits(g, 1 / 30);
+    expect(e.brood).toBe(1);
+    e.distance = 0.5;
+    tickTraits(g, 1 / 30);
+    e.distance = 3;
+    tickTraits(g, 1 / 30);
+    expect(e.brood).toBe(1);
+    expect(eggs(g)).toHaveLength(1);
+    e.distance = 4;
+    tickTraits(g, 1 / 30);
+    expect(e.brood).toBe(2);
+  });
+  it("lays at most one egg per tick and not while disrupted", () => {
+    const g = brooding(5), e = createEnemy(g, "drone", 0);
+    e.status = [{ kind: "disrupted", until: 5 }];
+    e.distance = 8;
+    tickTraits(g, 1 / 30);
+    expect(eggs(g)).toHaveLength(0);
+    e.status = [];
+    tickTraits(g, 1 / 30);
+    expect(eggs(g)).toHaveLength(1);
+    tickTraits(g, 1 / 30);
+    expect(eggs(g)).toHaveLength(2);
+  });
+  it("passes sentBy on and exposes progress", () => {
+    const g = brooding(), e = createEnemy(g, "drone", 0);
+    e.sentBy = 1;
+    e.distance = 2.5;
+    tickTraits(g, 1 / 30);
+    expect(eggs(g)[0].sentBy).toBe(1);
+    expect(traitFlags(g, e).brood).toBeCloseTo(0.25);
+  });
+  it("keeps the state hash of enemies without the trait unchanged", () => {
+    const plain = new Game(), e = createEnemy(plain, "drone", 3);
+    expect(e.brood).toBeUndefined();
+    const before = stateHash(plain.state);
+    e.brood = 0;
+    expect(stateHash(plain.state)).not.toBe(before);
+    delete e.brood;
+    expect(stateHash(plain.state)).toBe(before);
+  });
+  it("is rejected by validation when malformed", () => {
+    bad({ kind: "brood", type: "nope", every: 2, max: 2 });
+    bad({ kind: "brood", type: "runner", every: 0, max: 2 });
+    bad({ kind: "brood", type: "runner", every: 2, max: 0 });
+    bad({ kind: "brood", type: "runner", every: 2, max: 1.5 });
+    good({ kind: "brood", type: "runner", every: 2, max: 2 });
+  });
+});
+
+describe("overload", () => {
+  const overloading = () => new Game(undefined, withDroneTraits({ kind: "overload", radius: 2, cycles: 3 }));
+  it("stalls attack towers in the radius only, with an event", () => {
+    const g = overloading(), e = makeEnemy(1, "drone", 5, 5);
+    g.state.enemies = [e];
+    g.state.towers = [towerAt(1, "pulse", 6, 5), towerAt(2, "pulse", 9, 5), towerAt(3, "aura", 5, 6), towerAt(4, "mine", 5, 4), towerAt(5, "pulse", 5, 7)];
+    g.state.towers[4].cooldown = 5;
+    applyDamage(g, src, e, 5000);
+    const cd = g.state.towers.map((t) => t.cooldown);
+    expect(cd).toEqual([3, 0, 0, 0, 5]);
+    expect(g.state.events).toContainEqual({ type: "overload", at: { x: 5, y: 5 }, radius: 2 });
+  });
+  it("also fires when disrupted, and is flagged", () => {
+    const g = overloading(), e = makeEnemy(1, "drone", 5, 5);
+    e.status = [{ kind: "disrupted", until: 99 }];
+    g.state.enemies = [e];
+    g.state.towers = [towerAt(1, "pulse", 6, 5)];
+    applyDamage(g, src, e, 5000);
+    expect(g.state.towers[0].cooldown).toBe(3);
+    expect(traitFlags(g, makeEnemy(2, "drone", 0, 0)).overload).toBe(true);
+  });
+  it("is rejected by validation when malformed", () => {
+    bad({ kind: "overload", radius: 0, cycles: 2 });
+    bad({ kind: "overload", radius: 2, cycles: 0 });
+    good({ kind: "overload", radius: 2, cycles: 2 });
+  });
+});
+
+describe("molt", () => {
+  const molting = () => new Game(undefined, withDroneTraits({ kind: "molt", threshold: 0.5, armor: 0.6, speed: 1.8 }));
+  it("reduces all damage while hp share is at or above the threshold", () => {
+    const g = molting(), e = makeEnemy(1, "drone", 0, 3);
+    g.state.enemies = [e];
+    applyDamage(g, src, e, 100);
+    expect(e.hp).toBeCloseTo(960);
+    applyDamage(g, src, e, 100, true);
+    expect(e.hp).toBeCloseTo(920);
+    expect(traitFlags(g, e).molt).toBe("plated");
+    e.hp = 500;
+    applyDamage(g, src, e, 100);
+    expect(e.hp).toBeCloseTo(460);
+  });
+  it("is fast only below the threshold", () => {
+    const g = molting(), e = makeEnemy(1, "drone", 0, 3);
+    e.hp = 500;
+    expect(traitSpeedFactor(g, e)).toBe(1);
+    expect(traitFlags(g, e).molt).toBe("plated");
+    e.hp = 499;
+    expect(traitSpeedFactor(g, e)).toBe(1.8);
+    expect(traitFlags(g, e).molt).toBe("shed");
+    expect(traitFlags(new Game(), e).molt).toBeUndefined();
+  });
+  it("is rejected by validation when malformed", () => {
+    for (const t of [{ threshold: 0, armor: 0.5, speed: 1.5 }, { threshold: 1, armor: 0.5, speed: 1.5 }, { threshold: 0.5, armor: 0, speed: 1.5 }, { threshold: 0.5, armor: 1, speed: 1.5 }, { threshold: 0.5, armor: 0.5, speed: 1 }])
+      bad({ kind: "molt", ...t });
+    good({ kind: "molt", threshold: 0.5, armor: 0.5, speed: 1.5 });
+  });
+});
+
+describe("momentum", () => {
+  const swift = () => new Game(undefined, withDroneTraits({ kind: "momentum", per: 0.03, max: 0.9 }));
+  it("speeds up with the distance walked and is capped", () => {
+    const g = swift();
+    expect(traitSpeedFactor(g, makeEnemy(1, "drone", 0, 0, 0))).toBe(1);
+    expect(traitSpeedFactor(g, makeEnemy(1, "drone", 0, 0, 10))).toBeCloseTo(1.3);
+    expect(traitSpeedFactor(g, makeEnemy(1, "drone", 0, 0, 30))).toBeCloseTo(1.9);
+    expect(traitSpeedFactor(g, makeEnemy(1, "drone", 0, 0, 500))).toBeCloseTo(1.9);
+  });
+  it("gives factor 1 at a negative distance (pulled back on a ring)", () => {
+    const g = swift(), e = makeEnemy(1, "drone", 0, 0, -4);
+    expect(traitSpeedFactor(g, e)).toBe(1);
+    expect(traitFlags(g, e).momentum).toBe(0);
+  });
+  it("exposes the current bonus as a flag and is 0 without the trait", () => {
+    const g = swift();
+    expect(traitFlags(g, makeEnemy(1, "drone", 0, 0, 10)).momentum).toBeCloseTo(0.3);
+    expect(traitFlags(g, makeEnemy(1, "drone", 0, 0, 99)).momentum).toBeCloseTo(0.9);
+    expect(traitFlags(new Game(), makeEnemy(1, "drone", 0, 0, 10)).momentum).toBe(0);
+  });
+  it("is not disrupted by a Störsender", () => {
+    const g = swift(), e = makeEnemy(1, "drone", 0, 0, 10);
+    applyStatus(g, e, { kind: "disrupted", until: 99 });
+    expect(traitSpeedFactor(g, e)).toBeCloseTo(1.3);
+  });
+  it("is rejected by validation when malformed", () => {
+    bad({ kind: "momentum", per: 0, max: 0.5 });
+    bad({ kind: "momentum", per: 0.02, max: 0 });
+    good({ kind: "momentum", per: 0.02, max: 2 });
+  });
+});
+
+describe("lap", () => {
+  const RING = parseMap("lapring", "Lapring", ["........", ".S====..", ".=...=..", ".=...=..", ".=====..", "........"]);
+  const content = withDroneTraits({ kind: "lap", per: 0.15, max: 0.6 });
+  const ringGame = () =>
+    new Game(
+      { id: "lapring", name: "Lapring", focus: "", map: RING, waves: [wave(10, group("drone", 1, 1))], startingCredits: 100, reactorEnergy: 20, circle: { interval: 10, limit: 5, earlyBonus: 2 } },
+      content,
+    );
+  /** Damage that lands on a drone at `distance` after a 100 hit. */
+  const landed = (game: Game, distance: number) => {
+    const e = makeEnemy(1, "drone", 0, 0, distance);
+    game.state.enemies = [e];
+    applyDamage(game, src, e, 100);
+    return { dealt: 1000 - e.hp, flags: traitFlags(game, e) };
+  };
+  it("always has 0 laps on a reactor map", () => {
+    const g = new Game(undefined, content);
+    const r = landed(g, 500);
+    expect(r.dealt).toBeCloseTo(100);
+    expect(r.flags.laps).toBe(0);
+  });
+  it("counts a lap exactly at path.length on a ring", () => {
+    const g = ringGame(), n = RING.path.length;
+    expect(landed(g, n - 0.01)).toMatchObject({ flags: { laps: 0 } });
+    expect(landed(g, n - 0.01).dealt).toBeCloseTo(100);
+    expect(landed(g, n).flags.laps).toBe(1);
+    expect(landed(g, n).dealt).toBeCloseTo(85);
+    expect(landed(g, 2 * n).dealt).toBeCloseTo(70);
+  });
+  it("caps the reduction at max", () => {
+    const g = ringGame(), n = RING.path.length;
+    expect(landed(g, 4 * n).dealt).toBeCloseTo(40);
+    expect(landed(g, 9 * n).dealt).toBeCloseTo(40);
+    expect(landed(g, 9 * n).flags.laps).toBe(9);
+  });
+  it("has 0 laps at a negative distance", () => {
+    const g = ringGame();
+    expect(landed(g, -3).flags.laps).toBe(0);
+    expect(landed(g, -3).dealt).toBeCloseTo(100);
+  });
+  it("is rejected by validation when malformed", () => {
+    bad({ kind: "lap", per: 0, max: 0.5 });
+    bad({ kind: "lap", per: 1.1, max: 0.5 });
+    bad({ kind: "lap", per: 0.1, max: 0 });
+    bad({ kind: "lap", per: 0.1, max: 1.5 });
+    good({ kind: "lap", per: 0.1, max: 1 });
   });
 });

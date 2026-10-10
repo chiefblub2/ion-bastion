@@ -1316,6 +1316,83 @@ dialog strong {
   font-size: 14px;
   color: #e6cfae;
 }
+/* Game modes (Kampagne, Kreislauf) above the sector tabs; Kreislauf uses violet instead of mint. */
+#mission-dialog {
+  --mode: var(--mint);
+}
+#mission-dialog[data-circle] {
+  --mode: #a5a2ff;
+}
+.mission-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.mission-mode {
+  --accent: var(--mint);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+  padding: 12px 14px;
+  text-align: left;
+  background: #131f29;
+  border: 1px solid #2e3e49;
+  border-radius: 8px;
+  color: #a1b1ba;
+}
+.mission-mode[data-mode="circle"] {
+  --accent: #a5a2ff;
+}
+.mission-mode strong {
+  font: 600 24px/1 "Barlow Condensed", sans-serif;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.mission-mode span {
+  font-size: 13px;
+  color: #e5eeec;
+}
+.mission-mode small {
+  font: 500 10px var(--mono);
+  color: #7d9099;
+}
+.mission-mode:hover {
+  background: #1c2b34;
+  border-color: var(--accent);
+}
+.mission-mode[aria-selected="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, #0d1920);
+  box-shadow: inset 0 -3px var(--accent);
+}
+.mission-mode[data-current="true"] strong::after {
+  content: " ●";
+  font-size: 10px;
+  vertical-align: middle;
+}
+.mode-rules {
+  border-left: 2px solid var(--mode);
+  background: color-mix(in srgb, var(--mode) 10%, #0d1920);
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #d6d5ff;
+}
+#mission-dialog[data-circle] .mission-card:hover,
+#mission-dialog[data-circle] .mission-card[aria-current="true"] {
+  border-color: var(--mode);
+}
+#mission-dialog[data-circle] .mission-card[aria-current="true"] {
+  background: color-mix(in srgb, var(--mode) 8%, #0d1920);
+  box-shadow: inset 3px 0 var(--mode);
+}
+#mission-dialog[data-circle] .mission-index,
+.mission-stats .ring-badge {
+  color: var(--mode);
+}
 /* Sector tabs above the mission list, three per row. */
 .sector-tabs {
   display: grid;

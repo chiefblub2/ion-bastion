@@ -37,7 +37,12 @@ export function attackEnemies(sim: Sim, dt: number) {
     // Traps go off under anything that steps on them, stealthed or not.
     const triggers = d.placement === "path" ? canTarget : canAcquire;
     const candidates = s.enemies
-      .filter((e) => e.hp > 0 && triggers(sim, t.type, e) && dist(e, t) <= stats.range && dist(e, t) >= min)
+      .filter((e) => {
+        if (e.hp <= 0) return false;
+        // Cheap range check first; the trigger rules (layer, hidden) walk the traits.
+        const r = dist(e, t);
+        return r <= stats.range && r >= min && triggers(sim, t.type, e);
+      })
       .sort(compareTargets(t.priority, t));
     if (!candidates.length) continue;
     const target = module.choose?.(sim, t.type, { x: t.x, y: t.y }, stats.range, candidates, attack, t) ?? candidates[0],

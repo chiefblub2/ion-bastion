@@ -51,6 +51,17 @@ describe("versus match", () => {
     expect(statuses(m)).toEqual(["wave", "wave"]);
     expect(m.countdown).toBe(READY_COUNTDOWN);
   });
+  it("leaves later waves to the shared countdown, not the solo break timer", () => {
+    const m = match("race");
+    readyAll(m);
+    finishWaves(m);
+    expect(statuses(m)).toEqual(["ready", "ready"]);
+    for (let i = m.countdown; i > 1; i--) m.tick();
+    expect(statuses(m)).toEqual(["ready", "ready"]);
+    expect(m.fields.every((f) => f.state.nextWave === undefined)).toBe(true);
+    m.tick();
+    expect(statuses(m)).toEqual(["wave", "wave"]);
+  });
   it("refuses ring missions, which have their own wave timer", () => {
     const m = match("race");
     expect(m.command({ type: "mission", id: "umlaufbahn", player: 0 })).toMatchObject({ ok: false, code: "circle-versus" });

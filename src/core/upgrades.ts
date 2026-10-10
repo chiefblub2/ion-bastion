@@ -86,17 +86,22 @@ export const isFullyUpgraded = (tower: UpgradeProgress, content: ContentPack = D
   upgradeOptions(tower, Infinity, content).every((option) => option.status === "purchased" || option.status === "excluded");
 
 const cache = new WeakMap<ContentPack, Map<string, ResolvedTower>>();
+/** Fast path by list identity: a tower's list only grows (`push`), so its length tells whether the entry is current. */
+const byList = new WeakMap<readonly string[], { content: ContentPack; type: string; length: number; result: ResolvedTower }>();
 /**
  * Resolves declarative effects in dependency order; purchasing order is irrelevant.
  * Results are memoised per content pack and upgrade list, so the simulation can
  * ask for every tower on every tick.
  */
 export function resolveUpgrades(tower: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT): ResolvedTower {
+  const hit = byList.get(tower.upgrades);
+  if (hit && hit.content === content && hit.type === tower.type && hit.length === tower.upgrades.length) return hit.result;
   let byKey = cache.get(content);
   if (!byKey) cache.set(content, (byKey = new Map()));
   const key = `${tower.type}|${tower.upgrades.join(",")}`;
   let result = byKey.get(key);
   if (!result) byKey.set(key, (result = computeUpgrades(content.towers[tower.type], tower.upgrades)));
+  byList.set(tower.upgrades, { content, type: tower.type, length: tower.upgrades.length, result });
   return result;
 }
 

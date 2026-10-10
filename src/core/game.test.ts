@@ -6,6 +6,7 @@ import { OUTPOST } from "../content/maps";
 import { MISSIONS } from "../content/missions";
 import { validateMission } from "./validation";
 import { finishWave } from "./test-helpers";
+import { WAVE_BREAK } from "../systems/waves";
 import { effectiveTowerStats, isInAura } from "../systems/auras";
 describe("validated player commands", () => {
   it("rejects road, obstacles and duplicate placement without spending credits", () => {
@@ -276,5 +277,50 @@ describe("Raffinerie", () => {
     g.command({ type: "upgrade", id: aura.id, upgrade: "damage" });
     expect(isInAura(aura, refinery)).toBe(false);
     expect(Object.values(effectiveTowerStats(refinery, g.state.towers).bonuses).every((v) => v === 0)).toBe(true);
+  });
+});
+describe("wave break timer", () => {
+  const ticks = (g: Game, n: number) => {
+    for (let i = 0; i < n; i++) g.tick();
+  };
+  it("waits for the player before wave 1 and starts later waves by itself", () => {
+    const g = new Game();
+    ticks(g, 2 * WAVE_BREAK * 30);
+    expect(g.state).toMatchObject({ status: "ready", wave: 0 });
+    expect(g.state.nextWave).toBeUndefined();
+    expect(g.command({ type: "pause" }).code).toBe("pause-unavailable");
+    g.command({ type: "start" });
+    finishWave(g);
+    expect(g.state).toMatchObject({ status: "ready", wave: 1, nextWave: WAVE_BREAK });
+    const time = g.state.time;
+    ticks(g, WAVE_BREAK * 30 - 1);
+    expect(g.state.status).toBe("ready");
+    ticks(g, 1);
+    expect(g.state).toMatchObject({ status: "wave", wave: 2 });
+    expect(g.state.nextWave).toBeUndefined();
+    // The break does not advance the simulation clock.
+    expect(g.state.time).toBe(time);
+  });
+  it("freezes while paused and clears on a manual start", () => {
+    const g = new Game();
+    g.command({ type: "start" });
+    finishWave(g);
+    ticks(g, 30);
+    expect(g.command({ type: "pause" }).code).toBe("paused");
+    const left = g.state.nextWave;
+    ticks(g, WAVE_BREAK * 30);
+    expect(g.state).toMatchObject({ status: "ready", nextWave: left });
+    expect(g.command({ type: "start" }).code).toBe("wave-started");
+    expect(g.state).toMatchObject({ status: "wave", wave: 2, paused: false });
+    expect(g.state.nextWave).toBeUndefined();
+  });
+  it("sets no timer after the final wave", () => {
+    const mission = { ...MISSIONS[0], waves: MISSIONS[0].waves.slice(0, 1) },
+      g = new Game(mission);
+    for (const [x, y] of [[4, 4], [6, 5], [6, 7]]) g.command({ type: "build", tower: "pulse", x, y });
+    g.command({ type: "start" });
+    finishWave(g);
+    expect(g.state.status).toBe("won");
+    expect(g.state.nextWave).toBeUndefined();
   });
 });

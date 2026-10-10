@@ -10,7 +10,7 @@ Playbook for adding new sectors fast. Your own job is the **design sheet** and t
 Last run: two sectors, 10 missions, 4 enemies and 2 traits.
 - Foundation: about 2 min.
 - Three parallel agents: about 7.5 min.
-- Integration: about 3 min (`npm test` about 10 s, visual check about 75 s for four missions).
+- Integration: about 3 min (`npm run test:full` about 5 s, visual check about 75 s for four missions).
 
 Read CLAUDE.md ("Adding content") first.
 
@@ -68,7 +68,7 @@ ui/wave-forecast.ts, render/enemies.ts, content/enemies.ts, render/terrain.ts, c
 7. Stubs, NOT registered anywhere: content/sectors/<id>.ts exporting <CONST>: MissionSector (missions: []),
    core/strategies/<id>.ts exporting <ID>_STRATEGIES = {}.
 Gate: npx tsc --noEmit; npx vitest run src/systems src/ui; npx vitest run src/core/replay (no -u; all shards). Then
-`git diff --numstat src/core/__snapshots__` must show no deleted lines (second column 0; an empty diff is fine).
+`npx vite-node scripts/snapshot-diff.ts -- --expect ""` must exit 0 (no existing replay changed; new ones are fine).
 "every enemy type appears in the campaign" fails until integration — expected. Do not commit.
 Report: files changed, test results, any deviation from the design sheet.
 ```
@@ -89,6 +89,9 @@ enemies' counters, B = an alternative. Maps via parseMap(id, name, sketch, "<the
 HP difficulty ONLY through mission.hpGrowth or a per-wave hpMultiplier — no helper functions that compute waves.
 Loop: npx vite-node scripts/balance.ts -- src/content/sectors/<id>.ts src/core/strategies/<id>.ts --mission <missionId>
       --curve credits=<a>-<b>,waves=<a>-<b>   (add --why for leaks per enemy type / kills per tower)
+      Once per mission when A and B first win: add --tune. It prints the HP factor window in which A/B still win and
+      the thin/Nova defenses still lose (and the matching hpGrowth range). Set hpGrowth inside it rather than
+      guessing; a margin under about 5 % on either side is fragile.
 Done: final run without --mission shows no FAIL and no WARN (band, map, curve, id, hpGrowth).
 Balance lessons:
 - Upgrades beat tower count at hpGrowth ≈ 1; upgradeFirst is often right.
@@ -131,7 +134,7 @@ Run the expensive checks once, after all edits. Agents' final balance runs count
    - README enemy table: one row per new sector.
    - CLAUDE.md: the trait list under "Enemy", plus special rules of the new traits (e.g. an `isHidden` extension).
    - Player texts (mission `focus`, README) use the in-game tower names (`name` in `content/towers.ts`: Kryo, Glut, Teergrube, Stasis, Fangeisen …), never ids like frost or inferno. `grep -n "Frost\|Inferno\|Stase" src/content/sectors/<id>.ts` catches the usual slips.
-3. One `npm test` (about 10 s; the campaign runs in `replay-N.test.ts` shards, new golden snapshots are written automatically). Then `git diff --numstat src/core/__snapshots__`: no deleted lines.
+3. One `npm run test:full` (about 5 s, input cache off; the campaign runs in `replay-N.test.ts` shards, new golden snapshots are written automatically). Then `npx vite-node scripts/snapshot-diff.ts -- --expect ""`: only "Neu", nothing changed or removed.
 4. One `npm run build` (it already runs `tsc`; no separate `tsc`). Later edits to `focus` strings, README or CLAUDE.md need no new test run; only `.ts` changes the simulation reads do.
 5. **Visual check, mandatory:**
    - `npm run dev` in the background, then

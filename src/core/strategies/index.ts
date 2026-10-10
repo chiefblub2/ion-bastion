@@ -3,12 +3,14 @@ import { b, type Strategies } from "./build";
 import { CIRCLE_STRATEGIES } from "./circle";
 import { DUNE_STRATEGIES } from "./dune";
 import { FROST_STRATEGIES } from "./frost";
+import { GEAR_STRATEGIES } from "./gear";
 import { GEODE_STRATEGIES } from "./geode";
 import { JUNGLE_STRATEGIES } from "./jungle";
 import { ORBIT_STRATEGIES } from "./orbit";
 import { RIFT_STRATEGIES } from "./rift";
 import { RUIN_STRATEGIES } from "./ruin";
 import { STORM_STRATEGIES } from "./storm";
+import { TIDE_STRATEGIES } from "./tide";
 import { TOXIC_STRATEGIES } from "./toxic";
 import { VOLCANO_STRATEGIES } from "./volcano";
 /** Sector I; the other sectors keep their strategies in their own module. */
@@ -119,4 +121,6 @@ export const STRATEGIES: Strategies = {
   ...VOLCANO_STRATEGIES,
   ...GEODE_STRATEGIES,
   ...CIRCLE_STRATEGIES,
+  ...GEAR_STRATEGIES,
+  ...TIDE_STRATEGIES,
 };

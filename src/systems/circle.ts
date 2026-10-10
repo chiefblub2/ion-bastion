@@ -20,6 +20,7 @@ export function beginWave(sim: Sim) {
   s.wave++;
   s.status = "wave";
   s.paused = false;
+  delete s.nextWave;
   const offset = circle ? s.waveTime : 0;
   if (!circle) s.waveTime = 0;
   const spawns: Spawn[] = wave.groups.flatMap((group) =>

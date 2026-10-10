@@ -15,6 +15,18 @@ export function polygon(g: Ink, x: number, y: number, r: number, n: number, colo
     true,
   );
 }
+/** Spiky star with `n` spikes between the radii `inner` and `outer`. */
+export function star(g: Ink, x: number, y: number, outer: number, inner: number, n: number, color: number, rotation = 0) {
+  g.fillStyle(color);
+  g.fillPoints(
+    Array.from({ length: n * 2 }, (_, i) => {
+      const rad = i % 2 ? inner : outer,
+        a = rotation + (i * Math.PI) / n;
+      return { x: x + Math.cos(a) * rad, y: y + Math.sin(a) * rad };
+    }),
+    true,
+  );
+}
 /** Mixes a colour towards white (`f > 0`) or black (`f < 0`) by `|f|`. */
 export function shade(color: number, f: number) {
   const target = f < 0 ? 0 : 255,

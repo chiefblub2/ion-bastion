@@ -1,7 +1,7 @@
 import type { Enemy, EnemyDefinition, EnemyVisual } from "../core/types";
 import type { StatusFlags } from "../systems/status";
 import type { TraitFlags } from "../systems/traits";
-import { polygon, type Ink } from "./shapes";
+import { polygon, star, type Ink } from "./shapes";
 interface BodyContext {
   g: Ink;
   x: number;
@@ -12,6 +12,8 @@ interface BodyContext {
   heading: number;
   /** Flying unit: drawn with a distant shadow, whatever its shape. */
   air: boolean;
+  /** Render time in seconds, for animated bodies. */
+  clock?: number;
 }
 /** Enemy bodies by `visual.shape`. A new look is one entry here. */
 const BODIES: { [K in EnemyVisual["shape"]]: (ctx: BodyContext, visual: Extract<EnemyVisual, { shape: K }>) => void } = {
@@ -21,6 +23,57 @@ const BODIES: { [K in EnemyVisual["shape"]]: (ctx: BodyContext, visual: Extract<
     else g.fillEllipse(x, y + 6, r * 2.3, r * 1.5);
     polygon(g, x, y - (air ? 4 : 0), r, visual.sides, color, visual.rotation ?? 0);
     polygon(g, x, y - (air ? 4 : 0), r * 0.4, 4, 0x442e36, 0);
+  },
+  // Spiky star; turns a little with the heading so legs feel alive.
+  star: ({ g, x, y, r, color, heading, air }, visual) => {
+    g.fillStyle(0x030a0c, air ? 0.3 : 0.55);
+    if (air) g.fillEllipse(x, y + 14, r * 1.8, r * 0.9);
+    else g.fillEllipse(x, y + 6, r * 2.3, r * 1.5);
+    const cy = y - (air ? 4 : 0);
+    star(g, x, cy, r * 1.15, r * 1.15 * visual.inner, visual.points, color, heading * 0.35);
+    polygon(g, x, cy, r * 0.35, 4, 0x442e36, heading * 0.35);
+  },
+  // Round body: glow ring, core, highlight and orbiting moons.
+  orb: ({ g, x, y, r, color, air, clock = 0 }, visual) => {
+    g.fillStyle(0x030a0c, air ? 0.3 : 0.5);
+    if (air) g.fillEllipse(x, y + 14, r * 1.8, r * 0.9);
+    else g.fillEllipse(x, y + 6, r * 2.1, r * 1.4);
+    const cy = y - (air ? 4 : 0);
+    g.fillStyle(color, 0.22);
+    g.fillCircle(x, cy, r * 1.25);
+    g.fillStyle(color);
+    g.fillCircle(x, cy, r * 0.8);
+    g.fillStyle(0xffffff, 0.45);
+    g.fillCircle(x - r * 0.25, cy - r * 0.25, r * 0.25);
+    for (let i = 0; i < visual.moons; i++) {
+      const a = clock * 2 + (i * Math.PI * 2) / visual.moons;
+      g.fillStyle(0xffffff, 0.85);
+      g.fillCircle(x + Math.cos(a) * r * 1.35, cy + Math.sin(a) * r * 1.35, Math.max(2, r * 0.17));
+    }
+  },
+  // Segmented chain trailing behind the head with a gentle sway.
+  worm: ({ g, x, y, r, color, heading, air, clock = 0 }, visual) => {
+    const back = { x: -Math.cos(heading), y: -Math.sin(heading) },
+      cy = y - (air ? 4 : 0),
+      seg = (i: number) => {
+        const sway = Math.sin(clock * 4 - i * 0.9) * r * 0.35 * Math.min(i, 1.5),
+          d = i * r * 0.95;
+        return { x: x + back.x * d - back.y * sway, y: cy + back.y * d + back.x * sway, rad: r * (1 - (i * 0.55) / visual.segments) };
+      };
+    g.fillStyle(0x030a0c, air ? 0.3 : 0.5);
+    for (let i = 0; i < visual.segments; i++) {
+      const s = seg(i);
+      g.fillEllipse(s.x, s.y + (air ? 14 : 6), s.rad * 2, s.rad * 1.2);
+    }
+    for (let i = visual.segments - 1; i >= 0; i--) {
+      const s = seg(i);
+      g.fillStyle(0x0c1417, 0.9);
+      g.fillCircle(s.x, s.y, s.rad + 1.5);
+      g.fillStyle(color);
+      g.fillCircle(s.x, s.y, s.rad);
+    }
+    g.fillStyle(0x442e36);
+    g.fillCircle(x + Math.cos(heading) * r * 0.3, cy + Math.sin(heading) * r * 0.3, r * 0.25);
   },
   // Flying: faint, distant shadow and an arrow pointing along the path.
   glider: ({ g, x, y, r, color, heading: a }) => {
@@ -33,7 +86,7 @@ const BODIES: { [K in EnemyVisual["shape"]]: (ctx: BodyContext, visual: Extract<
 };
 /** Status marker colours; they match the towers that cause the effect. */
 const STATUS_COLORS = { slowed: 0xa5a2ff, stunned: 0x5cf2d6, burning: 0xff6a3d, vulnerable: 0xb6f04a, pulled: 0x4d7cff, disrupted: 0xff3df2, netted: 0xe0c068, bleeding: 0xd7263d, charged: 0xff4d4d };
-const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff9e, scan: 0x6fd3ff, regen: 0x93f5b8, armor: 0xc9d1d9, immune: 0x9fe6ff, split: 0x442e36, sand: 0xc9a46a, plate: 0xff9a7a, gust: 0x9fd8ff, swarm: 0xb6ff6a, rage: 0xff5a1a, facet: 0x7ff4ea };
+const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff9e, scan: 0x6fd3ff, regen: 0x93f5b8, armor: 0xc9d1d9, immune: 0x9fe6ff, split: 0x442e36, sand: 0xc9a46a, plate: 0xff9a7a, gust: 0x9fd8ff, swarm: 0xb6ff6a, rage: 0xff5a1a, facet: 0x7ff4ea, leap: 0xbfe9ff, dampen: 0x8a7dff, brood: 0xe8d27a, overload: 0xffe14d, molt: 0xe6a0b4, momentum: 0xffb347, lap: 0xd9a441 };
 /** Markers under the body: auras of leaders and healers, motion trails, outlines. */
 function traitsBelow(g: Ink, x: number, y: number, r: number, cell: number, color: number, heading: number, t: TraitFlags, clock: number) {
   if (t.leader) {
@@ -87,6 +140,61 @@ function traitsBelow(g: Ink, x: number, y: number, r: number, cell: number, colo
     g.fillCircle(x, y, r + 4 + 4 * t.rage);
     g.lineStyle(1.5 + t.rage, TRAIT_COLORS.rage, (0.25 + 0.6 * t.rage) * (0.6 + 0.4 * pulse));
     g.strokeCircle(x, y, r + 3 + 5 * t.rage * pulse);
+  }
+  // Leaping (on the other layer): a small arc under the body, like a hop.
+  if (t.leaping) {
+    g.lineStyle(2, TRAIT_COLORS.leap, 0.7);
+    g.beginPath();
+    g.arc(x, y + r * 0.9, r * 1.1, Math.PI * 0.15, Math.PI * 0.85);
+    g.strokePath();
+  }
+  // Dampening: a violet dashed field of its radius.
+  if (t.dampen) {
+    g.fillStyle(TRAIT_COLORS.dampen, 0.05);
+    g.fillCircle(x, y, t.dampen * cell);
+    g.lineStyle(1, TRAIT_COLORS.dampen, 0.4);
+    for (let i = 0; i < 16; i++) {
+      const a = (i * Math.PI) / 8 + clock * 0.2;
+      g.beginPath();
+      g.arc(x, y, t.dampen * cell, a, a + 0.22);
+      g.strokePath();
+    }
+  }
+  // Brood: a pulsing egg sac behind the body that swells towards the next egg.
+  if (t.brood > 0) {
+    const pulse = 0.5 + 0.5 * Math.sin(clock * 5),
+      size = r * (0.45 + 0.4 * t.brood) * (0.9 + 0.1 * pulse),
+      ex = x + back.x * r * 1.1,
+      ey = y + back.y * r * 1.1;
+    g.fillStyle(TRAIT_COLORS.brood, 0.35 + 0.3 * t.brood);
+    g.fillEllipse(ex, ey, size * 2, size * 1.6);
+    g.lineStyle(1, TRAIT_COLORS.brood, 0.8);
+    g.strokeEllipse(ex, ey, size * 2, size * 1.6);
+  }
+  // Molted (shell shed): shards trailing behind plus speed lines.
+  if (t.molt === "shed") {
+    g.fillStyle(TRAIT_COLORS.molt, 0.7);
+    for (let i = 1; i <= 3; i++) {
+      const sx = x + back.x * r * (0.9 + 0.8 * i) + Math.sin(i * 2.1 + clock * 3) * 2,
+        sy = y + back.y * r * (0.9 + 0.8 * i) + Math.cos(i * 2.1 + clock * 3) * 2;
+      g.fillTriangle(sx - 2.5, sy - 2, sx + 2.5, sy, sx, sy + 3);
+    }
+    g.lineStyle(1.5, 0xffffff, 0.55);
+    for (const side of [-0.5, 0.5]) {
+      const sx = x + back.x * r * 1.2 - back.y * side * r,
+        sy = y + back.y * r * 1.2 + back.x * side * r;
+      g.lineBetween(sx, sy, sx + back.x * r * 1.6, sy + back.y * r * 1.6);
+    }
+  }
+  // Momentum: motion streaks behind the body, longer with the bonus.
+  if (t.momentum > 0) {
+    const len = r * (0.8 + 4 * t.momentum);
+    g.lineStyle(1.5, TRAIT_COLORS.momentum, 0.35 + 0.4 * Math.min(1, t.momentum));
+    for (const side of [-0.55, 0, 0.55]) {
+      const sx = x + back.x * r * 0.9 - back.y * side * r,
+        sy = y + back.y * r * 0.9 + back.x * side * r;
+      g.lineBetween(sx, sy, sx + back.x * len * (side === 0 ? 1 : 0.7), sy + back.y * len * (side === 0 ? 1 : 0.7));
+    }
   }
   // Evasive: a faint afterimage beside the body.
   if (t.evade) {
@@ -167,6 +275,36 @@ function traitsAbove(g: Ink, x: number, y: number, r: number, t: TraitFlags, clo
     g.strokePoints(pts, true);
     g.lineStyle(1, 0xffffff, 0.5 + 0.3 * Math.sin(clock * 6));
     for (let i = 0; i < 6; i += 2) g.lineBetween(x, y, pts[i].x, pts[i].y);
+  }
+  // Plated molt: a thick segmented plate ring.
+  if (t.molt === "plated") {
+    g.lineStyle(4, TRAIT_COLORS.molt, 0.9);
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4 + 0.1;
+      g.beginPath();
+      g.arc(x, y, r + 3.5, a, a + 0.65);
+      g.strokePath();
+    }
+  }
+  // Laps: one small ring pip per completed lap (max 4) above the body.
+  for (let i = 0; i < Math.min(4, t.laps); i++) {
+    const px = x + (i - (Math.min(4, t.laps) - 1) / 2) * 6;
+    g.lineStyle(1.5, TRAIT_COLORS.lap, 0.95);
+    g.strokeCircle(px, y - r - 7, 2);
+  }
+  // Overload: small yellow crackling sparks around the body.
+  if (t.overload) {
+    g.lineStyle(1.5, TRAIT_COLORS.overload, 0.9);
+    const step = Math.floor(clock * 14);
+    for (let i = 0; i < 3; i++) {
+      const a = ((step * 2.399 + i * 2.1) % (Math.PI * 2)) + i,
+        x0 = x + Math.cos(a) * (r + 1),
+        y0 = y + Math.sin(a) * (r + 1),
+        x1 = x0 + Math.cos(a + 0.6) * 4,
+        y1 = y0 + Math.sin(a + 0.6) * 4;
+      g.lineBetween(x0, y0, x1, y1);
+      g.lineBetween(x1, y1, x0 + Math.cos(a - 0.2) * 8, y0 + Math.sin(a - 0.2) * 8);
+    }
   }
   // Splitting: three small dots inside the body.
   if (t.split) {
@@ -282,7 +420,7 @@ export function drawEnemy(
   if (traits.burrowed) {
     polygon(g, x, y, r * 0.8, d.visual.shape === "polygon" ? d.visual.sides : 4, d.color, d.visual.shape === "polygon" ? (d.visual.rotation ?? 0) : 0, 0.3);
   } else
-    (BODIES[d.visual.shape] as (ctx: BodyContext, visual: EnemyVisual) => void)({ g, x, y, r, color: d.color, heading, air: d.layer === "air" }, d.visual);
+    (BODIES[d.visual.shape] as (ctx: BodyContext, visual: EnemyVisual) => void)({ g, x, y, r, color: d.color, heading, air: traits.leaping ? d.layer !== "air" : d.layer === "air", clock }, d.visual);
   traitsAbove(g, x, y, r, traits, clock);
   // Netted: a mesh drawn over the body.
   if (status.netted) {

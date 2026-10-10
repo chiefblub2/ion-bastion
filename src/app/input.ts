@@ -1,4 +1,4 @@
-import type { Game } from "../core/game";
+import { isRunning, type Game } from "../core/game";
 import type { CommandResult, EnemyId, TargetPriority, TowerId } from "../core/types";
 import { TARGET_PRIORITIES } from "../systems/combat";
 import { hasPage, hotkeyTowers, isPaged, pageOf, towerOrder } from "../ui/tower-pages";
@@ -120,10 +120,10 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     dialogs.dismiss("missions");
     execute({ type: "mission", id });
   }
-  /** Switches the mission dialog to another sector tab and keeps the focus on the tab bar. */
-  function showSector(index: number) {
+  /** Switches the mission dialog to another sector tab or game mode and keeps the focus on the clicked bar. */
+  function showSector(index: number, bar: string) {
     renderMissionList(game, index);
-    document.getElementById(`sector-tab-${index}`)?.focus();
+    document.querySelector<HTMLElement>(`#${bar} [data-sector="${index}"]`)?.focus();
   }
   /** Opens another page of the build menu and keeps the focus on its tab. */
   function showTowerPage(page: number) {
@@ -153,19 +153,22 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     e.preventDefault();
     showCodexTab(next);
   });
-  // Arrow keys, Home and End move between the sector tabs.
-  document.getElementById("sector-tabs")!.addEventListener("keydown", (e) => {
-    const count = game.content.sectors?.length ?? 0,
-      current = Number((e.target as HTMLElement).closest<HTMLElement>("[data-sector]")?.dataset.sector);
-    const next = { ArrowRight: current + 1, ArrowLeft: current - 1, Home: 0, End: count - 1 }[e.key];
-    if (next === undefined || !count) return;
-    e.preventDefault();
-    showSector((next + count) % count);
-  });
+  // Arrow keys, Home and End move between the visible tabs of one bar (game modes or the sectors of a mode).
+  for (const bar of ["mission-modes", "sector-tabs"]) {
+    const tabs = document.getElementById(bar)!;
+    tabs.addEventListener("keydown", (e) => {
+      const buttons = [...tabs.querySelectorAll<HTMLElement>("[data-sector]")],
+        current = buttons.indexOf((e.target as HTMLElement).closest<HTMLElement>("[data-sector]")!);
+      const next = { ArrowRight: current + 1, ArrowLeft: current - 1, Home: 0, End: buttons.length - 1 }[e.key];
+      if (next === undefined || !buttons.length) return;
+      e.preventDefault();
+      showSector(Number(buttons[(next + buttons.length) % buttons.length].dataset.sector), bar);
+    });
+  }
   const fullscreen = () =>
     toggleFullscreen().catch(() => ui.notice("Vollbild ist in diesem Browser nicht verfügbar.", true));
   const pauseIfRunning = () => {
-    if (game.state.status === "wave") execute({ type: "pause" });
+    if (isRunning(game.state)) execute({ type: "pause" });
   };
   document.addEventListener("click", async (event) => {
     const b = (event.target as HTMLElement).closest("button");
@@ -173,7 +176,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     if (b.dataset.tower) return choose(b.dataset.tower as TowerId);
     if (b.dataset.mission) return selectMission(b.dataset.mission);
     if (b.dataset.send) return execute({ type: "send", enemy: b.dataset.send as EnemyId });
-    if (b.dataset.sector) return showSector(Number(b.dataset.sector));
+    if (b.dataset.sector) return showSector(Number(b.dataset.sector), b.parentElement!.id);
     if (b.dataset.codexTab) return showCodexTab(b.dataset.codexTab as CodexTab);
     if (b.dataset.towerPage) return showTowerPage(Number(b.dataset.towerPage));
     if (b.dataset.priority && view.selected !== null) {
@@ -330,7 +333,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
   });
   document.addEventListener("visibilitychange", () => {
     // In multiplayer the others keep playing; pausing stays an explicit choice.
-    if (document.hidden && !coop.active() && game.state.status === "wave" && !game.state.paused) execute({ type: "pause" });
+    if (document.hidden && !coop.active() && isRunning(game.state) && !game.state.paused) execute({ type: "pause" });
   });
   return { execute, chooseCell, chooseEnemy, cancel };
 }

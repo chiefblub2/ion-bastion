@@ -11,6 +11,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { SECTORS, missionNumber } from "../src/content/missions";
 import { ENEMIES } from "../src/content/enemies";
+import { RESERVE_ENEMIES } from "../src/core/mission-checks";
 
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
 const roman = (n: number) => ROMAN[n - 1] ?? String(n);
@@ -78,7 +79,7 @@ let out = readme.slice(0, readme.indexOf(START)) + block + readme.slice(readme.i
 
 // Intro counts: first pair = missions and sectors, second pair = enemy types.
 const missionCount = SECTORS.reduce((n, s) => n + s.missions.length, 0),
-  counts = [`${missionCount} Missionen in ${SECTORS.length} Sektoren`, `${Object.keys(ENEMIES).length} Gegnertypen`];
+  counts = [`${missionCount} Missionen in ${SECTORS.length} Sektoren`, `${Object.keys(ENEMIES).filter((id) => !RESERVE_ENEMIES.has(id)).length} Gegnertypen`];
 let k = 0;
 out = out.replace(/<!-- counts:start -->.*?<!-- counts:end -->/g, () => `<!-- counts:start -->${counts[k++] ?? ""}<!-- counts:end -->`);
 if (k !== counts.length) throw new Error(`expected ${counts.length} counts markers in README.md, found ${k}`);

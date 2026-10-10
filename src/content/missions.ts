@@ -9,6 +9,8 @@ import {
 } from "./waves";
 import { TIEFSEE } from "./sectors/abyss";
 import { KREISLAUF } from "./sectors/circle";
+import { ZAHNWERK } from "./sectors/gear";
+import { MONDSEE } from "./sectors/tide";
 import { DUENENMEER } from "./sectors/dune";
 import { DSCHUNGEL } from "./sectors/jungle";
 import { FROSTGUERTEL } from "./sectors/frost";
@@ -85,6 +87,8 @@ export const SECTORS: readonly MissionSector[] = [
   VULKANKETTE,
   KRISTALLHOEHLE,
   KREISLAUF,
+  ZAHNWERK,
+  MONDSEE,
 ];
 export const MISSIONS: readonly MissionDefinition[] = SECTORS.flatMap((s) => s.missions);
 export function missionById(id: string, missions: readonly MissionDefinition[] = MISSIONS) {
@@ -97,4 +101,8 @@ export function missionNumber(mission: MissionDefinition, missions: readonly Mis
 /** The sector that contains the mission, if the pack groups its missions. */
 export function sectorOf(mission: MissionDefinition, sectors: readonly MissionSector[] = SECTORS) {
   return sectors.find((s) => s.missions.some((m) => m.id === mission.id));
+}
+/** A Kreislauf sector: every mission plays on a closed ring, so the mission dialog lists it as its own mode. */
+export function isCircleSector(sector: MissionSector) {
+  return sector.missions.every((m) => m.circle);
 }

@@ -4,6 +4,8 @@ import type { Sim } from "../core/types";
 import { createEnemy } from "./spawn";
 import { repairReactor } from "./support";
 export { DEFAULT_HP_GROWTH } from "./spawn";
+/** Seconds of build time after a wave before the next one starts by itself. */
+export const WAVE_BREAK = 10;
 export function spawnEnemies(sim: Sim) {
   const s = sim.state;
   while (s.queue.length && s.queue[0].at <= s.waveTime) {
@@ -27,6 +29,7 @@ export function settleWave(sim: Sim) {
     payIncome(sim);
     repairReactor(sim);
     s.status = s.wave === waves.length ? "won" : "ready";
+    if (s.status === "ready") s.nextWave = WAVE_BREAK;
     s.events.push({ type: "waveEnd", wave: s.wave, bonus });
     if (s.status === "won") s.events.push({ type: "end", result: "won" });
   }

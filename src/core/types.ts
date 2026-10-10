@@ -316,11 +316,65 @@ export type Trait =
       length: number;
       /** Damage reduction of hits (not burn steps) in the window, in (0, 1). */
       reduction: number;
+    }
+  | {
+      kind: "leap";
+      /** Cycle length in cells of path distance; the last `length` cells of each cycle are spent on the opposite layer. */
+      every: number;
+      /** Cells on the flipped layer (ground becomes air and vice versa) per cycle, in (0, every). Stateless; not disruptable. */
+      length: number;
+    }
+  | {
+      kind: "dampen";
+      /** Radius in cells: this enemy and every other living enemy inside resist slow, stun and pull. Disruptable. */
+      radius: number;
+    }
+  | {
+      kind: "brood";
+      /** Enemy type laid as an egg at the layer's own path distance. */
+      type: string;
+      /** One egg per `every` cells of path distance walked; > 0. Counted in `Enemy.brood`, so a pull-back never re-lays. Disruptable. */
+      every: number;
+      /** Total eggs per enemy, an integer ≥ 1. */
+      max: number;
+    }
+  | {
+      kind: "overload";
+      /** On death: attack towers (not support towers, not traps) whose centre is within this radius in cells, > 0. */
+      radius: number;
+      /** Attack cycles the hit towers are stalled for (their cooldown is raised to this), > 0. */
+      cycles: number;
+    }
+  | {
+      kind: "molt";
+      /** While hp/maxHp is at or above this share the shell holds, in (0, 1). Stateless. */
+      threshold: number;
+      /** Damage reduction (all damage, burn included) while plated, in (0, 1). */
+      armor: number;
+      /** Speed multiplier once the shell is shed (below the threshold), > 1. */
+      speed: number;
+    }
+  | {
+      kind: "momentum";
+      /** Speed bonus per cell of path distance walked (ring laps accumulate), > 0. Not disruptable. */
+      per: number;
+      /** Cap of the speed bonus, > 0. The speed factor is 1 + min(max, per * max(0, distance)). */
+      max: number;
+    }
+  | {
+      kind: "lap";
+      /** Damage reduction per completed lap of a ring map, in (0, 1]. Always 0 laps on reactor maps. Not disruptable. */
+      per: number;
+      /** Cap of the damage reduction, in (0, 1]. */
+      max: number;
     };
 export type TraitKind = Trait["kind"];
 export type EnemyVisual =
   | { shape: "polygon"; sides: number; rotation?: number; /** Render only: number of tentacles trailing behind the body. */ tentacles?: number }
-  | { shape: "glider" };
+  | { shape: "glider" }
+  | { shape: "star"; /** Number of spikes, ≥ 3. */ points: number; /** Inner radius share, in (0, 1). */ inner: number }
+  | { shape: "orb"; /** Satellites circling the body, ≥ 0. */ moons: number }
+  | { shape: "worm"; /** Body segments trailing behind, ≥ 2. */ segments: number };
 export interface EnemyDefinition {
   id: string;
   name: string;
@@ -335,7 +389,7 @@ export interface EnemyDefinition {
   visual: EnemyVisual;
 }
 /** Terrain look, drawn by `render/terrain.ts`. */
-export type MapTheme = "outpost" | "lock" | "shard" | "ember" | "core" | "frost" | "toxic" | "orbit" | "ruin" | "rift" | "dune" | "abyss" | "storm" | "jungle" | "volcano" | "geode";
+export type MapTheme = "outpost" | "lock" | "shard" | "ember" | "core" | "frost" | "toxic" | "orbit" | "ruin" | "rift" | "dune" | "abyss" | "storm" | "jungle" | "volcano" | "geode" | "gear" | "tide";
 export interface MapDefinition {
   id: string;
   name: string;
@@ -436,6 +490,8 @@ export interface Enemy extends Point {
   hits?: number;
   sprintUntil?: number;
   sprinted?: boolean;
+  /** Brood only: eggs laid so far; `undefined` on every other enemy, so solo state and hashes stay unchanged. */
+  brood?: number;
   /** Stealthed and inside a detector's range this tick. */
   revealed?: boolean;
   /** Versus: player who sent this enemy; it pays no kill reward. */
@@ -494,6 +550,8 @@ export type GameEvent =
   | { type: "damage"; at: Point; amount: number; enemy: number }
   | { type: "kill"; at: Point; color: number; reward: number }
   | { type: "evade"; at: Point }
+  /** An overload enemy died: attack towers within `radius` cells are stalled. */
+  | { type: "overload"; at: Point; radius: number }
   | { type: "leak"; at: Point; amount: number }
   | { type: "spawn"; at: Point; enemy: number }
   | { type: "build" | "sell" | "upgrade"; at: Point; tower: TowerId; color: number }
@@ -521,6 +579,8 @@ export interface GameState {
   nextId: number;
   /** Circle missions only: seconds until the next wave starts by itself. */
   circle?: { next: number };
+  /** Reactor missions between waves: seconds until the next wave starts by itself; absent before wave 1 and in versus. */
+  nextWave?: number;
 }
 /** Everything a simulation system needs; `Game` implements it. */
 export interface Sim {

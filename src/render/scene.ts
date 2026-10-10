@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { Game, FIXED_STEP } from "../core/game";
+import { Game, FIXED_STEP, isRunning } from "../core/game";
 import { isFullyUpgraded, resolveUpgrades, towerColor, towerLevel, towerPath } from "../core/upgrades";
 import { attackModule } from "../systems/attacks";
 import { effectiveTowerStats, isInAura } from "../systems/auras";
@@ -41,7 +41,7 @@ export class LocalDriver implements Driver {
     private view: ViewState,
   ) {}
   advance(dt: number) {
-    if (this.sim.state.paused || this.sim.state.status !== "wave") {
+    if (this.sim.state.paused || !isRunning(this.sim.state)) {
       this.accumulator = 0;
       return;
     }

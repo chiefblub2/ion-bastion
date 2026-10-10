@@ -32,6 +32,13 @@ const TRAIT_INFO: { [K in TraitKind]: { name: string; text: string } } = {
     name: "Facette",
     text: "Wehrt in einem für alle gleichen Takt einen Teil jedes Treffers ab. Brand und Krähenfüße wirken voll.",
   },
+  leap: { name: "Sprung", text: "Wechselt in festen Abständen die Ebene: Bodengegner fliegen kurz, Flieger laufen kurz am Boden. Fallen lösen dann nicht aus." },
+  dampen: { name: "Dämpfer", text: "Er und Gegner in seiner Nähe sind immun gegen Verlangsamung, Betäubung und Sog. Ein Störsender schaltet das ab." },
+  brood: { name: "Brut", text: "Legt unterwegs Eier ab, aus denen weitere Gegner schlüpfen. Ein Störsender hält ihn davon ab." },
+  overload: { name: "Überlast", text: "Legt beim Tod nahe Angriffstürme für einige Schusszyklen lahm. Unterstützung und Fallen bleiben unberührt." },
+  momentum: { name: "Schwung", text: "Wird schneller, je länger er unterwegs ist. Wer ihn zurückzieht oder bremst, nimmt ihm den Schwung." },
+  lap: { name: "Runden", text: "Nimmt mit jeder vollendeten Runde auf dem Ring weniger Schaden. Auf Missionen mit Reaktor ohne Wirkung." },
+  molt: { name: "Häutung", text: "Gepanzert, solange er genug HP hat. Darunter wirft er den Panzer ab und wird schneller." },
 };
 const AIR_TAG: ForecastTag = { kind: "air", label: "LUFT", title: "Fliegt – nur Türme mit Luftziel treffen" };
 const AIR_INFO = { name: "Flieger", text: "Fliegt über den Pfad. Nur Türme mit Luftziel treffen ihn, Fallen lösen nicht aus." };

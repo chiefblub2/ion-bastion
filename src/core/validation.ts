@@ -36,10 +36,20 @@ export function validateEnemy(e: EnemyDefinition, path: string, content: Content
   check(e.hp > 0 && e.speed > 0 && e.reward >= 0 && e.size > 0, path, "Ungültige Gegnerwerte.");
   check(Number.isInteger(e.leak) && e.leak >= 1, path, "Ungültiger Reaktorschaden (leak).");
   check(e.visual, path, "Darstellung (visual) fehlt.");
+  validateVisual(e.visual, `${path} › Darstellung`);
   for (const [i, trait] of (e.traits ?? []).entries()) {
     const problem = validateTrait(trait, content);
     check(!problem, `${path} › Eigenschaft ${i + 1}`, problem!);
   }
+}
+
+/** Shape fields of the new body shapes; polygon and glider have none to check. */
+export function validateVisual(v: EnemyDefinition["visual"], path: string) {
+  if (v.shape === "star") {
+    check(Number.isInteger(v.points) && v.points >= 3, path, "Ungültige Zackenzahl (points): ganze Zahl ab 3.");
+    check(v.inner > 0 && v.inner < 1, path, "Ungültiger Innenradius (inner): zwischen 0 und 1.");
+  } else if (v.shape === "orb") check(Number.isInteger(v.moons) && v.moons >= 0, path, "Ungültige Mondzahl (moons): ganze Zahl ab 0.");
+  else if (v.shape === "worm") check(Number.isInteger(v.segments) && v.segments >= 2, path, "Ungültige Segmentzahl (segments): ganze Zahl ab 2.");
 }
 
 export function validateTower(t: TowerDefinition, path: string) {

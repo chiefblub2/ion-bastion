@@ -1,4 +1,4 @@
-import type { Game } from "../core/game";
+import { isRunning, type Game } from "../core/game";
 import type { Command, CommandResult } from "../core/types";
 export type DialogName = "help" | "restart" | "missions" | "coop" | "codex";
 /** Modal dialogs pause a running wave and resume it when closed; not in co-op, where `autoPause` is false. */
@@ -18,7 +18,7 @@ export function createDialogs(game: Game, execute: (c: Command) => CommandResult
     });
   return {
     open(name: DialogName) {
-      resumeAfterDialog = autoPause() && game.state.status === "wave" && !game.state.paused;
+      resumeAfterDialog = autoPause() && isRunning(game.state) && !game.state.paused;
       if (resumeAfterDialog) execute({ type: "pause" });
       dialogs[name].showModal();
     },

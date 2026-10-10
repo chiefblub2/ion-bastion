@@ -112,6 +112,8 @@ export class Match {
     for (const i of this.alive()) {
       const field = this.fields[i];
       field.tick();
+      // The shared ready countdown starts versus waves, not the solo break timer.
+      delete field.state.nextWave;
       if (field.state.status === "lost") {
         this.eliminatedAt[i] = this.frame;
         this.pending[i] = [];

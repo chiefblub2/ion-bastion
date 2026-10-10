@@ -1,6 +1,6 @@
 # ION BASTION
 
-Tower-Defense im Browser, gebaut mit TypeScript, Phaser 3 und Vite. <!-- counts:start -->63 Missionen in 13 Sektoren<!-- counts:end --> mit eigenen Maps, Wellen und Terrain-Stilen, über dreißig Türme und <!-- counts:start -->28 Gegnertypen<!-- counts:end --> am Boden und in der Luft. Allein spielbar oder mit 2–4 Spielern im Koop- oder Versus-Modus.
+Tower-Defense im Browser, gebaut mit TypeScript, Phaser 3 und Vite. <!-- counts:start -->73 Missionen in 15 Sektoren<!-- counts:end --> mit eigenen Maps, Wellen und Terrain-Stilen, über dreißig Türme und <!-- counts:start -->32 Gegnertypen<!-- counts:end --> am Boden und in der Luft. Allein spielbar oder mit 2–4 Spielern im Koop- oder Versus-Modus.
 
 Das Spiel läuft komplett im Browser; nur der Mehrspieler braucht einen kleinen Relay-Server. Spielstände liegen bewusst nur im Arbeitsspeicher: Neuladen startet eine neue Mission.
 
@@ -19,7 +19,7 @@ Hinweise für Entwickler und KI-Agenten (Architektur, Konventionen, Inhalte erg�
 
 ## Spielprinzip
 
-Gegner laufen einen festen Pfad entlang zum Reaktor. Erreicht einer den Reaktor, kostet das Reaktorenergie; bei 0 ist die Mission verloren. Zwischen den Wellen baust du Türme neben dem Pfad und verbesserst sie. Besiegte Gegner bringen Credits, jede überstandene Welle einen Bonus. Ein Verkauf erstattet 70 % der gesamten Investition.
+Gegner laufen einen festen Pfad entlang zum Reaktor. Erreicht einer den Reaktor, kostet das Reaktorenergie; bei 0 ist die Mission verloren. Zwischen und während der Wellen baust du Türme neben dem Pfad und verbesserst sie. Die erste Welle startest du selbst; danach startet die nächste Welle 10 Sekunden nach dem Ende der vorigen von selbst (mit `N` früher, ohne Bonus). Besiegte Gegner bringen Credits, jede überstandene Welle einen Bonus. Ein Verkauf erstattet 70 % der gesamten Investition.
 
 ## Bedienung
 
@@ -34,8 +34,8 @@ Gegner laufen einen festen Pfad entlang zum Reaktor. Erreicht einer den Reaktor,
 | Tabs Angriff · Kontrolle · Fallen · Unterstützung, `Shift`+`1`–`4` | Turmseite wechseln (ab zehn verfügbaren Türmen; auch Pfeiltasten auf den Tabs) |
 | `1`–`9`, `0`, `Q`, `W` | Turm im offenen Tab wählen; jeder Tab beginnt wieder bei `1` (die Taste steht auf der Karte). Ohne Tabs zählen die Tasten über alle Türme. |
 | Rechtsklick, `Esc` oder ✕ | Baumodus und Auswahl aufheben. Ohne Auswahl beendet `Esc` das Vollbild. |
-| `N` | Nächste Welle starten (im Versus: „Bereit“) |
-| Leertaste | Pause, nur während einer Welle und nicht im Versus |
+| `N` | Nächste Welle starten (im Versus: „Bereit“). Ab Welle 2 startet sie 10 s nach dem Ende der vorigen auch von selbst. |
+| Leertaste | Pause, nur während einer Welle oder des Countdowns und nicht im Versus |
 | `F` oder ⛶ | Vollbild |
 | Pfeiltasten + Enter | Tastaturbedienung auf dem fokussierten Spielfeld |
 
@@ -168,13 +168,25 @@ Alle Missionen sind über „Missionen“ direkt wählbar, mit einem Tab je Sekt
 | 61 | Umlaufbahn | Einfacher Ring, max. 30 Gegner, Welle alle 22 s | 18 × 12 | 8 | 400 | 35 % |
 | 62 | Doppelschleife | Einbuchtung bündelt zwei Bahnen, max. 30, alle 20 s | 20 × 12 | 9 | 450 | 45 % |
 | 63 | Mahlstrom | Zwei Einbuchtungen, max. 35, alle 18 s | 20 × 13 | 10 | 500 | 30 % |
+| **XIV** | **Zahnwerk** | | | | | |
+| 64 | Zahnkranz | Zahnräder werden schneller, je länger sie kreisen, max. 36, alle 20 s | 15 × 11 | 10 | 500 | 30 % |
+| 65 | Hemmung | Kolbenpanzer härten mit jeder Runde, max. 32, alle 18 s | 21 × 10 | 10 | 550 | 35 % |
+| 66 | Unruh | Echo in Welle 8, die Taille bündelt vier Bahnen, max. 35, alle 16 s | 15 × 11 | 11 | 550 | 40 %¹ |
+| 67 | Planetenrad | Nur Kern- und Kontrolltürme, max. 36, alle 18 s | 15 × 15 | 11 | 600 | 40 % |
+| 68 | Uhrwerk | Finale: zwei Titanen, max. 34, alle 16 s | 15 × 11 | 12 | 600 | 40 % |
+| **XV** | **Mondsee** | | | | | |
+| 69 | Ebbe | Gischtflügler härten mit jeder Runde, max. 45, alle 18 s | 20 × 11 | 11 | 550 | 35 % |
+| 70 | Flutring | Nautilus: Schild und Schwung, max. 42, alle 17 s | 20 × 11 | 11 | 570 | 38 % |
+| 71 | Brandung | Langer Schlangenring, max. 45, alle 16 s | 22 × 12 | 12 | 600 | 40 % |
+| 72 | Springflut | Kurzes Intervall, enges Limit, max. 35, alle 14 s | 20 × 14 | 12 | 620 | 40 % |
+| 73 | Mondfinsternis | Echo-Welle, Finale: drei Titanen, max. 40, alle 16 s | 20 × 13 | 13 | 650 | 50 %¹ |
 
 ¹ Einzelne Wellen haben einen eigenen HP-Faktor statt des linearen Zuwachses.
 <!-- missions:end -->
 
 ### Kreislauf
 
-Die Kreislauf-Missionen im letzten Sektor spielen auf geschlossenen Ringen ohne Reaktor:
+Kreislauf ist ein eigener Spielmodus mit eigenem Reiter in der Missionsauswahl, getrennt von der Kampagne. Er hat drei Sektoren: Kreislauf, Zahnwerk und Mondsee. Seine Missionen spielen auf geschlossenen Ringen ohne Reaktor:
 
 - Die erste Welle startest du selbst. Danach startet ein Timer jede weitere Welle, auch wenn die vorige noch läuft.
 - Gegner laufen im Kreis, bis sie fallen. Sie richten keinen Reaktorschaden an.
@@ -312,6 +324,10 @@ Sektor I nutzt fünf Grundgegner, darunter ab Mission 02 den **Gleiter**: schnel
 | X Dschungel | Schwarmameise (weniger Schaden im Rudel), Urwaldkoloss (gepanzert, regeneriert) |
 | XI Vulkankette | Glutläufer (wird schneller, je mehr HP fehlen), Aschenschwinge (fliegt, gepanzert, immun gegen Verlangsamung) |
 | XII Kristallhöhle | Kristallwächter (härtet sich im Takt gegen Treffer, Brand wirkt voll), Splitterfalter (fliegt, zerfällt in zwei Gleiter) |
+| XIV Zahnwerk | Zahnrad (wird schneller, je länger es kreist), Kolbenpanzer (gepanzert, nimmt mit jeder Runde weniger Schaden) |
+| XV Mondsee | Gischtflügler (fliegt, nimmt mit jeder Runde weniger Schaden), Nautilus (Schild, wird schneller, je länger er kreist) |
+
+Zehn weitere Gegner sind fertig, kommen aber noch in keiner Mission vor. Der Gegner-Kodex führt sie unter „in keiner Mission“: Sprungspinne (springt regelmäßig in die Luft), Tauchflosser (fliegt, taucht regelmäßig zum Boden ab, flink), Dämpfer (macht sich und Gegner in der Nähe immun gegen Verlangsamung, Betäubung und Sog), Brutmutter (gepanzert, legt unterwegs Schwarmameisen), Funkenwurm (legt beim Tod Türme in der Nähe kurz lahm), Häutling (gepanzert bis halbe HP, danach schnell), Irrlicht (fliegt, getarnt, weicht aus), Hydra (regeneriert, zerfällt in zwei Hydraköpfe), Hydrakopf (wird schneller, je mehr HP fehlen) und Gewitterzelle (fliegt, Schild, legt beim Tod Türme lahm).
 
 Getarnte Gegner kommen nur in Missionen vor, in denen der Detektor baubar ist.
 

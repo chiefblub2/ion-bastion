@@ -24,6 +24,19 @@ export function unbuildable(m: MissionDefinition, strategy: Pick<Strategy, "buil
 /** Mission 01 is the tutorial: three upgraded towers are meant to suffice there. */
 /** Strategies that still lose; balancing is pending. Remove an entry once it wins. */
 export const PENDING_BALANCE: ReadonlySet<string> = new Set(["frostwall/A", "frostwall/B"]);
+/** Enemies that exist but no mission uses yet; remove an id once a mission places it. */
+export const RESERVE_ENEMIES: ReadonlySet<string> = new Set([
+  "leaper",
+  "skimmer",
+  "warden",
+  "broodmother",
+  "sparkworm",
+  "molter",
+  "wisp",
+  "hydra",
+  "hydraling",
+  "stormcell",
+]);
 
 export const isTutorial = (m: MissionDefinition) => MISSIONS[0]?.id === m.id;
 

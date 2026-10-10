@@ -86,7 +86,9 @@ Files: ONLY src/content/sectors/<file>.ts and src/core/strategies/<file>.ts, onl
    difficulty stay close. Introduce each enemy in a light wave (small count, no other trait enemies), then mix it in.
 2. Adjust strategies only if needed (counters to the new enemies: flak/tesla for flyers, detector for stealth). The first
    3 builds of A stay core towers (pulse/blast/flak/frost/tesla).
-Loop: the baseline command plus --mission <missionId> --why.
+Loop: the baseline command plus --mission <missionId> --why. Once per mission, after placing the enemies: add --tune
+      (HP factor window in which A/B still win and the thin/Nova defenses still lose; aim the waves into it instead of
+      guessing in ±2 steps; it WARNs when the window is not monotonic).
 Done: a final run without --mission shows no FAIL and no WARN that the baseline did not have; --why shows the new enemies
 dying, not only leaking.
 Balance lessons:
@@ -106,8 +108,9 @@ Stat proposals: apply them yourself in `content/enemies.ts` and re-run the loop 
 
 Run the expensive checks once, after all edits. `git status` first: files outside this pack mean another session works in the same tree; leave them alone and name them in the report.
 
-1. Run `npx vitest run src/core/replay -u` (all shards, about 10 s), then list the changed missions:
-   `git diff -U0 src/core/__snapshots__ | grep -o '^[-+]exports\[.golden replays > [a-z0-9-]*' | sort -u`
+1. Run `npx vitest run src/core/replay -u` (all shards, a few seconds; unchanged missions come from the input cache), then
+   `npx vite-node scripts/snapshot-diff.ts -- --expect <placement mission ids, comma-separated>`
+   (per changed replay the first diverging wave and the final trace; exit 1 on any other mission).
    Only missions on the placement lines may appear. Any other mission means the trait leaks into solo state (an optional field that is not `undefined`, a changed iteration order): fix it, don't accept it.
 2. Text work, before the final test run:
    - `npx vite-node scripts/mission-table.ts --write` (enemy count in the README intro, mission table if waves changed).
@@ -115,7 +118,7 @@ Run the expensive checks once, after all edits. `git status` first: files outsid
    - Fallgrube, if a new enemy is under a pit threshold: the level descriptions in `content/towers.ts` and the README trap row both name the swallowed enemies.
    - CLAUDE.md: the trait list under "Enemy", plus special rules of new traits (an `isHidden` extension, a new `Enemy` field in `stateHash`, DISRUPTABLE).
    - Player texts use the in-game tower names (`name` in `content/towers.ts`: Kryo, Glut, Teergrube …), never ids like frost or inferno.
-3. One `npm test` and one `npm run build` (it already runs `tsc`). Later edits to texts, README or CLAUDE.md need no new run.
+3. One `npm run test:full` (cache off, about 5 s) and one `npm run build` (it already runs `tsc`). Later edits to texts, README or CLAUDE.md need no new run.
 4. **Visual check, mandatory:**
    - `npm run dev` in the background, then
      `npx vite-node scripts/visual-check.ts -- <placement mission> --enemies <id>[,<id>] --out <scratchpad>/vc`

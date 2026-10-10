@@ -148,6 +148,40 @@ w12 won lives=15 gold=1071 kills=374 towerKills=69/27/73/9/10/25/81/68/12"
 
 exports[`golden replays > splitterfeld defense B 2`] = `"w12 won lives=15 gold=1071 kills=374 towerKills=69/27/73/9/10/25/81/68/12"`;
 
+exports[`golden replays > springflut defense A 1`] = `
+"w2 wave lives=20 gold=140 kills=10 towerKills=10/0
+w3 wave lives=20 gold=238 kills=22 towerKills=21/1
+w4 wave lives=20 gold=209 kills=28 towerKills=22/6
+w5 wave lives=20 gold=194 kills=33 towerKills=23/10/0
+w6 wave lives=20 gold=247 kills=44 towerKills=27/13/4
+w7 wave lives=20 gold=267 kills=56 towerKills=30/17/9
+w8 wave lives=20 gold=512 kills=91 towerKills=38/25/26/2/0
+w9 wave lives=20 gold=278 kills=106 towerKills=42/25/30/9/0/0
+w10 wave lives=20 gold=303 kills=120 towerKills=45/25/31/12/5/2
+w11 wave lives=20 gold=387 kills=135 towerKills=45/30/31/15/11/3
+w12 wave lives=20 gold=420 kills=148 towerKills=45/35/32/19/14/3
+w12 won lives=20 gold=1278 kills=191 towerKills=52/38/43/32/22/4"
+`;
+
+exports[`golden replays > springflut defense A 2`] = `"w12 won lives=20 gold=1278 kills=191 towerKills=52/38/43/32/22/4"`;
+
+exports[`golden replays > springflut defense B 1`] = `
+"w2 wave lives=20 gold=148 kills=10 towerKills=10/0
+w3 wave lives=20 gold=108 kills=16 towerKills=16/0
+w4 wave lives=20 gold=198 kills=25 towerKills=17/0/8
+w5 wave lives=20 gold=206 kills=33 towerKills=20/1/11/1
+w6 wave lives=20 gold=324 kills=53 towerKills=27/5/15/6
+w7 wave lives=20 gold=368 kills=80 towerKills=32/9/16/16/7
+w8 wave lives=20 gold=321 kills=104 towerKills=44/15/18/18/9
+w9 wave lives=20 gold=228 kills=110 towerKills=45/15/18/23/9
+w10 wave lives=20 gold=295 kills=123 towerKills=46/16/18/28/15/0
+w11 wave lives=20 gold=421 kills=136 towerKills=46/16/21/31/22/0
+w12 wave lives=20 gold=420 kills=148 towerKills=46/16/24/36/26/0
+w12 won lives=20 gold=1278 kills=191 towerKills=57/21/27/50/34/2"
+`;
+
+exports[`golden replays > springflut defense B 2`] = `"w12 won lives=20 gold=1278 kills=191 towerKills=57/21/27/50/34/2"`;
+
 exports[`golden replays > truemmerallee defense A 1`] = `
 "w1 ready lives=20 gold=102 kills=8 towerKills=0/1/0/7
 w2 ready lives=20 gold=181 kills=20 towerKills=0/10/0/10

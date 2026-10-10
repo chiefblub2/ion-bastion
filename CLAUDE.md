@@ -10,14 +10,21 @@ TypeScript (strict, ESM), Phaser 3.90, Vite 6, Vitest 3, `ws` for the relay. Nod
 npm ci
 npm run dev        # game on :4173 (--host 0.0.0.0)
 npm run server     # multiplayer relay on :4174 (PORT=… overrides)
-npm test           # vitest run, all tests
+npm test           # vitest run, all tests (campaign results from the input cache where nothing changed)
+npm run test:full  # the same with the cache off (CAMPAIGN_CACHE=0); the final gate
 npm run build      # tsc --noEmit && vite build → dist/
 npx vitest run src/core/match.test.ts     # single file
 npx vitest run src/core/replay            # all golden replays (every replay*.test.ts shard)
+npx vitest run src/core/replay -t <missionId>
+                                          # golden replays and loss checks of one mission
 npx vitest run -u                         # update snapshots (golden replays: only on purpose, review the diff)
 npx vite-node scripts/balance.ts -- src/content/sectors/frost.ts src/core/strategies/frost.ts
                                           # balance check for one sector (optional `--curve credits=680-780,waves=17-20[,growth=1.1-1.2]` adds WARNs); sector I: -- src/content/missions.ts src/core/strategies/index.ts 0
-                                          # flags: --mission <id> (one mission), --why (leaks per enemy type, kills per tower)
+                                          # flags: --mission <id> (one mission), --why (leaks per enemy type, kills per tower),
+                                          # --tune (HP factor window in which A/B win and thin/Nova/empty defenses lose, plus the hpGrowth range)
+npx vite-node scripts/snapshot-diff.ts [-- --expect id,id | --sector <file> | --base <rev>]
+                                          # golden replays vs. HEAD: new / removed / changed (first diverging wave, final trace);
+                                          # exits 1 if a mission outside --expect changed (`--expect ""`: none may change)
 npx vite-node scripts/mission-table.ts    # README mission table from the content (stdout)
 npx vite-node scripts/mission-table.ts --enemies
                                           # markdown reference table of all enemies (stats, traits) for designing new ones
@@ -28,7 +35,7 @@ npx vite-node scripts/visual-check.ts -- <missionId>... [--enemies a,b] [--out d
                                           # tools, plays at 2× to the first wave of each new (or given) enemy and saves terrain + wave PNGs
 ```
 
-Always run `npm test` and `npm run build` before you finish. The chunk-size warning from `vite build` is expected.
+Always run `npm run test:full` and `npm run build` before you finish. The chunk-size warning from `vite build` is expected.
 
 To see a change in the real app, run `npm run dev` (and `npm run server` for multiplayer) and open `http://localhost:4173`. Use `?server=ws://host:port` to point at another relay, and `?mission=<id>` (e.g. `?mission=korallengraben`) to open a mission directly. Multiplayer needs several tabs, one per player.
 
@@ -92,7 +99,7 @@ Whole mission packs (new sectors, themes, enemies) follow the project skill `.cl
   - The ASCII sketch is the only source of truth: `S` entry, `R` reactor, `=` path, `#` obstacle, `.` buildable.
   - Size and path order are derived from it. Branches, dead ends and loose path cells are rejected with their coordinates.
   - A new terrain style needs an entry in `THEMES` (`render/terrain.ts`) and a value in `MapTheme`.
-- **Circle mission (Kreislauf, the last sector, in `content/sectors/circle.ts`):**
+- **Circle mission (Kreislauf mode: the trailing sectors `circle.ts`, `gear.ts`, `tide.ts` in `content/sectors/`; every circle sector comes after all campaign sectors):**
   - A map sketch without `R` is a closed ring (`MapDefinition.loop`). `S` sits on the ring, and enemies leave it in the first free direction (right, down, left, up).
   - The mission sets `circle: { interval, limit, earlyBonus }`; validation requires `circle` and `loop` together.
   - `systems/circle.ts` replaces `settleWave`. The status stays `"wave"` from the first start to the end.
@@ -119,7 +126,7 @@ Whole mission packs (new sectors, themes, enemies) follow the project skill `.cl
 
   Every `params` value can then be upgraded via `effects.attack` and shows up in the UI.
 - **Status effect:** add a member of `StatusEffect` and an entry in `STATUSES` (`systems/status.ts`), with a merge rule and optional hooks.
-- **Enemy:** add it to `content/enemies.ts`, with `layer` (`ground`/`air`), `visual` and optional `traits`. The available traits are armor, regen, splitOnDeath, slowImmune, shield, sprint, evade, healer, leader, stealth, unstoppable, swift, burrow, harden, surge, swarm, rage and facet. `rage` raises speed with lost HP (`speed` hook); `facet` cuts non-dot hits in a window of the global `state.time`, so burn ticks and bleed pass while Zerfall (not a dot) is reduced. A new trait is an entry in the `TRAITS` registry (`systems/traits.ts`), using the hooks `onDamage`, `onTick`, `onDeath` and `resists`. There is no inheritance tree and no global event bus. Stealth enemies may only appear in missions where the detector is buildable.
+- **Enemy:** add it to `content/enemies.ts`, with `layer` (`ground`/`air`), `visual` and optional `traits`. The available traits are armor, regen, splitOnDeath, slowImmune, shield, sprint, evade, healer, leader, stealth, unstoppable, swift, burrow, harden, surge, swarm, rage, facet, leap, dampen, brood, overload, molt, momentum and lap. `momentum` raises speed with `distance` (a Gravitron pull takes it back); `lap` cuts damage per completed lap, `floor(distance / path.length)`, only on ring maps (always 0 with a reactor). `rage` raises speed with lost HP (`speed` hook); `facet` cuts non-dot hits in a window of the global `state.time`, so burn ticks and bleed pass while Zerfall (not a dot) is reduced. `leap` flips the layer in a distance window; `layerOf` (`systems/traits.ts`) is the current layer and `canTarget` uses it, so ground towers and traps miss a leaping walker and Flak misses a diving flyer. `dampen` (disruptable) makes it and enemies in its radius resist slow, stun and pull, checked in `resists`. `brood` (disruptable) lays its `type` every `every` cells (at most one per tick, never again after a pull-back); its count `Enemy.brood` stays `undefined` without the trait and is part of `stateHash`, and `tickTraits` iterates a snapshot so eggs tick from the next tick on. `overload` sets `cooldown = max(cooldown, cycles)` on attack towers (not support towers or traps) in its radius when it dies. `molt` reduces damage above an HP share and speeds up below it. Enemies listed in `RESERVE_ENEMIES` (`core/mission-checks.ts`) exist but no mission uses them yet; remove an id when placing it (the campaign test checks both directions, and the README count skips them). A new trait is an entry in the `TRAITS` registry (`systems/traits.ts`), using the hooks `onDamage`, `onTick`, `onDeath` and `resists`. There is no inheritance tree and no global event bus. Stealth enemies may only appear in missions where the detector is buildable.
 - **Upgrades:** `UpgradeDefinition` (`id`, `label`, `description`, `cost`, `requires`, optional `path`, `effects`) in `content/upgrades.ts`.
   - `attackTower` generates the five-level path.
   - `AURA_UPGRADES` defines the three exclusive aura paths.
@@ -132,6 +139,8 @@ Whole mission packs (new sectors, themes, enemies) follow the project skill `.cl
 
 - Tests are pure Vitest with no DOM; they build a `Game` (or `Match`/`Room`) directly. Helpers in `core/test-helpers.ts`: `finishWave`, `play`, `makeEnemy`, `landProjectiles`. `play` lives in `core/play.ts` (no vitest import) so `scripts/balance.ts` can reuse it; the mission rules (air, stealth, buildability, thin defense, Nova-only, tutorial exemption) live in `core/mission-checks.ts` and are shared by the campaign tests and the balance script.
 - Campaign simulations live in `core/campaign-tests.ts` and are split into `SHARDS` files `core/replay-N.test.ts` by `fnv(mission.id)` (vitest runs files in parallel; a stable hash keeps snapshots in their file when sectors are inserted). Each mission × strategy (`core/strategies/`) is simulated once: the golden replay snapshot and the win check share that run. The shards also check that missions are lost without towers, with only three towers from mission 02 on, and with a Nova-only defense against gliders. `PENDING_BALANCE` (`core/mission-checks.ts`) lists strategies that do not win yet (currently Frostwall A/B); their replays run without the win check. Campaign tests have a 60 s timeout so a busy machine does not trip vitest's 5 s default.
+- `core/campaign-cache.ts` caches every campaign run per shard in `node_modules/.cache/ion-bastion/`. The key covers the simulation source (every non-test `.ts` in `src/core` without `strategies/`, and in `src/systems`), the mission, the strategy, the built towers' definitions (upgrades included) and the wave enemies, closed over enemy ids named in their definitions (split, brood). So a new enemy or upgrade only re-runs the missions that reach it. Cached traces are still compared with the snapshots. `CI` or `CAMPAIGN_CACHE=0` turns it off; a run that depends on anything outside the key (a new global in `src/content`) needs `test:full`.
+- `vitest.config.ts` uses the `threads` pool: forked workers cost several seconds of startup for the 14 shards.
 - `core/missions.test.ts` keeps the campaign-wide content rules (ids, sector grouping, stealth only with a detector, every enemy appears). `core/replay.test.ts` holds one hand-played golden replay.
 - Multiplayer tests:
   - `core/coop.test.ts`: co-op economy

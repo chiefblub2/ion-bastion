@@ -109,6 +109,25 @@ const TRAIT_TAGS: { [K in TraitKind]: (t: Extract<Trait, { kind: K }>, content: 
     label: "FACETTE",
     title: `Alle ${number(t.every)} s für ${number(t.length)} s ${number(t.reduction * 100)} % weniger Schaden durch Treffer, Brand wirkt voll`,
   }),
+  leap: (t) => ({ label: "SPRUNG", title: `Wechselt alle ${number(t.every)} Felder für ${number(t.length)} Felder die Ebene (Boden ↔ Luft)` }),
+  dampen: (t) => ({ label: "DÄMPFT", title: `Er und Gegner im Umkreis von ${number(t.radius)} Feldern sind immun gegen Verlangsamung, Betäubung und Sog` }),
+  brood: (t, content) => ({
+    label: "BRUT",
+    title: `Legt alle ${number(t.every)} Felder einen ${content.enemies[t.type as EnemyId]?.name ?? t.type} ab (max. ${t.max})`,
+  }),
+  overload: (t) => ({ label: "ÜBERLAST", title: `Legt beim Tod Angriffstürme im Umkreis von ${number(t.radius)} Feldern für ${number(t.cycles)} Schusszyklen lahm` }),
+  molt: (t) => ({
+    label: "HÄUTUNG",
+    title: `Gepanzert (${number(t.armor * 100)} % weniger Schaden) bis ${number(t.threshold * 100)} % HP, danach ${number(t.speed)}× so schnell`,
+  }),
+  momentum: (t) => ({
+    label: "SCHWUNG",
+    title: `Wird schneller, je länger er kreist: bis zu +${number(t.max * 100)} % Tempo (+${number(t.per * 100)} % pro Feld)`,
+  }),
+  lap: (t) => ({
+    label: "RUNDEN",
+    title: `Härter mit jeder Runde: ${number(t.per * 100)} % weniger Schaden pro vollendeter Runde, höchstens ${number(t.max * 100)} %`,
+  }),
   healer: (t) => ({
     label: "HEILER",
     title: `Heilt Gegner in ${number(t.radius)} Feldern um ${number(t.percent * 100)} % ihrer HP pro Sekunde`,
@@ -130,12 +149,35 @@ const hex = (color: number) => `#${color.toString(16).padStart(6, "0")}`;
 /** Small SVG of an enemy, in the same shape as on the battlefield. */
 export function enemyIcon(visual: EnemyVisual, color: number): string {
   const r = 7.5,
-    at = (angle: number, radius: number) => `${(Math.cos(angle) * radius).toFixed(2)},${(Math.sin(angle) * radius).toFixed(2)}`;
-  const points =
-    visual.shape === "glider"
-      ? [at(0, r * 1.2), at(2.5, r * 1.1), at(Math.PI, r * 0.35), at(-2.5, r * 1.1)]
-      : Array.from({ length: visual.sides }, (_, i) => at((visual.rotation ?? 0) + (i * Math.PI * 2) / visual.sides, r));
-  return `<svg class="enemy-icon" viewBox="-10 -10 20 20" aria-hidden="true"><polygon points="${points.join(" ")}" fill="${hex(color)}"/></svg>`;
+    n2 = (v: number) => v.toFixed(2),
+    at = (angle: number, radius: number) => `${n2(Math.cos(angle) * radius)},${n2(Math.sin(angle) * radius)}`,
+    fill = hex(color),
+    svg = (inner: string) => `<svg class="enemy-icon" viewBox="-10 -10 20 20" aria-hidden="true">${inner}</svg>`,
+    poly = (pts: string[]) => `<polygon points="${pts.join(" ")}" fill="${fill}"/>`;
+  switch (visual.shape) {
+    case "glider":
+      return svg(poly([at(0, r * 1.2), at(2.5, r * 1.1), at(Math.PI, r * 0.35), at(-2.5, r * 1.1)]));
+    case "star":
+      return svg(poly(Array.from({ length: visual.points * 2 }, (_, i) => at((i * Math.PI) / visual.points, i % 2 ? r * visual.inner : r))));
+    case "orb": {
+      const moons = Array.from({ length: visual.moons }, (_, i) => {
+        const a = (i * Math.PI * 2) / visual.moons - Math.PI / 2;
+        return `<circle cx="${n2(Math.cos(a) * 9)}" cy="${n2(Math.sin(a) * 9)}" r="1.1" fill="#fff" fill-opacity=".85"/>`;
+      }).join("");
+      return svg(`<circle r="${r * 0.9}" fill="${fill}" fill-opacity=".3"/><circle r="${r * 0.6}" fill="${fill}"/>${moons}`);
+    }
+    case "worm": {
+      const k = visual.segments,
+        step = 17 / k,
+        circles = Array.from({ length: k }, (_, i) => {
+          const rad = 3.6 * (1 - (i * 0.5) / k);
+          return `<circle cx="${n2(-8 + (k - 1 - i) * step + rad * 0.3)}" cy="0" r="${n2(rad)}" fill="${fill}" stroke="#0c1417" stroke-width=".8"/>`;
+        });
+      return svg(circles.join(""));
+    }
+    default:
+      return svg(poly(Array.from({ length: visual.sides }, (_, i) => at((visual.rotation ?? 0) + (i * Math.PI * 2) / visual.sides, r))));
+  }
 }
 
 export const LAYER = { ground: "Boden", air: "Luft" } as const;

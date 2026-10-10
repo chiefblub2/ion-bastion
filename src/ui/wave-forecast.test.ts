@@ -123,3 +123,22 @@ describe("wave forecast", () => {
     expect(next.enemies[0].hp).toBe(Math.round(base.enemies[0].hp * 0.8));
   });
 });
+
+describe("enemy icons and shape validation", () => {
+  it("draws every body shape", async () => {
+    const { enemyIcon } = await import("./wave-forecast");
+    expect(enemyIcon({ shape: "star", points: 8, inner: 0.45 }, 0xff0000).match(/\d,-?\d/g)!.length).toBeGreaterThanOrEqual(16);
+    expect(enemyIcon({ shape: "orb", moons: 3 }, 0x00ff00).match(/<circle/g)).toHaveLength(5);
+    expect(enemyIcon({ shape: "worm", segments: 5 }, 0x0000ff).match(/<circle/g)).toHaveLength(5);
+  });
+  it("rejects invalid shape fields", async () => {
+    const { validateEnemy } = await import("../core/validation");
+    const base = DEFAULT_CONTENT.enemies.drone;
+    const bad = (visual: unknown) => () => validateEnemy({ ...base, visual } as typeof base, "Gegner x", DEFAULT_CONTENT);
+    expect(bad({ shape: "star", points: 2, inner: 0.5 })).toThrow("points");
+    expect(bad({ shape: "star", points: 5, inner: 1 })).toThrow("inner");
+    expect(bad({ shape: "orb", moons: -1 })).toThrow("moons");
+    expect(bad({ shape: "worm", segments: 1 })).toThrow("segments");
+    expect(bad({ shape: "worm", segments: 2 })).not.toThrow();
+  });
+});

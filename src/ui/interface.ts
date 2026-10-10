@@ -1,22 +1,23 @@
-import { Game, SELL_REFUND } from "../core/game";
-import { missionNumber, sectorOf } from "../content/missions";
+import { Game, isRunning, SELL_REFUND } from "../core/game";
+import { isCircleSector, missionNumber, sectorOf } from "../content/missions";
 import { upgradeOption } from "../core/upgrades";
 import { towerDetails } from "./tower-details";
 import { enemyDetails, enemyKey } from "./enemy-details";
 import { isHidden } from "../systems/traits";
 import { earlyBonus, wavesLeft } from "../systems/circle";
+import { WAVE_BREAK } from "../systems/waves";
 import { renderWaveForecast, waveForecast } from "./wave-forecast";
 import { liveUnits, renderLiveUnits } from "./live-units";
 import { renderEnemyCodex, type CodexTab } from "./enemy-codex";
 import { effectiveTowerStats, isInAura } from "../systems/auras";
-import type { TowerId } from "../core/types";
+import type { MissionSector, TowerId } from "../core/types";
 import { MODE_IDS, MODES } from "../core/modes";
 import { renderPlayers, renderSends, versusOutcome, type MultiplayerSession } from "./players";
 export type { MultiplayerSession } from "./players";
 import type { ViewState } from "../render/scene";
 import { hotkeyTowers, isPaged, pageOf, TOWER_PAGES, towerOrder } from "./tower-pages";
 const pad = (n: number) => String(n).padStart(2, "0");
-const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI"];
 const roman = (index: number) => ROMAN[index] ?? String(index + 1);
 /** Hotkeys for the towers of the open tab, from 1 again on every tab; more than ten continue with letters. */
 export const TOWER_KEYS = "1234567890qwer";
@@ -46,8 +47,8 @@ export function mountUI(game: Game) {
     .join("")}</div></div>
   <section id="send-panel" class="send-panel" aria-label="Gegner schicken" hidden></section><div id="selection" class="selection"></div><section id="live-units" class="live-units" aria-label="Gegner im Feld" hidden></section></aside></div>
   <footer class="bottom-bar"><span id="notice" role="status" aria-live="polite">Wähle einen Turm und platziere ihn neben dem Pfad.</span><button id="restart-btn" class="text-button">Neu starten</button></footer></main>
-  <dialog id="help-dialog"><button class="dialog-close" id="close-help" aria-label="Spielhilfe schließen">×</button><p class="eyebrow">FELDHANDBUCH</p><h2>Dein Kern. Deine Linie.</h2><p>Überstehe alle <span id="help-waves"></span> Wellen. Erreicht ein Gegner den Reaktor, verliert er Energie. Bei 0 ist die Mission verloren.</p><ol><li><strong>Verteidigung bauen</strong><br>Wähle rechts einen Turm und klicke auf ein freies Feld neben dem Pfad. Fallen gehören direkt auf den Weg. Der Kreis zeigt seine Reichweite.</li><li><strong>Welle starten</strong><br>Besiegte Gegner geben Credits. Nach jeder Welle bekommst du einen Bonus und Zeit zum Bauen.</li><li><strong>Türme verbessern</strong><br>Klicke einen gebauten Turm an. Angriffstürme erreichen Stufe 5; die Stufen 4 und 5 sind teuer, bringen pro Credit aber mehr als ein weiterer Turm. Beim Aura-Turm wählst du einen Pfad (Schaden, Angriffstempo oder Reichweite) und baust ihn in drei Stufen aus. Für mehrere Boni baue mehrere Auren. Verkauf erstattet ${SELL_REFUND * 100} % deiner Investition.</li></ol><div class="tip">Tipp: Nova trifft Gruppen, aber nur Bodeneinheiten. Gegen Gleiter in der Luft helfen Flak und alle übrigen Angriffstürme. Tesla springt von Gegner zu Gegner, die Lanze durchschlägt ganze Reihen. Stasis hält Gegner kurz an, Korrosion lässt sie mehr Schaden nehmen, Zerfall knackt Titanen. Fokus wird stärker, je länger er auf demselben Ziel bleibt, und Gravitron zieht Bodengegner zurück. Der Mörser beschießt Gruppen aus großer Entfernung, Beben erschüttert alles rund um den Turm, der Henker erledigt angeschlagene Gegner, Schrapnell trifft mehrere Ziele zugleich, der Störsender schaltet Schilde und Heilung ab, und das Fangnetz holt Flieger in Reichweite von Bodentürmen. Prämienbake, Reparaturdock und Peilsender helfen ohne eigenen Angriff. Fallen wie Mine, Krähenfüße, Haftmine oder Fallgrube baust du direkt auf den Weg; sie lösen aus, wenn Bodengegner darüberlaufen, auch getarnte. Aura verstärkt nahe Angriffstürme, sobald du einen Pfad kaufst. Eine früh gebaute Raffinerie zahlt nach jeder Welle Credits aus. Getarnte Gegner kann ein Turm nur im Bereich eines Detektors anvisieren.</div><p class="keyboard-help">${towerKeyRange(Math.max(...TOWER_PAGES.map((_, i) => Object.values(TOWERS).filter((t) => pageOf(t) === i).length)), (key) => `<kbd>${key}</kbd>`)} Turm im offenen Tab wählen · <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>${TOWER_PAGES.length}</kbd> Tab wechseln<br><kbd>Esc</kbd>, Rechtsklick oder ✕: Auswahl aufheben<br><kbd>Shift</kbd>+Klick: mehrere Türme desselben Typs bauen<br><kbd>Leertaste</kbd> Pause · <kbd>N</kbd> Welle starten · <kbd>F</kbd> Vollbild<br><kbd>T</kbd> Zielpriorität des ausgewählten Turms wechseln<br>Gegner anklicken: HP und Eigenschaften<br>Auf dem Spielfeld: Pfeiltasten + Enter</p><button id="help-done" class="primary">Verstanden</button></dialog>
-  <dialog id="mission-dialog"><button class="dialog-close" id="close-missions" aria-label="Missionsauswahl schließen">×</button><p class="eyebrow">EINSATZPLAN</p><h2>Mission wählen.</h2><p id="mission-warning" class="mission-warning" hidden>Deine aktuelle Verteidigung und dein Fortschritt werden zurückgesetzt.</p><div id="sector-tabs" class="sector-tabs" role="tablist" aria-label="Sektoren" hidden></div><div id="mission-list" class="mission-list"></div></dialog>
+  <dialog id="help-dialog"><button class="dialog-close" id="close-help" aria-label="Spielhilfe schließen">×</button><p class="eyebrow">FELDHANDBUCH</p><h2>Dein Kern. Deine Linie.</h2><p>Überstehe alle <span id="help-waves"></span> Wellen. Erreicht ein Gegner den Reaktor, verliert er Energie. Bei 0 ist die Mission verloren.</p><ol><li><strong>Verteidigung bauen</strong><br>Wähle rechts einen Turm und klicke auf ein freies Feld neben dem Pfad. Fallen gehören direkt auf den Weg. Der Kreis zeigt seine Reichweite.</li><li><strong>Welle starten</strong><br>Besiegte Gegner geben Credits. Nach jeder Welle bekommst du einen Bonus und nach ${WAVE_BREAK} Sekunden startet die nächste Welle von selbst. Bauen kannst du auch während einer Welle. Mit <kbd>N</kbd> startest du sie früher.</li><li><strong>Türme verbessern</strong><br>Klicke einen gebauten Turm an. Angriffstürme erreichen Stufe 5; die Stufen 4 und 5 sind teuer, bringen pro Credit aber mehr als ein weiterer Turm. Beim Aura-Turm wählst du einen Pfad (Schaden, Angriffstempo oder Reichweite) und baust ihn in drei Stufen aus. Für mehrere Boni baue mehrere Auren. Verkauf erstattet ${SELL_REFUND * 100} % deiner Investition.</li></ol><div class="tip">Tipp: Nova trifft Gruppen, aber nur Bodeneinheiten. Gegen Gleiter in der Luft helfen Flak und alle übrigen Angriffstürme. Tesla springt von Gegner zu Gegner, die Lanze durchschlägt ganze Reihen. Stasis hält Gegner kurz an, Korrosion lässt sie mehr Schaden nehmen, Zerfall knackt Titanen. Fokus wird stärker, je länger er auf demselben Ziel bleibt, und Gravitron zieht Bodengegner zurück. Der Mörser beschießt Gruppen aus großer Entfernung, Beben erschüttert alles rund um den Turm, der Henker erledigt angeschlagene Gegner, Schrapnell trifft mehrere Ziele zugleich, der Störsender schaltet Schilde und Heilung ab, und das Fangnetz holt Flieger in Reichweite von Bodentürmen. Prämienbake, Reparaturdock und Peilsender helfen ohne eigenen Angriff. Fallen wie Mine, Krähenfüße, Haftmine oder Fallgrube baust du direkt auf den Weg; sie lösen aus, wenn Bodengegner darüberlaufen, auch getarnte. Aura verstärkt nahe Angriffstürme, sobald du einen Pfad kaufst. Eine früh gebaute Raffinerie zahlt nach jeder Welle Credits aus. Getarnte Gegner kann ein Turm nur im Bereich eines Detektors anvisieren.</div><p class="keyboard-help">${towerKeyRange(Math.max(...TOWER_PAGES.map((_, i) => Object.values(TOWERS).filter((t) => pageOf(t) === i).length)), (key) => `<kbd>${key}</kbd>`)} Turm im offenen Tab wählen · <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>${TOWER_PAGES.length}</kbd> Tab wechseln<br><kbd>Esc</kbd>, Rechtsklick oder ✕: Auswahl aufheben<br><kbd>Shift</kbd>+Klick: mehrere Türme desselben Typs bauen<br><kbd>Leertaste</kbd> Pause · <kbd>N</kbd> Welle starten · <kbd>F</kbd> Vollbild<br><kbd>T</kbd> Zielpriorität des ausgewählten Turms wechseln<br>Gegner anklicken: HP und Eigenschaften<br>Auf dem Spielfeld: Pfeiltasten + Enter</p><button id="help-done" class="primary">Verstanden</button></dialog>
+  <dialog id="mission-dialog"><button class="dialog-close" id="close-missions" aria-label="Missionsauswahl schließen">×</button><p class="eyebrow">EINSATZPLAN</p><h2>Mission wählen.</h2><p id="mission-warning" class="mission-warning" hidden>Deine aktuelle Verteidigung und dein Fortschritt werden zurückgesetzt.</p><div id="mission-modes" class="mission-modes" role="tablist" aria-label="Spielmodus" hidden></div><div id="sector-tabs" class="sector-tabs" role="tablist" aria-label="Sektoren" hidden></div><p id="mode-rules" class="mode-rules" hidden>Geschlossene Ringe ohne Reaktor: Gegner kreisen, bis sie fallen. Wellen starten per Timer, wer früh ruft, bekommt Credits. Sind mehr Gegner im Ring als das Limit erlaubt, ist die Mission verloren.</p><div id="mission-list" class="mission-list"></div></dialog>
   <dialog id="coop-dialog"><button class="dialog-close" id="close-coop" aria-label="Mehrspieler schließen">×</button><p class="eyebrow">MEHRSPIELER · 2–4 SPIELER</p><h2>Zusammen oder gegeneinander.</h2><fieldset id="coop-modes" class="coop-modes"><legend>Modus</legend>${MODE_IDS.map((id) => `<label><input type="radio" name="coop-mode" value="${id}"${id === "coop" ? " checked" : ""}><span>${MODES[id].name}</span></label>`).join("")}</fieldset><p id="coop-rules" class="coop-rules">${MODES.coop.rules}</p><div id="coop-lobby"><div class="dialog-actions"><button id="coop-create" class="primary">Raum erstellen</button></div><form id="coop-join-form" class="coop-join"><label for="coop-code">Raumcode</label><input id="coop-code" maxlength="4" autocomplete="off" spellcheck="false" placeholder="ABCD"><button id="coop-join" class="quiet" type="submit">Beitreten</button></form></div><div id="coop-room" hidden><p class="coop-code">Raum <b id="coop-room-code"></b></p><p id="coop-status" role="status"></p><p class="coop-mission">Mission: <b id="coop-mission"></b></p><div class="dialog-actions"><button id="coop-leave" class="quiet">Raum verlassen</button><button id="coop-launch" class="primary" hidden>Mission starten</button></div></div></dialog>
   <dialog id="codex-dialog" class="codex-dialog"><button class="dialog-close" id="close-codex" aria-label="Gegnerakte schließen">×</button><p class="eyebrow">GEGNERAKTE</p><h2>Kenne deinen Feind.</h2><p>Alle Gegnertypen in der Reihenfolge, in der die Kampagne sie einführt. HP und Tempo gelten für Welle 1; spätere Wellen haben mehr HP.</p><div id="codex-tabs" class="codex-tabs" role="tablist" aria-label="Gegnerakte"></div><div id="codex-list" class="codex-list" role="tabpanel"></div></dialog>
   <dialog id="restart-dialog"><h2>Mission neu starten?</h2><p>Deine aktuelle Verteidigung und dein Fortschritt werden zurückgesetzt.</p><div class="dialog-actions"><button id="cancel-restart" class="quiet">Weiterspielen</button><button id="confirm-restart" class="primary">Neu starten</button></div></dialog>`;
@@ -108,25 +109,49 @@ export function renderMissionList(game: Game, sectorIndex?: number) {
     selected = sectors[sectorIndex ?? (current ? sectors.indexOf(current) : 0)];
   document.getElementById("mission-warning")!.hidden =
     s.wave === 0 && s.towers.length === 0;
+  // Kreislauf sectors form their own mode with its own tab, apart from the campaign sectors.
+  const circle = !!selected && isCircleSector(selected),
+    group = sectors.filter((sector) => isCircleSector(sector) === circle),
+    campaign = sectors.filter((sector) => !isCircleSector(sector)),
+    rings = sectors.filter(isCircleSector),
+    count = (members: readonly MissionSector[]) => members.reduce((n, sector) => n + sector.missions.length, 0),
+    modes = document.getElementById("mission-modes")!;
+  modes.hidden = !campaign.length || !rings.length;
+  modes.innerHTML = modes.hidden
+    ? ""
+    : ([
+        [false, campaign, "Kampagne", "Reaktor verteidigen", `Sektor I–${roman(campaign.length - 1)} · ${count(campaign)} Missionen`],
+        [true, rings, "⟳ Kreislauf", "Ring unter dem Limit halten", `${count(rings)} Missionen`],
+      ] as const).map(([ring, members, name, goal, info]) => {
+        const active = ring === circle,
+          i = sectors.indexOf(members[0]);
+        return `<button class="mission-mode" role="tab" id="mission-mode-${ring ? "circle" : "campaign"}" data-sector="${i}"${ring ? ' data-mode="circle"' : ""} aria-controls="mission-list" aria-selected="${active}" tabindex="${active ? 0 : -1}"${!!current && isCircleSector(current) === ring ? ' data-current="true"' : ""}><strong>${name}</strong><span>${goal}</span><small>${info}</small></button>`;
+      }).join("");
+  document.getElementById("mission-dialog")!.toggleAttribute("data-circle", circle);
+  document.getElementById("mode-rules")!.hidden = !circle;
   const tabs = document.getElementById("sector-tabs")!;
-  tabs.hidden = !selected;
-  tabs.innerHTML = sectors.map((sector, i) => {
-    const first = missionNumber(sector.missions[0], missions),
+  tabs.hidden = !selected || group.length < 2;
+  tabs.innerHTML = tabs.hidden ? "" : group.map((sector) => {
+    const i = sectors.indexOf(sector),
+      first = missionNumber(sector.missions[0], missions),
       last = first + sector.missions.length - 1,
       active = sector === selected;
     return `<button class="sector-tab" role="tab" id="sector-tab-${i}" data-sector="${i}" aria-controls="mission-list" aria-selected="${active}" tabindex="${active ? 0 : -1}"${sector === current ? ' data-current="true"' : ""}><span class="sector-index">${roman(i)} <small>${pad(first)}–${pad(last)}</small></span><span class="sector-name">${sector.name}</span></button>`;
   }).join("");
   const list = document.getElementById("mission-list")!;
-  if (selected) {
+  if (selected && !tabs.hidden) {
     list.setAttribute("role", "tabpanel");
     list.setAttribute("aria-labelledby", `sector-tab-${sectors.indexOf(selected)}`);
+  } else if (!modes.hidden) {
+    list.setAttribute("role", "tabpanel");
+    list.setAttribute("aria-labelledby", `mission-mode-${circle ? "circle" : "campaign"}`);
   } else {
     list.removeAttribute("role");
     list.removeAttribute("aria-labelledby");
   }
   list.innerHTML = (selected?.missions ?? missions).map((m) => {
     const n = missionNumber(m, missions);
-    return `<button class="mission-card" data-mission="${m.id}"${m.id === game.mission.id ? ' aria-current="true"' : ""}><span class="mission-index">${pad(n)}</span><span class="mission-copy"><strong>${m.name}</strong><small>${m.focus}</small></span><span class="mission-stats"><b>${m.waves.length} Wellen</b><small>◇ ${m.startingCredits}${m.circle ? ` · ⟳ max. ${m.circle.limit}` : ""}</small></span></button>`;
+    return `<button class="mission-card" data-mission="${m.id}"${m.id === game.mission.id ? ' aria-current="true"' : ""}><span class="mission-index">${pad(n)}</span><span class="mission-copy"><strong>${m.name}</strong><small>${m.focus}</small></span><span class="mission-stats"><b>${m.waves.length} Wellen</b><small>◇ ${m.startingCredits}</small>${m.circle ? `<small class="ring-badge">⟳ Ring · max. ${m.circle.limit}</small>` : ""}</span></button>`;
   }).join("");
 }
 /** Fills the enemy codex dialog; called when it opens and on every tab change. */
@@ -212,7 +237,7 @@ export class Interface {
       "aria-label",
       s.paused ? "Spiel fortsetzen" : "Spiel pausieren",
     );
-    pause.disabled = s.status !== "wave";
+    pause.disabled = !isRunning(s);
     pause.hidden = !!match;
     text("speed-btn", `${this.view.speed}×`);
     // Without tabs every available tower shows; with tabs only the current page.
@@ -304,14 +329,14 @@ export class Interface {
           ? "<b>Welle</b> läuft"
           : match
             ? `<b>${ready ? "Bereit ✓" : "Bereit"}</b> ${pad(s.wave + 1)}${ready ? "" : " <span>▶</span>"}`
-            : `<b>Welle</b> ${pad(s.wave + 1)} <span>▶</span>`;
+            : `<b>Welle</b> ${pad(s.wave + 1)}${s.nextWave !== undefined ? ` <small>${Math.ceil(s.nextWave)} s</small>` : ""} <span>▶</span>`;
     quick.hidden = terminal;
     quick.disabled = !callable && (s.status !== "ready" || ready);
     if (quick.innerHTML !== quickLabel) {
       quick.innerHTML = quickLabel;
       quick.setAttribute(
         "aria-label",
-        callable ? `Welle ${s.wave + 1} jetzt rufen` : s.status === "wave" ? "Welle läuft" : match ? `Bereit für Welle ${s.wave + 1}` : `Welle ${s.wave + 1} starten`,
+        callable ? `Welle ${s.wave + 1} jetzt rufen` : s.status === "wave" ? "Welle läuft" : match ? `Bereit für Welle ${s.wave + 1}` : `Welle ${s.wave + 1} starten${s.nextWave !== undefined ? ` (startet in ${Math.ceil(s.nextWave)} s von selbst)` : ""}`,
       );
     }
     const overlay = document.getElementById("game-overlay")!;

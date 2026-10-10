@@ -16,7 +16,7 @@ const MESSAGES: Record<MessageCode, (p: Params) => string> = {
   "mission-over": () => "Die Mission ist beendet. Starte eine neue Runde.",
   paused: () => "Spiel pausiert.",
   resumed: () => "Spiel fortgesetzt.",
-  "pause-unavailable": () => "Pausieren geht nur während einer Welle.",
+  "pause-unavailable": () => "Pausieren geht nur während einer Welle oder des Wellen-Countdowns.",
   "wave-running": () => "Die aktuelle Welle läuft noch.",
   "wave-started": (p) => `Welle ${p.wave} gestartet`,
   "wave-called": (p) => `Welle ${p.wave} früh gerufen. +${p.bonus} Credits.`,

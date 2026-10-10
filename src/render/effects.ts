@@ -7,9 +7,9 @@ export const INCOME_LIFETIME = 1.6;
 export const effectLifetime = (e: VisualEvent) => (e.type === "income" || e.type === "repair" ? INCOME_LIFETIME : EFFECT_LIFETIME);
 export type VisualEvent = Extract<
   GameEvent,
-  { type: "shot" | "chain" | "beam" | "pulse" | "income" | "repair" | "impact" | "kill" | "leak" | "build" | "sell" | "upgrade" | "evade" }
+  { type: "shot" | "chain" | "beam" | "pulse" | "income" | "repair" | "impact" | "kill" | "leak" | "build" | "sell" | "upgrade" | "evade" | "overload" }
 >;
-const VISUAL = new Set<GameEvent["type"]>(["shot", "chain", "beam", "pulse", "income", "repair", "impact", "kill", "leak", "build", "sell", "upgrade", "evade"]);
+const VISUAL = new Set<GameEvent["type"]>(["shot", "chain", "beam", "pulse", "income", "repair", "impact", "kill", "leak", "build", "sell", "upgrade", "evade", "overload"]);
 export const isVisual = (e: GameEvent): e is VisualEvent => VISUAL.has(e.type);
 const DANGER = 0xff647c;
 /** Short-lived effects drawn from simulation events; they never affect the game. */
@@ -90,6 +90,22 @@ export function drawEffect(g: Ink, e: VisualEvent, age: number, content: Content
       g.beginPath();
       g.arc(x, y, 12 + age * 20, -2.4 + age * 3, -0.8 + age * 3);
       g.strokePath();
+      return;
+    }
+    // Overload death: an expanding yellow lightning ring out to the stalled radius.
+    case "overload": {
+      const x = px(e.at.x),
+        y = px(e.at.y),
+        k = Math.min(1, age / EFFECT_LIFETIME),
+        radius = e.radius * CELL * (1 - Math.pow(1 - k, 2));
+      g.lineStyle(3, 0xffe14d, alpha * 0.9);
+      g.strokeCircle(x, y, radius);
+      g.lineStyle(1.5, 0xffffff, alpha * 0.8);
+      for (let i = 0; i < 14; i++) {
+        const a = (i * Math.PI * 2) / 14 + age * 2,
+          jag = i % 2 ? 5 : -5;
+        g.lineBetween(x + Math.cos(a) * radius, y + Math.sin(a) * radius, x + Math.cos(a + 0.12) * (radius + jag), y + Math.sin(a + 0.12) * (radius + jag));
+      }
       return;
     }
     case "shot": {

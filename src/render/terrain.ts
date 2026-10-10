@@ -248,6 +248,23 @@ function rubbleHeap(g: Ink, x: number, y: number, rand: Random) {
   const rx = x + 14 + rand() * 20;
   g.strokePoints([{ x: rx, y: y + 34 }, { x: rx + 3, y: y + 24 }, { x: rx + 9, y: y + 21 }], false);
 }
+/** Toothed wheel: `teeth` trapezoid teeth around a body of radius `r`, with a darker rim line. */
+function cog(g: Ink, cx: number, cy: number, r: number, teeth: number, rot: number, color: number) {
+  const pts: Point[] = [],
+    step = (Math.PI * 2) / teeth;
+  for (let i = 0; i < teeth; i++) {
+    const a = rot + i * step;
+    for (const [da, rr] of [[-0.3, 0.8], [-0.2, 1.12], [0.2, 1.12], [0.3, 0.8]] as const) pts.push({ x: cx + Math.cos(a + da * step * 2) * r * rr, y: cy + Math.sin(a + da * step * 2) * r * rr });
+  }
+  g.fillStyle(shade(color, -0.45));
+  g.fillPoints(pts.map((q) => ({ x: q.x + 1.5, y: q.y + 2 })), true);
+  g.fillStyle(color);
+  g.fillPoints(pts, true);
+  g.lineStyle(1, shade(color, -0.35));
+  g.strokePoints(pts, true);
+  g.fillStyle(shade(color, 0.18));
+  g.fillCircle(cx, cy, r * 0.72);
+}
 /** Map looks by `map.theme`. A new look is one entry here. */
 export const THEMES: Record<MapTheme, Theme> = {
   outpost: {
@@ -1610,6 +1627,190 @@ export const THEMES: Record<MapTheme, Theme> = {
         g.lineStyle(1, 0xc8b0ff, 0.04 + 0.07 * (1 - s));
         g.strokeEllipse(p.x - ox, p.y - oy, 14 + 8 * s, 6 + 3 * s);
       });
+    },
+  },
+  // Zahnwerk: brass gears and copper rivets, a slow glint rolling along the path.
+  gear: {
+    backdrop: 0x1a1208,
+    ground: [0x3a2a14, 0x46331a],
+    grid: 0x5a4424,
+    path: { edge: 0x6b4e22, bed: 0x2a1d0c, line: 0xd9a441, arrow: 0xe8c273 },
+    accent: 0xd9a441,
+    // Large toothed wheel (kind < 0.55) or a meshing gear pair. The first draw matches `hash`, so ambient knows the variant.
+    obstacle: (g, x, y, rand) => {
+      const kind = rand();
+      if (kind < 0.55) {
+        g.fillStyle(0x0a0603, 0.55);
+        g.fillEllipse(x + 30, y + 46, 40, 11);
+        cog(g, x + 28, y + 28, 19, 10, rand() * 0.6, 0xb98a32);
+        g.lineStyle(1.5, 0x7a5a1e);
+        g.strokeCircle(x + 28, y + 28, 12);
+        for (let i = 0; i < 4; i++) {
+          const a = (i * Math.PI) / 2 + 0.4;
+          g.lineStyle(3, 0x9a7226);
+          g.lineBetween(x + 28 + Math.cos(a) * 6, y + 28 + Math.sin(a) * 6, x + 28 + Math.cos(a) * 12, y + 28 + Math.sin(a) * 12);
+        }
+        g.fillStyle(0xe6c06a, 0.55);
+        g.fillCircle(x + 22, y + 21, 3);
+        g.fillStyle(0x2a1d0c);
+        g.fillCircle(x + 28, y + 28, 5);
+        g.fillStyle(0xb8742e);
+        g.fillCircle(x + 28, y + 28, 2.5);
+        for (let i = 0; i < 5; i++) {
+          const a = (i * Math.PI * 2) / 5;
+          g.fillStyle(0xe6a070);
+          g.fillCircle(x + 28 + Math.cos(a) * 14.5, y + 28 + Math.sin(a) * 14.5, 1.2);
+        }
+      } else {
+        g.fillStyle(0x0a0603, 0.55);
+        g.fillEllipse(x + 28, y + 46, 46, 10);
+        cog(g, x + 20, y + 33, 13, 8, rand() * 0.8, 0x9a7226);
+        cog(g, x + 38, y + 21, 10, 7, rand() * 0.8 + 0.3, 0xd9a441);
+        for (const [cx, cy, r] of [[20, 33, 3.5], [38, 21, 3]]) {
+          g.fillStyle(0x2a1d0c);
+          g.fillCircle(x + cx, y + cy, r);
+          g.fillStyle(0xb8742e);
+          g.fillCircle(x + cx, y + cy, r * 0.5);
+        }
+        g.fillStyle(0xf0d488, 0.5);
+        g.fillCircle(x + 16, y + 29, 2.5);
+        g.fillCircle(x + 35, y + 18, 2);
+      }
+    },
+    decor: (g, x, y, rand) => {
+      const kind = rand(),
+        cx = x + 12 + rand() * 32,
+        cy = y + 12 + rand() * 32;
+      if (kind < 0.55) {
+        // Copper rivet with a highlight.
+        g.fillStyle(0x1a1208, 0.6);
+        g.fillCircle(cx + 1, cy + 1.5, 3);
+        g.fillStyle(0xb8742e);
+        g.fillCircle(cx, cy, 2.6);
+        g.fillStyle(0xe6a070, 0.8);
+        g.fillCircle(cx - 0.8, cy - 0.8, 1);
+      } else if (kind < 0.85) {
+        // Oil stain.
+        g.fillStyle(0x0c0804, 0.6);
+        g.fillEllipse(cx, cy, 14 + rand() * 8, 7 + rand() * 3);
+        g.fillStyle(0x3a2a14, 0.7);
+        g.fillEllipse(cx - 2, cy - 1, 6, 2.5);
+      } else {
+        // Loose cotter pin.
+        g.lineStyle(1.5, 0x8a6a2a, 0.8);
+        g.strokeCircle(cx, cy, 2.5);
+        g.lineBetween(cx + 2.5, cy, cx + 8, cy + 2);
+      }
+    },
+    // A slow glint of light rolling along the path, and a turning highlight on the large wheels.
+    ambient: ({ g, map, clock, path, hash }) => {
+      flow(path, clock, 2.2, 0.8, (p, k) => {
+        const s = 0.5 + 0.5 * Math.sin(clock * 2.2 + k * 1.9),
+          len = 7 + 4 * s;
+        g.fillStyle(0xe8c273, 0.05 + 0.07 * s);
+        g.fillEllipse(p.x, p.y, 20 + 8 * s, 9);
+        g.lineStyle(1.2, 0xfff0b8, 0.2 + 0.25 * s);
+        g.lineBetween(p.x - Math.cos(p.angle) * len, p.y - Math.sin(p.angle) * len, p.x + Math.cos(p.angle) * len, p.y + Math.sin(p.angle) * len);
+      });
+      for (const b of map.blocked) {
+        if (hash(b.x, b.y) >= 0.55) continue;
+        const a = clock * 0.5 + hash(b.x, b.y + 7) * 6.28,
+          cx = px(b.x),
+          cy = px(b.y);
+        g.fillStyle(0xfff0b8, 0.45);
+        g.fillCircle(cx + Math.cos(a) * 17, cy + Math.sin(a) * 17, 1.6);
+      }
+    },
+  },
+  // Mondsee: moonlit rocks with shells and tidepools, foam drifting along the path.
+  tide: {
+    backdrop: 0x081322,
+    ground: [0x14263a, 0x1a2f47],
+    grid: 0x2c4663,
+    path: { edge: 0x3a5a7c, bed: 0x0c1c30, line: 0xbcd6f0, arrow: 0xdceaf8 },
+    accent: 0xbcd6f0,
+    // Rock with a shell (kind < 0.55) or a tidepool ringed by stones. The first draw matches `hash`.
+    obstacle: (g, x, y, rand) => {
+      const kind = rand();
+      g.fillStyle(0x020812, 0.55);
+      g.fillEllipse(x + 29, y + 46, 42, 11);
+      if (kind < 0.55) {
+        const cx = x + 28;
+        g.fillStyle(0x34485e);
+        g.fillPoints([{ x: cx - 19, y: y + 46 }, { x: cx - 16, y: y + 28 }, { x: cx - 6, y: y + 15 + rand() * 4 }, { x: cx + 8, y: y + 17 }, { x: cx + 18, y: y + 30 }, { x: cx + 20, y: y + 46 }], true);
+        g.fillStyle(0x56708c);
+        g.fillPoints([{ x: cx - 16, y: y + 28 }, { x: cx - 6, y: y + 15 }, { x: cx + 1, y: y + 18 }, { x: cx - 6, y: y + 32 }, { x: cx - 12, y: y + 40 }], true);
+        g.lineStyle(1, 0xcfe2f4, 0.5);
+        g.lineBetween(cx - 6, y + 15, cx + 8, y + 17);
+        g.lineStyle(1, 0x1c2c40, 0.8);
+        zigzag(g, cx + 4, y + 26, rand, 12, 3);
+        // Spiral shell on the ledge.
+        const sx = cx + 9,
+          sy = y + 41;
+        g.fillStyle(0xdbe7f2);
+        g.fillCircle(sx, sy, 4.5);
+        g.lineStyle(1, 0x8aa4bc);
+        g.strokeCircle(sx, sy, 2.8);
+        g.strokeCircle(sx + 0.6, sy, 1.2);
+      } else {
+        const cx = x + 28,
+          cy = y + 32;
+        g.fillStyle(0x34485e);
+        g.fillEllipse(cx, cy, 44, 28);
+        g.fillStyle(0x56708c);
+        g.fillEllipse(cx - 2, cy - 3, 40, 22);
+        g.fillStyle(0x0c2036);
+        g.fillEllipse(cx, cy, 28, 15);
+        g.fillStyle(0x1f4668, 0.9);
+        g.fillEllipse(cx, cy + 1, 22, 10);
+        g.fillStyle(0xdceaf8, 0.5);
+        g.fillEllipse(cx - 5, cy - 1, 8, 2);
+        g.fillStyle(0xe6c0b8);
+        g.fillCircle(cx + 5, cy + 2, 1.5);
+        for (let i = 0; i < 3; i++) polygon(g, x + 10 + i * 18, y + 41 + rand() * 4, 3 + rand() * 2, 5, 0x6f8aa6, rand() * 3);
+      }
+    },
+    decor: (g, x, y, rand) => {
+      const kind = rand(),
+        cx = x + 12 + rand() * 32,
+        cy = y + 12 + rand() * 32;
+      if (kind < 0.5) {
+        // Small scallop shell.
+        g.fillStyle(0x020812, 0.5);
+        g.fillEllipse(cx + 1, cy + 2, 9, 4);
+        g.fillStyle(0xdbe7f2, 0.9);
+        g.fillPoints([{ x: cx - 4, y: cy + 2 }, { x: cx - 3, y: cy - 2 }, { x: cx, y: cy - 3.5 }, { x: cx + 3, y: cy - 2 }, { x: cx + 4, y: cy + 2 }], true);
+        g.lineStyle(1, 0x8aa4bc, 0.8);
+        g.lineBetween(cx, cy + 2, cx, cy - 3);
+        g.lineBetween(cx, cy + 2, cx - 3, cy - 2);
+        g.lineBetween(cx, cy + 2, cx + 3, cy - 2);
+      } else {
+        // Foam specks.
+        g.fillStyle(0xdceaf8, 0.55);
+        for (let i = 0; i < 4; i++) g.fillCircle(cx + (rand() - 0.5) * 14, cy + (rand() - 0.5) * 8, 0.8 + rand() * 1.2);
+        g.lineStyle(1, 0xbcd6f0, 0.25);
+        g.strokeEllipse(cx, cy, 16, 6);
+      }
+    },
+    // Foam rings drifting along the path, shimmer on the tidepools.
+    ambient: ({ g, map, clock, path, hash }) => {
+      flow(path, clock, 1.6, 0.45, (p, k) => {
+        const s = 0.5 + 0.5 * Math.sin(clock * 1.1 + k * 2.1),
+          ox = Math.sin(clock * 0.7 + k * 1.7) * 9,
+          oy = Math.cos(clock * 0.6 + k * 2.4) * 6;
+        g.lineStyle(1.2, 0xdceaf8, 0.07 + 0.12 * s);
+        g.strokeEllipse(p.x + ox, p.y + oy, 16 + 8 * s, 6 + 3 * s);
+        g.fillStyle(0xf0f8ff, 0.12 + 0.2 * (1 - s));
+        g.fillCircle(p.x - ox, p.y - oy, 1.3);
+        g.fillCircle(p.x - ox * 0.5 + 4, p.y + oy * 0.6, 0.9);
+      });
+      for (const b of map.blocked) {
+        const o = hash(b.x, b.y);
+        if (o < 0.55) continue;
+        const s = 0.5 + 0.5 * Math.sin(clock * 1.6 + o * 20);
+        g.lineStyle(1, 0xdceaf8, 0.12 + 0.28 * s);
+        g.strokeEllipse(px(b.x) + (s - 0.5) * 6, px(b.y) + 4, 8 + 6 * s, 3 + 2 * s);
+      }
     },
   },
 };

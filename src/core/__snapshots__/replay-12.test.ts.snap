@@ -92,6 +92,42 @@ w20 won lives=9 gold=1622 kills=584 towerKills=194/195/60/11/43/51/0/25/4/1"
 
 exports[`golden replays > kristallherz defense B 2`] = `"w20 won lives=9 gold=1622 kills=584 towerKills=194/195/60/11/43/51/0/25/4/1"`;
 
+exports[`golden replays > mondfinsternis defense A 1`] = `
+"w2 wave lives=20 gold=168 kills=10 towerKills=10/0
+w3 wave lives=20 gold=294 kills=24 towerKills=21/3
+w4 wave lives=20 gold=149 kills=31 towerKills=22/9/0
+w5 wave lives=20 gold=245 kills=42 towerKills=24/16/2
+w6 wave lives=20 gold=240 kills=55 towerKills=33/16/6
+w7 wave lives=20 gold=395 kills=70 towerKills=39/22/9/0
+w8 wave lives=20 gold=361 kills=92 towerKills=44/22/17/9
+w9 wave lives=20 gold=390 kills=105 towerKills=48/30/18/9
+w10 wave lives=20 gold=246 kills=110 towerKills=52/30/18/10
+w11 wave lives=20 gold=354 kills=123 towerKills=57/36/18/12/0
+w12 wave lives=20 gold=283 kills=130 towerKills=58/39/18/15/0/0
+w13 wave lives=20 gold=272 kills=134 towerKills=61/40/18/15/0/0/0
+w13 won lives=20 gold=1420 kills=170 towerKills=81/45/21/22/0/0/1"
+`;
+
+exports[`golden replays > mondfinsternis defense A 2`] = `"w13 won lives=20 gold=1420 kills=170 towerKills=81/45/21/22/0/0/1"`;
+
+exports[`golden replays > mondfinsternis defense B 1`] = `
+"w2 wave lives=20 gold=178 kills=10 towerKills=10/0
+w3 wave lives=20 gold=180 kills=19 towerKills=15/4
+w4 wave lives=20 gold=162 kills=27 towerKills=15/7/5
+w5 wave lives=20 gold=259 kills=37 towerKills=18/8/11
+w6 wave lives=20 gold=267 kills=49 towerKills=23/15/11
+w7 wave lives=20 gold=270 kills=61 towerKills=25/16/20
+w8 wave lives=20 gold=424 kills=87 towerKills=33/17/37/0
+w9 wave lives=20 gold=390 kills=105 towerKills=34/18/41/12
+w10 wave lives=20 gold=246 kills=110 towerKills=34/19/45/12
+w11 wave lives=20 gold=351 kills=124 towerKills=37/19/50/18/0
+w12 wave lives=20 gold=259 kills=131 towerKills=37/19/55/19/1/0
+w13 wave lives=20 gold=354 kills=136 towerKills=38/20/57/19/2/0
+w13 won lives=20 gold=1380 kills=170 towerKills=47/23/72/23/3/2"
+`;
+
+exports[`golden replays > mondfinsternis defense B 2`] = `"w13 won lives=20 gold=1380 kills=170 towerKills=47/23/72/23/3/2"`;
+
 exports[`golden replays > umlaufbahn defense A 1`] = `
 "w2 wave lives=20 gold=168 kills=10 towerKills=10/0
 w3 wave lives=20 gold=261 kills=24 towerKills=18/6
@@ -117,3 +153,33 @@ w8 won lives=20 gold=703 kills=155 towerKills=93/28/22/12/0"
 `;
 
 exports[`golden replays > umlaufbahn defense B 2`] = `"w8 won lives=20 gold=703 kills=155 towerKills=93/28/22/12/0"`;
+
+exports[`golden replays > zahnkranz defense A 1`] = `
+"w2 wave lives=20 gold=158 kills=10 towerKills=10/0
+w3 wave lives=20 gold=191 kills=26 towerKills=23/3
+w4 wave lives=20 gold=231 kills=40 towerKills=35/5/0
+w5 wave lives=20 gold=359 kills=60 towerKills=49/5/6
+w6 wave lives=20 gold=238 kills=72 towerKills=56/9/7/0
+w7 wave lives=20 gold=316 kills=93 towerKills=62/12/18/0/1
+w8 wave lives=20 gold=518 kills=119 towerKills=64/13/26/10/6
+w9 wave lives=20 gold=542 kills=145 towerKills=71/14/35/10/15
+w10 wave lives=20 gold=378 kills=167 towerKills=81/19/40/10/17
+w10 won lives=20 gold=550 kills=198 towerKills=95/21/45/10/27"
+`;
+
+exports[`golden replays > zahnkranz defense A 2`] = `"w10 won lives=20 gold=550 kills=198 towerKills=95/21/45/10/27"`;
+
+exports[`golden replays > zahnkranz defense B 1`] = `
+"w2 wave lives=20 gold=165 kills=10 towerKills=9/1
+w3 wave lives=20 gold=167 kills=23 towerKills=20/3
+w4 wave lives=20 gold=158 kills=31 towerKills=25/3/3
+w5 wave lives=20 gold=313 kills=53 towerKills=32/3/18
+w6 wave lives=20 gold=195 kills=63 towerKills=35/3/25/0
+w7 wave lives=20 gold=184 kills=71 towerKills=36/3/30/0/2
+w8 wave lives=20 gold=564 kills=104 towerKills=36/3/60/0/5
+w9 wave lives=20 gold=427 kills=127 towerKills=38/3/74/0/12
+w10 wave lives=20 gold=633 kills=163 towerKills=45/3/87/2/22/4
+w10 won lives=20 gold=702 kills=198 towerKills=47/3/91/2/40/15"
+`;
+
+exports[`golden replays > zahnkranz defense B 2`] = `"w10 won lives=20 gold=702 kills=198 towerKills=47/3/91/2/40/15"`;

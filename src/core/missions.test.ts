@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { ENEMIES } from "../content/enemies";
-import { MISSIONS, SECTORS, sectorOf } from "../content/missions";
+import { isCircleSector, MISSIONS, SECTORS, sectorOf } from "../content/missions";
 import { Game } from "./game";
-import { hasStealth } from "./mission-checks";
+import { hasStealth, RESERVE_ENEMIES } from "./mission-checks";
 import { STRATEGIES } from "./strategies";
 import { validateMission } from "./validation";
 /** Campaign-wide content rules; the per-mission simulations live in `campaign-tests.ts` (`replay-N.test.ts`). */
@@ -11,14 +11,15 @@ describe("missions", () => {
     expect(new Set(MISSIONS.map((m) => m.id)).size).toBe(MISSIONS.length);
     for (const m of MISSIONS) expect(() => validateMission(m)).not.toThrow();
   });
-  it("are grouped into sectors of five plus a final Kreislauf sector, in campaign order", () => {
+  it("are grouped into sectors of five followed by the Kreislauf sectors, in campaign order", () => {
     expect(SECTORS.length).toBeGreaterThanOrEqual(2);
-    const last = SECTORS.at(-1)!;
-    for (const s of SECTORS.slice(0, -1)) {
+    const firstRing = SECTORS.findIndex(isCircleSector);
+    expect(firstRing).toBeGreaterThan(0);
+    for (const s of SECTORS.slice(0, firstRing)) {
       expect(s.missions).toHaveLength(5);
       expect(s.missions.some((m) => m.circle)).toBe(false);
     }
-    expect(last.missions.every((m) => m.circle && m.map.loop)).toBe(true);
+    for (const s of SECTORS.slice(firstRing)) expect(s.missions.every((m) => m.circle && m.map.loop)).toBe(true);
     expect(SECTORS.flatMap((s) => s.missions)).toEqual(MISSIONS);
     expect(new Set(SECTORS.map((s) => s.id)).size).toBe(SECTORS.length);
     expect(sectorOf(MISSIONS[5])).toBe(SECTORS[1]);
@@ -47,6 +48,9 @@ describe("missions", () => {
   });
   it("every enemy type appears in the campaign", () => {
     const used = new Set(MISSIONS.flatMap((m) => m.waves.flatMap((w) => w.groups.map((g) => g.type))));
-    for (const id of Object.keys(ENEMIES)) expect(used.has(id as keyof typeof ENEMIES)).toBe(true);
+    for (const id of Object.keys(ENEMIES)) expect(used.has(id as keyof typeof ENEMIES), id).toBe(!RESERVE_ENEMIES.has(id));
+  });
+  it("reserve enemies exist", () => {
+    for (const id of RESERVE_ENEMIES) expect(Object.hasOwn(ENEMIES, id), id).toBe(true);
   });
 });

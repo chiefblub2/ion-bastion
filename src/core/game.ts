@@ -61,6 +61,8 @@ interface Handler<C extends Command> {
   run: (game: Game, command: C) => CommandResult;
 }
 const PLAYING: readonly GameStatus[] = ["ready", "wave"];
+/** Whether the clock runs: during a wave or while the countdown to the next one runs. */
+export const isRunning = (s: GameState) => s.status === "wave" || (s.status === "ready" && s.nextWave !== undefined);
 /** In co-op only the host (player 0) changes or restarts the mission. */
 const hostOnly = (g: Game, c: Command) => g.players > 1 && (c.player ?? 0) !== 0;
 /** The tower if it exists and belongs to the issuing player. */
@@ -87,9 +89,10 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
     },
   },
   pause: {
-    allowedIn: ["wave"],
-    rejected: "pause-unavailable",
+    // Between waves only while the countdown to the next one runs.
+    allowedIn: PLAYING,
     run: (g) => {
+      if (!isRunning(g.state)) return fail("pause-unavailable");
       g.state.paused = !g.state.paused;
       return ok(g.state.paused ? "paused" : "resumed");
     },
@@ -233,7 +236,14 @@ export class Game implements Sim {
   }
   tick(dt = FIXED_STEP) {
     const s = this.state;
-    if (s.paused || s.status !== "wave") return;
+    if (s.paused) return;
+    if (s.status === "ready" && s.nextWave !== undefined) {
+      s.nextWave -= dt;
+      // Tolerates float drift, so the wave starts exactly after WAVE_BREAK / dt ticks.
+      if (s.nextWave <= 1e-9) beginWave(this);
+      return;
+    }
+    if (s.status !== "wave") return;
     s.time += dt;
     s.waveTime += dt;
     spawnEnemies(this);
