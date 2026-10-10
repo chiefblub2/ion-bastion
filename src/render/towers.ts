@@ -927,7 +927,7 @@ const TURRETS: Record<TurretStyle, Drawing> = {
     g.strokeCircle(x, y, 8 + Math.sin(clock * 2) * 2);
   },
 };
-/** Path motifs of support towers; `tier` (1–3) adds detail. */
+/** Path motifs of Aura towers and specialized attack towers; `tier` (1–3) adds detail. */
 const MOTIFS: Record<PathMotif, (ctx: TurretContext, tier: number, time: number) => void> = {
   // Damage: pairs of blades turning slowly.
   blades: ({ g, x, y, color: c }, tier, time) => {
@@ -1011,10 +1011,15 @@ export function drawTower(g: Ink, x: number, y: number, tower: Tower, definition
     g.lineStyle(1.5, c, 0.6);
     g.strokeCircle(x, y, 14);
   }
+  // Specialized attack towers: the path motif turns under the turret, one tier per level above 5.
+  const motif = badges.path && definition.attack.kind !== "aura" ? definition.visual.paths?.[badges.path]?.motif : undefined;
+  if (motif) MOTIFS[motif](ctx, Math.max(1, level - 5), clock + tower.id);
   TURRETS[definition.visual.turret](ctx);
+  // Up to 8 levels: narrower steps keep the row inside the cell.
+  const step = badges.markers > 5 ? 5 : 6;
   for (let i = 0; i < badges.markers; i++) {
     g.fillStyle(c);
-    g.fillRect(x - (badges.markers * 6 - 2) / 2 + i * 6, y + 20, 4, 3);
+    g.fillRect(x - (badges.markers * step - 2) / 2 + i * step, y + 20, step - 2, 3);
   }
   if (badges.boosted) {
     g.fillStyle(0x0c202a);

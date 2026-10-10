@@ -2,7 +2,8 @@ import { DEFAULT_CONTENT } from "../content";
 import type { ContentPack, Tower, TowerDefinition } from "../core/types";
 import { AURA_STATS, auraBonuses, effectiveTowerStats } from "../systems/auras";
 import { describeAttack } from "../systems/attacks";
-import { previewUpgrade, resolveUpgrades, upgradeOptions, towerLevel } from "../core/upgrades";
+import { isSpecialization, previewUpgrade, resolveUpgrades, upgradeOptions, towerLevel } from "../core/upgrades";
+import { specializationValues } from "./specialization-text";
 import { escape, number, statValue } from "./format";
 
 const row = (label: string, before: number, after: number, unit = "") =>
@@ -26,8 +27,12 @@ export function upgradeControl(tower: Tower, towers: readonly Tower[] = [], cont
   const options = all.filter(option =>
     !hidden(option) && (option.status !== "purchased" || (support && !superseded.has(option.definition!.id))));
   if (!options.length) return '<button class="upgrade" disabled>Max level</button>';
-  return `<div class="upgrade-options ${support ? "aura-upgrades" : ""}">${options.map(option => {
+  // Path cards: Aura tiers and the specialization tiers of attack towers.
+  const cards = support || options.some(option => isSpecialization(option.definition!));
+  return `<div class="upgrade-options ${cards ? "aura-upgrades" : ""}">${options.map(option => {
     const upgrade = option.definition!;
+    const path = upgrade.path ? definition.visual.paths?.[upgrade.path] : undefined;
+    const specialized = isSpecialization(upgrade);
     const purchased = option.status === "purchased";
     const projected = previewUpgrade(tower, upgrade.id, content);
     const nextTower = projected ?? tower;
@@ -45,22 +50,27 @@ export function upgradeControl(tower: Tower, towers: readonly Tower[] = [], cont
       ...attackBefore.map((before, i) => row(before.label, before.value, attackAfter[i].value, before.unit)),
       ...AURA_STATS.filter(key => upgrade.effects.aura?.[key] !== undefined).map(key =>
         row(({damage: "Damage", speed: "Attack speed", range: "Range"})[key], currentAura[key] * 100, nextAura[key] * 100, "%")),
+      ...specializationRows(resolveUpgrades(tower, content).specialization, upgrade.effects.specialization),
     ].join("");
     const auraKey = AURA_STATS.find(key => upgrade.effects.aura?.[key] !== undefined);
     const summary = auraKey
       ? purchased ? `+${number(currentAura[auraKey] * 100)}% active` : `+${number(currentAura[auraKey] * 100)}% → +${number(nextAura[auraKey] * 100)}%`
-      : "";
-    const title = upgrade.effects.level !== undefined
+      : specialized ? `${escape(path?.role ?? "")} · Level ${upgrade.effects.level}` : "";
+    const title = specialized
+      ? `${escape(upgrade.label)} · Level ${towerLevel(tower, content)} → ${towerLevel(nextTower, content)}`
+      : upgrade.effects.level !== undefined
       ? `Level ${towerLevel(tower, content)} → ${towerLevel(nextTower, content)}`
       : `${escape(upgrade.label)}${purchased ? " · active" : ""}`;
     const tooltipId = `upgrade-tooltip-${upgrade.id}`;
     const unchanged = describeAttack(resolveUpgrades(tower, content).attack).filter(r => !changedAttack.includes(r.key));
     const special = support
       ? `${tower.upgrades.length ? "" : "The first purchase sets the path; the other paths are locked. "}The Aura radius stays at ${number(current.range)} cells. Only the strongest Aura bonus applies per stat.`
+      : specialized && upgrade.requires.includes("level-5")
+      ? "Locks the other two paths: this tower keeps the chosen path for good."
       : unchanged.length ? `Unchanged: ${unchanged.map(r => `${r.label} ${statValue(r)}`).join(", ")}.` : "";
     return `<div class="upgrade-control">
-      <button class="upgrade ${support ? "aura-upgrade" : ""}" data-upgrade="${upgrade.id}"${pathColor(upgrade.path)} aria-describedby="${tooltipId}" ${purchased ? "disabled" : ""}>
-        ${support ? `<span>${escape(upgrade.label)}<small>${summary}</small></span><b>${purchased ? "✓" : `◇ ${upgrade.cost}`}</b>` : `${upgrade.effects.level !== undefined ? "Upgrade" : escape(upgrade.label)} · ◇ ${upgrade.cost}`}
+      <button class="upgrade ${support || specialized ? "aura-upgrade" : ""}" data-upgrade="${upgrade.id}"${pathColor(upgrade.path)} aria-describedby="${tooltipId}" ${purchased ? "disabled" : ""}>
+        ${support || specialized ? `<span>${escape(upgrade.label)}<small>${summary}</small></span><b>${purchased ? "✓" : `◇ ${upgrade.cost}`}</b>` : `${upgrade.effects.level !== undefined ? "Upgrade" : escape(upgrade.label)} · ◇ ${upgrade.cost}`}
       </button>
       <button class="upgrade-info" aria-label="Explain ${escape(upgrade.label)}" aria-controls="${tooltipId}" aria-expanded="false" aria-describedby="${tooltipId}">ⓘ</button>
       <div id="${tooltipId}" class="upgrade-tooltip" role="tooltip" hidden>
@@ -71,6 +81,17 @@ export function upgradeControl(tower: Tower, towers: readonly Tower[] = [], cont
       </div>
     </div>`;
   }).join("")}</div>`;
+}
+
+/** Before → after rows of a specialization; a first tier compares against nothing. */
+function specializationRows(current: Parameters<typeof specializationValues>[0], next: Parameters<typeof specializationValues>[0]): string[] {
+  const before = current?.kind === next?.kind ? specializationValues(current) : [];
+  return specializationValues(next).map(after => {
+    const old = before.find(value => value.key === after.key);
+    return old
+      ? row(after.label, old.value, after.value, after.unit)
+      : `<div class="upgrade-change"><span>${escape(after.label)}</span><span class="upgrade-before">–</span><span aria-label="becomes">→</span><strong>${number(after.value)}${after.unit}</strong></div>`;
+  });
 }
 
 /** Shared hover/focus preview plus a separate touch target that never buys an upgrade. */

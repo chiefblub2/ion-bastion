@@ -34,7 +34,7 @@ const MESSAGES: Record<MessageCode, (p: Params) => string> = {
   "upgrade-unknown": () => "This upgrade is not available here.",
   "upgrade-purchased-already": () => "This upgrade is already active.",
   "upgrade-locked": () => "Buy the required upgrades first.",
-  "upgrade-excluded": () => "This Aura tower has already chosen another path.",
+  "upgrade-excluded": () => "This tower has already chosen another path.",
   "upgrade-unaffordable": () => "Not enough credits.",
   "tower-foreign": () => "This tower belongs to another player.",
   "host-only": () => "Only the host can do that in multiplayer.",
