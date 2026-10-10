@@ -45,6 +45,18 @@ const STATUSES: { [K in StatusKind]: StatusModule<Of<K>> } = {
     merge: strongest((s) => s.amount),
     damageTaken: (s) => 1 + s.amount,
   },
+  disrupted: {
+    merge: strongest(() => 0),
+  },
+  netted: {
+    merge: strongest((s) => -s.factor),
+    speed: (s) => s.factor,
+  },
+  // Like stun: the running entry includes the recovery window, and a negative factor walks backwards.
+  pull: {
+    merge: () => {},
+    speed: (s, time) => (time < s.release ? -s.factor : 1),
+  },
 };
 const moduleOf = (effect: StatusEffect) => STATUSES[effect.kind] as StatusModule<StatusEffect>;
 /**
@@ -58,7 +70,7 @@ export function applyStatus(sim: Sim, e: Enemy, effect: StatusEffect) {
   else if (!active(existing, sim.state.time)) Object.assign(existing, effect);
   else moduleOf(existing).merge(existing, effect);
 }
-/** Movement factor from all active effects; 1 means full speed, 0 stunned. */
+/** Movement factor from all active effects; 1 means full speed, 0 stunned, negative pulled back. */
 export function speedFactor(e: Enemy, time: number) {
   let factor = 1;
   for (const s of e.status) if (active(s, time)) factor = Math.min(factor, moduleOf(s).speed?.(s, time) ?? 1);
@@ -75,19 +87,29 @@ export interface StatusFlags {
   stunned: boolean;
   burning: boolean;
   vulnerable: boolean;
+  pulled: boolean;
+  disrupted: boolean;
+  netted: boolean;
 }
 /** Visible states for drawing. */
 export function statusFlags(e: Enemy, time: number): StatusFlags {
   const on = (kind: StatusKind) => e.status.some((s) => s.kind === kind && active(s, time));
-  const stun = e.status.find((s): s is Of<"stun"> => s.kind === "stun");
+  const stun = e.status.find((s): s is Of<"stun"> => s.kind === "stun"),
+    pull = e.status.find((s): s is Of<"pull"> => s.kind === "pull");
   return {
     slowed: on("slow"),
     stunned: !!stun && time < stun.release,
     burning: on("burn"),
     vulnerable: on("vulnerable"),
+    pulled: !!pull && time < pull.release,
+    disrupted: on("disrupted"),
+    netted: on("netted"),
   };
 }
 export const isSlowed = (e: Enemy, time: number) => statusFlags(e, time).slowed;
+/** Whether an effect of this kind is running; cheap enough for hot paths such as targeting. */
+export const hasStatus = (e: Enemy, kind: StatusKind, time: number) => e.status.some((s) => s.kind === kind && active(s, time));
+export const isNetted = (e: Enemy, time: number) => e.status.length > 0 && hasStatus(e, "netted", time);
 /** Runs effect ticks such as burning, expires effects and runs per-tick enemy traits such as regeneration. */
 export function tickStatus(sim: Sim, dt: number) {
   const time = sim.state.time;

@@ -2,14 +2,14 @@ import type { ContentPack, GameEvent } from "../core/types";
 import { bolt, CELL, polygon, px, type Ink } from "./shapes";
 /** Seconds an effect stays visible. */
 export const EFFECT_LIFETIME = 0.45;
-/** Refinery payouts linger so the credit burst can be read. */
+/** Refinery payouts and dock repairs linger so their label can be read. */
 export const INCOME_LIFETIME = 1.6;
-export const effectLifetime = (e: VisualEvent) => (e.type === "income" ? INCOME_LIFETIME : EFFECT_LIFETIME);
+export const effectLifetime = (e: VisualEvent) => (e.type === "income" || e.type === "repair" ? INCOME_LIFETIME : EFFECT_LIFETIME);
 export type VisualEvent = Extract<
   GameEvent,
-  { type: "shot" | "chain" | "beam" | "pulse" | "income" | "impact" | "kill" | "leak" | "build" | "sell" | "upgrade" | "evade" }
+  { type: "shot" | "chain" | "beam" | "pulse" | "income" | "repair" | "impact" | "kill" | "leak" | "build" | "sell" | "upgrade" | "evade" }
 >;
-const VISUAL = new Set<GameEvent["type"]>(["shot", "chain", "beam", "pulse", "income", "impact", "kill", "leak", "build", "sell", "upgrade", "evade"]);
+const VISUAL = new Set<GameEvent["type"]>(["shot", "chain", "beam", "pulse", "income", "repair", "impact", "kill", "leak", "build", "sell", "upgrade", "evade"]);
 export const isVisual = (e: GameEvent): e is VisualEvent => VISUAL.has(e.type);
 const DANGER = 0xff647c;
 /** Short-lived effects drawn from simulation events; they never affect the game. */
@@ -24,9 +24,10 @@ export function drawEffect(g: Ink, e: VisualEvent, age: number, content: Content
         fy = px(e.from.y),
         x = px(e.to.x),
         y = px(e.to.y);
-      g.lineStyle(7 * alpha + 1, e.color, alpha * 0.35);
+      const power = e.power ?? 1;
+      g.lineStyle((7 * alpha + 1) * (0.4 + 0.6 * power), e.color, alpha * 0.35);
       g.lineBetween(fx, fy, x, y);
-      g.lineStyle(2, 0xffffff, alpha);
+      g.lineStyle(1 + power, 0xffffff, alpha);
       g.lineBetween(fx, fy, x, y);
       return;
     }
@@ -38,6 +39,20 @@ export function drawEffect(g: Ink, e: VisualEvent, age: number, content: Content
       g.fillCircle(x, y, r);
       g.lineStyle(2, e.color, alpha * 0.9);
       g.strokeCircle(x, y, r);
+      return;
+    }
+    // Dock repair: a cross flaring up and a ring contracting onto the dock.
+    case "repair": {
+      const x = px(e.at.x),
+        y = px(e.at.y),
+        k = Math.min(1, age / 0.6),
+        fade = Math.max(0, 1 - age / INCOME_LIFETIME);
+      g.lineStyle(2, e.color, (1 - k) * 0.9);
+      g.strokeCircle(x, y, 40 - 26 * k);
+      g.fillStyle(e.color, fade * 0.8);
+      const arm = 4 + 6 * Math.min(1, age / 0.2);
+      g.fillRect(x - arm * 2, y - arm / 2, arm * 4, arm);
+      g.fillRect(x - arm / 2, y - arm * 2, arm, arm * 4);
       return;
     }
     // Refinery payout: a flash, a shock ring and credit shards bursting out, then drifting up.

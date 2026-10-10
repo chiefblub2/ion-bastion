@@ -103,7 +103,7 @@ const TRAIT_TAGS: { [K in TraitKind]: (t: Extract<Trait, { kind: K }>, content: 
   unstoppable: () => ({ label: "UNAUFHALTSAM", title: "Kann nicht verlangsamt, eingefroren oder betäubt werden" }),
   swift: (t) => ({ label: "FLINK", title: `${number(t.speed * 100)} % schneller, dafür ${number(t.hp * 100)} % weniger HP` }),
 };
-function traitTag(t: Trait, content: ContentPack): ForecastTag {
+export function traitTag(t: Trait, content: ContentPack): ForecastTag {
   const text = (TRAIT_TAGS[t.kind] as (t: Trait, content: ContentPack) => TagText)(t, content);
   return { kind: t.kind, ...text };
 }
@@ -120,7 +120,7 @@ export function enemyIcon(visual: EnemyVisual, color: number): string {
   return `<svg class="enemy-icon" viewBox="-10 -10 20 20" aria-hidden="true"><polygon points="${points.join(" ")}" fill="${hex(color)}"/></svg>`;
 }
 
-const LAYER = { ground: "Boden", air: "Luft" } as const;
+export const LAYER = { ground: "Boden", air: "Luft" } as const;
 function badges(w: ForecastWave) {
   return w.enemies
     .map((e) => {

@@ -6,7 +6,8 @@ import { isSupport } from "../systems/attacks";
 import { tickStatus } from "../systems/status";
 import { updateDetection } from "../systems/detection";
 import { spawnEnemies, settleWave } from "../systems/waves";
-import { balance, credit, startingWallets } from "./economy";
+import { beginWave, earlyBonus, settleCircle, wavesLeft } from "../systems/circle";
+import { balance, credit, earn, startingWallets } from "./economy";
 import { purchaseUpgrade } from "./upgrades";
 import { validateMission } from "./validation";
 import type {
@@ -44,9 +45,9 @@ export function initialState(mission: MissionDefinition, players = 1): GameState
     nextId: 1,
   };
 }
-/** Buildable towers of a mission, in content order. */
+/** Buildable towers of a mission, in content order. A ring has no reactor, so nothing repairs it. */
 export function availableTowers(mission: MissionDefinition, content: ContentPack = DEFAULT_CONTENT): TowerId[] {
-  const all = Object.keys(content.towers) as TowerId[];
+  const all = (Object.keys(content.towers) as TowerId[]).filter((id) => !(mission.circle && content.towers[id].attack.kind === "repair"));
   return mission.availableTowers ? all.filter((id) => mission.availableTowers!.includes(id)) : all;
 }
 
@@ -94,21 +95,19 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
     },
   },
   start: {
-    allowedIn: ["ready"],
-    rejected: "wave-running",
+    // On a ring the next wave may be called early while others still run.
+    allowedIn: PLAYING,
     run: (g) => {
-      const s = g.state,
-        wave = g.waves[s.wave];
-      s.wave++;
-      s.waveTime = 0;
-      s.status = "wave";
-      s.paused = false;
-      s.queue = wave.groups
-        .flatMap((group) =>
-          Array.from({ length: group.count }, (_, i) => ({ at: group.delay + i * group.interval, type: group.type })),
-        )
-        .sort((a, b) => a.at - b.at);
-      s.events.push({ type: "waveStart", wave: s.wave });
+      const s = g.state;
+      if (s.status === "wave") {
+        if (!g.mission.circle) return fail("wave-running");
+        if (!wavesLeft(g)) return fail("no-waves-left");
+        const bonus = earlyBonus(g);
+        earn(s, bonus);
+        beginWave(g);
+        return ok("wave-called", { wave: s.wave, bonus });
+      }
+      beginWave(g);
       return ok("wave-started", { wave: s.wave });
     },
   },
@@ -235,7 +234,8 @@ export class Game implements Sim {
     moveProjectiles(this, dt);
     attackEnemies(this, dt);
     s.enemies = s.enemies.filter((e) => e.hp > 0);
-    settleWave(this);
+    if (this.mission.circle) settleCircle(this, dt);
+    else settleWave(this);
   }
   drainEvents() {
     return this.state.events.splice(0);

@@ -29,7 +29,7 @@ const BODIES: { [K in EnemyVisual["shape"]]: (ctx: BodyContext, visual: Extract<
   },
 };
 /** Status marker colours; they match the towers that cause the effect. */
-const STATUS_COLORS = { slowed: 0xa5a2ff, stunned: 0x5cf2d6, burning: 0xff6a3d, vulnerable: 0xb6f04a };
+const STATUS_COLORS = { slowed: 0xa5a2ff, stunned: 0x5cf2d6, burning: 0xff6a3d, vulnerable: 0xb6f04a, pulled: 0x4d7cff, disrupted: 0xff3df2, netted: 0xe0c068 };
 const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff9e, scan: 0x6fd3ff, regen: 0x93f5b8, armor: 0xc9d1d9, immune: 0x9fe6ff, split: 0x442e36 };
 /** Markers under the body: auras of leaders and healers, motion trails, outlines. */
 function traitsBelow(g: Ink, x: number, y: number, r: number, cell: number, color: number, heading: number, t: TraitFlags, clock: number) {
@@ -168,6 +168,21 @@ export function drawEnemy(
     g.lineStyle(2, STATUS_COLORS.slowed, 0.7);
     g.strokeCircle(x, y, r + 5);
   }
+  // Disrupted: sparks flickering around the body.
+  if (status.disrupted) {
+    for (let i = 0; i < 4; i++) {
+      const a = clock * 7 + i * 1.9 + e.id;
+      g.fillStyle(STATUS_COLORS.disrupted, 0.5 + 0.5 * Math.sin(clock * 23 + i));
+      g.fillCircle(x + Math.cos(a) * (r + 4), y + Math.sin(a) * (r + 4), 1.6);
+    }
+  }
+  // Pulled: a ring trailing behind against the walking direction.
+  if (status.pulled) {
+    g.lineStyle(2, STATUS_COLORS.pulled, 0.85);
+    g.beginPath();
+    g.arc(x, y, r + 4, heading + Math.PI - 1.1, heading + Math.PI + 1.1);
+    g.strokePath();
+  }
   // Stunned: a broken ring.
   if (status.stunned) {
     g.lineStyle(2.5, STATUS_COLORS.stunned, 0.9);
@@ -180,6 +195,15 @@ export function drawEnemy(
   }
   (BODIES[d.visual.shape] as (ctx: BodyContext, visual: EnemyVisual) => void)({ g, x, y, r, color: d.color, heading }, d.visual);
   traitsAbove(g, x, y, r, traits, clock);
+  // Netted: a mesh drawn over the body.
+  if (status.netted) {
+    g.lineStyle(1.2, STATUS_COLORS.netted, 0.9);
+    g.strokeCircle(x, y, r + 2);
+    for (const o of [-0.5, 0, 0.5]) {
+      g.lineBetween(x - r, y + o * r * 2 - r * 0.5, x + r, y + o * r * 2 + r * 0.5);
+      g.lineBetween(x - r, y + o * r * 2 + r * 0.5, x + r, y + o * r * 2 - r * 0.5);
+    }
+  }
   if (status.burning) {
     g.fillStyle(STATUS_COLORS.burning, 0.9);
     for (const [dx, dy] of [[-0.6, -0.2], [0.5, -0.5], [0.1, 0.4]]) g.fillCircle(x + dx * r, y + dy * r, 2.2);

@@ -3,7 +3,7 @@
  * Usage: npx vite-node scripts/balance.ts -- <sector module> <strategies module>
  * e.g.   npx vite-node scripts/balance.ts -- src/content/sectors/frost.ts src/core/strategies/frost.ts
  * or     npx vite-node scripts/balance.ts -- src/content/missions.ts src/core/strategies/index.ts 0
- * Prints reactor energy after every wave for defenses A and B.
+ * Prints reactor energy after every wave for defenses A and B (on a ring: peak enemies per wave).
  */
 import { resolve } from "node:path";
 import { Game } from "../src/core/game";
@@ -29,8 +29,32 @@ function play(mission: MissionDefinition, strategy?: Strategy) {
       .sort((a, b) => a.cost - b.cost);
     return !!options.length && g.command({ type: "upgrade", id: options[0].id, upgrade: options[0].upgrade }).ok;
   };
-  while (g.state.status === "ready") {
+  const spend = () => {
     if (strategy) while (strategy.upgradeFirst ? upgrade() || build() : build() || upgrade());
+  };
+  if (mission.circle) {
+    // Waves overlap on a ring: spend whenever the timer starts the next one and
+    // record the peak number of enemies in the ring per wave instead of reactor energy.
+    spend();
+    g.command({ type: "start" });
+    let wave = g.state.wave,
+      peak = 0,
+      steps = 0;
+    while (g.state.status === "wave" && steps++ < 100000) {
+      g.tick();
+      g.drainEvents();
+      peak = Math.max(peak, g.state.enemies.length);
+      if (g.state.wave === wave) continue;
+      lives.push(peak);
+      peak = 0;
+      wave = g.state.wave;
+      spend();
+    }
+    lives.push(peak);
+    return { game: g, lives };
+  }
+  while (g.state.status === "ready") {
+    spend();
     g.command({ type: "start" });
     let steps = 0;
     while (g.state.status === "wave" && steps++ < 30000) {
@@ -57,14 +81,18 @@ const verdict = (ok: boolean, label: string) => {
 };
 for (const m of sector.missions) {
   const s = strategies[m.id];
-  console.log(`\n== ${m.id} (${m.name}) · ${m.waves.length} Wellen · ◇${m.startingCredits} · ⚡${m.reactorEnergy}`);
+  console.log(
+    `\n== ${m.id} (${m.name}) · ${m.waves.length} Wellen · ◇${m.startingCredits} · ${m.circle ? `⟳ max. ${m.circle.limit}` : `⚡${m.reactorEnergy}`}`,
+  );
   if (!s) {
     console.log(verdict(false, "Strategien A/B fehlen"));
     continue;
   }
   const lines: string[] = [];
   lines.push(verdict(play(m).game.state.status === "lost", "ohne Verteidigung verloren"));
-  lines.push(verdict(play(m, { builds: s.A.builds.slice(0, 3) }).game.state.status === "lost", "3 Türme verloren"));
+  // Same rule as core/missions.test.ts: a ring only has to beat a single tower.
+  const thin = m.circle ? 1 : 3;
+  lines.push(verdict(play(m, { builds: s.A.builds.slice(0, thin) }).game.state.status === "lost", thin === 1 ? "1 Turm verloren" : "3 Türme verloren"));
   if (m.waves.some((w) => w.groups.some((g) => g.type === "glider"))) {
     const builds = s.A.builds.map((x) => ({ ...x, tower: "blast" as const }));
     lines.push(verdict(play(m, { builds }).game.state.status === "lost", "nur Nova verloren"));
@@ -76,7 +104,7 @@ for (const m of sector.missions) {
     const { game, lives } = play(m, s[key]);
     lines.push(
       verdict(game.state.status === "won", `${key} gewinnt`) +
-        `  Energie/Welle: ${lives.join(" ")}  Türme: ${game.state.towers.length}/${s[key].builds.length}`,
+        `  ${m.circle ? "Gegner/Welle" : "Energie/Welle"}: ${lives.join(" ")}  Türme: ${game.state.towers.length}/${s[key].builds.length}`,
     );
   }
   console.log(lines.join("\n"));

@@ -466,7 +466,47 @@ p {
   font: 12px var(--mono);
   color: #798d98;
 }
-/* Twelve towers: three compact columns, symbol above name. */
+/* Category tabs above the cards; hidden when a mission offers only a few towers. */
+.tower-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.tower-tab {
+  min-width: 0;
+  padding: 6px 4px;
+  overflow: hidden;
+  font: 600 11px var(--mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #a1b1ba;
+  background: #131f29;
+  border: 1px solid #2e3e49;
+  border-radius: 6px;
+}
+.tower-tab small {
+  font-size: 10px;
+  color: #6c808b;
+}
+.tower-tab:hover {
+  background: #1c2b34;
+  border-color: var(--mint);
+}
+.tower-tab[aria-selected="true"] {
+  color: #e5eeec;
+  border-color: var(--mint);
+  background: color-mix(in srgb, var(--mint) 8%, #0d1920);
+  box-shadow: inset 0 -2px var(--mint);
+}
+/* The tower being built sits on another page. */
+.tower-tab[data-building]::after {
+  content: " ●";
+  font-size: 8px;
+  color: var(--mint);
+  vertical-align: middle;
+}
+/* One page of towers: three compact columns, symbol above name. */
 .tower-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -950,7 +990,7 @@ dialog strong {
   .section-title {
     grid-column: 1/-1;
   }
-  .tower-list {
+  .tower-menu {
     grid-row: 3;
   }
   .selection {
@@ -1463,6 +1503,10 @@ dialog strong {
   color: #2b1d08;
   background: #f0b45a;
 }
+.unit-tag.status {
+  color: #0c202a;
+  background: #c7b8ff;
+}
 .unit-tag.new {
   color: #112b20;
   background: var(--mint);
@@ -1651,4 +1695,33 @@ dialog strong {
   .live-unit .unit-name {
     display: block;
   }
+}
+
+/* Selected enemy: live HP bar and tag rows. */
+.enemy-hp {
+  height: 6px;
+  border-radius: 3px;
+  background: #1c2a34;
+  overflow: hidden;
+}
+.enemy-hp > span {
+  display: block;
+  height: 100%;
+  background: var(--mint);
+}
+.selection > p.enemy-hp-text,
+.selection > p.enemy-meta {
+  margin: 8px 0 14px;
+  font: 12px var(--mono);
+}
+.selection-heading .enemy-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+}
+.enemy-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
 }

@@ -31,44 +31,50 @@ export function attackEnemies(sim: Sim, dt: number) {
     // A rate change preserves progress instead of resetting or granting a free shot.
     t.cooldown = Math.max(0, t.cooldown - dt / stats.interval);
     if (t.cooldown > 0) continue;
-    const candidates = s.enemies
-      .filter((e) => e.hp > 0 && canAcquire(sim, t.type, e) && dist(e, t) <= stats.range)
-      .sort(compareTargets(t.priority, t));
-    if (!candidates.length) continue;
     const attack = resolveUpgrades(t, sim.content).attack,
       module = attackModule(attack)!,
-      target = module.choose?.(sim, t.type, { x: t.x, y: t.y }, stats.range, candidates, attack) ?? candidates[0];
+      min = module.minRange?.(attack) ?? 0;
+    const candidates = s.enemies
+      .filter((e) => e.hp > 0 && canAcquire(sim, t.type, e) && dist(e, t) <= stats.range && dist(e, t) >= min)
+      .sort(compareTargets(t.priority, t));
+    if (!candidates.length) continue;
+    const target = module.choose?.(sim, t.type, { x: t.x, y: t.y }, stats.range, candidates, attack, t) ?? candidates[0],
+      // A volley adds the next candidates in priority order, each a different enemy.
+      extra = (module.volley?.(attack) ?? 1) - 1,
+      targets = extra > 0 ? [target, ...candidates.filter((c) => c !== target).slice(0, extra)] : [target];
     t.angle = Math.atan2(target.y - t.y, target.x - t.x);
     t.cooldown = 1;
-    s.events.push({
-      type: "shot",
-      tower: t.type,
-      from: { x: t.x, y: t.y },
-      to: { x: target.x, y: target.y },
-      color: d.color,
-    });
-    if (!d.projectile) {
-      module.apply(
-        sim,
-        { tower: t.id, type: t.type },
-        { enemy: target, at: { x: target.x, y: target.y }, from: { x: t.x, y: t.y }, reach: stats.range },
-        stats.damage,
+    for (const e of targets) {
+      s.events.push({
+        type: "shot",
+        tower: t.type,
+        from: { x: t.x, y: t.y },
+        to: { x: e.x, y: e.y },
+        color: d.color,
+      });
+      if (!d.projectile) {
+        module.apply(
+          sim,
+          { tower: t.id, type: t.type },
+          { enemy: e, at: { x: e.x, y: e.y }, from: { x: t.x, y: t.y }, reach: stats.range },
+          stats.damage,
+          attack,
+        );
+        continue;
+      }
+      s.projectiles.push({
+        id: s.nextId++,
+        tower: t.id,
+        type: t.type,
+        target: module.aim === "point" ? null : e.id,
+        x: t.x,
+        y: t.y,
+        tx: e.x,
+        ty: e.y,
+        damage: stats.damage,
         attack,
-      );
-      continue;
+      });
     }
-    s.projectiles.push({
-      id: s.nextId++,
-      tower: t.id,
-      type: t.type,
-      target: module.aim === "point" ? null : target.id,
-      x: t.x,
-      y: t.y,
-      tx: target.x,
-      ty: target.y,
-      damage: stats.damage,
-      attack,
-    });
   }
 }
 /** Advances projectiles; damage is applied only when one arrives. */

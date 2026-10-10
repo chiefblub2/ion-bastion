@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { Game } from "./core/game";
+import { pageOf, towerOrder } from "./ui/tower-pages";
 import { Battlefield, CELL, LocalDriver, type ViewState } from "./render/scene";
 import { mountUI, Interface, renderMission } from "./ui/interface";
 import { bindUpgradeTooltip } from "./ui/upgrade-tooltip";
@@ -13,12 +14,14 @@ const game = new Game();
 mountUI(game);
 renderMission(game);
 bindUpgradeTooltip();
-const view: ViewState = { build: game.availableTowers()[0], selected: null, hover: null, speed: 1, player: 0 };
+const first = towerOrder(game)[0];
+const view: ViewState = { build: first, selected: null, enemy: null, hover: null, speed: 1, player: 0, page: pageOf(game.content.towers[first]) };
 const ui = new Interface(game, view);
 const audio = new Audio();
 const battlefield = new Battlefield(game, view, {
   // Pointer events only arrive after start-up, once `input` exists.
   chooseCell: (x, y, keepBuilding) => input.chooseCell(x, y, keepBuilding),
+  chooseEnemy: (id) => input.chooseEnemy(id),
   cancel: () => input.cancel(),
   refresh: () => ui.refresh(),
   events: (e) => {

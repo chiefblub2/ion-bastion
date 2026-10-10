@@ -1,4 +1,5 @@
 import { b, type Strategies } from "./build";
+import { CIRCLE_STRATEGIES } from "./circle";
 import { FROST_STRATEGIES } from "./frost";
 import { ORBIT_STRATEGIES } from "./orbit";
 import { RIFT_STRATEGIES } from "./rift";
@@ -105,4 +106,5 @@ export const STRATEGIES: Strategies = {
   ...ORBIT_STRATEGIES,
   ...RUIN_STRATEGIES,
   ...RIFT_STRATEGIES,
+  ...CIRCLE_STRATEGIES,
 };

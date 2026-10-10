@@ -51,6 +51,11 @@ describe("versus match", () => {
     expect(statuses(m)).toEqual(["wave", "wave"]);
     expect(m.countdown).toBe(READY_COUNTDOWN);
   });
+  it("refuses ring missions, which have their own wave timer", () => {
+    const m = match("race");
+    expect(m.command({ type: "mission", id: "umlaufbahn", player: 0 })).toMatchObject({ ok: false, code: "circle-versus" });
+    expect(m.fields.every((f) => f.mission.id === MISSIONS[0].id)).toBe(true);
+  });
   it("has no pause and leaves mission changes to the host", () => {
     const m = match("race");
     readyAll(m);

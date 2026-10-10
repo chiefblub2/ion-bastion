@@ -36,6 +36,8 @@ export function createCoop({ game, view, ui, dialogs, applied, setDriver }: Coop
     seat = 0,
     mode: ModeId = "coop",
     status = "";
+  const CIRCLE_RULES =
+    "Kreislauf: Die Gegner kreisen, bis sie fallen. Wellen kommen per Timer, wer früh ruft, bekommt Credits. Überschreitet ihr gemeinsam das Limit, ist die Mission verloren. Race und Siege gibt es hier nicht.";
   const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   ui.session = () => session;
   function render() {
@@ -44,13 +46,17 @@ export function createCoop({ game, view, ui, dialogs, applied, setDriver }: Coop
     el("coop-room-code").textContent = room?.code ?? "…";
     el("coop-status").textContent = status;
     const host = !!room && seat === 0,
-      idle = !session || stopped;
+      idle = !session || stopped,
+      // Ring missions run their own wave timer on one shared map: co-op only.
+      circle = !!game.mission.circle;
+    if (circle && MODES[mode].versus) mode = "coop";
     el("coop-modes").hidden = !!client && !host;
     for (const radio of document.querySelectorAll<HTMLInputElement>("input[name=coop-mode]")) {
       radio.checked = radio.value === mode;
-      radio.disabled = !idle;
+      radio.disabled = !idle || (circle && MODES[radio.value as ModeId].versus);
     }
-    el("coop-rules").textContent = MODES[session && !stopped ? session.mode : mode].rules;
+    const rules = MODES[session && !stopped ? session.mode : mode].rules;
+    el("coop-rules").textContent = circle ? `${rules} ${CIRCLE_RULES}` : rules;
     el("coop-launch").hidden = !host || !idle;
     (el("coop-launch") as HTMLButtonElement).disabled = !room || !fitsMode(mode, room.players);
     el("coop-mission").textContent = game.mission.name;
@@ -72,6 +78,7 @@ export function createCoop({ game, view, ui, dialogs, applied, setDriver }: Coop
       case "launched": {
         view.player = seat;
         view.selected = null;
+        view.enemy = null;
         const versus = MODES[m.mode].versus,
           match = versus ? new Match(m.mode, m.players, seat, game) : null;
         if (!versus) game.setPlayers(m.players);

@@ -13,8 +13,9 @@ describe("missions", () => {
     expect(new Set(MISSIONS.map((m) => m.id)).size).toBe(MISSIONS.length);
     for (const m of MISSIONS) expect(() => validateMission(m)).not.toThrow();
   });
-  it("are grouped into six sectors of five, in campaign order", () => {
-    expect(SECTORS.map((s) => s.missions.length)).toEqual([5, 5, 5, 5, 5, 5]);
+  it("are grouped into six sectors of five plus the Kreislauf sector, in campaign order", () => {
+    expect(SECTORS.map((s) => s.missions.length)).toEqual([5, 5, 5, 5, 5, 5, 3]);
+    expect(SECTORS.at(-1)!.missions.every((m) => m.circle && m.map.loop)).toBe(true);
     expect(SECTORS.flatMap((s) => s.missions)).toEqual(MISSIONS);
     expect(new Set(SECTORS.map((s) => s.id)).size).toBe(SECTORS.length);
     expect(sectorOf(MISSIONS[5])).toBe(SECTORS[1]);
@@ -54,7 +55,9 @@ describe("missions", () => {
       it("is lost without any defense", () => {
         const { game } = play(m);
         expect(game.state.status).toBe("lost");
-        expect(game.state.lives).toBe(0);
+        // A ring has no reactor: the enemy limit ends it instead.
+        if (m.circle) expect(game.state.enemies.length).toBeGreaterThan(m.circle.limit);
+        else expect(game.state.lives).toBe(0);
         expect(game.command({ type: "build", tower: "pulse", x: 0, y: 0 }).ok).toBe(false);
       });
       if (hasAir(m))
@@ -63,8 +66,15 @@ describe("missions", () => {
           const { game } = play(m, { builds });
           expect(game.state.status).toBe("lost");
         });
+      // On a ring every shot eventually finds a target, so a few fully upgraded towers
+      // are a legitimate tactic there; a single tower must still fall short.
+      if (m.circle)
+        it("is lost with a single tower", () => {
+          const { game } = play(m, { builds: STRATEGIES[m.id].A.builds.slice(0, 1) });
+          expect(game.state.status).toBe("lost");
+        });
       // Mission 01 is the tutorial: three upgraded towers are meant to suffice.
-      if (index > 0)
+      else if (index > 0)
         it("is lost with a thin defense of three towers", () => {
           const { game } = play(m, { builds: STRATEGIES[m.id].A.builds.slice(0, 3) });
           expect(game.state.status).toBe("lost");

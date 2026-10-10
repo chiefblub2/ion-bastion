@@ -1,3 +1,4 @@
+import { missionById } from "../content/missions";
 import { Game } from "./game";
 import { stateHash, fnv } from "./hash";
 import { balance } from "./economy";
@@ -87,6 +88,8 @@ export class Match {
       case "mission":
       case "restart": {
         if (player !== 0) return fail("host-only");
+        // Ring missions have their own wave timer and are played solo or in co-op only.
+        if (c.type === "mission" && missionById(c.id, this.fields[0].content.missions)?.circle) return fail("circle-versus");
         const results = this.fields.map((f) => f.command({ ...c, player: 0 }));
         if (results[0].ok) this.reset();
         return results[0];

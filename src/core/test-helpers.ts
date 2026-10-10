@@ -57,9 +57,31 @@ export function play(
       g.command({ type: "upgrade", id: options[0].id, upgrade: options[0].upgrade }).ok
     );
   };
+  const spend = () => {
+    if (strategy) while (strategy.upgradeFirst ? upgrade() || build() : build() || upgrade());
+  };
+  if (mission.circle) {
+    // Waves overlap on a ring: spend whenever the timer starts the next one.
+    spend();
+    g.command({ type: "start" });
+    let wave = g.state.wave,
+      steps = 0;
+    while (g.state.status === "wave" && steps++ < 100000) {
+      g.tick();
+      g.drainEvents();
+      if (g.state.wave === wave) continue;
+      lives.push(g.state.lives);
+      afterWave?.(g);
+      wave = g.state.wave;
+      spend();
+    }
+    expect(steps).toBeLessThan(100000);
+    lives.push(g.state.lives);
+    afterWave?.(g);
+    return { game: g, lives };
+  }
   while (g.state.status === "ready") {
-    if (strategy)
-      while (strategy.upgradeFirst ? upgrade() || build() : build() || upgrade());
+    spend();
     g.command({ type: "start" });
     finishWave(g);
     lives.push(g.state.lives);

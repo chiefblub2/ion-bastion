@@ -1,6 +1,7 @@
 import type { ContentPack, Enemy, EnemyId, Sim, StatusKind, Trait, TraitKind } from "../core/types";
 import { dist } from "./path";
 import { createEnemy } from "./spawn";
+import { hasStatus } from "./status";
 /** Spacing in cells between enemies released by `splitOnDeath`. */
 const SPLIT_SPACING = 0.15;
 interface TraitModule<T extends Trait> {
@@ -106,7 +107,7 @@ const TRAITS: Registry = {
   stealth: { validate: () => undefined },
   unstoppable: {
     validate: () => undefined,
-    resists: (_, status) => status === "slow" || status === "stun",
+    resists: (_, status) => status === "slow" || status === "stun" || status === "pull",
   },
   swift: {
     validate: (t) => first(positive("speed", t.speed), share("hp", t.hp)),
@@ -118,7 +119,13 @@ const TRAITS: Registry = {
 const DAMAGE_STAGE: Partial<Record<TraitKind, number>> = { evade: -1, shield: 1 };
 const stage = (t: Trait) => DAMAGE_STAGE[t.kind] ?? 0;
 const moduleOf = (t: Trait) => TRAITS[t.kind] as TraitModule<Trait> | undefined;
-const traitsOf = (sim: Sim, e: Enemy) => sim.content.enemies[e.type].traits ?? [];
+/** Abilities a Störsender switches off; physical properties such as armor stay. */
+const DISRUPTABLE: ReadonlySet<TraitKind> = new Set(["shield", "regen", "healer", "leader", "stealth", "evade"]);
+const NO_TRAITS: readonly Trait[] = [];
+const traitsOf = (sim: Sim, e: Enemy): readonly Trait[] => {
+  const traits = sim.content.enemies[e.type].traits ?? NO_TRAITS;
+  return e.status.length && hasStatus(e, "disrupted", sim.state.time) ? traits.filter((t) => !DISRUPTABLE.has(t.kind)) : traits;
+};
 export const hasTrait = (sim: Sim, e: Enemy, kind: TraitKind) => traitsOf(sim, e).some((t) => t.kind === kind);
 
 export function validateTrait(trait: Trait, content: ContentPack): string | undefined {

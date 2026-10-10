@@ -1,14 +1,18 @@
 import { describe, it, expect } from "vitest";
 import { Game } from "../core/game";
 import { attackEnemies, moveProjectiles } from "./combat";
+import { moveEnemies } from "./movement";
+import { stateHash } from "../core/hash";
 import { landProjectiles, makeEnemy } from "../core/test-helpers";
 import { validateContent } from "../core/validation";
 import { DEFAULT_CONTENT } from "../content";
 import { TOWERS } from "../content/towers";
 import { ENEMIES } from "../content/enemies";
-import type { ChainAttack, Enemy, EnemyId, PierceAttack, SplashAttack, TargetPriority, TowerId } from "../core/types";
+import type { ChainAttack, DisruptAttack, ExecuteAttack, QuakeAttack, VolleyAttack, Enemy, EnemyId, FocusAttack, MortarAttack, NetAttack, PierceAttack, PullAttack, SplashAttack, TargetPriority, TowerId } from "../core/types";
 import { applyDamage } from "./damage";
-import { damageTaken, speedFactor, tickStatus } from "./status";
+import { damageTaken, speedFactor, statusFlags, tickStatus } from "./status";
+import { isHidden, leaderBonus } from "./traits";
+import { canAcquire } from "./attacks";
 /** Tower at (7,5) on the outpost map; enemies are placed directly into the state. */
 function setup(tower: TowerId, enemies: [EnemyId, number, number][]) {
   const g = new Game();
@@ -244,6 +248,217 @@ describe("newer attack mechanics", () => {
     const g = fire("decay", [small]);
     landProjectiles(g);
     expect(small.hp).toBeCloseTo(100 - TOWERS.decay.damage - 4);
+  });
+});
+describe("Fokus", () => {
+  const d = TOWERS.focus.damage,
+    { ramp, stacks } = TOWERS.focus.attack as FocusAttack;
+  /** Fires `shots` times without waiting for the cooldown; returns the damage of each shot on enemy 100. */
+  function burst(g: Game, shots: number) {
+    const e = g.state.enemies.find((e) => e.id === 100)!,
+      dealt: number[] = [];
+    for (let i = 0; i < shots; i++) {
+      const before = e.hp;
+      g.state.towers[0].cooldown = 0;
+      attackEnemies(g, 0);
+      dealt.push(before - e.hp);
+    }
+    return dealt;
+  }
+  it("hits instantly and ramps up with every consecutive hit on the same target, up to its cap", () => {
+    const g = fire("focus", [enemyAt(100, "drone", 7, 7)]);
+    expect(g.state.projectiles).toHaveLength(0);
+    expect(g.state.enemies[0].hp).toBe(1000 - d);
+    const dealt = burst(g, stacks + 2);
+    expect(dealt[0]).toBeCloseTo(d * (1 + ramp));
+    expect(dealt[1]).toBeCloseTo(d * (1 + 2 * ramp));
+    expect(dealt.at(-1)).toBeCloseTo(d * (1 + stacks * ramp));
+    expect(g.state.towers[0].focus).toEqual({ target: 100, stacks });
+  });
+  it("keeps its target against its priority, and starts over on a new one", () => {
+    const g = fire("focus", [enemyAt(100, "drone", 7, 7), { ...enemyAt(101, "drone", 7, 6), distance: 20 }]);
+    // "first" locks onto 101, the furthest along the path; "last" would now pick 100.
+    expect(g.state.towers[0].focus).toEqual({ target: 101, stacks: 0 });
+    g.command({ type: "target", id: g.state.towers[0].id, priority: "last" });
+    g.state.towers[0].cooldown = 0;
+    attackEnemies(g, 0);
+    expect(g.state.towers[0].focus).toEqual({ target: 101, stacks: 1 });
+    // Once 101 leaves the range, the beam switches and loses its charge.
+    g.state.enemies[1].x = 20;
+    expect(burst(g, 1)).toEqual([d]);
+    expect(g.state.towers[0].focus).toEqual({ target: 100, stacks: 0 });
+  });
+  it("its charge is part of the state hash", () => {
+    const g = fire("focus", [enemyAt(100, "drone", 7, 7)]),
+      before = stateHash(g.state);
+    g.state.towers[0].focus!.stacks++;
+    expect(stateHash(g.state)).not.toBe(before);
+  });
+});
+describe("Gravitron", () => {
+  const { radius, strength, duration, recovery } = TOWERS.gravity.attack as PullAttack;
+  /** Moves enemies for `seconds`, keeping the clock in step. */
+  const walk = (g: Game, seconds: number) => {
+    for (let i = 0; i < Math.round(seconds * 30); i++) {
+      g.state.time += 1 / 30;
+      moveEnemies(g, 1 / 30);
+    }
+  };
+  it("pulls ground enemies in its radius back along the path, but no gliders", () => {
+    const g = fire("gravity", [enemyAt(100, "drone", 7, 7), enemyAt(101, "glider", 7, 7), enemyAt(102, "drone", 7, 7 + radius + 1)]);
+    const [drone, glider, far] = g.state.enemies;
+    expect([drone.hp, glider.hp, far.hp]).toEqual([1000 - TOWERS.gravity.damage, 1000, 1000]);
+    // The clock advances before each step, so the last step inside the pull ends just before its release.
+    const pulled = duration - 1 / 30;
+    walk(g, pulled);
+    expect(drone.distance).toBeCloseTo(10 - ENEMIES.drone.speed * strength * pulled, 5);
+    expect(glider.distance).toBeGreaterThan(10);
+    expect(far.distance).toBeGreaterThan(10);
+  });
+  it("recovery blocks a second pull, and unstoppable enemies resist", () => {
+    const g = fire("gravity", [enemyAt(100, "drone", 7, 7), enemyAt(101, "berserker", 7, 7.3)]);
+    const [drone, boss] = g.state.enemies;
+    expect(speedFactor(drone, 0.1)).toBe(-strength);
+    expect(speedFactor(boss, 0.1)).toBe(1);
+    g.state.time = duration + 0.1;
+    g.state.towers[0].cooldown = 0;
+    attackEnemies(g, 0);
+    expect(speedFactor(drone, g.state.time)).toBe(1);
+    g.state.time = duration + recovery + 0.1;
+    g.state.towers[0].cooldown = 0;
+    attackEnemies(g, 0);
+    expect(speedFactor(drone, g.state.time)).toBe(-strength);
+  });
+  it("never pulls an enemy behind the entry", () => {
+    const g = fire("gravity", [{ ...enemyAt(100, "drone", 7, 7), distance: 0.2 }]);
+    walk(g, duration - 1 / 30);
+    expect(g.state.enemies[0].distance).toBe(0);
+  });
+});
+describe("Mörser", () => {
+  const { radius, minRange } = TOWERS.mortar.attack as MortarAttack;
+  it("cannot aim inside its dead zone, but fires at enemies beyond it", () => {
+    const close = fire("mortar", [enemyAt(100, "drone", 7, 5 + minRange - 0.2)]);
+    expect(close.state.projectiles).toHaveLength(0);
+    const g = fire("mortar", [enemyAt(100, "drone", 7, 5 + minRange - 0.2), { ...enemyAt(101, "drone", 7, 9), distance: 5 }]);
+    expect(g.state.projectiles).toHaveLength(1);
+    expect(g.state.projectiles[0]).toMatchObject({ target: null, tx: 7, ty: 9 });
+  });
+  it("its shell hits every ground enemy in the blast, but no gliders", () => {
+    const [hit, beside, glider, far] = setup("mortar", [
+      ["drone", 7, 9],
+      ["drone", 7 + radius - 0.1, 9],
+      ["glider", 7, 9.2],
+      ["drone", 7, 9 + radius + 0.3],
+    ]);
+    expect([hit, beside, glider, far]).toEqual([TOWERS.mortar.damage, TOWERS.mortar.damage, 0, 0]);
+  });
+});
+describe("Beben", () => {
+  const { edge } = TOWERS.quake.attack as QuakeAttack,
+    d = TOWERS.quake.damage,
+    range = TOWERS.quake.range;
+  it("hits every ground enemy in range, weaker towards the edge, and spares gliders", () => {
+    const g = fire("quake", [enemyAt(100, "drone", 7, 5.5), enemyAt(101, "drone", 7 + range * 0.99, 5), enemyAt(102, "glider", 7, 6), enemyAt(103, "drone", 7, 5 + range + 0.2)]);
+    expect(g.state.projectiles).toHaveLength(0);
+    const [near, rim, glider, far] = g.state.enemies.map((e) => 1000 - e.hp);
+    expect(near).toBeCloseTo(d * (1 - (1 - edge) * (0.5 / range)));
+    expect(rim).toBeCloseTo(d * (1 - (1 - edge) * 0.99));
+    expect([glider, far]).toEqual([0, 0]);
+    expect(g.drainEvents().find((e) => e.type === "pulse")).toMatchObject({ at: { x: 7, y: 5 }, radius: range });
+  });
+});
+describe("Henker", () => {
+  const { threshold, multiplier } = TOWERS.executioner.attack as ExecuteAttack,
+    d = TOWERS.executioner.damage;
+  it("multiplies its hit on targets below the threshold at impact", () => {
+    const healthy = enemyAt(100, "drone", 7, 7),
+      wounded = { ...enemyAt(101, "drone", 7, 7), hp: threshold * 1000 - 1 };
+    const a = fire("executioner", [healthy]);
+    landProjectiles(a);
+    expect(healthy.hp).toBe(1000 - d);
+    const b = fire("executioner", [wounded]);
+    landProjectiles(b);
+    expect(wounded.hp).toBe(threshold * 1000 - 1 - d * multiplier);
+  });
+});
+describe("Schrapnell", () => {
+  const { targets } = TOWERS.shrapnel.attack as VolleyAttack;
+  it("fires at several different enemies per salvo, in priority order", () => {
+    const g = fire("shrapnel", [
+      { ...enemyAt(100, "drone", 7, 6), distance: 4 },
+      { ...enemyAt(101, "glider", 7, 7), distance: 9 },
+      { ...enemyAt(102, "drone", 6, 6), distance: 7 },
+      { ...enemyAt(103, "drone", 8, 6), distance: 2 },
+    ]);
+    expect(g.state.projectiles.map((p) => p.target)).toEqual([101, 102, 100].slice(0, targets));
+    landProjectiles(g);
+    expect(g.state.enemies.map((e) => 1000 - e.hp)).toEqual([TOWERS.shrapnel.damage, TOWERS.shrapnel.damage, TOWERS.shrapnel.damage, 0]);
+  });
+  it("shoots once with a single enemy, and more targets after level 5", () => {
+    expect(fire("shrapnel", [enemyAt(100, "drone", 7, 7)]).state.projectiles).toHaveLength(1);
+    const g = new Game();
+    g.state.wallets[0] = 100000;
+    const id = g.command({ type: "build", tower: "shrapnel", x: 7, y: 5 }).id!;
+    for (const level of [2, 3, 4, 5]) expect(g.command({ type: "upgrade", id, upgrade: `level-${level}` }).ok).toBe(true);
+    g.state.enemies = Array.from({ length: 7 }, (_, i) => enemyAt(100 + i, "drone", 7, 6 + i * 0.2));
+    attackEnemies(g, 0);
+    expect(g.state.projectiles).toHaveLength(5);
+  });
+});
+describe("Störsender", () => {
+  const { duration } = TOWERS.jammer.attack as DisruptAttack;
+  it("breaks shields, which stay down until their delay after the disruption", () => {
+    const g = new Game(),
+      e = makeEnemy(100, "aegis", 7, 7);
+    g.state.wallets[0] = 1000;
+    g.command({ type: "build", tower: "jammer", x: 7, y: 5 });
+    e.shield = 600;
+    g.state.enemies = [e];
+    attackEnemies(g, 0);
+    expect(e.shield).toBe(0);
+    // Hits during the disruption land on HP; no recharge until `delay` after it ends.
+    g.state.time = duration + 2.9;
+    tickStatus(g, 1 / 30);
+    expect(e.shield).toBe(0);
+    g.state.time = duration + 3;
+    tickStatus(g, 1 / 30);
+    expect(e.shield).toBeGreaterThan(0);
+  });
+  it("switches off regen, stealth and leader bonuses until the disruption ends", () => {
+    const g = fire("jammer", [enemyAt(100, "slime", 7, 7), enemyAt(101, "phantom", 7, 7.2), enemyAt(102, "warlord", 7.2, 7), enemyAt(103, "drone", 7.3, 7.3)]);
+    const [slime, phantom, , drone] = g.state.enemies;
+    const hp = slime.hp;
+    tickStatus(g, 1);
+    expect(slime.hp).toBe(hp);
+    expect(isHidden(g, phantom)).toBe(false);
+    expect(canAcquire(g, "pulse", phantom)).toBe(true);
+    // The warlord is disrupted, so the drone beside it gets no bonus.
+    expect(leaderBonus(g, drone)).toEqual({ speed: 0, resist: 0 });
+    expect(statusFlags(slime, 0).disrupted).toBe(true);
+    g.state.time = duration + 0.1;
+    expect(isHidden(g, phantom)).toBe(true);
+    expect(leaderBonus(g, drone).speed).toBeGreaterThan(0);
+    tickStatus(g, 1);
+    expect(slime.hp).toBeGreaterThan(hp);
+  });
+});
+describe("Fangnetz", () => {
+  const { factor, duration } = TOWERS.net.attack as NetAttack;
+  it("hits only flyers, slows them and lets ground-only towers hit them while netted", () => {
+    expect(setup("net", [["drone", 7, 7]])).toEqual([0]);
+    const g = fire("net", [enemyAt(100, "glider", 7, 7)]);
+    landProjectiles(g);
+    const glider = g.state.enemies[0];
+    expect(glider.hp).toBe(1000 - TOWERS.net.damage);
+    expect(speedFactor(glider, 0.1)).toBe(factor);
+    expect(statusFlags(glider, 0.1).netted).toBe(true);
+    // Nova only targets ground, but a netted glider counts as both.
+    g.state.time = 0.1;
+    expect(canAcquire(g, "blast", glider)).toBe(true);
+    expect(canAcquire(g, "flak", glider)).toBe(true);
+    g.state.time = duration + 0.1;
+    expect(canAcquire(g, "blast", glider)).toBe(false);
   });
 });
 describe("target priorities", () => {

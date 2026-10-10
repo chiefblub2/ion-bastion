@@ -78,6 +78,11 @@ export function validateMap(map: MapDefinition, path: string) {
       );
     }
   });
+  if (map.loop) {
+    const first = map.path[0],
+      last = map.path[map.path.length - 1];
+    check(map.path.length >= 4 && Math.abs(first.x - last.x) + Math.abs(first.y - last.y) === 1, path, "Der Ring muss geschlossen sein.");
+  }
   for (const p of map.blocked)
     check(valid(p) && !cells.has(`${p.x},${p.y}`), path, `Ungültiges Hindernis ${p.x},${p.y}.`);
   check(map.path.length + map.blocked.length < map.columns * map.rows, path, "Die Map benötigt freie Bauflächen.");
@@ -90,6 +95,11 @@ export function validateMission(m: MissionDefinition, content: ContentPack = DEF
     check(Number.isInteger(v) && v > 0, path, "Ungültige Startwerte.");
   check(m.hpGrowth === undefined || m.hpGrowth >= 0, path, "Ungültiger HP-Zuwachs.");
   validateMap(m.map, `${path} › Map ${m.map.id}`);
+  check(!m.circle === !m.map.loop, path, "Kreislauf-Missionen brauchen eine Ring-Map und umgekehrt.");
+  if (m.circle) {
+    const c = m.circle;
+    check(c.interval > 0 && Number.isInteger(c.limit) && c.limit > 0 && c.earlyBonus >= 0, path, "Ungültige Kreislauf-Regeln.");
+  }
   check(m.waves.length, path, "Keine Wellen definiert.");
   m.waves.forEach((w, i) => {
     const at = `${path} › Welle ${i + 1}`;

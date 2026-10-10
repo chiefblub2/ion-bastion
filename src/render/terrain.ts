@@ -965,6 +965,20 @@ const themeOf = (map: MapDefinition) => THEMES[map.theme ?? "outpost"];
 /** Reactor colour of the map's theme. */
 export const themeAccent = (map: MapDefinition) => themeOf(map).accent;
 const hex = (color: number) => `#${color.toString(16).padStart(6, "0")}`;
+/** Path in pixels; a ring repeats its first cell at the end so lines and markers close the loop. */
+const pixelPath = (map: MapDefinition) =>
+  (map.loop ? [...map.path, map.path[0]] : map.path).map((p) => ({ x: px(p.x), y: px(p.y) }));
+/** Reactor in the theme's accent; scene.ts pulses a ring between the two outlines. */
+function drawReactor(g: Phaser.GameObjects.Graphics, end: Point, accent: number, backdrop: number) {
+  g.lineStyle(1, accent, 0.3);
+  g.strokeCircle(end.x, end.y, 31);
+  g.fillStyle(backdrop);
+  g.fillCircle(end.x, end.y, 24);
+  g.lineStyle(2, accent);
+  g.strokeCircle(end.x, end.y, 22);
+  polygon(g, end.x, end.y, 13, 6, accent, Math.PI / 6);
+  polygon(g, end.x, end.y, 7, 6, shade(accent, -0.65), Math.PI / 6);
+}
 /** Static terrain, drawn once per mission. */
 export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: (x: number, y: number) => boolean) {
   const g = scene.add.graphics(),
@@ -988,7 +1002,7 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
     }
   for (let y = 0; y < map.rows; y++)
     for (let x = 0; x < map.columns; x++) if (isBlocked(x, y)) theme.obstacle(g, x * CELL, y * CELL, cellRandom(map, x, y));
-  const path = map.path.map((p) => ({ x: px(p.x), y: px(p.y) }));
+  const path = pixelPath(map);
   g.lineStyle(54, theme.path.line, 0.06);
   g.strokePoints(path, false);
   g.lineStyle(42, theme.path.edge);
@@ -1010,10 +1024,12 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
   const start = path[0],
     end = path[path.length - 1],
     accent = theme.accent;
+  // A ring has no reactor; its entry portal glows in the accent colour instead.
+  const portal = map.loop ? accent : 0xf0cf87;
   // Entry: amber in every theme, pointing along the path, inside a dashed ring.
   g.fillStyle(theme.backdrop, 0.6);
   g.fillCircle(start.x, start.y, 25);
-  g.lineStyle(2, 0xf0cf87, 0.5);
+  g.lineStyle(2, portal, 0.5);
   for (let i = 0; i < 8; i++) {
     const a = (i * Math.PI) / 4;
     g.beginPath();
@@ -1022,18 +1038,10 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
   }
   g.fillStyle(theme.backdrop);
   g.fillCircle(start.x, start.y, 19);
-  g.lineStyle(2, 0xf0cf87);
+  g.lineStyle(2, portal);
   g.strokeCircle(start.x, start.y, 18);
-  polygon(g, start.x, start.y, 8, 3, 0xf0cf87, Math.atan2(path[1].y - start.y, path[1].x - start.x));
-  // Reactor in the theme's accent; scene.ts pulses a ring between the two outlines.
-  g.lineStyle(1, accent, 0.3);
-  g.strokeCircle(end.x, end.y, 31);
-  g.fillStyle(theme.backdrop);
-  g.fillCircle(end.x, end.y, 24);
-  g.lineStyle(2, accent);
-  g.strokeCircle(end.x, end.y, 22);
-  polygon(g, end.x, end.y, 13, 6, accent, Math.PI / 6);
-  polygon(g, end.x, end.y, 7, 6, shade(accent, -0.65), Math.PI / 6);
+  polygon(g, start.x, start.y, 8, 3, portal, Math.atan2(path[1].y - start.y, path[1].x - start.x));
+  if (!map.loop) drawReactor(g, end, accent, theme.backdrop);
   const label = (x: number, y: number, text: string, color: string) =>
     scene.add.text(x, y, text, {
       fontFamily: "monospace",
@@ -1052,9 +1060,13 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
       Math.min(Math.max(y, 4), height - text.height - 4),
     );
   // Below the entry when the map name label occupies the space above it.
-  place(label(0, 0, "EINTRITT", "#efd297"), start.x, start.y < CELL * 2 ? start.y + 26 : start.y - 54);
+  place(
+    label(0, 0, map.loop ? "PORTAL" : "EINTRITT", map.loop ? hex(accent) : "#efd297"),
+    start.x,
+    start.y < CELL * 2 ? start.y + 26 : start.y - 54,
+  );
   // Below the reactor unless it sits in the bottom row.
-  place(label(0, 0, "REAKTOR", hex(accent)), end.x, end.y + 32 + 30 < height ? end.y + 32 : end.y - 58);
+  if (!map.loop) place(label(0, 0, "REAKTOR", hex(accent)), end.x, end.y + 32 + 30 < height ? end.y + 32 : end.y - 58);
   // Map name in the top-left corner, or in the first corner the path keeps clear.
   const name = label(0, 0, map.name.toUpperCase(), hex(shade(theme.grid, 0.35))),
     clear = (row: number, fromRight: boolean) =>
@@ -1068,7 +1080,7 @@ export function drawAmbient(g: Ink, map: MapDefinition, clock: number) {
   themeOf(map).ambient({
     g,
     map,
-    path: map.path.map((p) => ({ x: px(p.x), y: px(p.y) })),
+    path: pixelPath(map),
     clock,
     hash: (x, y) => cellRandom(map, x, y)(),
   });

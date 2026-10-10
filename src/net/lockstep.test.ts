@@ -53,6 +53,25 @@ describe("lockstep", () => {
     expect(room.reportHash(0, 30, clients[0].hashes[0][1])).toBe("pending");
     expect(room.reportHash(1, 30, clients[1].hashes[0][1])).toBe("ok");
   });
+  it("keeps co-op clients identical on a ring mission with timed waves", () => {
+    const { room, clients, step } = session(3);
+    room.launch("umlaufbahn");
+    step();
+    expect(clients[0].game.mission.circle).toBeDefined();
+    room.queue(0, { type: "build", tower: "pulse", x: 3, y: 2 });
+    room.queue(1, { type: "build", tower: "blast", x: 12, y: 5 });
+    room.queue(2, { type: "start" });
+    let guard = 0;
+    do {
+      step();
+      // Calling waves early is shared too.
+      if (guard === 300) room.queue(1, { type: "start" });
+      expect(new Set(clients.map((c) => c.sim.hash())).size).toBe(1);
+      expect(guard++).toBeLessThan(40000);
+    } while (clients[0].game.state.status === "wave");
+    expect(clients[0].game.state.wave).toBeGreaterThan(2);
+    expect(clients[0].hashes).toEqual(clients[2].hashes);
+  });
   it("reports every applied command with its player", () => {
     const { room, clients, step } = session();
     room.launch("outpost-07");

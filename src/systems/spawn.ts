@@ -11,16 +11,17 @@ export function waveHpScale(mission: MissionDefinition, wave: number) {
 }
 /** HP factor of the current wave. */
 export const hpScale = (sim: Sim) => waveHpScale(sim.mission, sim.state.wave);
-/** Adds an enemy at a path distance, scaled to the current wave. */
-export function createEnemy(sim: Sim, type: EnemyId, distance = 0): Enemy {
+/** Adds an enemy at a path distance, scaled to its wave (the current one when absent). */
+export function createEnemy(sim: Sim, type: EnemyId, distance = 0, wave?: number): Enemy {
   const s = sim.state,
-    hp = Math.round(sim.content.enemies[type].hp * hpScale(sim) * traitHpFactor(sim.content, type));
+    scale = wave === undefined ? hpScale(sim) : waveHpScale(sim.mission, wave),
+    hp = Math.round(sim.content.enemies[type].hp * scale * traitHpFactor(sim.content, type));
   const enemy: Enemy = {
     id: s.nextId++,
     type,
     hp,
     maxHp: hp,
-    ...positionOnPath(sim.mission.map.path, distance),
+    ...positionOnPath(sim.mission.map.path, distance, sim.mission.map.loop),
     distance,
     status: [],
   };

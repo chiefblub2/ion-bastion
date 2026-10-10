@@ -1,4 +1,4 @@
-import type { TowerStats, UpgradeDefinition, TowerDefinition, AttackSpec, AuraAttack, DetectAttack, IncomeAttack } from "../core/types";
+import type { TowerStats, UpgradeDefinition, TowerDefinition, AttackSpec, SupportAttack } from "../core/types";
 /** Extra effects and text for individual late levels of one tower. */
 export type LevelSpecials = Partial<Record<number, { attack: Readonly<Record<string, number>>; description: string }>>;
 
@@ -92,7 +92,35 @@ export const DETECTOR_UPGRADES: readonly UpgradeDefinition[] = DETECTOR_LEVELS.m
   effects: { level, stats: { range } },
 }));
 
+/** Support levels: cost plus attack and stat overrides; level 1 is the build itself. */
+function supportUpgrades(levels: readonly { cost: number; attack: Record<string, number>; range?: number; description: string }[]): readonly UpgradeDefinition[] {
+  return levels.map(({ cost, attack, range, description }, i) => ({
+    id: `level-${i + 2}`,
+    label: `Stufe ${i + 2}`,
+    description,
+    cost,
+    requires: i === 0 ? [] : [`level-${i + 1}`],
+    effects: { level: i + 2, attack, ...(range === undefined ? {} : { stats: { range } }) },
+  }));
+}
+
+/** Prämienbake: more bonus per kill, the last level also a wider radius. */
+export const BEACON_UPGRADES = supportUpgrades([
+  { cost: 90, attack: { bonus: 0.75 }, description: "Höhere Prämie: Abschüsse im Radius zahlen 75 % mehr Credits." },
+  { cost: 150, attack: { bonus: 1 }, range: 3, description: "Kopfgeld: doppelte Credits für Abschüsse in drei Feldern Radius." },
+]);
+/** Reparaturdock: more reactor energy per completed wave. */
+export const DOCK_UPGRADES = supportUpgrades([
+  { cost: 160, attack: { amount: 2 }, description: "Zweite Crew: stellt nach jeder Welle 2 Reaktorenergie wieder her." },
+  { cost: 260, attack: { amount: 3 }, description: "Werft: stellt nach jeder Welle 3 Reaktorenergie wieder her." },
+]);
+/** Peilsender: stronger marking in a wider radius. */
+export const TRACKER_UPGRADES = supportUpgrades([
+  { cost: 120, attack: { amount: 0.2 }, range: 2.5, description: "Feinpeilung: Gegner im Radius 2,5 erleiden 20 % mehr Schaden." },
+  { cost: 200, attack: { amount: 0.25 }, range: 2.8, description: "Zielerfassung: Gegner im Radius 2,8 erleiden 25 % mehr Schaden." },
+]);
+
 /** Derive the default level path from the single base-tower definition. */
-export function attackTower<T extends Omit<TowerDefinition, "upgrades" | "attack"> & { attack: Exclude<AttackSpec, AuraAttack | IncomeAttack | DetectAttack> }>(definition: T, specials: LevelSpecials = {}) {
+export function attackTower<T extends Omit<TowerDefinition, "upgrades" | "attack"> & { attack: Exclude<AttackSpec, SupportAttack> }>(definition: T, specials: LevelSpecials = {}) {
   return { ...definition, upgrades: attackUpgrades(definition, definition.cost, specials) };
 }

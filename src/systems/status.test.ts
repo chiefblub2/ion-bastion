@@ -43,7 +43,31 @@ describe("status merge rules", () => {
     applyStatus(g, e, { kind: "stun", release: 1, until: 2 });
     expect(speedFactor(e, 0.5)).toBe(0);
     expect(speedFactor(e, 1.5)).toBe(0.5);
-    expect(statusFlags(e, 0.5)).toEqual({ slowed: true, stunned: true, burning: false, vulnerable: false });
+    expect(statusFlags(e, 0.5)).toEqual({ slowed: true, stunned: true, burning: false, vulnerable: false, pulled: false, disrupted: false, netted: false });
     expect(statusFlags(e, 1.5).stunned).toBe(false);
+  });
+  it("a disruption extends, and the stronger net replaces a weaker one", () => {
+    const g = new Game(),
+      e = makeEnemy(1, "glider", 0, 3);
+    applyStatus(g, e, { kind: "disrupted", until: 2 });
+    applyStatus(g, e, { kind: "disrupted", until: 4 });
+    expect(e.status[0].until).toBe(4);
+    applyStatus(g, e, { kind: "netted", factor: 0.7, until: 3 });
+    applyStatus(g, e, { kind: "netted", factor: 0.8, until: 9 });
+    expect(speedFactor(e, 1)).toBe(0.7);
+    applyStatus(g, e, { kind: "netted", factor: 0.6, until: 2 });
+    expect(speedFactor(e, 1)).toBe(0.6);
+    expect(statusFlags(e, 1)).toMatchObject({ disrupted: true, netted: true });
+  });
+  it("a pull walks backwards, beats a stun, and blocks further pulls until its recovery ends", () => {
+    const g = new Game(),
+      e = makeEnemy(1, "drone", 0, 3);
+    applyStatus(g, e, { kind: "stun", release: 1, until: 2 });
+    applyStatus(g, e, { kind: "pull", factor: 1.5, release: 0.6, until: 3 });
+    expect(speedFactor(e, 0.5)).toBe(-1.5);
+    expect(statusFlags(e, 0.5).pulled).toBe(true);
+    expect(speedFactor(e, 0.8)).toBe(0);
+    applyStatus(g, e, { kind: "pull", factor: 3, release: 2, until: 4 });
+    expect(e.status.find((s) => s.kind === "pull")).toMatchObject({ factor: 1.5, until: 3 });
   });
 });

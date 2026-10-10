@@ -2,12 +2,13 @@ import { credit, earn } from "../core/economy";
 import { resolveUpgrades } from "../core/upgrades";
 import type { Sim } from "../core/types";
 import { createEnemy } from "./spawn";
+import { repairReactor } from "./support";
 export { DEFAULT_HP_GROWTH } from "./spawn";
 export function spawnEnemies(sim: Sim) {
   const s = sim.state;
   while (s.queue.length && s.queue[0].at <= s.waveTime) {
     const spawn = s.queue.shift()!,
-      enemy = createEnemy(sim, spawn.type);
+      enemy = createEnemy(sim, spawn.type, 0, spawn.wave);
     if (spawn.sentBy !== undefined) enemy.sentBy = spawn.sentBy;
   }
 }
@@ -24,13 +25,14 @@ export function settleWave(sim: Sim) {
     s.projectiles = [];
     earn(s, bonus);
     payIncome(sim);
+    repairReactor(sim);
     s.status = s.wave === waves.length ? "won" : "ready";
     s.events.push({ type: "waveEnd", wave: s.wave, bonus });
     if (s.status === "won") s.events.push({ type: "end", result: "won" });
   }
 }
 /** Refineries pay out once per completed wave. */
-function payIncome(sim: Sim) {
+export function payIncome(sim: Sim) {
   const s = sim.state;
   for (const t of s.towers) {
     const attack = resolveUpgrades(t, sim.content).attack;

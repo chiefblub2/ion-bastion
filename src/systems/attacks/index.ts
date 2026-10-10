@@ -4,13 +4,22 @@ import { burn } from "./burn";
 import { chain } from "./chain";
 import { corrode } from "./corrode";
 import { decay } from "./decay";
+import { disrupt } from "./disrupt";
 import { detect } from "./detect";
 import { direct } from "./direct";
+import { execute } from "./execute";
+import { focus } from "./focus";
 import { income } from "./income";
+import { mortar } from "./mortar";
+import { net } from "./net";
 import { pierce } from "./pierce";
+import { pull } from "./pull";
+import { quake } from "./quake";
 import { slow } from "./slow";
 import { splash } from "./splash";
 import { stun } from "./stun";
+import { bounty, mark, repair } from "./support";
+import { volley } from "./volley";
 import type { AttackModule, ParamRule } from "./types";
 export type { AttackModule, Impact, ParamRule } from "./types";
 export { canAcquire, canTarget } from "./targeting";
@@ -32,9 +41,20 @@ const ATTACKS: { [K in AttackKind]: AttackModule<Extract<AttackSpec, { kind: K }
   decay,
   income,
   detect,
+  focus,
+  pull,
+  mortar,
+  quake,
+  execute,
+  volley,
+  disrupt,
+  net,
+  bounty,
+  repair,
+  mark,
 };
 export const attackModule = (spec: AttackSpec) => ATTACKS[spec.kind] as AttackModule | undefined;
-/** Support towers (aura, refinery, detector) never attack, are never buffed and have no targets. */
+/** Support towers (aura, refinery, detector, beacon, dock, tracker) never attack, are never buffed and have no targets. */
 export const isSupport = (spec: AttackSpec) => attackModule(spec)?.aim === "none";
 export interface StatRow {
   key: string;

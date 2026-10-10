@@ -1,6 +1,7 @@
 import type { Game } from "../core/game";
 import type { CommandResult, EnemyId, TargetPriority, TowerId } from "../core/types";
 import { TARGET_PRIORITIES } from "../systems/combat";
+import { pageOf, towerOrder } from "../ui/tower-pages";
 import { isSupport } from "../systems/attacks";
 import type { MatchCommand } from "../core/match";
 import { type Interface, nextMission, renderMission, renderMissionList, TOWER_KEYS } from "../ui/interface";
@@ -53,7 +54,9 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     if (own || (shared && result.ok)) ui.notice(`${own ? "" : `${playerName(player)}: `}${describeResult(result)}`, own && !result.ok);
     if ((c.type === "restart" || c.type === "mission") && result.ok) {
       view.selected = null;
-      view.build = game.availableTowers()[0];
+      view.enemy = null;
+      view.build = towerOrder(game)[0];
+      view.page = pageOf(game.content.towers[view.build]);
       if (!coop.active()) view.speed = 1;
     }
     if (c.type === "mission" && result.ok) {
@@ -67,20 +70,24 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
   const coop = createCoop({ game, view, ui, dialogs, applied, setDriver });
   function choose(type: TowerId) {
     view.build = type;
+    view.page = pageOf(game.content.towers[type]);
     view.selected = null;
+    view.enemy = null;
     ui.notice(`${game.content.towers[type].name} ausgewählt. Klicke auf ein freies Feld neben dem Pfad.`);
     ui.refresh();
   }
   /** Leaves build mode and drops the selection (Esc, right click). */
   function cancel() {
-    if (view.build === null && view.selected === null) return;
+    if (view.build === null && view.selected === null && view.enemy === null) return;
     view.build = null;
     view.selected = null;
+    view.enemy = null;
     ui.notice("Auswahl aufgehoben.");
     ui.refresh();
   }
   function chooseCell(x: number, y: number, keepBuilding = false) {
     if (game.state.status === "lost" || game.state.status === "won") return;
+    view.enemy = null;
     const tower = game.state.towers.find((t) => t.x === x && t.y === y);
     if (tower) {
       view.selected = tower.id;
@@ -100,6 +107,13 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
       ui.refresh();
     }
   }
+  /** Shows HP and traits of an enemy in the sidebar; drops the tower selection. */
+  function chooseEnemy(id: number) {
+    view.enemy = id;
+    view.selected = null;
+    view.build = null;
+    ui.refresh();
+  }
   function selectMission(id: string) {
     dialogs.dismiss("missions");
     execute({ type: "mission", id });
@@ -109,6 +123,21 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     renderMissionList(game, index);
     document.getElementById(`sector-tab-${index}`)?.focus();
   }
+  /** Opens another page of the build menu and keeps the focus on its tab. */
+  function showTowerPage(page: number) {
+    view.page = page;
+    ui.refresh();
+    document.getElementById(`tower-tab-${page}`)?.focus();
+  }
+  // Arrow keys, Home and End move between the visible tower tabs.
+  document.getElementById("tower-tabs")!.addEventListener("keydown", (e) => {
+    const pages = [...document.querySelectorAll<HTMLElement>("[data-tower-page]")].map((t) => Number(t.dataset.towerPage)),
+      current = pages.indexOf(view.page);
+    const next = { ArrowRight: current + 1, ArrowLeft: current - 1, Home: 0, End: pages.length - 1 }[e.key];
+    if (next === undefined || !pages.length) return;
+    e.preventDefault();
+    showTowerPage(pages[(next + pages.length) % pages.length]);
+  });
   // Arrow keys, Home and End move between the sector tabs.
   document.getElementById("sector-tabs")!.addEventListener("keydown", (e) => {
     const count = game.content.sectors?.length ?? 0,
@@ -130,6 +159,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     if (b.dataset.mission) return selectMission(b.dataset.mission);
     if (b.dataset.send) return execute({ type: "send", enemy: b.dataset.send as EnemyId });
     if (b.dataset.sector) return showSector(Number(b.dataset.sector));
+    if (b.dataset.towerPage) return showTowerPage(Number(b.dataset.towerPage));
     if (b.dataset.priority && view.selected !== null) {
       execute({ type: "target", id: view.selected, priority: b.dataset.priority as TargetPriority });
       return;
@@ -211,7 +241,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
   });
   document.addEventListener("keydown", (e) => {
     if (dialogs.anyOpen() || e.altKey || e.metaKey || e.ctrlKey || e.repeat) return;
-    const towerKeys = game.availableTowers();
+    const towerKeys = towerOrder(game);
     const towerIndex = e.key.length === 1 ? TOWER_KEYS.indexOf(e.key.toLowerCase()) : -1;
     if (towerIndex >= 0 && towerKeys[towerIndex]) {
       choose(towerKeys[towerIndex]);
@@ -268,5 +298,5 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     // In multiplayer the others keep playing; pausing stays an explicit choice.
     if (document.hidden && !coop.active() && game.state.status === "wave" && !game.state.paused) execute({ type: "pause" });
   });
-  return { execute, chooseCell, cancel };
+  return { execute, chooseCell, chooseEnemy, cancel };
 }

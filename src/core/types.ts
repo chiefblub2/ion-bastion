@@ -56,6 +56,64 @@ export interface DecayAttack { kind: "decay"; /** Extra damage as a fraction of 
 export interface IncomeAttack { kind: "income"; /** Credits paid after every completed wave. */ amount: number }
 /** Detector: reveals stealthed enemies within its range; no attack of its own. */
 export interface DetectAttack { kind: "detect" }
+export interface FocusAttack {
+  kind: "focus";
+  /** Extra damage per consecutive hit on the same target, e.g. 0.2 for +20 %. */
+  ramp: number;
+  /** Maximum number of ramp steps. */
+  stacks: number;
+}
+export interface QuakeAttack {
+  kind: "quake";
+  /** Damage share at the edge of the range; full damage next to the tower, linear in between. */
+  edge: number;
+}
+export interface ExecuteAttack {
+  kind: "execute";
+  /** HP share at impact below which the hit is multiplied. */
+  threshold: number;
+  multiplier: number;
+}
+export interface VolleyAttack {
+  kind: "volley";
+  /** Different enemies shot at in one salvo. */
+  targets: number;
+}
+export interface MortarAttack {
+  kind: "mortar";
+  radius: number;
+  /** Dead zone: enemies closer than this to the tower cannot be targeted. */
+  minRange: number;
+}
+export interface DisruptAttack {
+  kind: "disrupt";
+  radius: number;
+  /** Seconds in which shield, regen, healer, leader, stealth and evade are switched off. */
+  duration: number;
+}
+export interface NetAttack {
+  kind: "net";
+  /** Speed factor while netted; a netted flyer also counts as a ground target. */
+  factor: number;
+  duration: number;
+}
+/** Prämienbake: kills in range pay this share of their reward on top. */
+export interface BountyAttack { kind: "bounty"; bonus: number }
+/** Reparaturdock: reactor energy restored after every completed wave. */
+export interface RepairAttack { kind: "repair"; amount: number }
+/** Peilsender: enemies in range take this much more damage, e.g. 0.15 for +15 %. */
+export interface MarkAttack { kind: "mark"; amount: number }
+/** Towers without an attack of their own; they are never buffed and have no targets. */
+export type SupportAttack = AuraAttack | IncomeAttack | DetectAttack | BountyAttack | RepairAttack | MarkAttack;
+export interface PullAttack {
+  kind: "pull";
+  radius: number;
+  /** Backward speed as a multiple of the enemy's own speed. */
+  strength: number;
+  duration: number;
+  /** Seconds after a pull in which the enemy cannot be pulled again. */
+  recovery: number;
+}
 export type AttackSpec =
   | DirectAttack
   | SplashAttack
@@ -68,7 +126,18 @@ export type AttackSpec =
   | CorrodeAttack
   | DecayAttack
   | IncomeAttack
-  | DetectAttack;
+  | DetectAttack
+  | FocusAttack
+  | PullAttack
+  | MortarAttack
+  | QuakeAttack
+  | ExecuteAttack
+  | VolleyAttack
+  | DisruptAttack
+  | NetAttack
+  | BountyAttack
+  | RepairAttack
+  | MarkAttack;
 export type AttackKind = AttackSpec["kind"];
 
 export interface UpgradeDefinition {
@@ -101,8 +170,19 @@ export type TurretStyle =
   | "vat"
   | "prism"
   | "refinery"
-  | "radar";
-export type ProjectileStyle = "tracer" | "shell" | "crystal" | "twin" | "ember" | "glob" | "orb";
+  | "radar"
+  | "lens"
+  | "gravity"
+  | "mortar"
+  | "hammer"
+  | "blade"
+  | "scatter"
+  | "antenna"
+  | "launcher"
+  | "beacon"
+  | "dock"
+  | "tracker";
+export type ProjectileStyle = "tracer" | "shell" | "crystal" | "twin" | "ember" | "glob" | "orb" | "net";
 export type PathMotif = "blades" | "vortex" | "rings";
 export interface PathVisual { color: number; motif: PathMotif }
 export interface TowerVisual {
@@ -202,6 +282,8 @@ export interface MapDefinition {
   blocked: readonly Point[];
   /** Defaults to "outpost". */
   theme?: MapTheme;
+  /** Closed ring: the last cell joins the first and enemies circle until they die. */
+  loop?: true;
 }
 export interface WaveGroup {
   type: EnemyId;
@@ -228,6 +310,17 @@ export interface MissionDefinition {
   hpGrowth?: number;
   /** Buildable towers; all towers when absent. */
   availableTowers?: readonly TowerId[];
+  /** Kreislauf: timed, overlapping waves on a ring map; absent on reactor missions. */
+  circle?: CircleRules;
+}
+/** Rules of a circle mission; its map must be a `loop`. */
+export interface CircleRules {
+  /** Seconds between two waves. */
+  interval: number;
+  /** The mission is lost as soon as more enemies than this are alive. */
+  limit: number;
+  /** Credits per second saved when the next wave is called early. */
+  earlyBonus: number;
 }
 /** A group of consecutive missions, shown as one tab in the mission dialog. */
 export interface MissionSector {
@@ -255,7 +348,13 @@ export type StatusEffect =
   | { kind: "stun"; release: number; until: number }
   /** Damage per second, dealt in steps; `next` is the time of the next step. */
   | { kind: "burn"; dps: number; next: number; until: number; source: DamageSource }
-  | { kind: "vulnerable"; amount: number; until: number };
+  | { kind: "vulnerable"; amount: number; until: number }
+  /** Walks backwards at `factor` × speed until `release`; immune to further pulls until `until`. */
+  | { kind: "pull"; factor: number; release: number; until: number }
+  /** Störsender: shield, regen, healer, leader, stealth and evade are off until `until`. */
+  | { kind: "disrupted"; until: number }
+  /** Fangnetz: slowed to `factor`, and a flyer counts as a ground target. */
+  | { kind: "netted"; factor: number; until: number };
 export type StatusKind = StatusEffect["kind"];
 export interface Enemy extends Point {
   id: number;
@@ -289,6 +388,8 @@ export interface Tower extends Point {
   owner: number;
   /** Whom the tower aims at; absent means "first". */
   priority?: TargetPriority;
+  /** Fokus only: the locked target and its consecutive hits. */
+  focus?: { target: number; stacks: number };
 }
 /** Target selection of an attack tower; ties fall back to path progress, then id. */
 export type TargetPriority = "first" | "last" | "strong" | "weak" | "close";
@@ -311,13 +412,17 @@ export interface Spawn {
   type: EnemyId;
   /** Versus: player who sent this enemy. */
   sentBy?: number;
+  /** Circle: the wave this enemy belongs to, since waves overlap. */
+  wave?: number;
 }
 export type GameEvent =
   | { type: "shot"; tower: TowerId; from: Point; to: Point; color: number }
   | { type: "chain"; from: Point; to: Point; color: number }
-  | { type: "beam"; from: Point; to: Point; color: number }
+  /** `power`: 0–1 display intensity, e.g. a Fokus beam's charge. */
+  | { type: "beam"; from: Point; to: Point; color: number; power?: number }
   | { type: "pulse"; at: Point; radius: number; color: number }
   | { type: "income"; at: Point; amount: number; color: number }
+  | { type: "repair"; at: Point; amount: number; color: number }
   | { type: "impact"; tower: TowerId; at: Point; color: number }
   | { type: "damage"; at: Point; amount: number; enemy: number }
   | { type: "kill"; at: Point; color: number; reward: number }
@@ -347,6 +452,8 @@ export interface GameState {
   queue: Spawn[];
   events: GameEvent[];
   nextId: number;
+  /** Circle missions only: seconds until the next wave starts by itself. */
+  circle?: { next: number };
 }
 /** Everything a simulation system needs; `Game` implements it. */
 export interface Sim {
@@ -376,6 +483,9 @@ export type MessageCode =
   | "pause-unavailable"
   | "wave-running"
   | "wave-started"
+  | "wave-called"
+  | "no-waves-left"
+  | "circle-versus"
   | "tower-unknown"
   | "tower-unavailable"
   | "cell-blocked"

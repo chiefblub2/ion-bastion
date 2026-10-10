@@ -59,11 +59,16 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 - Damage lands on impact. Projectiles are part of the state, fly at `projectile.speed` per tower, and still land after their tower is sold.
   - Homing shots (Impuls, Flak, Kryo) retarget within 1.5 cells when their target dies.
   - Nova shells fly to a fixed point.
-  - Tesla and Lanze hit instantly (`Impact.from`, `Impact.reach`).
+  - Tesla, Lanze, Fokus, Beben, Gravitron and Störsender hit instantly (`Impact.from`, `Impact.reach`). Beben centres its wave on `Impact.from`, the tower itself.
+  - Schrapnell: a module's `volley` hook makes `attackEnemies` fire at that many different candidates per salvo, the chosen target first, then in priority order. Henker judges its threshold on impact.
+  - Mörser shells fly to a fixed point like Nova; its module's `minRange` hook makes `attackEnemies` skip enemies inside the dead zone.
+  - Fokus keeps its target through `choose` (which also receives the firing `Tower`) and stores its charge in `Tower.focus`, which is part of `stateHash`.
 - Always deal damage through `applyDamage` (`systems/damage.ts`) and apply status effects through `applyStatus` (`systems/status.ts`).
-- Status merge rules: for slow, burn and vulnerable, the stronger effect replaces the weaker one and an equal one extends it. Stun blocks further stuns until its recovery time ends. Burn ticks every 0.5 s and credits the source tower even after a sale. Vulnerable applies before armor.
+- Status merge rules: for slow, burn and vulnerable, the stronger effect replaces the weaker one and an equal one extends it. Stun and pull (Gravitron) block further stuns or pulls until their recovery time ends. A pull is a negative speed factor, so it beats slow and stun; `moveEnemies` clamps `distance` at 0 on reactor maps. The stronger net (Fangnetz) replaces a weaker one, and a disruption extends.
+- `disrupted` (Störsender) hides the `DISRUPTABLE` traits (shield, regen, healer, leader, stealth, evade) from `traitsOf`, so every trait hook and `isHidden` follow it. `netted` makes `canTarget` treat a flyer as air and ground.
+- Passive support effects live in `systems/support.ts`: `bountyBonus` (Prämienbake, added to the kill reward in `applyDamage`), `markFactor` (Peilsender, multiplied with `damageTaken` before armor) and `repairReactor` (Reparaturdock, in `settleWave`). Like auras they are derived on every query and take the strongest overlapping tower. `availableTowers` drops `repair` towers on circle missions. Burn ticks every 0.5 s and credits the source tower even after a sale. Vulnerable applies before armor.
 - Aura bonuses are derived from the current towers on every query, with no cache. Overlapping auras use the maximum bonus per stat. Cooldowns store the remaining fraction of a cycle, so a speed change never grants a free shot.
-- Support towers are recognised by `aim: "none"` of their attack module (`isSupport`). They have no `targets`, no damage and no fire rate, are never buffed by auras, and only the aura needs a range.
+- Support towers are recognised by `aim: "none"` of their attack module (`isSupport`). They have no `targets`, no damage and no fire rate, are never buffed by auras, and only towers with an area (aura, detector, beacon, tracker) need a range. Their specs form `SupportAttack`, which `attackTower` excludes.
 
 ## Adding content
 
@@ -75,13 +80,21 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
   - The ASCII sketch is the only source of truth: `S` entry, `R` reactor, `=` path, `#` obstacle, `.` buildable.
   - Size and path order are derived from it. Branches, dead ends and loose path cells are rejected with their coordinates.
   - A new terrain style needs an entry in `THEMES` (`render/terrain.ts`) and a value in `MapTheme`.
+- **Circle mission (Kreislauf, sector VII in `content/sectors/circle.ts`):**
+  - A map sketch without `R` is a closed ring (`MapDefinition.loop`). `S` sits on the ring, and enemies leave it in the first free direction (right, down, left, up).
+  - The mission sets `circle: { interval, limit, earlyBonus }`; validation requires `circle` and `loop` together.
+  - `systems/circle.ts` replaces `settleWave`. The status stays `"wave"` from the first start to the end.
+    - The timer (`state.circle.next`) starts overlapping waves.
+    - `start` calls the next wave early for `earlyBonus` credits per second saved.
+    - More than `limit` alive enemies loses; all waves started and an empty ring wins.
+  - Overlapping spawns carry `Spawn.wave` for their HP scale. Versus rejects circle missions (`circle-versus`), so they run solo or in co-op.
 - **Waves:** use the helpers `g(type, count, interval, delay)` and `wave(bonus, ...groups)` from `content/waves.ts`. An optional per-wave `hpMultiplier` replaces the linear growth.
 - **Tower:** add it to `content/towers.ts`. Fields:
   - `attack`: kind plus values, e.g. `{ kind: "slow", factor: 0.55, duration: 1.9 }`
   - `visual`: `icon`, `turret`, `projectile`, `muzzle`, `impact`
   - `targets`: the layers it can hit
 
-  Menu, tooltips, detail values and validation are generated from the definition. Hotkeys follow `TOWER_KEYS` in `ui/interface.ts`; with more than 13 towers you must extend it.
+  Menu, tooltips, detail values and validation are generated from the definition. The build menu has category tabs (Angriff, Kontrolle, Unterstützung) once a mission offers `PAGED_FROM` towers; `pageOf` in `ui/tower-pages.ts` derives the tab from the attack (support towers, or `CONTROL_KINDS`). Menu order and hotkeys follow `towerOrder` (page by page) and `TOWER_KEYS` in `ui/interface.ts`; with more than 24 towers you must extend it (`t`, `f` and `n` are taken).
 - **Attack kind:** you need three pieces:
   - a module in `systems/attacks/` (`aim`, `projectile`, `params` with label, check and unit, `apply`)
   - an entry in `systems/attacks/index.ts`

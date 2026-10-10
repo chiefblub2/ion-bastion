@@ -27,8 +27,10 @@ Gegner laufen einen festen Pfad entlang zum Reaktor. Erreicht einer den Reaktor,
 | --- | --- |
 | Turm wählen, freies Feld anklicken | Bauen. Danach endet der Baumodus; Shift+Klick baut weitere Türme desselben Typs. |
 | Gebauten Turm anklicken | Verbessern, verkaufen oder Zielpriorität wählen |
+| Gegner anklicken | Lebenspunkte, Schild, Eigenschaften und aktive Effekte anzeigen |
 | `T` | Zielpriorität des ausgewählten Turms weiterschalten |
-| `1`–`9`, `0`, `Q`, `W`, `E` | Turmtyp wählen (in Listenreihenfolge) |
+| Tabs Angriff · Kontrolle · Unterstützung | Turmseite wechseln (ab zehn verfügbaren Türmen; Pfeiltasten auf den Tabs) |
+| `1`–`9`, `0`, `Q`, `W`, `E`, `R`, `U`, `I`, `O`, `P`, `G`, `H`, `J`, `K`, `L`, `X` | Turmtyp wählen, Seite für Seite durchnummeriert; der passende Tab öffnet sich |
 | Rechtsklick, `Esc` oder ✕ | Baumodus und Auswahl aufheben. Ohne Auswahl beendet `Esc` das Vollbild. |
 | `N` | Nächste Welle starten (im Versus: „Bereit“) |
 | Leertaste | Pause, nur während einer Welle und nicht im Versus |
@@ -66,6 +68,8 @@ npm run dev      # Spiel auf http://0.0.0.0:4173
 | Koop | 2–4 | Gemeinsame Karte und Reaktorenergie, getrennte Credits. Start-Credits, Abschussprämien und Wellenbonus werden geteilt; Raffinerien zahlen an ihren Besitzer. Zusammen verdient ihr genau so viel wie ein Einzelspieler. Türme gehören dem Erbauer (farbige Ecke: blau, bernstein, grün, magenta); nur er kann sie verbessern und verkaufen. |
 | Wettlauf | 2–4 | Jeder verteidigt eine eigene Kopie der Mission mit vollen Start-Credits. Die Wellen starten für alle gleichzeitig, sobald alle „Bereit“ gedrückt haben, spätestens nach 30 s. Es gibt keine Pause. Wer seinen Reaktor als Letzter hält, gewinnt. Überstehen mehrere alle Wellen, entscheidet die Reaktorenergie, danach die Zahl der Abschüsse. |
 | Belagerung | 2–4 | Wie Wettlauf. Zusätzlich schickt man unter „Schicken“ Gegner in das Feld des nächsten Mitspielers, der noch im Spiel ist. Das kostet das Vierfache der Abschussprämie. Schicken kann man nur Gegnertypen, die schon in einer Welle vorkamen. Geschickte Gegner bringen dem Verteidiger keine Prämie. |
+
+Kreislauf-Missionen (Sektor VII) laufen im Mehrspieler nur als Koop: Alle verteidigen denselben Ring, das Gegnerlimit gilt für alle zusammen, und jeder kann die nächste Welle früh rufen.
 
 Mission, Neustart und Tempo bestimmt in allen Modi der Host. Dialoge und Tabwechsel pausieren im Mehrspieler nicht.
 
@@ -122,7 +126,23 @@ Alle Missionen sind über „Missionen“ direkt wählbar, mit einem Tab je Sekt
 | 29 | Nullpunkt | Ohne Aura und Raffinerie, harte Panzer | 18 × 12 | 18 | 590 | 105 % |
 | 30 | Kern der Singularität | Finale: 20 Wellen, drei Titanen | 20 × 13 | 20 | 650 | 110 % |
 
+| **VII** | **Kreislauf** | | | | | |
+| 31 | Umlaufbahn | Einfacher Ring, max. 30 Gegner, Welle alle 22 s | 18 × 12 | 8 | 400 | 35 % |
+| 32 | Doppelschleife | Einbuchtung bündelt zwei Bahnen, max. 30, alle 20 s | 20 × 12 | 9 | 450 | 45 % |
+| 33 | Mahlstrom | Zwei Einbuchtungen, max. 35, alle 18 s | 20 × 13 | 10 | 500 | 30 % |
+
 ¹ Einzelne Wellen haben einen eigenen HP-Faktor statt des linearen Zuwachses.
+
+### Kreislauf
+
+Die Missionen in Sektor VII spielen auf geschlossenen Ringen ohne Reaktor:
+
+- Die erste Welle startest du selbst. Danach startet ein Timer jede weitere Welle, auch wenn die vorige noch läuft.
+- Gegner laufen im Kreis, bis sie fallen. Sie richten keinen Reaktorschaden an.
+- Sind mehr Gegner gleichzeitig im Ring als das Limit erlaubt, ist die Mission verloren. Die Anzeige „IM RING“ ersetzt die Reaktorenergie.
+- Mit „Welle ▶“ oder `N` rufst du die nächste Welle früher. Für jede gesparte Sekunde gibt es Credits; den Bonus zeigt der Button an.
+- Wellenbonus und Raffinerie-Einkommen kommen, sobald die nächste Welle startet.
+- Gewonnen ist die Mission, wenn alle Wellen gestartet und alle Gegner besiegt sind.
 
 ## Türme
 
@@ -141,10 +161,21 @@ Jeder Gegner bewegt sich am Boden oder in der Luft; jeder Angriffsturm trifft nu
 | Stasis | 140 | Betäubung: Puls im Radius 0,9 hält Gegner 0,8 s an, danach 1,5 s immun | Boden · Luft |
 | Korrosion | 110 | Schwächung: Gegner im Radius 0,8 nehmen 3 s lang 25 % mehr Schaden | Boden · Luft |
 | Zerfall | 160 | Anti-Boss: Treffer plus 4 % der maximalen HP | Boden · Luft |
+| Fokus | 150 | Aufladung: Dauerstrahl hält sein Ziel, jeder Folgetreffer +20 % Schaden, bis zum Dreifachen | Boden · Luft |
+| Mörser | 160 | Artillerie: Reichweite 5, Explosionsradius 1,3, kann Gegner näher als 1,5 Felder nicht beschießen | nur Boden |
+| Beben | 140 | Nahbereich: Schockwelle trifft alle Gegner in Reichweite 1,8, am Rand noch 50 % | nur Boden |
+| Henker | 150 | Hinrichtung: Gegner unter 25 % HP erleiden beim Einschlag den vierfachen Schaden | Boden · Luft |
+| Schrapnell | 130 | Mehrfachziel: jede Salve trifft bis zu 3 verschiedene Gegner | Boden · Luft |
+| Störsender | 130 | Störung: Puls im Radius 1,1 schaltet 3 s lang Schild, Regeneration, Heilung, Tarnung, Ausweichen und Anführer-Bonus ab; Schilde brechen sofort | Boden · Luft |
+| Fangnetz | 110 | Luftfalle: Flieger 3 s lang 30 % langsamer und für Bodentürme wie Nova angreifbar | nur Luft |
+| Gravitron | 170 | Rückstoß: Puls im Radius 1 zieht Gegner 0,6 s lang mit 1,5-fachem Tempo zurück, danach 2,5 s immun; Berserker widerstehen | nur Boden |
 | Raffinerie | 120 | 25 Credits nach jeder Welle, kein Angriff | – |
 | Detektor | 90 | Deckt getarnte Gegner im Radius 3,5 auf, kein eigener Angriff | – |
+| Prämienbake | 100 | Abschüsse im Radius 2,5 zahlen 50 % mehr Credits (mehrere Baken zählen nicht doppelt), kein Angriff | – |
+| Reparaturdock | 150 | Stellt nach jeder Welle 1 Reaktorenergie wieder her, bis zum Startwert; nicht im Kreislauf | – |
+| Peilsender | 140 | Gegner im Radius 2,2 erleiden 15 % mehr Schaden, zusätzlich zu Korrosion, kein Angriff | – |
 
-Nova, Flak und Kryo verschießen Geschosse, die Zeit brauchen; schnelle Gegner können Nova-Granaten ausweichen. Tesla und Lanze treffen sofort.
+Nova, Mörser, Flak, Kryo, Henker, Schrapnell und Fangnetz verschießen Geschosse, die Zeit brauchen; schnelle Gegner können Nova-Granaten ausweichen. Tesla, Lanze, Fokus, Beben, Gravitron und Störsender treffen sofort.
 
 **Angriffstürme** haben fünf Stufen:
 
@@ -166,8 +197,24 @@ Die Stufen 4 und 5 sind teuer, bringen aber mehr Schaden pro Credit als zusätzl
 | Stasis | 1 s, Radius 1,1 | 1,2 s, Radius 1,3 |
 | Korrosion | +30 % Schaden | +40 %, Radius 1 |
 | Zerfall | 5 % der maximalen HP | 6 % |
+| Fokus | +25 % je Folgetreffer | +30 %, bis zu 12 Stufen |
+| Mörser | Explosionsradius 1,5 | 1,7, toter Winkel 1,2 |
+| Beben | 70 % am Rand | volle Wucht bis zum Rand |
+| Henker | schon unter 30 % HP | 5-facher Schaden unter 35 % HP |
+| Schrapnell | 4 Ziele pro Salve | 5 Ziele |
+| Störsender | 3,5 s, Radius 1,3 | 4,5 s, Radius 1,5 |
+| Fangnetz | 3,5 s | 40 % langsamer, 4,5 s |
+| Gravitron | Radius 1,2, 1,8-fache Zugkraft | Radius 1,4, 2,2-fach, 0,7 s |
 
 Die **Raffinerie** hat drei Stufen und zahlt 25 / 40 / 60 Credits pro Welle (Ausbau für 100 und 160 Credits).
+
+Weitere Unterstützungstürme mit drei Stufen:
+
+| Turm | Stufe 2 | Stufe 3 |
+| --- | --- | --- |
+| Prämienbake | +75 % · 90 | +100 %, Radius 3 · 150 |
+| Reparaturdock | 2 Energie pro Welle · 160 | 3 Energie · 260 |
+| Peilsender | +20 %, Radius 2,5 · 120 | +25 %, Radius 2,8 · 200 |
 
 **Die Aura** hat keinen Grundbonus. Mit dem ersten Kauf legst du einen von drei Pfaden fest; die anderen beiden sind danach für diesen Turm gesperrt, umentscheiden geht nur über Verkaufen:
 

@@ -40,6 +40,19 @@ const PROJECTILES: Record<ProjectileStyle, (g: Ink, x: number, y: number, a: num
     g.fillStyle(0xffffff);
     g.fillCircle(x, y, 1.8);
   },
+  // A spinning square mesh with a cross inside.
+  net: (g, x, y, a, color) => {
+    const corners = Array.from({ length: 4 }, (_, i) => ({
+      x: x + Math.cos(a * 3 + (i * Math.PI) / 2) * 7,
+      y: y + Math.sin(a * 3 + (i * Math.PI) / 2) * 7,
+    }));
+    g.fillStyle(color, 0.15);
+    g.fillPoints(corners, true);
+    g.lineStyle(1.5, color, 0.95);
+    g.strokePoints(corners, true);
+    g.lineBetween(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
+    g.lineBetween(corners[1].x, corners[1].y, corners[3].x, corners[3].y);
+  },
   tracer: (g, x, y, a, color) => {
     g.lineStyle(2, color, 0.5);
     g.lineBetween(x, y, x - Math.cos(a) * 10, y - Math.sin(a) * 10);
