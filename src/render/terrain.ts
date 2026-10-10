@@ -1914,12 +1914,12 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
     );
   // Below the entry when the map name label occupies the space above it.
   place(
-    label(0, 0, map.loop ? "PORTAL" : "EINTRITT", map.loop ? hex(accent) : "#efd297"),
+    label(0, 0, map.loop ? "PORTAL" : "ENTRY", map.loop ? hex(accent) : "#efd297"),
     start.x,
     start.y < CELL * 2 ? start.y + 26 : start.y - 54,
   );
   // Below the reactor unless it sits in the bottom row.
-  if (!map.loop) place(label(0, 0, "REAKTOR", hex(accent)), end.x, end.y + 32 + 30 < height ? end.y + 32 : end.y - 58);
+  if (!map.loop) place(label(0, 0, "REACTOR", hex(accent)), end.x, end.y + 32 + 30 < height ? end.y + 32 : end.y - 58);
   // Map name in the top-left corner, or in the first corner the path keeps clear.
   const name = label(0, 0, map.name.toUpperCase(), hex(shade(theme.grid, 0.35))),
     clear = (row: number, fromRight: boolean) =>
