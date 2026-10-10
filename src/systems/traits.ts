@@ -114,7 +114,16 @@ const TRAITS: Registry = {
     hpFactor: (t) => 1 - t.hp,
     speed: (t) => 1 + t.speed,
   },
+  burrow: {
+    validate: (t) => first(positive("every", t.every), positive("length", t.length), t.length < t.every ? undefined : "length muss kleiner als every sein."),
+  },
+  harden: {
+    validate: (t) => share("max", t.max),
+    onDamage: (t, amount, e) => amount * (1 - hardenShare(t.max, e)),
+  },
 };
+/** Current damage reduction of a hardening enemy: 0 at full HP, `max` at 0 HP. */
+const hardenShare = (max: number, e: Enemy) => max * (1 - e.hp / e.maxHp);
 /** Damage hooks in order: a dodge first, then reductions, the shield takes what is left. */
 const DAMAGE_STAGE: Partial<Record<TraitKind, number>> = { evade: -1, shield: 1 };
 const stage = (t: Trait) => DAMAGE_STAGE[t.kind] ?? 0;
@@ -168,8 +177,11 @@ export function leaderBonus(sim: Sim, e: Enemy) {
   }
   return bonus;
 }
-/** Stealthed and not revealed by a detector: towers cannot pick it as a target. */
-export const isHidden = (sim: Sim, e: Enemy) => hasTrait(sim, e, "stealth") && !e.revealed;
+/** Underground: derived from the path distance, so a pull-back resurfaces it correctly. */
+export const isBurrowed = (sim: Sim, e: Enemy) =>
+  traitsOf(sim, e).some((t) => t.kind === "burrow" && e.distance % t.every >= t.every - t.length);
+/** Stealthed and not revealed by a detector, or burrowed: towers cannot pick it as a target. */
+export const isHidden = (sim: Sim, e: Enemy) => (hasTrait(sim, e, "stealth") && !e.revealed) || isBurrowed(sim, e);
 export function tickTraits(sim: Sim, dt: number) {
   for (const e of sim.state.enemies)
     if (e.hp > 0) for (const t of traitsOf(sim, e)) moduleOf(t)!.onTick?.(t, e, dt, sim);
@@ -195,6 +207,9 @@ export interface TraitFlags {
   armor: boolean;
   split: boolean;
   slowImmune: boolean;
+  burrowed: boolean;
+  /** Current damage reduction share of a hardening enemy, 0..max; 0 without the trait. */
+  harden: number;
 }
 /** Visible traits for drawing; `leader` and `healer` are their radii in cells (0 if absent). */
 export function traitFlags(sim: Sim, e: Enemy): TraitFlags {
@@ -212,12 +227,15 @@ export function traitFlags(sim: Sim, e: Enemy): TraitFlags {
     armor: false,
     split: false,
     slowImmune: false,
+    burrowed: isBurrowed(sim, e),
+    harden: 0,
   };
   for (const t of traitsOf(sim, e)) {
     if (t.kind === "shield") flags.shield = (e.shield ?? 0) / (t.capacity * e.maxHp);
     else if (t.kind === "leader" || t.kind === "healer") flags[t.kind] = t.radius;
     else if (t.kind === "armor" || t.kind === "slowImmune") flags[t.kind] = true;
     else if (t.kind === "splitOnDeath") flags.split = true;
+    else if (t.kind === "harden") flags.harden = hardenShare(t.max, e);
     else if (t.kind === "stealth" || t.kind === "unstoppable" || t.kind === "swift" || t.kind === "evade" || t.kind === "regen") flags[t.kind] = true;
   }
   return flags;

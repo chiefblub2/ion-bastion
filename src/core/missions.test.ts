@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_CONTENT } from "../content";
 import { ENEMIES } from "../content/enemies";
 import { MISSIONS, SECTORS, missionById, sectorOf } from "../content/missions";
 import { Game } from "./game";
 import { play } from "./test-helpers";
+import { hasAir, hasStealth, isTutorial, novaOnly, thinBuilds, unbuildable } from "./mission-checks";
 import { STRATEGIES } from "./strategies";
 import { validateMission } from "./validation";
 /** Strategies that still lose; balancing is pending. Remove an entry once it wins. */
@@ -13,8 +13,8 @@ describe("missions", () => {
     expect(new Set(MISSIONS.map((m) => m.id)).size).toBe(MISSIONS.length);
     for (const m of MISSIONS) expect(() => validateMission(m)).not.toThrow();
   });
-  it("are grouped into six sectors of five plus the Kreislauf sector, in campaign order", () => {
-    expect(SECTORS.map((s) => s.missions.length)).toEqual([5, 5, 5, 5, 5, 5, 3]);
+  it("are grouped into eight sectors of five plus the Kreislauf sector, in campaign order", () => {
+    expect(SECTORS.map((s) => s.missions.length)).toEqual([5, 5, 5, 5, 5, 5, 5, 5, 3]);
     expect(SECTORS.at(-1)!.missions.every((m) => m.circle && m.map.loop)).toBe(true);
     expect(SECTORS.flatMap((s) => s.missions)).toEqual(MISSIONS);
     expect(new Set(SECTORS.map((s) => s.id)).size).toBe(SECTORS.length);
@@ -32,15 +32,11 @@ describe("missions", () => {
     expect(g.mission.id).toBe("kernfestung");
     expect(g.command({ type: "mission", id: "nope" }).ok).toBe(false);
   });
-  const hasAir = (m: (typeof MISSIONS)[number]) =>
-    m.waves.some((w) => w.groups.some((g) => g.type === "glider"));
-  const hasStealth = (m: (typeof MISSIONS)[number]) =>
-    m.waves.some((w) => w.groups.some((g) => DEFAULT_CONTENT.enemies[g.type].traits?.some((t) => t.kind === "stealth")));
   it("stealth only where the detector can be built", () => {
-    for (const m of MISSIONS.filter(hasStealth)) expect(!m.availableTowers || m.availableTowers.includes("detector")).toBe(true);
+    for (const m of MISSIONS.filter((m) => hasStealth(m))) expect(!m.availableTowers || m.availableTowers.includes("detector")).toBe(true);
   });
   it("defense A builds a detector against stealth", () => {
-    for (const m of MISSIONS.filter(hasStealth)) expect(STRATEGIES[m.id].A.builds.some((b) => b.tower === "detector")).toBe(true);
+    for (const m of MISSIONS.filter((m) => hasStealth(m))) expect(STRATEGIES[m.id].A.builds.some((b) => b.tower === "detector")).toBe(true);
   });
   it("sector I keeps the base roster", () => {
     const base = new Set(["drone", "runner", "tank", "boss", "glider"]);
@@ -50,7 +46,7 @@ describe("missions", () => {
     const used = new Set(MISSIONS.flatMap((m) => m.waves.flatMap((w) => w.groups.map((g) => g.type))));
     for (const id of Object.keys(ENEMIES)) expect(used.has(id as keyof typeof ENEMIES)).toBe(true);
   });
-  for (const [index, m] of MISSIONS.entries()) {
+  for (const m of MISSIONS) {
     describe(m.name, () => {
       it("is lost without any defense", () => {
         const { game } = play(m);
@@ -62,7 +58,7 @@ describe("missions", () => {
       });
       if (hasAir(m))
         it("is lost with a ground-only Nova defense", () => {
-          const builds = STRATEGIES[m.id].A.builds.map((x) => ({ ...x, tower: "blast" as const }));
+          const builds = novaOnly(STRATEGIES[m.id].A);
           const { game } = play(m, { builds });
           expect(game.state.status).toBe("lost");
         });
@@ -70,21 +66,20 @@ describe("missions", () => {
       // are a legitimate tactic there; a single tower must still fall short.
       if (m.circle)
         it("is lost with a single tower", () => {
-          const { game } = play(m, { builds: STRATEGIES[m.id].A.builds.slice(0, 1) });
+          const { game } = play(m, { builds: thinBuilds(m, STRATEGIES[m.id].A) });
           expect(game.state.status).toBe("lost");
         });
       // Mission 01 is the tutorial: three upgraded towers are meant to suffice.
-      else if (index > 0)
+      else if (!isTutorial(m))
         it("is lost with a thin defense of three towers", () => {
-          const { game } = play(m, { builds: STRATEGIES[m.id].A.builds.slice(0, 3) });
+          const { game } = play(m, { builds: thinBuilds(m, STRATEGIES[m.id].A) });
           expect(game.state.status).toBe("lost");
         });
       for (const key of ["A", "B"] as const) {
         it.skipIf(PENDING_BALANCE.has(`${m.id}/${key}`))(`can be won with defense ${key}`, () => {
           const strategy = STRATEGIES[m.id]?.[key];
           expect(strategy).toBeDefined();
-          const g = new Game(missionById(m.id)!);
-          for (const b of strategy.builds) expect(g.canBuild(b.x, b.y), `${b.x},${b.y}`).toBe(true);
+          expect(unbuildable(missionById(m.id)!, strategy)).toEqual([]);
           const { game } = play(m, strategy);
           expect(game.state.status).toBe("won");
           expect(game.state.lives).toBeGreaterThan(0);

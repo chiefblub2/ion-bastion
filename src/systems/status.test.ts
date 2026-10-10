@@ -43,7 +43,7 @@ describe("status merge rules", () => {
     applyStatus(g, e, { kind: "stun", release: 1, until: 2 });
     expect(speedFactor(e, 0.5)).toBe(0);
     expect(speedFactor(e, 1.5)).toBe(0.5);
-    expect(statusFlags(e, 0.5)).toEqual({ slowed: true, stunned: true, burning: false, vulnerable: false, pulled: false, disrupted: false, netted: false });
+    expect(statusFlags(e, 0.5)).toEqual({ slowed: true, stunned: true, burning: false, vulnerable: false, pulled: false, disrupted: false, netted: false, bleeding: false, charged: false });
     expect(statusFlags(e, 1.5).stunned).toBe(false);
   });
   it("a disruption extends, and the stronger net replaces a weaker one", () => {

@@ -16,11 +16,13 @@ npx vitest run src/core/match.test.ts     # single file
 npx vitest run -u                         # update snapshots (golden replays: only on purpose, review the diff)
 npx vite-node scripts/balance.ts -- src/content/sectors/frost.ts src/core/strategies/frost.ts
                                           # balance check for one sector; sector I: -- src/content/missions.ts src/core/strategies/index.ts 0
+                                          # flags: --mission <id> (one mission), --why (leaks per enemy type, kills per tower)
+npx vite-node scripts/mission-table.ts    # README mission table from the content
 ```
 
 Always run `npm test` and `npm run build` before you finish. The chunk-size warning from `vite build` is expected.
 
-To see a change in the real app, run `npm run dev` (and `npm run server` for multiplayer) and open `http://localhost:4173`. Use `?server=ws://host:port` to point at another relay. Multiplayer needs several tabs, one per player.
+To see a change in the real app, run `npm run dev` (and `npm run server` for multiplayer) and open `http://localhost:4173`. Use `?server=ws://host:port` to point at another relay, and `?mission=<id>` (e.g. `?mission=korallengraben`) to open a mission directly. Multiplayer needs several tabs, one per player.
 
 ## Language
 
@@ -34,7 +36,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 | --- | --- |
 | `src/core/` | Pure simulation: no DOM, no Phaser. `game.ts` (`Game`, command `HANDLERS`, `tick`), `types.ts`, `economy.ts` (wallets), `upgrades.ts`, `validation.ts` (`ContentError` with paths like "Mission kernfestung › Welle 7 › Gruppe 2"), `hash.ts` (`stateHash`, `fnv`), `modes.ts` (multiplayer mode registry), `match.ts` (versus engine), `strategies/` (test bots) |
 | `src/systems/` | Tick systems on `Sim` (`{ state, mission, content }`): spawn, status, movement, detection, combat, waves, traits, auras. `attacks/` has one module per attack kind, `damage.ts` the single damage pipeline |
-| `src/content/` | Towers, enemies, upgrades, maps, waves, missions; sectors II–VI in `content/sectors/*.ts`. `content/index.ts` exports `DEFAULT_CONTENT` (`ContentPack`) |
+| `src/content/` | Towers, enemies, upgrades, maps, waves, missions; sectors II–VIII in `content/sectors/*.ts`. `content/index.ts` exports `DEFAULT_CONTENT` (`ContentPack`) |
 | `src/render/` | Phaser scene (`scene.ts`, `Battlefield`, `LocalDriver`) and draw registries (`towers.ts`, `enemies.ts`, `projectiles.ts`, `effects.ts`, `terrain.ts`) |
 | `src/ui/` | DOM HUD (`interface.ts`, all markup is one template string), messages, tooltips, wave forecast, live units, multiplayer HUD (`players.ts`) |
 | `src/app/` | Input (`input.ts`), dialogs, multiplayer lobby/session (`coop.ts`), audio, fullscreen, WebMCP tools (`webmcp.ts`) |
@@ -65,12 +67,14 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
   - Fokus keeps its target through `choose` (which also receives the firing `Tower`) and stores its charge in `Tower.focus`, which is part of `stateHash`.
 - Always deal damage through `applyDamage` (`systems/damage.ts`) and apply status effects through `applyStatus` (`systems/status.ts`).
 - Status merge rules: for slow, burn and vulnerable, the stronger effect replaces the weaker one and an equal one extends it. Stun and pull (Gravitron) block further stuns or pulls until their recovery time ends. A pull is a negative speed factor, so it beats slow and stun; `moveEnemies` clamps `distance` at 0 on reactor maps. The stronger net (Fangnetz) replaces a weaker one, and a disruption extends.
-- `disrupted` (Störsender) hides the `DISRUPTABLE` traits (shield, regen, healer, leader, stealth, evade) from `traitsOf`, so every trait hook and `isHidden` follow it. `netted` makes `canTarget` treat a flyer as air and ground.
+- `disrupted` (Störsender) hides the `DISRUPTABLE` traits (shield, regen, healer, leader, stealth, evade) from `traitsOf`, so every trait hook and `isHidden` follow it. `isHidden` also covers `burrow` (Gräber), which is stateless (derived from `distance`), not disruptable and not revealed by a detector; traps and area damage still hit. `netted` makes `canTarget` treat a flyer as air and ground.
 - Passive support effects live in `systems/support.ts`: `bountyBonus` (Prämienbake, added to the kill reward in `applyDamage`), `markFactor` (Peilsender, multiplied with `damageTaken` before armor) and `repairReactor` (Reparaturdock, in `settleWave`). Like auras they are derived on every query and take the strongest overlapping tower. `availableTowers` drops `repair` towers on circle missions. Burn ticks every 0.5 s and credits the source tower even after a sale. Vulnerable applies before armor.
 - Aura bonuses are derived from the current towers on every query, with no cache. Overlapping auras use the maximum bonus per stat. Cooldowns store the remaining fraction of a cycle, so a speed change never grants a free shot.
 - Support towers are recognised by `aim: "none"` of their attack module (`isSupport`). They have no `targets`, no damage and no fire rate, are never buffed by auras, and only towers with an area (aura, detector, beacon, tracker) need a range. Their specs form `SupportAttack`, which `attackTower` excludes.
 
 ## Adding content
+
+Whole mission packs (new sectors, themes, enemies) follow the project skill `.claude/skills/mission-pack/SKILL.md`: foundation agent, parallel sector and theme agents, integration checklist.
 
 - **Mission:** add a `MissionDefinition` to a sector in `content/missions.ts` (or `content/sectors/*.ts`).
   - The fields are map, waves, `startingCredits` and `reactorEnergy`.
@@ -80,7 +84,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
   - The ASCII sketch is the only source of truth: `S` entry, `R` reactor, `=` path, `#` obstacle, `.` buildable.
   - Size and path order are derived from it. Branches, dead ends and loose path cells are rejected with their coordinates.
   - A new terrain style needs an entry in `THEMES` (`render/terrain.ts`) and a value in `MapTheme`.
-- **Circle mission (Kreislauf, sector VII in `content/sectors/circle.ts`):**
+- **Circle mission (Kreislauf, sector IX in `content/sectors/circle.ts`):**
   - A map sketch without `R` is a closed ring (`MapDefinition.loop`). `S` sits on the ring, and enemies leave it in the first free direction (right, down, left, up).
   - The mission sets `circle: { interval, limit, earlyBonus }`; validation requires `circle` and `loop` together.
   - `systems/circle.ts` replaces `settleWave`. The status stays `"wave"` from the first start to the end.
@@ -94,7 +98,12 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
   - `visual`: `icon`, `turret`, `projectile`, `muzzle`, `impact`
   - `targets`: the layers it can hit
 
-  Menu, tooltips, detail values and validation are generated from the definition. The build menu has category tabs (Angriff, Kontrolle, Unterstützung) once a mission offers `PAGED_FROM` towers; `pageOf` in `ui/tower-pages.ts` derives the tab from the attack (support towers, or `CONTROL_KINDS`). Menu order and hotkeys follow `towerOrder` (page by page) and `TOWER_KEYS` in `ui/interface.ts`; with more than 24 towers you must extend it (`t`, `f` and `n` are taken).
+  Menu, tooltips, detail values and validation are generated from the definition. The build menu has category tabs (Angriff, Kontrolle, Fallen, Unterstützung) once a mission offers `PAGED_FROM` towers; `pageOf` in `ui/tower-pages.ts` derives the tab from `placement` and the attack (traps, support towers, or `CONTROL_KINDS`). Menu order follows `towerOrder` (page by page). Hotkeys come from `hotkeyTowers(game, view.page)`: with tabs every tab numbers its towers from 1 (`TOWER_KEYS` in `ui/interface.ts`, 14 keys per tab; `t`, `f` and `n` are taken), and `Shift`+`1`–`4` (by `e.code`) opens a tab.
+- **Trap:** use `trapTower` (`content/upgrades.ts`), which sets `placement: "path"` and keeps the trigger radius (`range`, about 0.45) at every level. Traps reuse the normal attack kinds.
+  - `Game.canBuild(x, y, tower)` puts traps on free path cells (`isTrapCell`: not the entry and, with a reactor, not the reactor cell), everything else beside the path. The build fails with `trap-off-path`.
+  - `attackEnemies` triggers traps with `canTarget` instead of `canAcquire`, so stealthed walkers set them off. Traps target ground only, so flyers pass over.
+  - Trap-only kinds (`trapOnly` on the module, rejected elsewhere by validation): `bleed` (Krähenfüße: status `bleeding` costs `perCell` per cell walked, in `BURN_TICK` steps; standing or pushed back costs nothing), `charge` (Haftmine: status `charged` detonates at `until` or through the status `onDeath` hook, which `applyDamage` runs via `statusDeath`; a spent charge has `until = -Infinity`, so chains never repeat), `pit` (Fallgrube: swallows enemies with `size` ≤ the spec and without `unstoppable` through an infinite hit, which `applyDamage` turns into the remaining HP) and `alarm` (Alarmdraht: sets `cooldown = 0` on attack towers in its radius, not on support towers or traps).
+  - The scene draws traps flat (no shadow or turret rings) and suppresses their muzzle flash. A trap with `visual.impact` emits an `impact` event where it goes off.
 - **Attack kind:** you need three pieces:
   - a module in `systems/attacks/` (`aim`, `projectile`, `params` with label, check and unit, `apply`)
   - an entry in `systems/attacks/index.ts`
@@ -102,7 +111,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 
   Every `params` value can then be upgraded via `effects.attack` and shows up in the UI.
 - **Status effect:** add a member of `StatusEffect` and an entry in `STATUSES` (`systems/status.ts`), with a merge rule and optional hooks.
-- **Enemy:** add it to `content/enemies.ts`, with `layer` (`ground`/`air`), `visual` and optional `traits`. The available traits are armor, regen, splitOnDeath, slowImmune, shield, sprint, evade, healer, leader, stealth, unstoppable and swift. A new trait is an entry in the `TRAITS` registry (`systems/traits.ts`), using the hooks `onDamage`, `onTick`, `onDeath` and `resists`. There is no inheritance tree and no global event bus. Stealth enemies may only appear in missions where the detector is buildable.
+- **Enemy:** add it to `content/enemies.ts`, with `layer` (`ground`/`air`), `visual` and optional `traits`. The available traits are armor, regen, splitOnDeath, slowImmune, shield, sprint, evade, healer, leader, stealth, unstoppable, swift, burrow and harden. A new trait is an entry in the `TRAITS` registry (`systems/traits.ts`), using the hooks `onDamage`, `onTick`, `onDeath` and `resists`. There is no inheritance tree and no global event bus. Stealth enemies may only appear in missions where the detector is buildable.
 - **Upgrades:** `UpgradeDefinition` (`id`, `label`, `description`, `cost`, `requires`, optional `path`, `effects`) in `content/upgrades.ts`.
   - `attackTower` generates the five-level path.
   - `AURA_UPGRADES` defines the three exclusive aura paths.
@@ -113,7 +122,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 
 ## Tests
 
-- Tests are pure Vitest with no DOM; they build a `Game` (or `Match`/`Room`) directly. Helpers in `core/test-helpers.ts`: `finishWave`, `play`, `makeEnemy`, `landProjectiles`.
+- Tests are pure Vitest with no DOM; they build a `Game` (or `Match`/`Room`) directly. Helpers in `core/test-helpers.ts`: `finishWave`, `play`, `makeEnemy`, `landProjectiles`. `play` lives in `core/play.ts` (no vitest import) so `scripts/balance.ts` can reuse it; the mission rules (air, stealth, buildability, thin defense, Nova-only, tutorial exemption) live in `core/mission-checks.ts` and are shared by `missions.test.ts` and the balance script.
 - `core/missions.test.ts` plays each mission with two deterministic strategies (`core/strategies/`) to a win. It also checks that missions are lost without towers, with only three towers from mission 02 on, and with a Nova-only defense against gliders. `PENDING_BALANCE` lists strategies that do not win yet (currently Frostwall A/B); their win tests are skipped.
 - Multiplayer tests:
   - `core/coop.test.ts`: co-op economy

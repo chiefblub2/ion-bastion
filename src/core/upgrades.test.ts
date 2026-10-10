@@ -8,7 +8,9 @@ import type { TowerDefinition, TowerId } from "./types";
 
 function setup(type: TowerId) {
   const game = new Game(); game.state.wallets[0] = 2000;
-  const result = game.command({ type: "build", tower: type, x: 4, y: 4 });
+  // Traps go on the path, every other tower beside it.
+  const cell = TOWERS[type].placement === "path" ? game.mission.map.path[1] : { x: 4, y: 4 };
+  const result = game.command({ type: "build", tower: type, ...cell });
   const tower = game.state.towers.find(t => t.id === result.id)!;
   return { game, tower };
 }

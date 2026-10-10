@@ -960,6 +960,228 @@ export const THEMES: Record<MapTheme, Theme> = {
       });
     },
   },
+  // Dünenmeer: sandstone spires and half-buried wrecks in rippled sand. First draw of `obstacle` picks the variant (ambient reads it from `hash`).
+  dune: {
+    backdrop: 0x1a1206,
+    ground: [0x2a1f10, 0x261c0e],
+    grid: 0x4a3818,
+    path: { edge: 0xc98a3a, bed: 0x3a2a12, line: 0xffc46b, arrow: 0xffd48a },
+    accent: 0xffc46b,
+    obstacle: (g, x, y, rand) => {
+      const kind = rand();
+      // Soft shadow, stretched away from the light.
+      g.fillStyle(0x0a0602, 0.5);
+      g.fillEllipse(x + 32, y + 47, 42, 11);
+      if (kind < 0.55) {
+        // Sandstone spire with banded strata and a lit left face.
+        const lean = (rand() - 0.5) * 6,
+          h = 28 + rand() * 12,
+          top = y + 46 - h;
+        g.fillStyle(0x6b4e28);
+        g.fillPoints([{ x: x + 16, y: y + 46 }, { x: x + 21 + lean, y: top + 4 }, { x: x + 27 + lean, y: top }, { x: x + 35 + lean, y: top + 3 }, { x: x + 40, y: y + 46 }], true);
+        g.fillStyle(0x8a6a3a);
+        g.fillPoints([{ x: x + 16, y: y + 46 }, { x: x + 21 + lean, y: top + 4 }, { x: x + 27 + lean, y: top }, { x: x + 28, y: y + 46 }], true);
+        g.lineStyle(1.5, 0x4a3418, 0.8);
+        for (let i = 1; i < 4; i++) {
+          const ly = top + (h * i) / 4;
+          g.lineBetween(x + 18 + lean * (1 - i / 4) + 1, ly, x + 38 + lean * (1 - i / 4) - 1, ly + rand() * 2 - 1);
+        }
+        g.fillStyle(0xb08850, 0.5);
+        g.fillTriangle(x + 21 + lean, top + 4, x + 27 + lean, top, x + 26 + lean, top + 10);
+        // Drift of sand banked against the foot.
+        g.fillStyle(0xa87c40, 0.8);
+        g.fillEllipse(x + 22, y + 46, 22, 6);
+      } else {
+        // Half-buried wreck: tilted hull plate, ribs and a drift of sand over its lower half.
+        const a = (rand() < 0.5 ? -1 : 1) * (0.25 + rand() * 0.25),
+          c = Math.cos(a),
+          s = Math.sin(a),
+          at = (u: number, v: number) => ({ x: x + 28 + u * c - v * s, y: y + 32 + u * s + v * c });
+        g.fillStyle(0x4a3a2e);
+        g.fillPoints([at(-20, -12), at(18, -14), at(22, 6), at(-16, 10)], true);
+        g.fillStyle(0x6a4a30);
+        g.fillPoints([at(-20, -12), at(18, -14), at(19, -9), at(-19, -7)], true);
+        g.lineStyle(2, 0x2a2018, 0.9);
+        for (const u of [-10, 0, 10]) {
+          const p = at(u, -8),
+            q = at(u + 1, 8);
+        g.lineBetween(p.x, p.y, q.x, q.y);
+        }
+        g.fillStyle(0x8a4a22, 0.8);
+        g.fillCircle(at(-6, -3).x, at(-6, -3).y, 2);
+        g.fillStyle(0xa87c40);
+        g.fillPoints([{ x: x + 6, y: y + 46 }, { x: x + 14, y: y + 36 }, { x: x + 28, y: y + 38 }, { x: x + 44, y: y + 33 }, { x: x + 52, y: y + 46 }], true);
+        g.fillStyle(0xc49a5a, 0.6);
+        g.fillTriangle(x + 14, y + 36, x + 28, y + 38, x + 20, y + 41);
+      }
+    },
+    decor: (g, x, y, rand) => {
+      const kind = rand(),
+        cx = x + 12 + rand() * 32,
+        cy = y + 14 + rand() * 28;
+      if (kind < 0.5) {
+        // Wind ripples: a few shallow arcs.
+        g.lineStyle(1, 0x3d2c14, 0.85);
+        for (let i = 0; i < 3; i++) {
+          const ry = y + 12 + i * 12 + rand() * 4;
+          g.beginPath();
+          g.arc(x + 28 + (rand() - 0.5) * 6, ry + 14, 18 + rand() * 6, -2.4, -0.8);
+          g.strokePath();
+        }
+        g.lineStyle(1, 0x5a4220, 0.5);
+        g.lineBetween(cx - 8, cy + 2, cx + 6, cy + 2);
+      } else if (kind < 0.8) {
+        // Small stones with a lit edge.
+        for (let i = 0; i < 3; i++) {
+          const sx = cx + (rand() - 0.5) * 16,
+            sy = cy + (rand() - 0.5) * 12,
+            sr = 1.5 + rand() * 2;
+          g.fillStyle(0x0a0602, 0.4);
+          g.fillEllipse(sx + 1, sy + 1.5, sr * 2.4, sr);
+          polygon(g, sx, sy, sr, 5, 0x5a4428, rand() * 3);
+        }
+      } else {
+        // Bleached bones: a rib arc over a spine.
+        g.lineStyle(1.5, 0xd8c8a0, 0.7);
+        g.lineBetween(cx - 8, cy, cx + 8, cy);
+        for (const dx of [-5, 0, 5]) {
+          g.beginPath();
+          g.arc(cx + dx, cy, 5, Math.PI, Math.PI * 2);
+          g.strokePath();
+        }
+        g.fillStyle(0xd8c8a0, 0.8);
+        g.fillCircle(cx + 10, cy, 2.2);
+      }
+    },
+    // Sand blowing across the field in streaks, heat shimmer rising off the path, glowing heat haze at the wrecks.
+    ambient: ({ g, map, path, clock, hash }) => {
+      const w = map.columns * CELL,
+        h = map.rows * CELL;
+      for (let k = 0; k < map.columns * 2; k++) {
+        const s = hash(k, 3),
+          t = hash(3, k),
+          fx = ((clock * (50 + s * 40) + s * w * 5) % (w + 40)) - 20,
+          fy = (t * h + Math.sin(clock * 0.6 + k) * 8) % h;
+        g.fillStyle(0xe8c58a, 0.18 + s * 0.2);
+        g.fillRect(fx, fy, 3 + s * 5, 1);
+      }
+      flow(path, clock, 1.1, 0.35, (p, k) => {
+        const rise = (clock * 0.5 + k * 0.29) % 1,
+          wob = Math.sin(clock * 3 + k * 2) * 3;
+        g.lineStyle(1.5, 0xffd9a0, 0.16 * (1 - rise));
+        g.lineBetween(p.x + wob - 5, p.y - 8 - rise * 10, p.x + wob + 5, p.y - 10 - rise * 10);
+      });
+      for (const b of map.blocked) {
+        const o = hash(b.x, b.y);
+        if (o < 0.55) continue;
+        // Wrecks only: a sheen drifting over the hot plate.
+        g.fillStyle(0xffc46b, 0.05 + 0.04 * Math.sin(clock * 1.6 + o * 20));
+        g.fillEllipse(px(b.x), b.y * CELL + 30, 44, 18);
+      }
+    },
+  },
+  // Tiefsee: coral and hydrothermal vents, kelp and shells, bubbles and slow light rays. First draw of `obstacle` picks the variant.
+  abyss: {
+    backdrop: 0x020a14,
+    ground: [0x061424, 0x051220],
+    grid: 0x0f3050,
+    path: { edge: 0x1f8fa8, bed: 0x072236, line: 0x3df2e0, arrow: 0x7af8ea },
+    accent: 0x3df2e0,
+    obstacle: (g, x, y, rand) => {
+      const kind = rand();
+      g.fillStyle(0x010408, 0.55);
+      g.fillEllipse(x + 28, y + 47, 38, 10);
+      if (kind < 0.55) {
+        // Branching coral with glowing tips.
+        const base = x + 28,
+          arms = 3 + Math.floor(rand() * 2);
+        for (let i = 0; i < arms; i++) {
+          const lean = (i - (arms - 1) / 2) * 9 + (rand() - 0.5) * 4,
+            h = 20 + rand() * 12,
+            tx = base + lean,
+            ty = y + 46 - h;
+          g.lineStyle(5, 0x1f5a6e);
+          g.strokePoints([{ x: base + lean * 0.2, y: y + 47 }, { x: base + lean * 0.6, y: y + 46 - h * 0.5 }, { x: tx, y: ty }], false);
+          g.lineStyle(2, 0x3a8aa0, 0.8);
+          g.strokePoints([{ x: base + lean * 0.2 - 1, y: y + 47 }, { x: base + lean * 0.6 - 1, y: y + 46 - h * 0.5 }, { x: tx - 1, y: ty }], false);
+          g.fillStyle(0xff7aa8);
+          g.fillCircle(tx, ty, 3);
+          g.fillStyle(0xffc0d4, 0.8);
+          g.fillCircle(tx - 0.8, ty - 0.8, 1.2);
+        }
+      } else {
+        // Hydrothermal vent: a dark chimney with a glowing mouth.
+        const cx = x + 28 + (rand() - 0.5) * 6,
+          h = 22 + rand() * 8;
+        g.fillStyle(0x16222e);
+        g.fillPoints([{ x: cx - 13, y: y + 47 }, { x: cx - 6, y: y + 46 - h }, { x: cx + 6, y: y + 46 - h }, { x: cx + 13, y: y + 47 }], true);
+        g.fillStyle(0x24384a);
+        g.fillPoints([{ x: cx - 13, y: y + 47 }, { x: cx - 6, y: y + 46 - h }, { x: cx - 1, y: y + 46 - h }, { x: cx - 3, y: y + 47 }], true);
+        g.fillStyle(0x7a3a1a, 0.7);
+        for (let i = 0; i < 3; i++) g.fillRect(cx - 8 + i * 6 + rand() * 2, y + 30 + rand() * 12, 3, 2);
+        g.fillStyle(0xff9a4a, 0.85);
+        g.fillEllipse(cx, y + 46 - h, 12, 4);
+        g.fillStyle(0xffe0a0, 0.9);
+        g.fillEllipse(cx, y + 46 - h, 6, 2);
+      }
+    },
+    decor: (g, x, y, rand) => {
+      const kind = rand(),
+        cx = x + 12 + rand() * 32,
+        cy = y + 14 + rand() * 28;
+      if (kind < 0.55) {
+        // Seaweed fronds.
+        for (let i = 0; i < 3; i++) {
+          const bx = cx + (i - 1) * 4,
+            lean = (rand() - 0.5) * 8,
+            h = 12 + rand() * 8;
+          g.lineStyle(1.5, i === 1 ? 0x2a8a5a : 0x1f6a48, 0.85);
+          g.strokePoints([{ x: bx, y: cy + 6 }, { x: bx + lean, y: cy + 6 - h * 0.5 }, { x: bx - lean * 0.4, y: cy + 6 - h }], false);
+        }
+      } else if (kind < 0.85) {
+        // Shell: a fan with ribs.
+        g.fillStyle(0x3a6a7a, 0.9);
+        g.fillTriangle(cx - 5, cy + 3, cx + 5, cy + 3, cx, cy - 4);
+        g.lineStyle(1, 0x9ad8e0, 0.6);
+        for (const dx of [-2.5, 0, 2.5]) g.lineBetween(cx, cy + 3, cx + dx * 1.2, cy - 3);
+      } else {
+        // Pale pebbles on the seabed.
+        for (let i = 0; i < 3; i++) {
+          g.fillStyle(0x1a4658, 0.9);
+          g.fillCircle(cx + (rand() - 0.5) * 14, cy + (rand() - 0.5) * 8, 1.5 + rand() * 1.5);
+        }
+      }
+    },
+    // Slow light rays from above, bubbles rising from vents and the channel, bioluminescent pulses at the obstacles.
+    ambient: ({ g, map, path, clock, hash }) => {
+      const h = map.rows * CELL;
+      for (let k = 0; k < Math.ceil(map.columns / 2); k++) {
+        const s = hash(k, 5),
+          sway = Math.sin(clock * 0.25 + s * 20) * 14,
+          x0 = s * map.columns * CELL + sway;
+        g.fillStyle(0x7af8ea, 0.025 + 0.015 * Math.sin(clock * 0.5 + s * 9));
+        g.fillPoints([{ x: x0, y: 0 }, { x: x0 + 22, y: 0 }, { x: x0 + 70, y: h }, { x: x0 + 30, y: h }], true);
+      }
+      for (const b of map.blocked) {
+        const o = hash(b.x, b.y),
+          bx = b.x * CELL,
+          by = b.y * CELL,
+          vent = o >= 0.55;
+        g.fillStyle(vent ? 0xff9a4a : 0x3df2e0, 0.06 + 0.06 * Math.sin(clock * 2 + o * 25));
+        g.fillCircle(px(b.x), by + 30, vent ? 20 : 26);
+        for (let i = 0; i < (vent ? 3 : 1); i++) {
+          const life = (clock * (vent ? 0.7 : 0.4) + o * 5 + i / 3) % 1;
+          g.lineStyle(1.2, 0xbff8ff, 0.6 * (1 - life));
+          g.strokeCircle(bx + 24 + o * 12 + Math.sin(life * 7 + i) * 3, by + (vent ? 28 : 34) - life * 36, 1.5 + life * 2.5);
+        }
+      }
+      flow(path, clock, 1.7, 0.45, (p, k) => {
+        const life = (clock * 0.5 + k * 0.31) % 1;
+        g.lineStyle(1, 0xbff8ff, 0.4 * (1 - life));
+        g.strokeCircle(p.x + ((k % 3) - 1) * 9, p.y + 6 - life * 18, 1.5 + (k % 2));
+      });
+    },
+  },
 };
 const themeOf = (map: MapDefinition) => THEMES[map.theme ?? "outpost"];
 /** Reactor colour of the map's theme. */

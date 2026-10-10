@@ -119,7 +119,7 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
       if (!Object.hasOwn(g.content.towers, c.tower)) return fail("tower-unknown");
       const d = g.content.towers[c.tower];
       if (!g.availableTowers().includes(c.tower)) return fail("tower-unavailable", { tower: d.name });
-      if (!g.canBuild(c.x, c.y)) return fail("cell-blocked");
+      if (!g.canBuild(c.x, c.y, c.tower)) return fail(d.placement === "path" ? "trap-off-path" : "cell-blocked");
       if (balance(s, player) < d.cost) return fail("credits-missing");
       const id = s.nextId++;
       s.wallets[player] -= d.cost;
@@ -202,7 +202,9 @@ export class Game implements Sim {
   isBlocked(x: number, y: number) {
     return this.blocked.has(`${x},${y}`);
   }
-  canBuild(x: number, y: number) {
+  /** Whether `tower` (any regular tower if absent) fits on the cell; traps need a free path cell. */
+  canBuild(x: number, y: number, tower?: TowerId) {
+    const trap = tower !== undefined && this.content.towers[tower]?.placement === "path";
     return (
       Number.isInteger(x) &&
       Number.isInteger(y) &&
@@ -210,10 +212,17 @@ export class Game implements Sim {
       y >= 0 &&
       x < this.map.columns &&
       y < this.map.rows &&
-      !this.isPath(x, y) &&
+      (trap ? this.isTrapCell(x, y) : !this.isPath(x, y)) &&
       !this.isBlocked(x, y) &&
       !this.state.towers.some((t) => t.x === x && t.y === y)
     );
+  }
+  /** Path cells that take a trap: not the entry and, on a reactor map, not the reactor. */
+  isTrapCell(x: number, y: number) {
+    const path = this.map.path,
+      end = path[path.length - 1];
+    if (!this.isPath(x, y) || (x === path[0].x && y === path[0].y)) return false;
+    return !!this.map.loop || x !== end.x || y !== end.y;
   }
   command(c: Command): CommandResult {
     const handler = HANDLERS[c.type] as Handler<Command>,

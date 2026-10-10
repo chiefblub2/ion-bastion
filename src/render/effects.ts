@@ -93,6 +93,8 @@ export function drawEffect(g: Ink, e: VisualEvent, age: number, content: Content
       return;
     }
     case "shot": {
+      // A trap has no barrel to flash.
+      if (content.towers[e.tower].placement === "path") return;
       if (content.towers[e.tower].visual.muzzle === "bolt") {
         bolt(g, e.from, e.to, e.color, alpha);
         return;

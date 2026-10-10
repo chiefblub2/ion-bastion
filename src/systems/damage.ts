@@ -1,15 +1,19 @@
 import type { DamageSource, Enemy, Sim } from "../core/types";
 import { earn } from "../core/economy";
-import { damageTaken } from "./status";
+import { damageTaken, statusDeath } from "./status";
 import { bountyBonus, markFactor } from "./support";
 import { afterHit, modifyDamage, onDeath } from "./traits";
 export type { DamageSource } from "../core/types";
-/** The single damage pipeline: traits, HP, reward, kill credit and events. `dot`: a burn step, not a hit. */
+/**
+ * The single damage pipeline: traits, HP, reward, kill credit and events. `dot`: a burn step, not a hit.
+ * An infinite amount (Fallgrube) is lethal whatever shield or armor absorb; a dodge still avoids it.
+ */
 export function applyDamage(sim: Sim, src: DamageSource, e: Enemy, amount: number, dot = false) {
   if (e.hp <= 0) return;
   const s = sim.state,
     // Weakening and marking first, so armor absorbs a share of the amplified hit.
-    dealt = modifyDamage(sim, e, amount * damageTaken(e, s.time) * markFactor(sim, e), dot);
+    raw = modifyDamage(sim, e, amount * damageTaken(e, s.time) * markFactor(sim, e), dot),
+    dealt = Number.isFinite(raw) || raw <= 0 ? raw : e.hp;
   e.hp -= dealt;
   s.events.push({ type: "damage", at: { x: e.x, y: e.y }, amount: dealt, enemy: e.id });
   afterHit(sim, e, dot);
@@ -23,4 +27,5 @@ export function applyDamage(sim: Sim, src: DamageSource, e: Enemy, amount: numbe
   if (tower) tower.kills++;
   s.events.push({ type: "kill", at: { x: e.x, y: e.y }, color: d.color, reward });
   onDeath(sim, e);
+  statusDeath(sim, e);
 }

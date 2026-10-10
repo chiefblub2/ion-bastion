@@ -10,14 +10,17 @@ interface BodyContext {
   color: number;
   /** Direction of travel. */
   heading: number;
+  /** Flying unit: drawn with a distant shadow, whatever its shape. */
+  air: boolean;
 }
 /** Enemy bodies by `visual.shape`. A new look is one entry here. */
 const BODIES: { [K in EnemyVisual["shape"]]: (ctx: BodyContext, visual: Extract<EnemyVisual, { shape: K }>) => void } = {
-  polygon: ({ g, x, y, r, color }, visual) => {
-    g.fillStyle(0x030a0c, 0.55);
-    g.fillEllipse(x, y + 6, r * 2.3, r * 1.5);
-    polygon(g, x, y, r, visual.sides, color, visual.rotation ?? 0);
-    polygon(g, x, y, r * 0.4, 4, 0x442e36, 0);
+  polygon: ({ g, x, y, r, color, air }, visual) => {
+    g.fillStyle(0x030a0c, air ? 0.3 : 0.55);
+    if (air) g.fillEllipse(x, y + 14, r * 1.8, r * 0.9);
+    else g.fillEllipse(x, y + 6, r * 2.3, r * 1.5);
+    polygon(g, x, y - (air ? 4 : 0), r, visual.sides, color, visual.rotation ?? 0);
+    polygon(g, x, y - (air ? 4 : 0), r * 0.4, 4, 0x442e36, 0);
   },
   // Flying: faint, distant shadow and an arrow pointing along the path.
   glider: ({ g, x, y, r, color, heading: a }) => {
@@ -29,8 +32,8 @@ const BODIES: { [K in EnemyVisual["shape"]]: (ctx: BodyContext, visual: Extract<
   },
 };
 /** Status marker colours; they match the towers that cause the effect. */
-const STATUS_COLORS = { slowed: 0xa5a2ff, stunned: 0x5cf2d6, burning: 0xff6a3d, vulnerable: 0xb6f04a, pulled: 0x4d7cff, disrupted: 0xff3df2, netted: 0xe0c068 };
-const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff9e, scan: 0x6fd3ff, regen: 0x93f5b8, armor: 0xc9d1d9, immune: 0x9fe6ff, split: 0x442e36 };
+const STATUS_COLORS = { slowed: 0xa5a2ff, stunned: 0x5cf2d6, burning: 0xff6a3d, vulnerable: 0xb6f04a, pulled: 0x4d7cff, disrupted: 0xff3df2, netted: 0xe0c068, bleeding: 0xd7263d, charged: 0xff4d4d };
+const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff9e, scan: 0x6fd3ff, regen: 0x93f5b8, armor: 0xc9d1d9, immune: 0x9fe6ff, split: 0x442e36, sand: 0xc9a46a, plate: 0xff9a7a };
 /** Markers under the body: auras of leaders and healers, motion trails, outlines. */
 function traitsBelow(g: Ink, x: number, y: number, r: number, cell: number, color: number, heading: number, t: TraitFlags, clock: number) {
   if (t.leader) {
@@ -78,6 +81,16 @@ function traitsBelow(g: Ink, x: number, y: number, r: number, cell: number, colo
     g.lineStyle(3.5, 0x0b0f14, 0.95);
     g.strokeCircle(x, y, r + 2);
   }
+  // Burrowed: a sand mound with a dust ring spreading around it.
+  if (t.burrowed) {
+    const dust = (clock * 1.2) % 1;
+    g.fillStyle(TRAIT_COLORS.sand, 0.35);
+    g.fillEllipse(x, y + r * 0.35, r * 2.4, r * 1.2);
+    g.fillStyle(0xe0c48a, 0.35);
+    g.fillEllipse(x - r * 0.2, y + r * 0.15, r * 1.2, r * 0.5);
+    g.lineStyle(1.5, TRAIT_COLORS.sand, 0.5 * (1 - dust));
+    g.strokeEllipse(x, y + r * 0.35, r * (1.6 + dust), r * (0.8 + dust * 0.5));
+  }
 }
 /** Markers on top of the body: shield bubble, crown, cross, scan brackets. */
 function traitsAbove(g: Ink, x: number, y: number, r: number, t: TraitFlags, clock: number) {
@@ -107,6 +120,16 @@ function traitsAbove(g: Ink, x: number, y: number, r: number, t: TraitFlags, clo
       const a = (i * Math.PI) / 2 + 0.335;
       g.beginPath();
       g.arc(x, y, r + 2, a, a + 0.9);
+      g.strokePath();
+    }
+  }
+  // Hardening: a plate ring that grows more opaque as the shell thickens.
+  if (t.harden > 0) {
+    g.lineStyle(3, TRAIT_COLORS.plate, 0.2 + 0.8 * t.harden);
+    for (let i = 0; i < 6; i++) {
+      const a = (i * Math.PI) / 3 + 0.2;
+      g.beginPath();
+      g.arc(x, y, r + 3.5, a, a + 0.7);
       g.strokePath();
     }
   }
@@ -176,6 +199,14 @@ export function drawEnemy(
       g.fillCircle(x + Math.cos(a) * (r + 4), y + Math.sin(a) * (r + 4), 1.6);
     }
   }
+  // Bleeding: drops falling off behind the enemy.
+  if (status.bleeding) {
+    for (let i = 0; i < 3; i++) {
+      const k = (clock * 1.5 + i / 3 + e.id * 0.1) % 1;
+      g.fillStyle(STATUS_COLORS.bleeding, 1 - k);
+      g.fillCircle(x - Math.cos(heading) * (r + 2 + k * 6) + (i - 1) * 2, y - Math.sin(heading) * (r + 2 + k * 6) + k * 3, 1.6);
+    }
+  }
   // Pulled: a ring trailing behind against the walking direction.
   if (status.pulled) {
     g.lineStyle(2, STATUS_COLORS.pulled, 0.85);
@@ -193,7 +224,30 @@ export function drawEnemy(
       g.strokePath();
     }
   }
-  (BODIES[d.visual.shape] as (ctx: BodyContext, visual: EnemyVisual) => void)({ g, x, y, r, color: d.color, heading }, d.visual);
+  // Tentacles trail behind the body, swaying with the clock.
+  if (d.visual.shape === "polygon" && d.visual.tentacles) {
+    const count = d.visual.tentacles;
+    g.lineStyle(1.5, d.color, 0.55);
+    for (let k = 0; k < count; k++) {
+      const i = k - (count - 1) / 2;
+      const sx = x - Math.cos(heading) * r * 0.5 - Math.sin(heading) * i * r * 0.35,
+        sy = y - Math.sin(heading) * r * 0.5 + Math.cos(heading) * i * r * 0.35,
+        w = Math.sin(clock * 5 + i * 1.3 + e.id) * r * 0.35;
+      g.strokePoints(
+        [
+          { x: sx, y: sy },
+          { x: sx - Math.cos(heading) * r * 0.9 - Math.sin(heading) * w, y: sy - Math.sin(heading) * r * 0.9 + Math.cos(heading) * w },
+          { x: sx - Math.cos(heading) * r * 1.7 + Math.sin(heading) * w, y: sy - Math.sin(heading) * r * 1.7 - Math.cos(heading) * w },
+        ],
+        false,
+      );
+    }
+  }
+  // Burrowed: only a faint body above the mound.
+  if (traits.burrowed) {
+    polygon(g, x, y, r * 0.8, d.visual.shape === "polygon" ? d.visual.sides : 4, d.color, d.visual.shape === "polygon" ? (d.visual.rotation ?? 0) : 0, 0.3);
+  } else
+    (BODIES[d.visual.shape] as (ctx: BodyContext, visual: EnemyVisual) => void)({ g, x, y, r, color: d.color, heading, air: d.layer === "air" }, d.visual);
   traitsAbove(g, x, y, r, traits, clock);
   // Netted: a mesh drawn over the body.
   if (status.netted) {
@@ -203,6 +257,13 @@ export function drawEnemy(
       g.lineBetween(x - r, y + o * r * 2 - r * 0.5, x + r, y + o * r * 2 + r * 0.5);
       g.lineBetween(x - r, y + o * r * 2 + r * 0.5, x + r, y + o * r * 2 - r * 0.5);
     }
+  }
+  // Haftladung: a bomb stuck on top, its light blinking.
+  if (status.charged) {
+    g.fillStyle(0x1a1a1a);
+    g.fillCircle(x + r * 0.5, y - r * 0.5, 3.5);
+    g.fillStyle(STATUS_COLORS.charged, Math.sin(clock * 18) > 0 ? 1 : 0.25);
+    g.fillCircle(x + r * 0.5, y - r * 0.5 - 2.5, 1.4);
   }
   if (status.burning) {
     g.fillStyle(STATUS_COLORS.burning, 0.9);

@@ -1,5 +1,7 @@
 import type { Enemy, Sim, StatusEffect, StatusKind } from "../core/types";
 import { applyDamage } from "./damage";
+import { canTarget } from "./attacks/targeting";
+import { dist } from "./path";
 import { resists, tickTraits } from "./traits";
 /** Seconds between two burn damage steps; fewer, larger hits instead of one per tick. */
 export const BURN_TICK = 0.5;
@@ -13,6 +15,16 @@ interface StatusModule<S extends StatusEffect> {
   /** Damage factor while active; 1 means unchanged. */
   damageTaken?(effect: S): number;
   tick?(sim: Sim, enemy: Enemy, effect: S): void;
+  /** When the enemy dies while the effect is running. */
+  onDeath?(sim: Sim, enemy: Enemy, effect: S): void;
+}
+/** Haftmine blast around the carrier; marked spent first, so a chain reaction never repeats it. */
+function detonate(sim: Sim, carrier: Enemy, s: Of<"charged">) {
+  s.until = -Infinity;
+  sim.state.events.push({ type: "pulse", at: { x: carrier.x, y: carrier.y }, radius: s.radius, color: sim.content.towers[s.source.type].color });
+  // A copy: fragments released by a death in the blast must not catch it.
+  for (const target of [...sim.state.enemies])
+    if (target.hp > 0 && canTarget(sim, s.source.type, target) && dist(target, carrier) <= s.radius) applyDamage(sim, s.source, target, s.damage);
 }
 /** Rule for effects with one strength value: stronger replaces, equal extends, weaker never overrides. */
 const strongest =
@@ -52,6 +64,28 @@ const STATUSES: { [K in StatusKind]: StatusModule<Of<K>> } = {
     merge: strongest((s) => -s.factor),
     speed: (s) => s.factor,
   },
+  bleeding: {
+    merge: strongest((s) => s.perCell),
+    // Only forward steps hurt: a stunned or pulled-back enemy does not bleed.
+    tick: (sim, e, s) => {
+      while (s.next <= sim.state.time && s.next <= s.until && e.hp > 0) {
+        s.next += BURN_TICK;
+        const walked = Math.max(0, e.distance - s.last);
+        s.last = e.distance;
+        if (walked > 0) applyDamage(sim, s.source, e, walked * s.perCell, true);
+      }
+    },
+  },
+  // One bomb per enemy; it goes off on time or with its carrier.
+  charged: {
+    merge: () => {},
+    tick: (sim, e, s) => {
+      if (s.until !== -Infinity && sim.state.time >= s.until) detonate(sim, e, s);
+    },
+    onDeath: (sim, e, s) => {
+      if (s.until !== -Infinity) detonate(sim, e, s);
+    },
+  },
   // Like stun: the running entry includes the recovery window, and a negative factor walks backwards.
   pull: {
     merge: () => {},
@@ -90,6 +124,8 @@ export interface StatusFlags {
   pulled: boolean;
   disrupted: boolean;
   netted: boolean;
+  bleeding: boolean;
+  charged: boolean;
 }
 /** Visible states for drawing. */
 export function statusFlags(e: Enemy, time: number): StatusFlags {
@@ -104,12 +140,18 @@ export function statusFlags(e: Enemy, time: number): StatusFlags {
     pulled: !!pull && time < pull.release,
     disrupted: on("disrupted"),
     netted: on("netted"),
+    bleeding: on("bleeding"),
+    charged: on("charged"),
   };
 }
 export const isSlowed = (e: Enemy, time: number) => statusFlags(e, time).slowed;
 /** Whether an effect of this kind is running; cheap enough for hot paths such as targeting. */
 export const hasStatus = (e: Enemy, kind: StatusKind, time: number) => e.status.some((s) => s.kind === kind && active(s, time));
 export const isNetted = (e: Enemy, time: number) => e.status.length > 0 && hasStatus(e, "netted", time);
+/** Death hooks of running effects, e.g. a Haftmine going off with its carrier. */
+export function statusDeath(sim: Sim, e: Enemy) {
+  for (const s of e.status) if (active(s, sim.state.time) || s.kind === "charged") moduleOf(s).onDeath?.(sim, e, s);
+}
 /** Runs effect ticks such as burning, expires effects and runs per-tick enemy traits such as regeneration. */
 export function tickStatus(sim: Sim, dt: number) {
   const time = sim.state.time;

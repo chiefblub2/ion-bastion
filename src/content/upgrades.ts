@@ -14,7 +14,7 @@ const ATTACK_LEVELS = [
 ] as const;
 
 /** Content factory only: costs and stat snapshots preserve the original balance. */
-export function attackUpgrades(base: TowerStats, buildCost: number, specials: LevelSpecials = {}): readonly UpgradeDefinition[] {
+export function attackUpgrades(base: TowerStats, buildCost: number, specials: LevelSpecials = {}, growsRange = true): readonly UpgradeDefinition[] {
   return ATTACK_LEVELS.map(({ level, cost, damage, range, interval }) => ({
     id: `level-${level}`,
     label: `Stufe ${level}`,
@@ -27,7 +27,7 @@ export function attackUpgrades(base: TowerStats, buildCost: number, specials: Le
       level,
       stats: {
         damage: Math.round(base.damage * damage),
-        range: base.range + range,
+        range: growsRange ? base.range + range : base.range,
         interval: base.interval * interval,
       },
       ...(specials[level] ? { attack: specials[level].attack } : {}),
@@ -119,6 +119,11 @@ export const TRACKER_UPGRADES = supportUpgrades([
   { cost: 120, attack: { amount: 0.2 }, range: 2.5, description: "Feinpeilung: Gegner im Radius 2,5 erleiden 20 % mehr Schaden." },
   { cost: 200, attack: { amount: 0.25 }, range: 2.8, description: "Zielerfassung: Gegner im Radius 2,8 erleiden 25 % mehr Schaden." },
 ]);
+
+/** A trap: an attack tower on a path cell; its trigger radius stays the same at every level. */
+export function trapTower<T extends Omit<TowerDefinition, "upgrades" | "attack" | "placement"> & { attack: Exclude<AttackSpec, SupportAttack> }>(definition: T, specials: LevelSpecials = {}) {
+  return { ...definition, placement: "path" as const, upgrades: attackUpgrades(definition, definition.cost, specials, false) };
+}
 
 /** Derive the default level path from the single base-tower definition. */
 export function attackTower<T extends Omit<TowerDefinition, "upgrades" | "attack"> & { attack: Exclude<AttackSpec, SupportAttack> }>(definition: T, specials: LevelSpecials = {}) {

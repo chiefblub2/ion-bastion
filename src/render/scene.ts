@@ -189,7 +189,7 @@ export class Battlefield extends Phaser.Scene {
       hover = this.view.hover;
     const preview = this.view.build && hover ? { ...hover, type: this.view.build, upgrades: [] } : selected;
     if (preview && s.status !== "won" && s.status !== "lost") {
-      const valid = !this.view.build || this.sim.canBuild(preview.x, preview.y),
+      const valid = !this.view.build || this.sim.canBuild(preview.x, preview.y, this.view.build),
         color = valid ? towerColor(preview, content) : 0xff647c,
         x = px(preview.x),
         y = px(preview.y),
@@ -225,7 +225,7 @@ export class Battlefield extends Phaser.Scene {
     if (
       preview &&
       towers[preview.type].attack.kind === "aura" &&
-      (!this.view.build || this.sim.canBuild(preview.x, preview.y))
+      (!this.view.build || this.sim.canBuild(preview.x, preview.y, this.view.build))
     ) {
       const color = towerColor(preview, content);
       for (const target of s.towers) {

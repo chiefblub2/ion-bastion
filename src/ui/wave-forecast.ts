@@ -91,6 +91,11 @@ const TRAIT_TAGS: { [K in TraitKind]: (t: Extract<Trait, { kind: K }>, content: 
     title: `Unter ${number(t.threshold * 100)} % HP einmalig ${number(t.duration)} s lang ${number((t.factor - 1) * 100)} % schneller`,
   }),
   evade: (t) => ({ label: `AUSWEICHEN 1/${t.every}`, title: `Weicht jedem ${t.every}. Treffer aus; Brand trifft immer` }),
+  burrow: (t) => ({
+    label: "GRÄBT SICH EIN",
+    title: `Taucht alle ${number(t.every)} Felder für ${number(t.length)} Felder ab: nur Fallen und Flächenschaden treffen`,
+  }),
+  harden: (t) => ({ label: "VERHÄRTET", title: `Bis zu ${number(t.max * 100)} % Schadensreduktion, je verletzter er ist` }),
   healer: (t) => ({
     label: "HEILER",
     title: `Heilt Gegner in ${number(t.radius)} Feldern um ${number(t.percent * 100)} % ihrer HP pro Sekunde`,

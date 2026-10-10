@@ -1,7 +1,7 @@
 import type { Game } from "../core/game";
 import type { CommandResult, EnemyId, TargetPriority, TowerId } from "../core/types";
 import { TARGET_PRIORITIES } from "../systems/combat";
-import { pageOf, towerOrder } from "../ui/tower-pages";
+import { hasPage, hotkeyTowers, isPaged, pageOf, towerOrder } from "../ui/tower-pages";
 import { isSupport } from "../systems/attacks";
 import type { MatchCommand } from "../core/match";
 import { type Interface, nextMission, renderMission, renderMissionList, TOWER_KEYS } from "../ui/interface";
@@ -73,7 +73,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     view.page = pageOf(game.content.towers[type]);
     view.selected = null;
     view.enemy = null;
-    ui.notice(`${game.content.towers[type].name} ausgewählt. Klicke auf ein freies Feld neben dem Pfad.`);
+    const d = game.content.towers[type];
+    ui.notice(`${d.name} ausgewählt. Klicke auf ein freies Feld ${d.placement === "path" ? "auf dem Weg" : "neben dem Pfad"}.`);
     ui.refresh();
   }
   /** Leaves build mode and drops the selection (Esc, right click). */
@@ -241,7 +242,18 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
   });
   document.addEventListener("keydown", (e) => {
     if (dialogs.anyOpen() || e.altKey || e.metaKey || e.ctrlKey || e.repeat) return;
-    const towerKeys = towerOrder(game);
+    // Shift+1–4 opens a tab; the number keys then pick from that tab, starting at 1.
+    const digit = /^Digit([1-9])$/.exec(e.code);
+    if (e.shiftKey && digit) {
+      const page = Number(digit[1]) - 1;
+      if (isPaged(game) && hasPage(game, page)) {
+        e.preventDefault();
+        view.page = page;
+        ui.refresh();
+      }
+      return;
+    }
+    const towerKeys = hotkeyTowers(game, view.page);
     const towerIndex = e.key.length === 1 ? TOWER_KEYS.indexOf(e.key.toLowerCase()) : -1;
     if (towerIndex >= 0 && towerKeys[towerIndex]) {
       choose(towerKeys[towerIndex]);
@@ -285,7 +297,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
           y: Math.max(0, Math.min(game.map.rows - 1, p.y + dy)),
         };
         ui.notice(
-          `Feld ${String.fromCharCode(65 + view.hover.x)}${view.hover.y + 1}. ${game.canBuild(view.hover.x, view.hover.y) ? "Bebaubar." : "Belegt."}`,
+          `Feld ${String.fromCharCode(65 + view.hover.x)}${view.hover.y + 1}. ${game.canBuild(view.hover.x, view.hover.y, view.build ?? undefined) ? "Bebaubar." : "Belegt."}`,
         );
       }
       if (e.key === "Enter") {

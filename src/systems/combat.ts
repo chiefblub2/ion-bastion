@@ -1,6 +1,6 @@
 import { resolveUpgrades } from "../core/upgrades";
 import type { Enemy, Point, Sim, TargetPriority } from "../core/types";
-import { attackModule, canAcquire, isSupport } from "./attacks";
+import { attackModule, canAcquire, canTarget, isSupport } from "./attacks";
 import { effectiveTowerStats, isAuraSource } from "./auras";
 import { dist } from "./path";
 /** Homing projectiles whose target died look for a new one within this radius. */
@@ -34,8 +34,10 @@ export function attackEnemies(sim: Sim, dt: number) {
     const attack = resolveUpgrades(t, sim.content).attack,
       module = attackModule(attack)!,
       min = module.minRange?.(attack) ?? 0;
+    // Traps go off under anything that steps on them, stealthed or not.
+    const triggers = d.placement === "path" ? canTarget : canAcquire;
     const candidates = s.enemies
-      .filter((e) => e.hp > 0 && canAcquire(sim, t.type, e) && dist(e, t) <= stats.range && dist(e, t) >= min)
+      .filter((e) => e.hp > 0 && triggers(sim, t.type, e) && dist(e, t) <= stats.range && dist(e, t) >= min)
       .sort(compareTargets(t.priority, t));
     if (!candidates.length) continue;
     const target = module.choose?.(sim, t.type, { x: t.x, y: t.y }, stats.range, candidates, attack, t) ?? candidates[0],
@@ -53,6 +55,8 @@ export function attackEnemies(sim: Sim, dt: number) {
         color: d.color,
       });
       if (!d.projectile) {
+        // A trap with an impact look (Mine) bursts on the spot, as no projectile lands.
+        if (d.placement === "path" && d.visual.impact) s.events.push({ type: "impact", tower: t.type, at: { x: e.x, y: e.y }, color: d.color });
         module.apply(
           sim,
           { tower: t.id, type: t.type },

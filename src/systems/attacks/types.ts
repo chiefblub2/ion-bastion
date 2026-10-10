@@ -24,6 +24,8 @@ export interface AttackModule<S extends AttackSpec = AttackSpec> {
   params: { [K in Exclude<keyof S, "kind">]?: ParamRule };
   /** Dead zone around the tower in cells; enemies closer than this are never targeted. */
   minRange?: (spec: S) => number;
+  /** Only traps may use this kind; validation rejects it elsewhere. */
+  trapOnly?: true;
   /** Different enemies hit per salvo, the chosen target first; 1 when absent. */
   volley?: (spec: S) => number;
   /** Extra checks beyond `params`; returns an error message. */

@@ -9,7 +9,9 @@ import type { ContentPack, EnemyDefinition, Trait } from "../core/types";
 import { applyDamage } from "./damage";
 import { createEnemy } from "./spawn";
 import { applyStatus, speedFactor, tickStatus } from "./status";
-import { traitFlags, traitSpeedFactor } from "./traits";
+import { canAcquire, canTarget } from "./attacks";
+import { updateDetection } from "./detection";
+import { isBurrowed, isHidden, traitFlags, traitSpeedFactor } from "./traits";
 
 /** The shipped content with extra traits on the drone. */
 function withDroneTraits(...traits: Trait[]): ContentPack {
@@ -234,5 +236,74 @@ describe("marker flags", () => {
       e = makeEnemy(1, "drone", 0, 3);
     expect(traitFlags(g, e)).toMatchObject({ armor: true, split: true, slowImmune: true });
     expect(traitFlags(new Game(), makeEnemy(2, "drone", 0, 3))).toMatchObject({ armor: false, split: false, slowImmune: false });
+  });
+});
+
+describe("burrow", () => {
+  const burrowing = () => new Game(undefined, withDroneTraits({ kind: "burrow", every: 3, length: 1.2 }));
+  it("is underground in the last `length` cells of each cycle, so towers cannot pick it", () => {
+    const g = burrowing();
+    const under = makeEnemy(1, "drone", 0, 3, 5.0), up = makeEnemy(2, "drone", 0, 3, 4.5);
+    expect(isBurrowed(g, under)).toBe(true);
+    expect(isHidden(g, under)).toBe(true);
+    expect(canAcquire(g, "pulse", under)).toBe(false);
+    expect(canTarget(g, "pulse", under)).toBe(true);
+    expect(isBurrowed(g, up)).toBe(false);
+    expect(canAcquire(g, "pulse", up)).toBe(true);
+    expect(traitFlags(g, under).burrowed).toBe(true);
+  });
+  it("starts on the surface and resurfaces when pulled back", () => {
+    const g = burrowing(), e = makeEnemy(1, "drone", 0, 3, 0);
+    expect(isBurrowed(g, e)).toBe(false);
+    e.distance = 2.5;
+    expect(isBurrowed(g, e)).toBe(true);
+    e.distance = 1.5;
+    expect(isBurrowed(g, e)).toBe(false);
+  });
+  it("a detector does not reveal it", () => {
+    const g = burrowing();
+    g.state.wallets[0] = 1000;
+    expect(g.command({ type: "build", tower: "detector", x: 7, y: 5 }).ok).toBe(true);
+    const e = makeEnemy(1, "drone", 7, 6, 5);
+    g.state.enemies = [e];
+    updateDetection(g);
+    expect(isHidden(g, e)).toBe(true);
+  });
+  it("is rejected by validation when malformed", () => {
+    expect(() => validateContent(withDroneTraits({ kind: "burrow", every: 3, length: 3 }))).toThrow();
+    expect(() => validateContent(withDroneTraits({ kind: "burrow", every: 0, length: 0.5 }))).toThrow();
+    expect(() => validateContent(withDroneTraits({ kind: "burrow", every: 3, length: 1.2 }))).not.toThrow();
+  });
+});
+
+describe("harden", () => {
+  const hit = (hpShare: number) => {
+    const g = new Game(undefined, withDroneTraits({ kind: "harden", max: 0.6 })),
+      e = makeEnemy(1, "drone", 0, 3);
+    g.state.enemies = [e];
+    e.hp = e.maxHp * hpShare;
+    const before = e.hp;
+    applyDamage(g, src, e, 100);
+    return { taken: before - e.hp, flags: traitFlags(g, e) };
+  };
+  it("reduces damage the more HP is lost", () => {
+    expect(hit(1).taken).toBeCloseTo(100);
+    expect(hit(0.5).taken).toBeCloseTo(70);
+    expect(hit(0.1).taken).toBeCloseTo(46);
+  });
+  it("reports the current reduction as a flag", () => {
+    const g = new Game(undefined, withDroneTraits({ kind: "harden", max: 0.6 })),
+      e = makeEnemy(1, "drone", 0, 3);
+    expect(traitFlags(g, e).harden).toBe(0);
+    e.hp = 500;
+    expect(traitFlags(g, e).harden).toBeCloseTo(0.3);
+  });
+  it("applies to burn damage as well", () => {
+    const g = new Game(undefined, withDroneTraits({ kind: "harden", max: 0.6 })),
+      e = makeEnemy(1, "drone", 0, 3);
+    g.state.enemies = [e];
+    e.hp = 500;
+    applyDamage(g, src, e, 100, true);
+    expect(e.hp).toBeCloseTo(430);
   });
 });

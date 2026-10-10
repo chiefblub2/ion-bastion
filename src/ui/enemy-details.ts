@@ -14,6 +14,8 @@ const STATUS_LABELS: { [K in keyof StatusFlags]: string } = {
   pulled: "ZURÜCKGEZOGEN",
   disrupted: "GESTÖRT",
   netted: "EINGENETZT",
+  bleeding: "BLUTET",
+  charged: "HAFTLADUNG",
 };
 
 /** Changes whenever the panel's content would; avoids rewriting the HTML on every refresh. */

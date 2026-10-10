@@ -57,6 +57,9 @@ export function validateTower(t: TowerDefinition, path: string) {
   const area = !support || t.attack.kind === "aura";
   check(t.cost > 0 && (area ? t.range > 0 : t.range >= 0) && t.damage >= 0 && (support || t.interval > 0), path, "Ungültiger Turm.");
   if (support) check(t.damage === 0 && t.interval === 0, path, "Ungültiger Unterstützungsturm: kein Schaden, kein Schusstakt.");
+  check(!module.trapOnly || t.placement === "path", path, "Diese Angriffsart gibt es nur für Fallen.");
+  if (t.placement !== undefined)
+    check(t.placement === "path" && !support, path, "Ungültige Platzierung: nur Angriffstürme können als Falle auf dem Weg stehen.");
   check(t.visual?.icon, path, "Symbol (visual.icon) fehlt.");
   validateUpgradeDefinitions(t, path);
 }

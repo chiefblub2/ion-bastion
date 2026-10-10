@@ -1,6 +1,6 @@
 # ION BASTION
 
-Tower-Defense im Browser, gebaut mit TypeScript, Phaser 3 und Vite. 30 Missionen in sechs Sektoren mit eigenen Maps, Wellen und Terrain-Stilen, dreizehn Türme und fünfzehn Gegnertypen am Boden und in der Luft. Allein spielbar oder mit 2–4 Spielern im Koop- oder Versus-Modus.
+Tower-Defense im Browser, gebaut mit TypeScript, Phaser 3 und Vite. 43 Missionen in neun Sektoren mit eigenen Maps, Wellen und Terrain-Stilen, über dreißig Türme und neunzehn Gegnertypen am Boden und in der Luft. Allein spielbar oder mit 2–4 Spielern im Koop- oder Versus-Modus.
 
 Das Spiel läuft komplett im Browser; nur der Mehrspieler braucht einen kleinen Relay-Server. Spielstände liegen bewusst nur im Arbeitsspeicher: Neuladen startet eine neue Mission.
 
@@ -23,14 +23,16 @@ Gegner laufen einen festen Pfad entlang zum Reaktor. Erreicht einer den Reaktor,
 
 ## Bedienung
 
+`http://localhost:4173/?mission=<id>` öffnet eine Mission direkt, zum Beispiel `?mission=korallengraben`.
+
 | Eingabe | Aktion |
 | --- | --- |
 | Turm wählen, freies Feld anklicken | Bauen. Danach endet der Baumodus; Shift+Klick baut weitere Türme desselben Typs. |
 | Gebauten Turm anklicken | Verbessern, verkaufen oder Zielpriorität wählen |
 | Gegner anklicken | Lebenspunkte, Schild, Eigenschaften und aktive Effekte anzeigen |
 | `T` | Zielpriorität des ausgewählten Turms weiterschalten |
-| Tabs Angriff · Kontrolle · Unterstützung | Turmseite wechseln (ab zehn verfügbaren Türmen; Pfeiltasten auf den Tabs) |
-| `1`–`9`, `0`, `Q`, `W`, `E`, `R`, `U`, `I`, `O`, `P`, `G`, `H`, `J`, `K`, `L`, `X` | Turmtyp wählen, Seite für Seite durchnummeriert; der passende Tab öffnet sich |
+| Tabs Angriff · Kontrolle · Fallen · Unterstützung, `Shift`+`1`–`4` | Turmseite wechseln (ab zehn verfügbaren Türmen; auch Pfeiltasten auf den Tabs) |
+| `1`–`9`, `0`, `Q`, `W` | Turm im offenen Tab wählen; jeder Tab beginnt wieder bei `1` (die Taste steht auf der Karte). Ohne Tabs zählen die Tasten über alle Türme. |
 | Rechtsklick, `Esc` oder ✕ | Baumodus und Auswahl aufheben. Ohne Auswahl beendet `Esc` das Vollbild. |
 | `N` | Nächste Welle starten (im Versus: „Bereit“) |
 | Leertaste | Pause, nur während einer Welle und nicht im Versus |
@@ -69,7 +71,7 @@ npm run dev      # Spiel auf http://0.0.0.0:4173
 | Wettlauf | 2–4 | Jeder verteidigt eine eigene Kopie der Mission mit vollen Start-Credits. Die Wellen starten für alle gleichzeitig, sobald alle „Bereit“ gedrückt haben, spätestens nach 30 s. Es gibt keine Pause. Wer seinen Reaktor als Letzter hält, gewinnt. Überstehen mehrere alle Wellen, entscheidet die Reaktorenergie, danach die Zahl der Abschüsse. |
 | Belagerung | 2–4 | Wie Wettlauf. Zusätzlich schickt man unter „Schicken“ Gegner in das Feld des nächsten Mitspielers, der noch im Spiel ist. Das kostet das Vierfache der Abschussprämie. Schicken kann man nur Gegnertypen, die schon in einer Welle vorkamen. Geschickte Gegner bringen dem Verteidiger keine Prämie. |
 
-Kreislauf-Missionen (Sektor VII) laufen im Mehrspieler nur als Koop: Alle verteidigen denselben Ring, das Gegnerlimit gilt für alle zusammen, und jeder kann die nächste Welle früh rufen.
+Kreislauf-Missionen (Sektor IX) laufen im Mehrspieler nur als Koop: Alle verteidigen denselben Ring, das Gegnerlimit gilt für alle zusammen, und jeder kann die nächste Welle früh rufen.
 
 Mission, Neustart und Tempo bestimmt in allen Modi der Host. Dialoge und Tabwechsel pausieren im Mehrspieler nicht.
 
@@ -118,24 +120,36 @@ Alle Missionen sind über „Missionen“ direkt wählbar, mit einem Tab je Sekt
 | 22 | Bunkerlinie | Nur Impuls, Nova, Kryo, Flak | 18 × 11 | 15 | 500 | 92 % |
 | 23 | Kathedrale | Kurzer Pfad, 15 Reaktorenergie | 18 × 12 | 15 | 520 | 88 % |
 | 24 | Hochbahn | Sprinterschwärme auf langen Geraden | 22 × 11 | 16 | 540 | 92 % |
-| 25 | Zitadelle | Finale: zwei Titanen zugleich | 20 × 13 | 16 | 560 | 90 % |
+| 25 | Zitadelle | Finale: zwei Titanen zugleich | 20 × 13 | 16 | 580 | 90 % |
 | **VI** | **Singularität** | | | | | |
 | 26 | Ereignishorizont | Nur 10 Reaktorenergie | 18 × 12 | 16 | 520 | 90 % |
 | 27 | Riss | Sehr kurzer Pfad, kompakte Karte | 15 × 10 | 16 | 560 | 95 % |
 | 28 | Zeitschleife | Einzelne Wellen mit HP-Spitzen | 18 × 12 | 17 | 580 | 110 %¹ |
 | 29 | Nullpunkt | Ohne Aura und Raffinerie, harte Panzer | 18 × 12 | 18 | 590 | 105 % |
 | 30 | Kern der Singularität | Finale: 20 Wellen, drei Titanen | 20 × 13 | 20 | 650 | 110 % |
+| **VII** | **Dünenmeer** | | | | | |
+| 31 | Treibsand | Gepanzerte Skarabäen, Wucht statt Streufeuer | 16 × 10 | 16 | 600 | 110 % |
+| 32 | Karawanenweg | Gräber tauchen ab, Fallen erwischen sie | 16 × 11 | 17 | 620 | 102 % |
+| 33 | Glasebene | Nur Fallen, Nova, Kryo und Flak | 16 × 10 | 16 | 700 | 105 % |
+| 34 | Sturmkamm | Nur 10 Reaktorenergie | 18 × 11 | 18 | 650 | 108 % |
+| 35 | Oase Null | Finale: Echo-Wellen, zwei Titanen | 18 × 11 | 19 | 700 | 112 %¹ |
+| **VIII** | **Tiefsee** | | | | | |
+| 36 | Schelfkante | Panzerkrebse mit Burst, Henker und Fallgrube brechen | 16 × 9 | 17 | 650 | 110 % |
+| 37 | Korallengraben | Heilende Quallen in der Luft, Flak | 15 × 11 | 18 | 670 | 110 % |
+| 38 | Druckkammer | Enge Spirale, 10 Reaktorenergie, Echo-Wellen | 15 × 11 | 18 | 690 | 110 %¹ |
+| 39 | Schwarzer Raucher | Phantome, ohne Aura und Raffinerie | 11 × 14 | 18 | 700 | 110 % |
+| 40 | Abgrund | Finale: alle Tiefseegegner, drei Titanen | 20 × 13 | 20 | 750 | 110 %¹ |
 
-| **VII** | **Kreislauf** | | | | | |
-| 31 | Umlaufbahn | Einfacher Ring, max. 30 Gegner, Welle alle 22 s | 18 × 12 | 8 | 400 | 35 % |
-| 32 | Doppelschleife | Einbuchtung bündelt zwei Bahnen, max. 30, alle 20 s | 20 × 12 | 9 | 450 | 45 % |
-| 33 | Mahlstrom | Zwei Einbuchtungen, max. 35, alle 18 s | 20 × 13 | 10 | 500 | 30 % |
+| **IX** | **Kreislauf** | | | | | |
+| 41 | Umlaufbahn | Einfacher Ring, max. 30 Gegner, Welle alle 22 s | 18 × 12 | 8 | 400 | 35 % |
+| 42 | Doppelschleife | Einbuchtung bündelt zwei Bahnen, max. 30, alle 20 s | 20 × 12 | 9 | 450 | 45 % |
+| 43 | Mahlstrom | Zwei Einbuchtungen, max. 35, alle 18 s | 20 × 13 | 10 | 500 | 30 % |
 
 ¹ Einzelne Wellen haben einen eigenen HP-Faktor statt des linearen Zuwachses.
 
 ### Kreislauf
 
-Die Missionen in Sektor VII spielen auf geschlossenen Ringen ohne Reaktor:
+Die Missionen in Sektor IX spielen auf geschlossenen Ringen ohne Reaktor:
 
 - Die erste Welle startest du selbst. Danach startet ein Timer jede weitere Welle, auch wenn die vorige noch läuft.
 - Gegner laufen im Kreis, bis sie fallen. Sie richten keinen Reaktorschaden an.
@@ -176,6 +190,22 @@ Jeder Gegner bewegt sich am Boden oder in der Luft; jeder Angriffsturm trifft nu
 | Peilsender | 140 | Gegner im Radius 2,2 erleiden 15 % mehr Schaden, zusätzlich zu Korrosion, kein Angriff | – |
 
 Nova, Mörser, Flak, Kryo, Henker, Schrapnell und Fangnetz verschießen Geschosse, die Zeit brauchen; schnelle Gegner können Nova-Granaten ausweichen. Tesla, Lanze, Fokus, Beben, Gravitron und Störsender treffen sofort.
+
+### Fallen
+
+Fallen baust du direkt auf freie Wegfelder (nicht auf Eingang oder Reaktor). Sie lösen aus, sobald ein Bodengegner auf ihr Feld läuft, auch ein getarnter. Flieger fliegen darüber hinweg. Nach dem Auslösen laden sie nach; ein Licht zeigt, wann sie wieder scharf sind. Fallen haben die fünf Stufen der Angriffstürme, ihr Auslöseradius bleibt aber gleich.
+
+| Falle | Kosten | Wirkung | Stufe 4 / 5 |
+| --- | --- | --- | --- |
+| Mine | 70 | Explosion mit 80 Schaden im Radius 1,1, 5 s Nachladen | Radius 1,3 / 1,5 |
+| Krähenfüße | 60 | Blutung: 4 s lang 12 Schaden je weiter gelaufenem Feld; festgehaltene oder zurückgeworfene Gegner bluten nicht | 15 je Feld / 18 je Feld, 5 s |
+| Teergrube | 60 | Gegner laufen 1,5 s mit 45 % Tempo | 40 % für 2 s / 30 % für 2,5 s |
+| Fangeisen | 90 | Hält Gegner 1,5 s fest, danach 2,5 s immun, 4 s Nachladen | 1,8 s / 2,2 s, größerer Griff |
+| Flammenrost | 80 | Brand: das Dreifache des Treffers über 3 s | 3,5-fach / 4-fach über 4 s |
+| Sprungfeder | 100 | Wirft Gegner den Weg zurück, danach 3 s immun; Berserker widerstehen | weiter / noch weiter |
+| Haftmine | 90 | Heftet eine Bombe an den Gegner: 70 Schaden im Radius 1,2 nach 2 s oder sofort, wenn der Träger stirbt; Kettenreaktionen möglich | Radius 1,4 / 1,6, Zünder 1,5 s |
+| Fallgrube | 120 | Verschlingt kleine Gegner (Drohne, Läufer, Skater, Phantom, Blinker) sofort, egal wie viele HP; größere nehmen 60 Schaden; 6 s Abdecken | auch Heiler, Schildträger, Splitter, Schleim / auch Panzer |
+| Alarmdraht | 110 | Lädt beim Auslösen alle Angriffstürme im Radius 2,5 sofort nach; 6 s Spannen | Radius 3 / 3,5 |
 
 **Angriffstürme** haben fünf Stufen:
 
@@ -251,6 +281,8 @@ Sektor I nutzt fünf Grundgegner, darunter ab Mission 02 den **Gleiter**: schnel
 | IV Orbitaldeck | Schildträger (Schild lädt sich wieder auf), Phantom (getarnt, braucht den Detektor) |
 | V Ruinenstadt | Bollwerk (Rüstung), Kommandant (stärkt Gegner in der Nähe) |
 | VI Singularität | Phasenläufer (weicht jedem n-ten Treffer aus), Berserker (unaufhaltsam, spurtet bei wenig HP) |
+| VII Dünenmeer | Skarabäus (gepanzert und flink), Gräber (taucht regelmäßig ab; dann treffen nur Fallen und Flächenschaden) |
+| VIII Tiefsee | Panzerkrebs (verhärtet, je verletzter er ist), Qualle (fliegt und heilt Gegner in der Nähe) |
 
 Getarnte Gegner kommen nur in Missionen vor, in denen der Detektor baubar ist.
 

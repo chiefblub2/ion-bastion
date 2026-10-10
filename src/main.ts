@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { Game } from "./core/game";
+import { missionById } from "./content/missions";
 import { pageOf, towerOrder } from "./ui/tower-pages";
 import { Battlefield, CELL, LocalDriver, type ViewState } from "./render/scene";
 import { mountUI, Interface, renderMission } from "./ui/interface";
@@ -11,6 +12,9 @@ import { registerTools } from "./app/webmcp";
 import "./style.css";
 // Dependencies flow top-down: state → view → UI → battlefield → input.
 const game = new Game();
+// Deep link `?mission=<id>`: start in that mission. Done before the UI and the scene are built, so they never see the default map.
+const linked = new URLSearchParams(location.search).get("mission");
+if (linked && missionById(linked)) game.command({ type: "mission", id: linked });
 mountUI(game);
 renderMission(game);
 bindUpgradeTooltip();

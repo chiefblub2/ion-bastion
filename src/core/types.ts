@@ -79,6 +79,14 @@ export interface VolleyAttack {
   /** Different enemies shot at in one salvo. */
   targets: number;
 }
+/** Krähenfüße: damage per cell walked while bleeding. */
+export interface BleedAttack { kind: "bleed"; perCell: number; duration: number }
+/** Haftmine: a bomb stuck to the enemy, blowing up after `fuse` seconds or on its death. */
+export interface ChargeAttack { kind: "charge"; fuse: number; radius: number }
+/** Fallgrube: swallows enemies up to this body size whole. */
+export interface PitAttack { kind: "pit"; size: number }
+/** Alarmdraht: instantly reloads every attack tower within `radius`. */
+export interface AlarmAttack { kind: "alarm"; radius: number }
 export interface MortarAttack {
   kind: "mortar";
   radius: number;
@@ -130,6 +138,10 @@ export type AttackSpec =
   | FocusAttack
   | PullAttack
   | MortarAttack
+  | BleedAttack
+  | ChargeAttack
+  | PitAttack
+  | AlarmAttack
   | QuakeAttack
   | ExecuteAttack
   | VolleyAttack
@@ -174,6 +186,15 @@ export type TurretStyle =
   | "lens"
   | "gravity"
   | "mortar"
+  | "mine"
+  | "spikes"
+  | "tar"
+  | "snare"
+  | "grill"
+  | "spring"
+  | "limpet"
+  | "pit"
+  | "tripwire"
   | "hammer"
   | "blade"
   | "scatter"
@@ -212,6 +233,8 @@ export interface TowerDefinition {
   targets: readonly UnitLayer[];
   /** Flying projectile; absent means the hit lands instantly (lightning). */
   projectile?: { speed: number };
+  /** `path`: a trap, built on a path cell and triggered by enemies walking over it; absent means beside the path. */
+  placement?: "path";
   visual: TowerVisual;
   upgrades: readonly UpgradeDefinition[];
 }
@@ -253,10 +276,18 @@ export type Trait =
     }
   | { kind: "stealth" }
   | { kind: "unstoppable" }
-  | { kind: "swift"; /** Extra speed and HP penalty, e.g. 0.5 and 0.2. */ speed: number; hp: number };
+  | { kind: "swift"; /** Extra speed and HP penalty, e.g. 0.5 and 0.2. */ speed: number; hp: number }
+  | {
+      kind: "burrow";
+      /** Cycle length in cells of path distance; the last `length` cells of each cycle are spent underground. */
+      every: number;
+      /** Cells underground per cycle, in (0, every). Burrowed: no tower can pick it, only traps and area damage hit. */
+      length: number;
+    }
+  | { kind: "harden"; /** Damage reduction at 0 HP; it grows linearly with the HP lost. */ max: number };
 export type TraitKind = Trait["kind"];
 export type EnemyVisual =
-  | { shape: "polygon"; sides: number; rotation?: number }
+  | { shape: "polygon"; sides: number; rotation?: number; /** Render only: number of tentacles trailing behind the body. */ tentacles?: number }
   | { shape: "glider" };
 export interface EnemyDefinition {
   id: string;
@@ -272,7 +303,7 @@ export interface EnemyDefinition {
   visual: EnemyVisual;
 }
 /** Terrain look, drawn by `render/terrain.ts`. */
-export type MapTheme = "outpost" | "lock" | "shard" | "ember" | "core" | "frost" | "toxic" | "orbit" | "ruin" | "rift";
+export type MapTheme = "outpost" | "lock" | "shard" | "ember" | "core" | "frost" | "toxic" | "orbit" | "ruin" | "rift" | "dune" | "abyss";
 export interface MapDefinition {
   id: string;
   name: string;
@@ -354,7 +385,11 @@ export type StatusEffect =
   /** Störsender: shield, regen, healer, leader, stealth and evade are off until `until`. */
   | { kind: "disrupted"; until: number }
   /** Fangnetz: slowed to `factor`, and a flyer counts as a ground target. */
-  | { kind: "netted"; factor: number; until: number };
+  | { kind: "netted"; factor: number; until: number }
+  /** Krähenfüße: every `BURN_TICK` the cells walked since `last` cost `perCell` each. */
+  | { kind: "bleeding"; perCell: number; last: number; next: number; until: number; source: DamageSource }
+  /** Haftmine: explodes at `until` or when the carrier dies; `until` is -Infinity once it has gone off. */
+  | { kind: "charged"; damage: number; radius: number; until: number; source: DamageSource };
 export type StatusKind = StatusEffect["kind"];
 export interface Enemy extends Point {
   id: number;
@@ -489,6 +524,7 @@ export type MessageCode =
   | "tower-unknown"
   | "tower-unavailable"
   | "cell-blocked"
+  | "trap-off-path"
   | "credits-missing"
   | "tower-built"
   | "tower-missing"

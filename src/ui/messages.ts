@@ -25,6 +25,7 @@ const MESSAGES: Record<MessageCode, (p: Params) => string> = {
   "tower-unknown": () => "Unbekannter Turm.",
   "tower-unavailable": (p) => `${p.tower} ist in dieser Mission nicht verfügbar.`,
   "cell-blocked": () => "Hier kannst du nicht bauen. Wähle ein freies Rasterfeld.",
+  "trap-off-path": () => "Fallen kannst du nur auf freie Wegfelder bauen, nicht auf Eingang oder Reaktor.",
   "credits-missing": () => "Nicht genügend Credits.",
   "tower-built": (p) => `${p.tower} gebaut.`,
   "tower-missing": () => "Turm nicht gefunden.",

@@ -1,7 +1,10 @@
 import type { AttackKind, AttackSpec } from "../../core/types";
+import { alarm } from "./alarm";
 import { aura } from "./aura";
+import { bleed } from "./bleed";
 import { burn } from "./burn";
 import { chain } from "./chain";
+import { charge } from "./charge";
 import { corrode } from "./corrode";
 import { decay } from "./decay";
 import { disrupt } from "./disrupt";
@@ -13,6 +16,7 @@ import { income } from "./income";
 import { mortar } from "./mortar";
 import { net } from "./net";
 import { pierce } from "./pierce";
+import { pit } from "./pit";
 import { pull } from "./pull";
 import { quake } from "./quake";
 import { slow } from "./slow";
@@ -44,6 +48,10 @@ const ATTACKS: { [K in AttackKind]: AttackModule<Extract<AttackSpec, { kind: K }
   focus,
   pull,
   mortar,
+  bleed,
+  charge,
+  pit,
+  alarm,
   quake,
   execute,
   volley,

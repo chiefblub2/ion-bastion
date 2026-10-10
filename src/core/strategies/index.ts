@@ -1,5 +1,7 @@
+import { ABYSS_STRATEGIES } from "./abyss";
 import { b, type Strategies } from "./build";
 import { CIRCLE_STRATEGIES } from "./circle";
+import { DUNE_STRATEGIES } from "./dune";
 import { FROST_STRATEGIES } from "./frost";
 import { ORBIT_STRATEGIES } from "./orbit";
 import { RIFT_STRATEGIES } from "./rift";
@@ -106,5 +108,7 @@ export const STRATEGIES: Strategies = {
   ...ORBIT_STRATEGIES,
   ...RUIN_STRATEGIES,
   ...RIFT_STRATEGIES,
+  ...DUNE_STRATEGIES,
+  ...ABYSS_STRATEGIES,
   ...CIRCLE_STRATEGIES,
 };

@@ -7,7 +7,9 @@ import {
   SPLITTERFELD_WAVES,
   WAVES,
 } from "./waves";
+import { TIEFSEE } from "./sectors/abyss";
 import { KREISLAUF } from "./sectors/circle";
+import { DUENENMEER } from "./sectors/dune";
 import { FROSTGUERTEL } from "./sectors/frost";
 import { ORBITALDECK } from "./sectors/orbit";
 import { SINGULARITAET } from "./sectors/rift";
@@ -72,6 +74,8 @@ export const SECTORS: readonly MissionSector[] = [
   ORBITALDECK,
   RUINENSTADT,
   SINGULARITAET,
+  DUENENMEER,
+  TIEFSEE,
   KREISLAUF,
 ];
 export const MISSIONS: readonly MissionDefinition[] = SECTORS.flatMap((s) => s.missions);

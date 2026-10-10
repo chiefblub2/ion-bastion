@@ -43,6 +43,19 @@ function muzzleGlow({ g, x, y, tower: t, definition: d, kick }: TurretContext, d
   g.fillStyle(shade(d.color, 0.5), kick * 0.7);
   g.fillCircle(p.x, p.y, size * (0.6 + kick * 0.6));
 }
+/** Traps lie flat on the path: a thin frame instead of a raised plate. */
+function trapFrame({ g, x, y, definition: d }: TurretContext, size = 19) {
+  g.fillStyle(DARK, 0.75);
+  g.fillRoundedRect(x - size, y - size, size * 2, size * 2, 5);
+  g.lineStyle(1.5, shade(d.color, -0.35), 0.9);
+  g.strokeRoundedRect(x - size, y - size, size * 2, size * 2, 5);
+}
+/** Ready light of a trap: lit once it has re-armed, dark while it reloads. */
+function armedLight({ g, x, y, definition: d, tower: t }: TurretContext) {
+  const armed = t.cooldown === 0;
+  g.fillStyle(armed ? d.color : DARK, armed ? 1 : 0.9);
+  g.fillCircle(x + 14, y - 14, 2.4);
+}
 /** Base plates by `visual.turret`: shadow, outer plate, trim and the dark inner deck. */
 const BASES: Record<TurretStyle, Drawing> = {
   barrel: ({ g, x, y, definition: d }) => {
@@ -199,6 +212,29 @@ const BASES: Record<TurretStyle, Drawing> = {
     g.fillCircle(x, y, 18);
     g.fillStyle(shade(d.color, -0.4));
     for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) g.fillEllipse(x + sx * 18, y + sy * 18, 8, 5);
+  },
+  mine: (ctx) => trapFrame(ctx, 15),
+  spikes: (ctx) => trapFrame(ctx),
+  tar: ({ g, x, y, definition: d }) => {
+    g.fillStyle(shade(d.color, -0.6), 0.9);
+    g.fillEllipse(x, y, 40, 34);
+  },
+  snare: (ctx) => trapFrame(ctx, 17),
+  grill: (ctx) => trapFrame(ctx),
+  spring: (ctx) => trapFrame(ctx, 16),
+  limpet: (ctx) => trapFrame(ctx, 14),
+  // A dug hole with a stone rim.
+  pit: ({ g, x, y, definition: d }) => {
+    g.fillStyle(shade(d.color, -0.3), 0.9);
+    g.fillCircle(x, y, 19);
+    g.fillStyle(0x020506);
+    g.fillCircle(x, y, 15);
+  },
+  // Two posts on the path edge.
+  tripwire: ({ g, x, y, definition: d }) => {
+    g.fillStyle(shade(d.color, -0.55));
+    g.fillRect(x - 19, y - 4, 6, 8);
+    g.fillRect(x + 13, y - 4, 6, 8);
   },
   // Cracked stone slab.
   hammer: ({ g, x, y, definition: d }) => {
@@ -470,6 +506,137 @@ const TURRETS: Record<TurretStyle, Drawing> = {
     g.fillCircle(x, y, 3);
     hub(ctx, 1.5);
     muzzleGlow(ctx, back + 14 + level, 6);
+  },
+  // A domed mine with a blinking fuse.
+  mine: (ctx) => {
+    const { g, x, y, definition: d, clock, charge } = ctx,
+      c = d.color;
+    g.fillStyle(shade(c, -0.5));
+    g.fillCircle(x, y, 10);
+    g.fillStyle(shade(c, -0.15), 0.4 + 0.6 * charge);
+    g.fillCircle(x, y, 7);
+    for (let i = 0; i < 4; i++) {
+      const p = at(x, y, (i * Math.PI) / 2 + Math.PI / 4, 11);
+      g.fillStyle(shade(c, -0.3));
+      g.fillCircle(p.x, p.y, 2);
+    }
+    if (charge >= 1) {
+      g.fillStyle(0xffffff, 0.5 + 0.5 * Math.sin(clock * 6));
+      g.fillCircle(x, y, 2);
+    }
+    armedLight(ctx);
+  },
+  // Rows of spikes that shoot up on each strike.
+  spikes: (ctx) => {
+    const { g, x, y, definition: d, kick } = ctx,
+      c = d.color,
+      h = 3 + 5 * kick;
+    for (let i = -1; i <= 1; i++)
+      for (let j = -1; j <= 1; j++) {
+        const sx = x + i * 11,
+          sy = y + j * 11;
+        g.fillStyle(shade(c, -0.3 + 0.5 * kick));
+        g.fillTriangle(sx - 3, sy + 3, sx + 3, sy + 3, sx, sy + 3 - h);
+      }
+    armedLight(ctx);
+  },
+  // Bubbling tar.
+  tar: (ctx) => {
+    const { g, x, y, tower: t, definition: d, clock } = ctx,
+      c = d.color;
+    g.fillStyle(shade(c, -0.35), 0.9);
+    g.fillEllipse(x, y, 30, 25);
+    for (let i = 0; i < 3; i++) {
+      const phase = (clock * 0.7 + i / 3 + t.id * 0.2) % 1;
+      g.lineStyle(1.2, shade(c, 0.4), 1 - phase);
+      g.strokeCircle(x - 7 + i * 7, y - 2 + (i % 2) * 5, 1 + phase * 4);
+    }
+  },
+  // Open jaws that snap shut and spring back open while re-arming.
+  snare: (ctx) => {
+    const { g, x, y, definition: d, charge } = ctx,
+      c = d.color,
+      open = 3 + 9 * charge;
+    g.lineStyle(1.5, shade(c, -0.3));
+    g.strokeCircle(x, y, 5);
+    for (const side of [-1, 1]) {
+      g.fillStyle(c);
+      g.fillRect(x - 12, y + side * open - 1.5, 24, 3);
+      for (let i = 0; i < 5; i++) {
+        const tx = x - 10 + i * 5;
+        g.fillTriangle(tx - 1.8, y + side * open, tx + 1.8, y + side * open, tx, y + side * (open - 4));
+      }
+    }
+    armedLight(ctx);
+  },
+  // A glowing grate.
+  grill: (ctx) => {
+    const { g, x, y, tower: t, definition: d, clock, kick } = ctx,
+      c = d.color,
+      glow = 0.55 + 0.25 * Math.sin(clock * 5 + t.id) + 0.2 * kick;
+    for (let i = -2; i <= 2; i++) {
+      g.fillStyle(shade(c, -0.6));
+      g.fillRect(x - 14, y + i * 6 - 1.5, 28, 3);
+      g.fillStyle(c, glow);
+      g.fillRect(x - 12, y + i * 6 - 0.8, 24, 1.6);
+    }
+  },
+  // A coiled spring under a launch plate, compressed while it re-arms.
+  spring: (ctx) => {
+    const { g, x, y, definition: d, charge, kick } = ctx,
+      c = d.color,
+      h = 4 + 6 * charge + 6 * kick;
+    g.lineStyle(1.5, shade(c, -0.2));
+    for (let i = 0; i < 4; i++) {
+      const yy = y + 8 - (i * h) / 3;
+      g.lineBetween(x - 7, yy, x + 7, yy - h / 6);
+    }
+    g.fillStyle(c);
+    g.fillRoundedRect(x - 10, y + 6 - h - 4, 20, 4, 2);
+    armedLight(ctx);
+  },
+  // A magnetic disc carrying the next bomb; empty until it re-arms.
+  limpet: (ctx) => {
+    const { g, x, y, definition: d, clock, charge } = ctx,
+      c = d.color;
+    g.lineStyle(1.5, shade(c, -0.3));
+    g.strokeCircle(x, y, 11);
+    if (charge >= 1) {
+      g.fillStyle(shade(c, -0.35));
+      g.fillCircle(x, y, 7);
+      g.fillStyle(c, 0.5 + 0.5 * Math.sin(clock * 8));
+      g.fillCircle(x, y - 3, 2);
+    }
+    armedLight(ctx);
+  },
+  // Planks slide over the hole while it re-arms and open once it is ready.
+  pit: (ctx) => {
+    const { g, x, y, definition: d, charge } = ctx,
+      c = d.color,
+      cover = 1 - charge;
+    if (cover > 0) {
+      g.fillStyle(shade(c, 0.1));
+      for (let i = -1; i <= 1; i++) g.fillRect(x - 15, y + i * 9 - 3.5, 30 * cover, 7);
+    }
+    armedLight(ctx);
+  },
+  // The wire between the posts, taut and humming when armed.
+  tripwire: (ctx) => {
+    const { g, x, y, definition: d, clock, charge, kick } = ctx,
+      c = d.color,
+      sag = (1 - charge) * 6 + kick * 4;
+    g.lineStyle(1.5, c, 0.4 + 0.6 * charge);
+    g.beginPath();
+    g.moveTo(x - 15, y);
+    for (let i = 1; i <= 6; i++) {
+      const f = i / 6;
+      g.lineTo(x - 15 + 30 * f, y + Math.sin(f * Math.PI) * sag + (charge >= 1 ? Math.sin(clock * 30 + i) * 0.4 : 0));
+    }
+    g.strokePath();
+    g.fillStyle(c);
+    g.fillCircle(x - 16, y, 2.2);
+    g.fillCircle(x + 16, y, 2.2);
+    armedLight(ctx);
   },
   // A piston that rises while charging and slams down on the shot.
   hammer: (ctx) => {
@@ -823,21 +990,27 @@ export function drawTower(g: Ink, x: number, y: number, tower: Tower, definition
     g.fillStyle(c, 0.08 + 0.05 * Math.sin(clock * 2 + tower.id));
     g.fillCircle(x, y, 27);
   }
-  g.fillStyle(0x050b10, 0.55);
-  g.fillEllipse(x, y + 8, 39, 27);
+  // Traps lie flat on the path: no shadow and no turret rings.
+  const trap = definition.placement === "path";
+  if (!trap) {
+    g.fillStyle(0x050b10, 0.55);
+    g.fillEllipse(x, y + 8, 39, 27);
+  }
   BASES[definition.visual.turret](ctx);
-  if (level >= 2) {
+  if (level >= 2 && !trap) {
     g.lineStyle(1, shade(c, -0.2), 0.6);
     g.strokeCircle(x, y, 17);
   }
-  if (level >= 4)
+  if (level >= 4 && !trap)
     for (let i = 0; i < 4; i++) {
       const p = at(x, y, Math.PI / 4 + (i * Math.PI) / 2, 15.5);
       g.fillStyle(c, 0.6 + 0.4 * Math.sin(clock * 3 + i));
       g.fillCircle(p.x, p.y, 1.6);
     }
-  g.lineStyle(1.5, c, 0.6);
-  g.strokeCircle(x, y, 14);
+  if (!trap) {
+    g.lineStyle(1.5, c, 0.6);
+    g.strokeCircle(x, y, 14);
+  }
   TURRETS[definition.visual.turret](ctx);
   for (let i = 0; i < badges.markers; i++) {
     g.fillStyle(c);
