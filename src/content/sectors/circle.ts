@@ -3,7 +3,7 @@ import { parseMap } from "../maps";
 import { g, wave } from "../waves";
 // Sector VII, Kreislauf: ring maps without a reactor. Waves start on a timer, enemies
 // circle until they die, and too many at once overload the ring.
-const UMLAUFBAHN = parseMap("umlaufbahn", "Umlaufbahn", [
+const UMLAUFBAHN = parseMap("umlaufbahn", "Orbit", [
   "..................",
   "..S===========....",
   "..=..........=....",
@@ -17,7 +17,7 @@ const UMLAUFBAHN = parseMap("umlaufbahn", "Umlaufbahn", [
   "..============....",
   "..................",
 ], "orbit");
-const DOPPELSCHLEIFE = parseMap("doppelschleife", "Doppelschleife", [
+const DOPPELSCHLEIFE = parseMap("doppelschleife", "Double Loop", [
   "....................",
   ".S=======..=======..",
   ".=......=..=.....=..",
@@ -31,7 +31,7 @@ const DOPPELSCHLEIFE = parseMap("doppelschleife", "Doppelschleife", [
   ".=================..",
   "....................",
 ], "rift");
-const MAHLSTROM = parseMap("mahlstrom", "Mahlstrom", [
+const MAHLSTROM = parseMap("mahlstrom", "Maelstrom", [
   "....................",
   ".S=====.....======..",
   ".=....=.....=....=..",
@@ -48,12 +48,12 @@ const MAHLSTROM = parseMap("mahlstrom", "Mahlstrom", [
 ], "rift");
 export const KREISLAUF: MissionSector = {
   id: "circle",
-  name: "Kreislauf",
+  name: "Circuit",
   missions: [
     {
       id: "umlaufbahn",
-      name: "Umlaufbahn",
-      focus: "Gegner kreisen, bis sie fallen. Halte den Ring unter dem Limit",
+      name: "Orbit",
+      focus: "Enemies circle until they die. Keep the ring under the limit",
       map: UMLAUFBAHN,
       circle: { interval: 22, limit: 30, earlyBonus: 2 },
       waves: [
@@ -72,8 +72,8 @@ export const KREISLAUF: MissionSector = {
     },
     {
       id: "doppelschleife",
-      name: "Doppelschleife",
-      focus: "Die Einbuchtung bündelt zwei Bahnen. Früh rufen lohnt sich",
+      name: "Double Loop",
+      focus: "The indent bundles two lanes. Calling early pays off",
       map: DOPPELSCHLEIFE,
       circle: { interval: 20, limit: 30, earlyBonus: 3 },
       waves: [
@@ -93,8 +93,8 @@ export const KREISLAUF: MissionSector = {
     },
     {
       id: "mahlstrom",
-      name: "Mahlstrom",
-      focus: "Zwei Einbuchtungen, schnelle Wellen. Heiler und Anführer zuerst",
+      name: "Maelstrom",
+      focus: "Two indents, fast waves. Medics and leaders first",
       map: MAHLSTROM,
       circle: { interval: 18, limit: 35, earlyBonus: 3 },
       waves: [

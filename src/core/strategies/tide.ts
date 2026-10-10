@@ -66,7 +66,7 @@ export const TIDE_STRATEGIES: Strategies = {
     },
   },
   mondfinsternis: {
-    // The corridor row between the two middle legs, Gravitron and Störsender against the swimmers.
+    // The corridor row between the two middle legs, Gravitron and Jammer against the swimmers.
     A: {
       upgradeFirst: true,
       builds: [

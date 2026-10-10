@@ -14,7 +14,7 @@ function place(g: Game, type: TowerId, x: number, y: number, upgrades: string[] 
   return t;
 }
 const src = { tower: 0, type: "pulse" as const };
-describe("Prämienbake", () => {
+describe("Bounty Beacon", () => {
   it("adds half the reward for kills in range, nothing outside, and never stacks", () => {
     const g = new Game(),
       reward = ENEMIES.tank.reward;

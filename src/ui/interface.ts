@@ -17,6 +17,7 @@ export type { MultiplayerSession } from "./players";
 import type { ViewState } from "../render/scene";
 import { hotkeyTowers, isPaged, pageOf, TOWER_PAGES, towerOrder } from "./tower-pages";
 const pad = (n: number) => String(n).padStart(2, "0");
+const plural = (n: number, word: string) => (n === 1 ? word : `${word}s`);
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI"];
 const roman = (index: number) => ROMAN[index] ?? String(index + 1);
 /** Hotkeys for the towers of the open tab, from 1 again on every tab; more than ten continue with letters. */
@@ -29,35 +30,35 @@ function towerKeyRange(count: number, wrap = (key: string) => key) {
 }
 /** Header of a start-screen page: back, the brand (a link home) and the title. */
 const pageHead = (eyebrow: string, title: string, id: string) =>
-  `<header class="menu-page-head"><button class="quiet menu-back" data-back>← Zurück</button><a class="brand" href="/" aria-label="ION BASTION Startseite"><span class="brand-mark">I</span><span>ION<span class="brand-light">BASTION</span></span></a></header><p class="eyebrow">${eyebrow}</p><h1 id="${id}">${title}</h1>`;
+  `<header class="menu-page-head"><button class="quiet menu-back" data-back>← Back</button><a class="brand" href="/" aria-label="ION BASTION home"><span class="brand-mark">I</span><span>ION<span class="brand-light">BASTION</span></span></a></header><p class="eyebrow">${eyebrow}</p><h1 id="${id}">${title}</h1>`;
 export function mountUI(game: Game) {
   const TOWERS = game.content.towers;
   document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div id="start-screen" class="start-screen">
-  <section class="menu-page menu-home" data-page="home" tabindex="-1" aria-labelledby="menu-title"><p class="eyebrow">TOWER DEFENSE</p><h2 id="menu-title" class="menu-title"><span class="brand-mark">I</span><span>ION<span class="brand-light">BASTION</span></span></h2><p class="menu-tagline">Halte die Linie. Schütze den Reaktor.</p><div class="menu-options"><button id="menu-continue" class="mission-mode menu-continue" hidden><strong>Weiterspielen ▶</strong><span id="menu-continue-mission"></span></button><button id="menu-campaign" class="mission-mode"><strong>Kampagne</strong><span>Reaktor verteidigen</span><small id="menu-campaign-info"></small></button><button id="menu-circle" class="mission-mode" data-mode="circle"><strong>⟳ Kreislauf</strong><span>Ring unter dem Limit halten</span><small id="menu-circle-info"></small></button><button id="menu-coop" class="mission-mode"><strong>Mehrspieler ⇄</strong><span>Zusammen oder gegeneinander</span><small>2–4 Spieler · ${MODE_IDS.map((id) => MODES[id].name).join(" · ")}</small></button></div><div class="dialog-actions"><button id="menu-codex" class="quiet">Gegnerakte <span>◆</span></button><button id="menu-help" class="quiet">Spielhilfe <span>?</span></button></div></section>
-  <section id="mission-page" class="menu-page" tabindex="-1" data-page="missions" aria-labelledby="missions-title" hidden>${pageHead("EINSATZPLAN", "Mission wählen.", "missions-title")}<p id="mission-warning" class="mission-warning" hidden>Deine aktuelle Verteidigung und dein Fortschritt werden zurückgesetzt.</p><div id="mission-modes" class="mission-modes" role="tablist" aria-label="Spielmodus" hidden></div><div id="sector-tabs" class="sector-tabs" role="tablist" aria-label="Sektoren" hidden></div><p id="mode-rules" class="mode-rules" hidden>Geschlossene Ringe ohne Reaktor: Gegner kreisen, bis sie fallen. Wellen starten per Timer, wer früh ruft, bekommt Credits. Sind mehr Gegner im Ring als das Limit erlaubt, ist die Mission verloren.</p><div id="mission-list" class="mission-list"></div></section>
-  <section id="coop-page" class="menu-page" tabindex="-1" data-page="coop" aria-labelledby="coop-title" hidden>${pageHead("MEHRSPIELER · 2–4 SPIELER", "Zusammen oder gegeneinander.", "coop-title")}<fieldset id="coop-modes" class="coop-modes"><legend>Modus</legend>${MODE_IDS.map((id) => `<label><input type="radio" name="coop-mode" value="${id}"${id === "coop" ? " checked" : ""}><span>${MODES[id].name}</span></label>`).join("")}</fieldset><p id="coop-rules" class="coop-rules">${MODES.coop.rules}</p><p class="coop-mission">Mission: <b id="coop-mission"></b> <button id="coop-pick" class="text-button">Mission wählen</button></p><p id="coop-status" role="status"></p><div id="coop-lobby"><div class="dialog-actions"><button id="coop-create" class="primary">Raum erstellen</button></div><form id="coop-join-form" class="coop-join"><label for="coop-code">Raumcode</label><input id="coop-code" maxlength="4" autocomplete="off" spellcheck="false" placeholder="ABCD"><button id="coop-join" class="quiet" type="submit">Beitreten</button></form></div><div id="coop-room" hidden><p class="coop-code">Raum <b id="coop-room-code"></b></p><div class="dialog-actions"><button id="coop-leave" class="quiet">Raum verlassen</button><button id="coop-launch" class="primary" hidden>Mission starten</button></div></div></section>
-  <section id="codex-page" class="menu-page" tabindex="-1" data-page="codex" aria-labelledby="codex-title" hidden>${pageHead("GEGNERAKTE", "Kenne deinen Feind.", "codex-title")}<p>Alle Gegnertypen in der Reihenfolge, in der die Kampagne sie einführt. HP und Tempo gelten für Welle 1; spätere Wellen haben mehr HP.</p><div id="codex-tabs" class="codex-tabs" role="tablist" aria-label="Gegnerakte"></div><div id="codex-list" class="codex-list" role="tabpanel"></div></section>
-  <section id="help-page" class="menu-page" tabindex="-1" data-page="help" aria-labelledby="help-title" hidden>${pageHead("FELDHANDBUCH", "Dein Kern. Deine Linie.", "help-title")}<p>Überstehe alle Wellen einer Mission. Erreicht ein Gegner den Reaktor, verliert er Energie. Bei 0 ist die Mission verloren.</p><ol><li><strong>Verteidigung bauen</strong><br>Wähle rechts einen Turm und klicke auf ein freies Feld neben dem Pfad. Fallen gehören direkt auf den Weg. Der Kreis zeigt seine Reichweite.</li><li><strong>Welle starten</strong><br>Besiegte Gegner geben Credits. Nach jeder Welle bekommst du einen Bonus und nach ${WAVE_BREAK} Sekunden startet die nächste Welle von selbst. Bauen kannst du auch während einer Welle. Mit <kbd>N</kbd> startest du sie früher.</li><li><strong>Türme verbessern</strong><br>Klicke einen gebauten Turm an. Angriffstürme erreichen Stufe 5; die Stufen 4 und 5 sind teuer, bringen pro Credit aber mehr als ein weiterer Turm. Beim Aura-Turm wählst du einen Pfad (Schaden, Angriffstempo oder Reichweite) und baust ihn in drei Stufen aus. Für mehrere Boni baue mehrere Auren. Verkauf erstattet ${SELL_REFUND * 100} % deiner Investition.</li></ol><div class="tip">Tipp: Nova trifft Gruppen, aber nur Bodeneinheiten. Gegen Gleiter in der Luft helfen Flak und alle übrigen Angriffstürme. Tesla springt von Gegner zu Gegner, die Lanze durchschlägt ganze Reihen. Stasis hält Gegner kurz an, Korrosion lässt sie mehr Schaden nehmen, Zerfall knackt Titanen. Fokus wird stärker, je länger er auf demselben Ziel bleibt, und Gravitron zieht Bodengegner zurück. Der Mörser beschießt Gruppen aus großer Entfernung, Beben erschüttert alles rund um den Turm, der Henker erledigt angeschlagene Gegner, Schrapnell trifft mehrere Ziele zugleich, der Störsender schaltet Schilde und Heilung ab, und das Fangnetz holt Flieger in Reichweite von Bodentürmen. Prämienbake, Reparaturdock und Peilsender helfen ohne eigenen Angriff. Fallen wie Mine, Krähenfüße, Haftmine oder Fallgrube baust du direkt auf den Weg; sie lösen aus, wenn Bodengegner darüberlaufen, auch getarnte. Aura verstärkt nahe Angriffstürme, sobald du einen Pfad kaufst. Eine früh gebaute Raffinerie zahlt nach jeder Welle Credits aus. Getarnte Gegner kann ein Turm nur im Bereich eines Detektors anvisieren.</div><p class="keyboard-help">${towerKeyRange(Math.max(...TOWER_PAGES.map((_, i) => Object.values(TOWERS).filter((t) => pageOf(t) === i).length)), (key) => `<kbd>${key}</kbd>`)} Turm im offenen Tab wählen · <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>${TOWER_PAGES.length}</kbd> Tab wechseln<br><kbd>Esc</kbd>, Rechtsklick oder ✕: Auswahl aufheben<br><kbd>Shift</kbd>+Klick: mehrere Türme desselben Typs bauen<br><kbd>Leertaste</kbd> Pause · <kbd>N</kbd> Welle starten · <kbd>F</kbd> Vollbild<br><kbd>T</kbd> Zielpriorität des ausgewählten Turms wechseln<br>Gegner anklicken: HP und Eigenschaften<br>Auf dem Spielfeld: Pfeiltasten + Enter</p><button class="primary" data-back>Verstanden</button></section>
+  <section class="menu-page menu-home" data-page="home" tabindex="-1" aria-labelledby="menu-title"><p class="eyebrow">TOWER DEFENSE</p><h2 id="menu-title" class="menu-title"><span class="brand-mark">I</span><span>ION<span class="brand-light">BASTION</span></span></h2><p class="menu-tagline">Hold the line. Protect the reactor.</p><div class="menu-options"><button id="menu-continue" class="mission-mode menu-continue" hidden><strong>Continue ▶</strong><span id="menu-continue-mission"></span></button><button id="menu-campaign" class="mission-mode"><strong>Campaign</strong><span>Defend the reactor</span><small id="menu-campaign-info"></small></button><button id="menu-circle" class="mission-mode" data-mode="circle"><strong>⟳ Circuit</strong><span>Keep the ring under the limit</span><small id="menu-circle-info"></small></button><button id="menu-coop" class="mission-mode"><strong>Multiplayer ⇄</strong><span>Together or against each other</span><small>2–4 players · ${MODE_IDS.map((id) => MODES[id].name).join(" · ")}</small></button></div><div class="dialog-actions"><button id="menu-codex" class="quiet">Enemy Codex <span>◆</span></button><button id="menu-help" class="quiet">Help <span>?</span></button></div></section>
+  <section id="mission-page" class="menu-page" tabindex="-1" data-page="missions" aria-labelledby="missions-title" hidden>${pageHead("OPERATIONS", "Choose a mission.", "missions-title")}<p id="mission-warning" class="mission-warning" hidden>Your current defense and progress will be reset.</p><div id="mission-modes" class="mission-modes" role="tablist" aria-label="Game mode" hidden></div><div id="sector-tabs" class="sector-tabs" role="tablist" aria-label="Sectors" hidden></div><p id="mode-rules" class="mode-rules" hidden>Closed rings without a reactor: enemies circle until they fall. Waves start on a timer; calling one early earns credits. If more enemies are in the ring than the limit allows, the mission is lost.</p><div id="mission-list" class="mission-list"></div></section>
+  <section id="coop-page" class="menu-page" tabindex="-1" data-page="coop" aria-labelledby="coop-title" hidden>${pageHead("MULTIPLAYER · 2–4 PLAYERS", "Together or against each other.", "coop-title")}<fieldset id="coop-modes" class="coop-modes"><legend>Mode</legend>${MODE_IDS.map((id) => `<label><input type="radio" name="coop-mode" value="${id}"${id === "coop" ? " checked" : ""}><span>${MODES[id].name}</span></label>`).join("")}</fieldset><p id="coop-rules" class="coop-rules">${MODES.coop.rules}</p><p class="coop-mission">Mission: <b id="coop-mission"></b> <button id="coop-pick" class="text-button">Choose mission</button></p><p id="coop-status" role="status"></p><div id="coop-lobby"><div class="dialog-actions"><button id="coop-create" class="primary">Create room</button></div><form id="coop-join-form" class="coop-join"><label for="coop-code">Room code</label><input id="coop-code" maxlength="4" autocomplete="off" spellcheck="false" placeholder="ABCD"><button id="coop-join" class="quiet" type="submit">Join</button></form></div><div id="coop-room" hidden><p class="coop-code">Room <b id="coop-room-code"></b></p><div class="dialog-actions"><button id="coop-leave" class="quiet">Leave room</button><button id="coop-launch" class="primary" hidden>Start mission</button></div></div></section>
+  <section id="codex-page" class="menu-page" tabindex="-1" data-page="codex" aria-labelledby="codex-title" hidden>${pageHead("ENEMY CODEX", "Know your enemy.", "codex-title")}<p>All enemy types in the order the campaign introduces them. HP and speed apply to wave 1; later waves have more HP.</p><div id="codex-tabs" class="codex-tabs" role="tablist" aria-label="Enemy Codex"></div><div id="codex-list" class="codex-list" role="tabpanel"></div></section>
+  <section id="help-page" class="menu-page" tabindex="-1" data-page="help" aria-labelledby="help-title" hidden>${pageHead("FIELD MANUAL", "Your core. Your line.", "help-title")}<p>Survive all waves of a mission. When an enemy reaches the reactor, it loses energy. At 0 the mission is lost.</p><ol><li><strong>Build your defense</strong><br>Pick a tower on the right and click a free cell next to the path. Traps go right on the path. The circle shows its range.</li><li><strong>Start a wave</strong><br>Defeated enemies give credits. After each wave you get a bonus, and after ${WAVE_BREAK} seconds the next wave starts on its own. You can also build during a wave. Press <kbd>N</kbd> to start it earlier.</li><li><strong>Upgrade towers</strong><br>Click a built tower. Attack towers reach level 5; levels 4 and 5 are expensive, but give more per credit than another tower. With the Aura tower you pick a path (damage, attack speed or range) and expand it in three levels. For several bonuses, build several Auras. Selling refunds ${SELL_REFUND * 100}% of your investment.</li></ol><div class="tip">Tip: Nova hits groups, but only ground units. Against Gliders in the air, Flak and all other attack towers help. Tesla jumps from enemy to enemy, the Lance pierces whole rows. Stasis halts enemies briefly, Corrosion makes them take more damage, Decay cracks Titans. Focus gets stronger the longer it stays on the same target, and Gravitron pulls ground enemies back. The Mortar shells groups from long range, Quake shakes everything around the tower, the Executioner finishes off wounded enemies, Shrapnel hits several targets at once, the Jammer switches off shields and healing, and the Snare Net pulls flyers into range of ground towers. Bounty Beacon, Repair Dock and Tracker help without attacking themselves. Traps like Mine, Caltrops, Sticky Mine or Pitfall go directly on the path; they trigger when ground enemies walk over them, stealthed ones too. Aura boosts nearby attack towers once you buy a path. A Refinery built early pays out credits after every wave. A tower can only target stealthed enemies within range of a Detector.</div><p class="keyboard-help">${towerKeyRange(Math.max(...TOWER_PAGES.map((_, i) => Object.values(TOWERS).filter((t) => pageOf(t) === i).length)), (key) => `<kbd>${key}</kbd>`)} Pick a tower on the open tab · <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>${TOWER_PAGES.length}</kbd> Switch tab<br><kbd>Esc</kbd>, right-click or ✕: deselect<br><kbd>Shift</kbd>+click: build several towers of the same type<br><kbd>Space</kbd> Pause · <kbd>N</kbd> Start wave · <kbd>F</kbd> Fullscreen<br><kbd>T</kbd> Cycle target priority of the selected tower<br>Click an enemy: HP and traits<br>On the field: arrow keys + Enter</p><button class="primary" data-back>Got it</button></section>
   </div>
-  <div id="game-view"><header class="topbar"><a class="brand" href="/" aria-label="ION BASTION Startseite"><span class="brand-mark">I</span><span>ION<span class="brand-light">BASTION</span></span></a><span class="edition">TOWER DEFENSE <b id="edition-number">01</b></span><div class="header-actions"><button id="menu-btn" class="quiet">Menü <span>☰</span></button><button id="coop-btn" class="quiet">Mehrspieler <span>⇄</span></button><button id="codex-btn" class="quiet">Gegnerakte <span>◆</span></button><button id="help-btn" class="quiet">Spielhilfe <span>?</span></button><button id="sound-btn" class="quiet" aria-pressed="false">Ton aus</button></div></header>
-  <main><div class="mission-heading"><div><p class="eyebrow">MISSION <b id="mission-number">01</b> <span>/</span> <b id="mission-sector">VERTEIDIGUNG</b></p><h1>Halte die Linie.</h1><p id="mission-focus" class="mission-focus"></p></div><div class="mission-meta"><span class="sector-label" id="sector-label"></span><span class="difficulty" id="difficulty"></span></div></div>
-  <div class="workspace"><section class="field-panel" aria-label="Spielfeld"><div class="field-toolbar"><div class="resources"><div><span class="stat-label">CREDITS</span><strong class="credits"><span class="resource-icon">◇</span><span id="gold"></span></strong></div><div><span class="stat-label" id="lives-label">REAKTOR</span><strong><span class="resource-icon heart">♡</span><span id="lives"></span><small id="lives-max"></small></strong></div><div><span class="stat-label">WELLE</span><strong><span id="wave">00</span><small id="wave-total"></small></strong></div></div><div id="wave-forecast" class="next-wave-slot"></div><div class="playback"><button id="toolbar-start" class="toolbar-start" title="Nächste Welle starten (N)"><b>Welle</b> 01 <span>▶</span></button><button id="pause-btn" title="Pause (Leertaste)" aria-label="Spiel pausieren" aria-pressed="false">Ⅱ</button><button id="speed-btn" aria-label="Spieltempo ändern">1×</button><button id="fullscreen-btn" title="Vollbild (F)" aria-label="Vollbild (F)" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 5.5v-4h4M10.5 1.5h4v4M14.5 10.5v4h-4M5.5 14.5h-4v-4"/></svg></button></div></div>
-  <div id="players-panel" class="players-panel" aria-label="Mitspieler" hidden></div>
-  <div id="board-wrap"><div id="board" tabindex="0" role="application" aria-label="Tower-Defense-Spielfeld. Pfeiltasten wählen ein Feld; Enter baut oder wählt einen Turm. Tasten ${towerKeyRange(Object.keys(TOWERS).length)} wählen einen Turmtyp."></div><div id="game-overlay" hidden><div id="overlay-icon">Ⅱ</div><p class="eyebrow" id="overlay-kicker">TAKTISCHE PAUSE</p><h2 id="overlay-title">Zeit für einen Plan.</h2><p id="overlay-copy">Drücke die Leertaste oder die Pause-Taste zum Fortsetzen.</p><div class="overlay-actions"><button id="overlay-next" class="primary" hidden>Nächste Mission <span>→</span></button><button id="overlay-restart" class="primary" hidden>Neu starten</button><button id="overlay-missions" class="quiet" hidden>Missionen</button></div></div></div>
-  <div class="field-footer"><span><i class="legend-path"></i>Gegnerpfad</span><span><i class="legend-build"></i>Freie Baufläche</span><span id="cell-label">Turm wählen, dann Feld anklicken</span></div>
-  <div class="wave-timeline"><div class="timeline-label"><span>MISSIONSFORTSCHRITT</span><b id="progress-label"></b></div><div id="wave-segments"></div></div>
+  <div id="game-view"><header class="topbar"><a class="brand" href="/" aria-label="ION BASTION home"><span class="brand-mark">I</span><span>ION<span class="brand-light">BASTION</span></span></a><span class="edition">TOWER DEFENSE <b id="edition-number">01</b></span><div class="header-actions"><button id="menu-btn" class="quiet">Menu <span>☰</span></button><button id="coop-btn" class="quiet">Multiplayer <span>⇄</span></button><button id="codex-btn" class="quiet">Enemy Codex <span>◆</span></button><button id="help-btn" class="quiet">Help <span>?</span></button><button id="sound-btn" class="quiet" aria-pressed="false">Sound off</button></div></header>
+  <main><div class="mission-heading"><div><p class="eyebrow">MISSION <b id="mission-number">01</b> <span>/</span> <b id="mission-sector">DEFENSE</b></p><h1>Hold the line.</h1><p id="mission-focus" class="mission-focus"></p></div><div class="mission-meta"><span class="sector-label" id="sector-label"></span><span class="difficulty" id="difficulty"></span></div></div>
+  <div class="workspace"><section class="field-panel" aria-label="Battlefield"><div class="field-toolbar"><div class="resources"><div><span class="stat-label">CREDITS</span><strong class="credits"><span class="resource-icon">◇</span><span id="gold"></span></strong></div><div><span class="stat-label" id="lives-label">REACTOR</span><strong><span class="resource-icon heart">♡</span><span id="lives"></span><small id="lives-max"></small></strong></div><div><span class="stat-label">WAVE</span><strong><span id="wave">00</span><small id="wave-total"></small></strong></div></div><div id="wave-forecast" class="next-wave-slot"></div><div class="playback"><button id="toolbar-start" class="toolbar-start" title="Start next wave (N)"><b>Wave</b> 01 <span>▶</span></button><button id="pause-btn" title="Pause (Space)" aria-label="Pause game" aria-pressed="false">Ⅱ</button><button id="speed-btn" aria-label="Change game speed">1×</button><button id="fullscreen-btn" title="Fullscreen (F)" aria-label="Fullscreen (F)" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 5.5v-4h4M10.5 1.5h4v4M14.5 10.5v4h-4M5.5 14.5h-4v-4"/></svg></button></div></div>
+  <div id="players-panel" class="players-panel" aria-label="Teammates" hidden></div>
+  <div id="board-wrap"><div id="board" tabindex="0" role="application" aria-label="Tower defense battlefield. Arrow keys select a cell; Enter builds or selects a tower. Keys ${towerKeyRange(Object.keys(TOWERS).length)} pick a tower type."></div><div id="game-overlay" hidden><div id="overlay-icon">Ⅱ</div><p class="eyebrow" id="overlay-kicker">TACTICAL PAUSE</p><h2 id="overlay-title">Time for a plan.</h2><p id="overlay-copy">Press Space or the pause button to resume.</p><div class="overlay-actions"><button id="overlay-next" class="primary" hidden>Next mission <span>→</span></button><button id="overlay-restart" class="primary" hidden>Restart</button><button id="overlay-missions" class="quiet" hidden>Missions</button></div></div></div>
+  <div class="field-footer"><span><i class="legend-path"></i>Enemy path</span><span><i class="legend-build"></i>Free build area</span><span id="cell-label">Pick a tower, then click a cell</span></div>
+  <div class="wave-timeline"><div class="timeline-label"><span>MISSION PROGRESS</span><b id="progress-label"></b></div><div id="wave-segments"></div></div>
   </section>
-  <aside class="sidebar"><div class="section-title towers-title"><h2>Türme</h2><span>01–${String(Object.keys(TOWERS).length).padStart(2, "0")}</span></div><div class="tower-menu"><div id="tower-tabs" class="tower-tabs" role="tablist" aria-label="Turmkategorien" hidden></div><div id="tower-list" class="tower-list" role="tabpanel">${towerOrder(game)
+  <aside class="sidebar"><div class="section-title towers-title"><h2>Towers</h2><span>01–${String(Object.keys(TOWERS).length).padStart(2, "0")}</span></div><div class="tower-menu"><div id="tower-tabs" class="tower-tabs" role="tablist" aria-label="Tower categories" hidden></div><div id="tower-list" class="tower-list" role="tabpanel">${towerOrder(game)
     .map((id) => TOWERS[id])
     .map(
       (t, i) =>
-        `<button class="tower-card ${t.id}" style="--accent:#${t.color.toString(16).padStart(6, "0")}" data-tower="${t.id}" aria-pressed="false" title="${t.role}: ${t.description}" aria-label="${t.name}, ${t.role}, ${t.cost} Credits"><span class="tower-symbol">${t.visual.icon}</span><strong class="tower-name">${t.name}</strong><span class="tower-cost"><b>◇ ${t.cost}</b><kbd>${towerKey(i)}</kbd></span></button>`,
+        `<button class="tower-card ${t.id}" style="--accent:#${t.color.toString(16).padStart(6, "0")}" data-tower="${t.id}" aria-pressed="false" title="${t.role}: ${t.description}" aria-label="${t.name}, ${t.role}, ${t.cost} credits"><span class="tower-symbol">${t.visual.icon}</span><strong class="tower-name">${t.name}</strong><span class="tower-cost"><b>◇ ${t.cost}</b><kbd>${towerKey(i)}</kbd></span></button>`,
     )
     .join("")}</div></div>
-  <section id="send-panel" class="send-panel" aria-label="Gegner schicken" hidden></section><div id="selection" class="selection"></div><section id="live-units" class="live-units" aria-label="Gegner im Feld" hidden></section></aside></div>
-  <footer class="bottom-bar"><span id="notice" role="status" aria-live="polite">Wähle einen Turm und platziere ihn neben dem Pfad.</span><button id="restart-btn" class="text-button">Neu starten</button></footer></main></div>
-  <dialog id="restart-dialog"><h2>Mission neu starten?</h2><p>Deine aktuelle Verteidigung und dein Fortschritt werden zurückgesetzt.</p><div class="dialog-actions"><button id="cancel-restart" class="quiet">Weiterspielen</button><button id="confirm-restart" class="primary">Neu starten</button></div></dialog>`;
+  <section id="send-panel" class="send-panel" aria-label="Send enemies" hidden></section><div id="selection" class="selection"></div><section id="live-units" class="live-units" aria-label="Enemies on the field" hidden></section></aside></div>
+  <footer class="bottom-bar"><span id="notice" role="status" aria-live="polite">Pick a tower and place it next to the path.</span><button id="restart-btn" class="text-button">Restart</button></footer></main></div>
+  <dialog id="restart-dialog"><h2>Restart mission?</h2><p>Your current defense and progress will be reset.</p><div class="dialog-actions"><button id="cancel-restart" class="quiet">Keep playing</button><button id="confirm-restart" class="primary">Restart</button></div></dialog>`;
 }
 /** Everything in the shell that depends on the active mission. */
 export function renderMission(game: Game) {
@@ -89,12 +90,12 @@ export function renderMission(game: Game) {
   }).join("");
   const sectors = game.content.sectors ?? [],
     sector = sectorOf(m, sectors);
-  text("mission-sector", sector ? `SEKTOR ${roman(sectors.indexOf(sector))} · ${sector.name.toUpperCase()}` : "VERTEIDIGUNG");
+  text("mission-sector", sector ? `SECTOR ${roman(sectors.indexOf(sector))} · ${sector.name.toUpperCase()}` : "DEFENSE");
   text("mission-focus", m.focus);
   text("sector-label", m.map.name);
-  text("difficulty", `${total} Wellen · ◇ ${m.startingCredits} Start-Credits`);
+  text("difficulty", `${total} ${plural(total, "wave")} · ◇ ${m.startingCredits} starting credits`);
   // A ring has no reactor; the HUD counts the enemies in it against the limit instead.
-  text("lives-label", m.circle ? "IM RING" : "REAKTOR");
+  text("lives-label", m.circle ? "IN RING" : "REACTOR");
   text("lives-max", `/ ${m.circle ? m.circle.limit : m.reactorEnergy}`);
   text("wave-total", `/ ${total}`);
   document.getElementById("wave-segments")!.innerHTML = Array.from(
@@ -102,14 +103,14 @@ export function renderMission(game: Game) {
     (_, i) => `<span data-wave="${i + 1}"><i></i><small>${pad(i + 1)}</small></span>`,
   ).join("");
 }
-/** The campaign sectors and the Kreislauf sectors, each a game mode of its own. */
+/** The campaign sectors and the Circuit sectors, each a game mode of its own. */
 export function modeGroups(sectors: readonly MissionSector[]) {
   return { campaign: sectors.filter((sector) => !isCircleSector(sector)), rings: sectors.filter(isCircleSector) };
 }
 const missionCount = (members: readonly MissionSector[]) => members.reduce((n, sector) => n + sector.missions.length, 0);
-const campaignInfo = (campaign: readonly MissionSector[]) => `Sektor I–${roman(campaign.length - 1)} · ${missionCount(campaign)} Missionen`;
+const campaignInfo = (campaign: readonly MissionSector[]) => `Sector I–${roman(campaign.length - 1)} · ${missionCount(campaign)} ${plural(missionCount(campaign), "mission")}`;
 /**
- * Fills the start screen's home page. "Weiterspielen" returns to `resume` when a mission is in progress in this
+ * Fills the start screen's home page. "Continue" returns to `resume` when a mission is in progress in this
  * session, else it loads the remembered mission `last` while it still exists.
  */
 export function renderMenu(game: Game, last: string | undefined, resume: boolean) {
@@ -117,10 +118,10 @@ export function renderMenu(game: Game, last: string | undefined, resume: boolean
     { campaign, rings } = modeGroups(game.content.sectors ?? []),
     target = resume ? game.mission : missions.find((m) => m.id === last);
   document.getElementById("menu-continue")!.hidden = !target;
-  if (target) text("menu-continue-mission", `Mission ${pad(missionNumber(target, missions))} · ${target.name}${resume ? ` · Welle ${pad(Math.max(1, game.state.wave))}` : ""}`);
-  text("menu-campaign-info", campaign.length ? campaignInfo(campaign) : `${missions.length} Missionen`);
+  if (target) text("menu-continue-mission", `Mission ${pad(missionNumber(target, missions))} · ${target.name}${resume ? ` · Wave ${pad(Math.max(1, game.state.wave))}` : ""}`);
+  text("menu-campaign-info", campaign.length ? campaignInfo(campaign) : `${missions.length} ${plural(missions.length, "mission")}`);
   document.getElementById("menu-circle")!.hidden = !rings.length;
-  text("menu-circle-info", `${missionCount(rings)} Missionen`);
+  text("menu-circle-info", `${missionCount(rings)} ${plural(missionCount(rings), "mission")}`);
 }
 /**
  * Fills the mission page; called each time it opens and on every tab change.
@@ -134,7 +135,7 @@ export function renderMissionList(game: Game, sectorIndex?: number) {
     selected = sectors[sectorIndex ?? (current ? sectors.indexOf(current) : 0)];
   document.getElementById("mission-warning")!.hidden =
     s.wave === 0 && s.towers.length === 0;
-  // Kreislauf sectors form their own mode with its own tab, apart from the campaign sectors.
+  // Circuit sectors form their own mode with its own tab, apart from the campaign sectors.
   const circle = !!selected && isCircleSector(selected),
     group = sectors.filter((sector) => isCircleSector(sector) === circle),
     { campaign, rings } = modeGroups(sectors),
@@ -143,8 +144,8 @@ export function renderMissionList(game: Game, sectorIndex?: number) {
   modes.innerHTML = modes.hidden
     ? ""
     : ([
-        [false, campaign, "Kampagne", "Reaktor verteidigen", campaignInfo(campaign)],
-        [true, rings, "⟳ Kreislauf", "Ring unter dem Limit halten", `${missionCount(rings)} Missionen`],
+        [false, campaign, "Campaign", "Defend the reactor", campaignInfo(campaign)],
+        [true, rings, "⟳ Circuit", "Keep the ring under the limit", `${missionCount(rings)} ${plural(missionCount(rings), "mission")}`],
       ] as const).map(([ring, members, name, goal, info]) => {
         const active = ring === circle,
           i = sectors.indexOf(members[0]);
@@ -174,7 +175,7 @@ export function renderMissionList(game: Game, sectorIndex?: number) {
   }
   list.innerHTML = (selected?.missions ?? missions).map((m) => {
     const n = missionNumber(m, missions);
-    return `<button class="mission-card" data-mission="${m.id}"${m.id === game.mission.id ? ' aria-current="true"' : ""}><span class="mission-index">${pad(n)}</span><span class="mission-copy"><strong>${m.name}</strong><small>${m.focus}</small></span><span class="mission-stats"><b>${m.waves.length} Wellen</b><small>◇ ${m.startingCredits}</small>${m.circle ? `<small class="ring-badge">⟳ Ring · max. ${m.circle.limit}</small>` : ""}</span></button>`;
+    return `<button class="mission-card" data-mission="${m.id}"${m.id === game.mission.id ? ' aria-current="true"' : ""}><span class="mission-index">${pad(n)}</span><span class="mission-copy"><strong>${m.name}</strong><small>${m.focus}</small></span><span class="mission-stats"><b>${m.waves.length} ${plural(m.waves.length, "wave")}</b><small>◇ ${m.startingCredits}</small>${m.circle ? `<small class="ring-badge">⟳ Ring · max ${m.circle.limit}</small>` : ""}</span></button>`;
   }).join("");
 }
 /** Fills the enemy codex page; called when it opens and on every tab change. */
@@ -258,7 +259,7 @@ export class Interface {
     pause.setAttribute("aria-pressed", String(s.paused));
     pause.setAttribute(
       "aria-label",
-      s.paused ? "Spiel fortsetzen" : "Spiel pausieren",
+      s.paused ? "Resume game" : "Pause game",
     );
     pause.disabled = !isRunning(s);
     pause.hidden = !!match;
@@ -300,7 +301,7 @@ export class Interface {
       const next = waveForecast(this.game);
       forecast.innerHTML = next
         ? renderWaveForecast(next)
-        : `<p class="next-wave-empty">${terminal ? `MISSION BEENDET · ${s.status === "won" ? "Alle Wellen abgewehrt" : circle ? "Ring überlastet" : "Reaktor verloren"}` : "LETZTE WELLE LÄUFT"}</p>`;
+        : `<p class="next-wave-empty">${terminal ? `MISSION OVER · ${s.status === "won" ? "All waves repelled" : circle ? "Ring overloaded" : "Reactor lost"}` : "FINAL WAVE IN PROGRESS"}</p>`;
     }
     const panel = document.getElementById("live-units")!,
       live = liveUnits(this.game),
@@ -332,7 +333,7 @@ export class Interface {
         box.innerHTML = towerDetails(d.id as TowerId, t, s.towers, content);
       } else
         box.innerHTML =
-          '<div class="selection-heading"><span>TAKTIK</span><b>◇</b></div><p>Baue an Kurven, um Gegner länger in Reichweite zu halten.</p><div class="placement-note">Klicke einen gebauten Turm an, um ihn zu verbessern, oder einen Gegner, um seine HP und Eigenschaften zu sehen.</div>';
+          '<div class="selection-heading"><span>TACTICS</span><b>◇</b></div><p>Build at bends to keep enemies in range longer.</p><div class="placement-note">Click a built tower to upgrade it, or an enemy to see its HP and traits.</div>';
     }
     for (const button of document.querySelectorAll<HTMLButtonElement>("[data-upgrade]")) {
       button.disabled = !t || terminal || foreign || upgradeOption(t, button.dataset.upgrade!, gold, content).status !== "available";
@@ -347,19 +348,19 @@ export class Interface {
       ready = !!match?.ready[me],
       callable = !!circle && s.status === "wave" && wavesLeft(this.game) > 0,
       quickLabel = callable
-        ? `<b>Welle</b> ${pad(s.wave + 1)} <small>${Math.ceil(s.circle!.next)} s · +${earlyBonus(this.game)} ◇</small> <span>▶</span>`
+        ? `<b>Wave</b> ${pad(s.wave + 1)} <small>${Math.ceil(s.circle!.next)} s · +${earlyBonus(this.game)} ◇</small> <span>▶</span>`
         : s.status === "wave"
-          ? "<b>Welle</b> läuft"
+          ? "<b>Wave</b> running"
           : match
-            ? `<b>${ready ? "Bereit ✓" : "Bereit"}</b> ${pad(s.wave + 1)}${ready ? "" : " <span>▶</span>"}`
-            : `<b>Welle</b> ${pad(s.wave + 1)}${s.nextWave !== undefined ? ` <small>${Math.ceil(s.nextWave)} s</small>` : ""} <span>▶</span>`;
+            ? `<b>${ready ? "Ready ✓" : "Ready"}</b> ${pad(s.wave + 1)}${ready ? "" : " <span>▶</span>"}`
+            : `<b>Wave</b> ${pad(s.wave + 1)}${s.nextWave !== undefined ? ` <small>${Math.ceil(s.nextWave)} s</small>` : ""} <span>▶</span>`;
     quick.hidden = terminal;
     quick.disabled = !callable && (s.status !== "ready" || ready);
     if (quick.innerHTML !== quickLabel) {
       quick.innerHTML = quickLabel;
       quick.setAttribute(
         "aria-label",
-        callable ? `Welle ${s.wave + 1} jetzt rufen` : s.status === "wave" ? "Welle läuft" : match ? `Bereit für Welle ${s.wave + 1}` : `Welle ${s.wave + 1} starten${s.nextWave !== undefined ? ` (startet in ${Math.ceil(s.nextWave)} s von selbst)` : ""}`,
+        callable ? `Call wave ${s.wave + 1} now` : s.status === "wave" ? "Wave running" : match ? `Ready for wave ${s.wave + 1}` : `Start wave ${s.wave + 1}${s.nextWave !== undefined ? ` (starts on its own in ${Math.ceil(s.nextWave)} s)` : ""}`,
       );
     }
     const overlay = document.getElementById("game-overlay")!;
@@ -375,43 +376,43 @@ export class Interface {
         const next = host ? nextMission(this.game) : undefined;
         document.getElementById("overlay-next")!.hidden = !next;
         document.getElementById("overlay-restart")!.hidden = !host;
-        text("overlay-restart", "Revanche");
+        text("overlay-restart", "Rematch");
         document.getElementById("overlay-missions")!.hidden = !host;
       }
     } else overlay.hidden = !s.paused && !terminal;
     if (!overlay.hidden && !match) {
       text("overlay-icon", terminal ? (s.status === "won" ? "✦" : "◇") : "Ⅱ");
-      text("overlay-kicker", terminal ? "MISSION BEENDET" : "TAKTISCHE PAUSE");
+      text("overlay-kicker", terminal ? "MISSION OVER" : "TACTICAL PAUSE");
       text(
         "overlay-title",
         s.status === "won"
-          ? circle ? "Der Ring ist leer." : "Die Linie hält."
+          ? circle ? "The ring is empty." : "The line holds."
           : s.status === "lost"
-            ? circle ? "Ring überlastet." : "Reaktor verloren."
-            : "Zeit für einen Plan.",
+            ? circle ? "Ring overloaded." : "Reactor lost."
+            : "Time for a plan.",
       );
       text(
         "overlay-copy",
         s.status === "won"
           ? circle
-            ? `${this.game.mission.name}: alle ${this.game.waves.length} Wellen aufgerieben. ${s.kills} Gegner besiegt.`
-            : `${this.game.mission.name}: alle ${this.game.waves.length} Wellen abgewehrt. ${s.kills} Gegner besiegt. ${s.lives} Reaktorenergie übrig.`
+            ? `${this.game.mission.name}: all ${this.game.waves.length} ${plural(this.game.waves.length, "wave")} wiped out. ${s.kills} ${s.kills === 1 ? "enemy" : "enemies"} defeated.`
+            : `${this.game.mission.name}: all ${this.game.waves.length} ${plural(this.game.waves.length, "wave")} repelled. ${s.kills} ${s.kills === 1 ? "enemy" : "enemies"} defeated. ${s.lives} reactor energy left.`
           : s.status === "lost" && circle
-            ? `Mehr als ${circle.limit} Gegner kreisten gleichzeitig. Du hast Welle ${s.wave} erreicht und ${s.kills} Gegner besiegt. Rufe Wellen erst, wenn der Ring leerer ist.`
+            ? `More than ${circle.limit} enemies circled at once. You reached wave ${s.wave} and defeated ${s.kills} ${s.kills === 1 ? "enemy" : "enemies"}. Only call waves when the ring is emptier.`
           : s.status === "lost"
-            ? `Du hast Welle ${s.wave} erreicht und ${s.kills} Gegner besiegt. Versuche mehr Upgrades und Kryo-Unterstützung.`
-            : "Du kannst weiter bauen. Mit der Pause-Taste geht es weiter.",
+            ? `You reached wave ${s.wave} and defeated ${s.kills} ${s.kills === 1 ? "enemy" : "enemies"}. Try more upgrades and Cryo support.`
+            : "You can keep building. Use the pause button to continue.",
       );
       const next = s.status === "won" ? nextMission(this.game) : undefined;
       document.getElementById("overlay-next")!.hidden = !next;
       document.getElementById("overlay-restart")!.hidden = !terminal || !!next;
-      text("overlay-restart", s.status === "won" ? "Erneut spielen" : "Neu starten");
+      text("overlay-restart", s.status === "won" ? "Play again" : "Restart");
       document.getElementById("overlay-missions")!.hidden = !terminal;
     }
     if (this.view.hover)
       text(
         "cell-label",
-        `Feld ${String.fromCharCode(65 + this.view.hover.x)}${this.view.hover.y + 1}`,
+        `Cell ${String.fromCharCode(65 + this.view.hover.x)}${this.view.hover.y + 1}`,
       );
   }
 }

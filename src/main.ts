@@ -17,7 +17,7 @@ import "./style.css";
 /** The mission from wave `wave` on; every remaining wave keeps the HP factor it has in the full mission. */
 const fromWave = (m: MissionDefinition, wave: number): MissionDefinition => ({
   ...m,
-  name: `${m.name} · ab Welle ${wave}`,
+  name: `${m.name} · from wave ${wave}`,
   waves: m.waves.slice(wave - 1).map((w, i) => ({ ...w, hpMultiplier: waveHpScale(m, wave + i) })),
 });
 // Deep link `?mission=<id>`: start in that mission; `&wave=<n>` (for checks) skips to wave n and `&credits=<n>`

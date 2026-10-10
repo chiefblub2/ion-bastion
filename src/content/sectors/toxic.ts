@@ -2,7 +2,7 @@ import type { MissionSector } from "../../core/types";
 import { parseMap } from "../maps";
 import { g, wave } from "../waves";
 // A deep V-shaped pit: both legs run past the same small basin.
-const SICKERGRUBE = parseMap("sickergrube", "Sickergrube", [
+const SICKERGRUBE = parseMap("sickergrube", "Seepage Pit", [
   "...#....##....#...",
   "S====#.....#.====R",
   "....=........=....",
@@ -17,7 +17,7 @@ const SICKERGRUBE = parseMap("sickergrube", "Sickergrube", [
   "......######......",
 ], "toxic");
 // Two diagonal staircases through the fog: groups bunch up on every step.
-const NEBELSUMPF = parseMap("nebelsumpf", "Nebelsumpf", [
+const NEBELSUMPF = parseMap("nebelsumpf", "Fog Swamp", [
   "....#.........##.....",
   "S==.......##.........",
   "..==.....###......==R",
@@ -32,7 +32,7 @@ const NEBELSUMPF = parseMap("nebelsumpf", "Nebelsumpf", [
   ".##....####..........",
 ], "toxic");
 // From the north bank down to the south: the path meanders between brackish pools.
-const BRACKWASSER = parseMap("brackwasser", "Brackwasser", [
+const BRACKWASSER = parseMap("brackwasser", "Brackish Water", [
   "..S..##.....###.",
   "..=....======...",
   "#.=....=.##.=..#",
@@ -47,7 +47,7 @@ const BRACKWASSER = parseMap("brackwasser", "Brackwasser", [
   "####.....##..R..",
 ], "toxic");
 // A square spiral around the reactor; sludge fills the gaps between the outer rings.
-const FAULTURM = parseMap("faulturm", "Faulturm", [
+const FAULTURM = parseMap("faulturm", "Digester Tower", [
   "....##.......##..",
   "S===============.",
   "..#############=.",
@@ -63,7 +63,7 @@ const FAULTURM = parseMap("faulturm", "Faulturm", [
   "#....##.....##..#",
 ], "toxic");
 // The cauldron: down the left wall, across the floor, up the right wall and over the rim.
-const GIFTKESSEL = parseMap("giftkessel", "Giftkessel", [
+const GIFTKESSEL = parseMap("giftkessel", "Toxic Cauldron", [
   "......##......#.....",
   "S===.........##.....",
   "...=....===========R",
@@ -79,12 +79,12 @@ const GIFTKESSEL = parseMap("giftkessel", "Giftkessel", [
 ], "toxic");
 export const SAEUREMOOR: MissionSector = {
   id: "toxic",
-  name: "Säuremoor",
+  name: "Acid Moor",
   missions: [
     {
       id: "sickergrube",
-      name: "Sickergrube",
-      focus: "Korrosion lässt Gegner mehr Schaden nehmen und knackt die Schleimer-Regeneration",
+      name: "Seepage Pit",
+      focus: "Corrosion makes enemies take more damage and cracks Sludge regeneration",
       map: SICKERGRUBE,
       waves: [
         wave(35, g("drone", 10, 0.8)),
@@ -107,8 +107,8 @@ export const SAEUREMOOR: MissionSector = {
     },
     {
       id: "nebelsumpf",
-      name: "Nebelsumpf",
-      focus: "Stasis hält dichte Gruppen an, Sanitäter zuerst töten",
+      name: "Fog Swamp",
+      focus: "Stasis halts dense groups, kill Medics first",
       map: NEBELSUMPF,
       waves: [
         wave(35, g("drone", 12, 0.6)),
@@ -131,8 +131,8 @@ export const SAEUREMOOR: MissionSector = {
     },
     {
       id: "brackwasser",
-      name: "Brackwasser",
-      focus: "Nur Impuls, Kryo, Korrosion und Flak",
+      name: "Brackish Water",
+      focus: "Only Pulse, Cryo, Corrosion and Flak",
       map: BRACKWASSER,
       availableTowers: ["pulse", "frost", "acid", "flak"],
       waves: [
@@ -157,8 +157,8 @@ export const SAEUREMOOR: MissionSector = {
     },
     {
       id: "faulturm",
-      name: "Faulturm",
-      focus: "Spirale um den Reaktor, Aura-Cluster in der Mitte",
+      name: "Digester Tower",
+      focus: "Spiral around the reactor, aura cluster in the middle",
       map: FAULTURM,
       waves: [
         wave(35, g("drone", 12, 0.6)),
@@ -182,8 +182,8 @@ export const SAEUREMOOR: MissionSector = {
     },
     {
       id: "giftkessel",
-      name: "Giftkessel",
-      focus: "Sektorfinale: Panzerwellen, Korrosion und Zerfall",
+      name: "Toxic Cauldron",
+      focus: "Sector finale: tank waves, Corrosion and Decay",
       map: GIFTKESSEL,
       waves: [
         wave(35, g("drone", 12, 0.6)),

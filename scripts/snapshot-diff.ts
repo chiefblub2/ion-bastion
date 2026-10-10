@@ -32,7 +32,7 @@ let tracked: string[] = [];
 try {
   tracked = execFileSync("git", ["ls-tree", "--name-only", `${base}:${DIR}`], { encoding: "utf8" }).split("\n").filter((f) => f.startsWith("replay-") && f.endsWith(".snap"));
 } catch {
-  console.log(`Hinweis: ${base}:${DIR} nicht gefunden, alles gilt als neu.`);
+  console.log(`Note: ${base}:${DIR} not found, everything counts as new.`);
 }
 for (const f of files) parse(readFileSync(`${DIR}/${f}`, "utf8"), current);
 for (const f of tracked) parse(execFileSync("git", ["show", `${base}:${DIR}/${f}`], { encoding: "utf8", maxBuffer: 1 << 26 }), previous);
@@ -48,20 +48,20 @@ const group = (keys: string[]) => {
   for (const k of keys) by.set(missionOf(k), [...(by.get(missionOf(k)) ?? []), k.slice(k.lastIndexOf(" ") + 1)]);
   return [...by].map(([m, s]) => `${m} ${s.join(", ")}`).join(" · ");
 };
-if (!added.length && !removed.length && !changed.length) console.log(`Keine Änderungen gegenüber ${base}.`);
-if (added.length) console.log(`Neu (${added.length}): ${group(added)}`);
-if (removed.length) console.log(`Entfernt (${removed.length}): ${group(removed)}`);
-if (changed.length) console.log(`Geändert (${changed.length}):`);
+if (!added.length && !removed.length && !changed.length) console.log(`No changes against ${base}.`);
+if (added.length) console.log(`New (${added.length}): ${group(added)}`);
+if (removed.length) console.log(`Removed (${removed.length}): ${group(removed)}`);
+if (changed.length) console.log(`Changed (${changed.length}):`);
 for (const k of changed) {
   const a = previous.get(k)!,
     b = current.get(k)!,
     old = (a.waves ?? "").split("\n"),
     now = (b.waves ?? "").split("\n"),
     i = old.findIndex((line, n) => line !== now[n]);
-  const first = i === -1 ? (old.length === now.length ? "" : `Wellenzahl ${old.length} → ${now.length}`) : `ab ${old[i]?.split(" ")[0] ?? `w${i + 1}`}: ${old[i] ?? "–"}  →  ${now[i] ?? "–"}`;
+  const first = i === -1 ? (old.length === now.length ? "" : `wave count ${old.length} → ${now.length}`) : `from ${old[i]?.split(" ")[0] ?? `w${i + 1}`}: ${old[i] ?? "–"}  →  ${now[i] ?? "–"}`;
   console.log(`  ${k}`);
   if (first) console.log(`    ${first}`);
-  if (a.final !== b.final) console.log(`    Ende: ${a.final}  →  ${b.final}`);
+  if (a.final !== b.final) console.log(`    Final: ${a.final}  →  ${b.final}`);
 }
 
 const sectorPath = option("--sector");
@@ -74,8 +74,8 @@ if (sectorPath) {
 if (expected) {
   const unexpected = [...new Set([...changed, ...removed].map(missionOf))].filter((m) => !expected!.includes(m));
   if (unexpected.length) {
-    console.log(`\nFAIL unerwartet geändert: ${unexpected.join(", ")} – leckt etwas in den Solo-Zustand (optionales Feld nicht undefined, andere Reihenfolge)?`);
+    console.log(`\nFAIL unexpectedly changed: ${unexpected.join(", ")} – is something leaking into solo state (optional field not undefined, different order)?`);
     process.exit(1);
   }
-  console.log("\nNur erwartete Missionen geändert.");
+  console.log("\nOnly expected missions changed.");
 }

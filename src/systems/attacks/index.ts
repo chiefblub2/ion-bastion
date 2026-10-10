@@ -83,15 +83,15 @@ export function describeAttack(spec: AttackSpec, keys?: readonly string[]): Stat
 /** Error message for an invalid spec, or undefined. */
 export function attackError(spec: AttackSpec): string | undefined {
   const module = attackModule(spec);
-  if (!module) return `Unbekannte Angriffsart '${(spec as AttackSpec).kind}'.`;
+  if (!module) return `Unknown attack kind '${(spec as AttackSpec).kind}'.`;
   const params = module.params as Record<string, ParamRule>;
   for (const [key, value] of Object.entries(spec)) {
     if (key === "kind" || (spec.kind === "aura" && key === "base")) continue;
-    if (!params[key]) return `Unbekannter Angriffswert '${key}'.`;
+    if (!params[key]) return `Unknown attack value '${key}'.`;
   }
   for (const [key, rule] of Object.entries(params)) {
     const value = (spec as unknown as Record<string, number>)[key];
-    if (!(typeof value === "number" && rule.valid(value))) return `Ungültiger Angriffswert '${key}'.`;
+    if (!(typeof value === "number" && rule.valid(value))) return `Invalid attack value '${key}'.`;
   }
   return module.validate?.(spec as never);
 }
@@ -100,6 +100,6 @@ export function attackOverrideError(spec: AttackSpec, overrides: Readonly<Record
   const params = (attackModule(spec)?.params ?? {}) as Record<string, ParamRule>;
   for (const [key, value] of Object.entries(overrides))
     if (!params[key] || !(typeof value === "number" && params[key].valid(value)))
-      return `Ungültiger Angriffswert '${key}' für ${spec.kind}.`;
+      return `Invalid attack value '${key}' for ${spec.kind}.`;
   return undefined;
 }

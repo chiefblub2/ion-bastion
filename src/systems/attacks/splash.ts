@@ -14,7 +14,7 @@ export const splash: AttackModule<SplashAttack> = {
   aim: "point",
   projectile: "optional",
   params: {
-    radius: { label: "Explosionsradius", valid: (v) => v > 0, unit: " Felder" },
+    radius: { label: "Blast radius", valid: (v) => v > 0, unit: " cells" },
   },
   apply: (sim, src, { at }, damage, spec) => blast(sim, src, at, spec.radius, damage, "splash"),
 };

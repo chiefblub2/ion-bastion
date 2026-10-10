@@ -40,9 +40,9 @@ describe("ring maps", () => {
     expect(RING.path.at(-1)).toEqual({ x: 1, y: 2 });
   });
   it("reject open rings and branches", () => {
-    expect(() => parseMap("t", "T", ["S==", "=..", "=.."])).toThrow("ohne zu S zurückzukehren");
-    expect(() => parseMap("t", "T", ["S==", "=.=", "===", "=.."])).toThrow("verzweigt");
-    expect(() => parseMap("t", "T", ["S=.", "...", "..."])).toThrow("nicht geschlossen");
+    expect(() => parseMap("t", "T", ["S==", "=..", "=.."])).toThrow("without returning to S");
+    expect(() => parseMap("t", "T", ["S==", "=.=", "===", "=.."])).toThrow("branches");
+    expect(() => parseMap("t", "T", ["S=.", "...", "..."])).toThrow("not closed");
   });
   it("wrap positions from the last cell back to the first", () => {
     const n = RING.path.length;
@@ -50,9 +50,9 @@ describe("ring maps", () => {
     expect(positionOnPath(RING.path, n + 1, true)).toEqual(RING.path[1]);
   });
   it("need circle rules, and circle rules need a ring", () => {
-    expect(() => new Game(ring({ circle: undefined }))).toThrow("Ring-Map");
-    expect(() => new Game(ring({ map: missionById("outpost-07")!.map }))).toThrow("Ring-Map");
-    expect(() => new Game(ring({ circle: { interval: 0, limit: 5, earlyBonus: 0 } }))).toThrow("Kreislauf-Regeln");
+    expect(() => new Game(ring({ circle: undefined }))).toThrow("ring map");
+    expect(() => new Game(ring({ map: missionById("outpost-07")!.map }))).toThrow("ring map");
+    expect(() => new Game(ring({ circle: { interval: 0, limit: 5, earlyBonus: 0 } }))).toThrow("circuit rules");
   });
 });
 describe("circle missions", () => {

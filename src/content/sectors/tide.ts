@@ -4,7 +4,7 @@ import { g, wave } from "../waves";
 // Sector IX, Mondsee: ring maps on a tidal lake. Flyers and shelled swimmers keep circling,
 // so they grow fast or tough with every lap.
 // L-shaped ring: the wide arm of the L runs two rows from both its legs.
-const EBBE = parseMap("ebbe", "Ebbe", [
+const EBBE = parseMap("ebbe", "Ebb", [
   "....................",
   ".S========..........",
   ".=.......=..........",
@@ -18,7 +18,7 @@ const EBBE = parseMap("ebbe", "Ebbe", [
   "....................",
 ], "tide");
 // A one-cell notch between two legs: one tower covers both.
-const FLUTRING = parseMap("flutring", "Flutring", [
+const FLUTRING = parseMap("flutring", "Tide Ring", [
   "....................",
   ".S=======.=========.",
   ".=......=.=.......=.",
@@ -32,7 +32,7 @@ const FLUTRING = parseMap("flutring", "Flutring", [
   "....................",
 ], "tide");
 // A long snake ring: two parallel runs in the middle sit two rows apart.
-const BRANDUNG = parseMap("brandung", "Brandung", [
+const BRANDUNG = parseMap("brandung", "Surf", [
   "......................",
   ".S===================.",
   ".=..................=.",
@@ -47,7 +47,7 @@ const BRANDUNG = parseMap("brandung", "Brandung", [
   "......................",
 ], "tide");
 // A plus-shaped ring with narrow arms: every arm cell reaches two legs.
-const SPRINGFLUT = parseMap("springflut", "Springflut", [
+const SPRINGFLUT = parseMap("springflut", "Spring Tide", [
   "....................",
   "........=S==........",
   "........=..=........",
@@ -64,7 +64,7 @@ const SPRINGFLUT = parseMap("springflut", "Springflut", [
   "....................",
 ], "tide");
 // An H-shaped ring: the corridor legs sit two rows apart between two deep notches.
-const MONDFINSTERNIS = parseMap("mondfinsternis", "Mondfinsternis", [
+const MONDFINSTERNIS = parseMap("mondfinsternis", "Lunar Eclipse", [
   "....................",
   ".S=====......======.",
   ".=....=......=....=.",
@@ -81,12 +81,12 @@ const MONDFINSTERNIS = parseMap("mondfinsternis", "Mondfinsternis", [
 ], "tide");
 export const MONDSEE: MissionSector = {
   id: "tide",
-  name: "Mondsee",
+  name: "Moon Lake",
   missions: [
     {
       id: "ebbe",
-      name: "Ebbe",
-      focus: "Gischtflügler werden mit jeder Runde härter. Flak und Tesla räumen sie in der ersten",
+      name: "Ebb",
+      focus: "Spray Wings get tougher with every lap. Flak and Tesla clear them in the first",
       map: EBBE,
       circle: { interval: 18, limit: 45, earlyBonus: 3 },
       waves: [
@@ -108,8 +108,8 @@ export const MONDSEE: MissionSector = {
     },
     {
       id: "flutring",
-      name: "Flutring",
-      focus: "Nautilus nimmt mit jeder Runde Schwung auf. Störsender, Gravitron und Zerfall bremsen ihn",
+      name: "Tide Ring",
+      focus: "Nautilus gains momentum with every lap. Jammer, Gravitron and Decay slow it",
       map: FLUTRING,
       circle: { interval: 17, limit: 42, earlyBonus: 3 },
       waves: [
@@ -131,8 +131,8 @@ export const MONDSEE: MissionSector = {
     },
     {
       id: "brandung",
-      name: "Brandung",
-      focus: "Langer Schlangenring, die Mittelbahnen liegen eng. Kryo bremst, Zerfall räumt die Panzer",
+      name: "Surf",
+      focus: "Long serpentine ring, the middle lanes lie close. Cryo slows, Decay clears the tanks",
       map: BRANDUNG,
       circle: { interval: 16, limit: 45, earlyBonus: 3 },
       waves: [
@@ -155,8 +155,8 @@ export const MONDSEE: MissionSector = {
     },
     {
       id: "springflut",
-      name: "Springflut",
-      focus: "Kurzes Intervall und enges Limit. Die Kreuzmitte bündelt alle Arme, früh rufen zahlt sich aus",
+      name: "Spring Tide",
+      focus: "Short interval and tight limit. The cross center bundles all arms, calling early pays off",
       map: SPRINGFLUT,
       circle: { interval: 14, limit: 35, earlyBonus: 4 },
       waves: [
@@ -179,8 +179,8 @@ export const MONDSEE: MissionSector = {
     },
     {
       id: "mondfinsternis",
-      name: "Mondfinsternis",
-      focus: "Zwei tiefe Buchten, die Mittelbahnen liegen eng beieinander. Gravitron und Störsender bremsen das Echo, am Ende drei Bossgegner",
+      name: "Lunar Eclipse",
+      focus: "Two deep bays, the middle lanes lie close together. Gravitron and Jammer slow the echo, three bosses at the end",
       map: MONDFINSTERNIS,
       circle: { interval: 16, limit: 40, earlyBonus: 4 },
       waves: [

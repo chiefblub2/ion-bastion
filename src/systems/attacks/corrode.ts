@@ -9,9 +9,9 @@ export const corrode: AttackModule<CorrodeAttack> = {
   aim: "point",
   projectile: "optional",
   params: {
-    radius: { label: "Säureradius", valid: (v) => v > 0, unit: " Felder" },
-    amount: { label: "Mehrschaden", valid: (v) => v > 0, unit: " %", show: (v) => v * 100 },
-    duration: { label: "Dauer", valid: (v) => v > 0, unit: " s" },
+    radius: { label: "Acid radius", valid: (v) => v > 0, unit: " cells" },
+    amount: { label: "Bonus damage", valid: (v) => v > 0, unit: " %", show: (v) => v * 100 },
+    duration: { label: "Duration", valid: (v) => v > 0, unit: " s" },
   },
   apply: (sim, src, { at }, damage, spec) => {
     const until = sim.state.time + spec.duration;

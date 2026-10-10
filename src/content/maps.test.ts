@@ -16,10 +16,10 @@ describe("map sketches", () => {
     expect(map.blocked).toEqual([{ x: 4, y: 0 }]);
   });
   it("reject branches, dead ends, stray path cells and ragged rows with the position", () => {
-    expect(() => parseMap("t", "T", ["S==", ".=.", ".=R"])).toThrow("Map t: Pfad verzweigt bei 1,0");
-    expect(() => parseMap("t", "T", ["S=.", "...", "..R"])).toThrow("ohne Reaktor");
-    expect(() => parseMap("t", "T", ["S=R", "...", "=.."])).toThrow("ohne Verbindung");
-    expect(() => parseMap("t", "T", ["S=R", ".."])).toThrow("Zeile 2");
-    expect(() => parseMap("t", "T", ["S=X"])).toThrow("Unbekanntes Zeichen");
+    expect(() => parseMap("t", "T", ["S==", ".=.", ".=R"])).toThrow("Map t: Path branches at 1,0");
+    expect(() => parseMap("t", "T", ["S=.", "...", "..R"])).toThrow("without reactor R");
+    expect(() => parseMap("t", "T", ["S=R", "...", "=.."])).toThrow("not connected");
+    expect(() => parseMap("t", "T", ["S=R", ".."])).toThrow("Row 2");
+    expect(() => parseMap("t", "T", ["S=X"])).toThrow("Unknown character");
   });
 });

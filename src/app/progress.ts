@@ -1,4 +1,4 @@
-// The only thing the browser keeps between visits: the id of the last started mission, for "Weiterspielen".
+// The only thing the browser keeps between visits: the id of the last started mission, for "Continue".
 const KEY = "ion-bastion:last-mission";
 /** Storage can be missing or throw (private mode, blocked site data); then there is simply no last mission. */
 export function lastMission(): string | undefined {
@@ -12,6 +12,6 @@ export function rememberMission(id: string) {
   try {
     localStorage.setItem(KEY, id);
   } catch {
-    // Not remembered; the menu then offers no "Weiterspielen".
+    // Not remembered; the menu then offers no "Continue".
   }
 }

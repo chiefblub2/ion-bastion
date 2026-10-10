@@ -24,8 +24,8 @@ import { SAEUREMOOR } from "./sectors/toxic";
 const GRENZZONE: readonly MissionDefinition[] = [
   {
     id: "outpost-07",
-    name: "Außenposten 07",
-    focus: "An Kurven bauen, Gegner lange in Reichweite halten",
+    name: "Outpost 07",
+    focus: "Build on bends to keep enemies in range for a long time",
     map: OUTPOST,
     waves: WAVES,
     startingCredits: 240,
@@ -33,8 +33,8 @@ const GRENZZONE: readonly MissionDefinition[] = [
   },
   {
     id: "schleusenring",
-    name: "Schleusenring",
-    focus: "Innenkurven nutzen, Türme mehrfach feuern lassen",
+    name: "Lock Ring",
+    focus: "Use the inner bends so towers fire multiple times",
     map: SCHLEUSENRING,
     waves: SCHLEUSENRING_WAVES,
     startingCredits: 280,
@@ -43,8 +43,8 @@ const GRENZZONE: readonly MissionDefinition[] = [
   },
   {
     id: "splitterfeld",
-    name: "Splitterfeld",
-    focus: "Reichweiten sorgfältig überlappen lassen",
+    name: "Shard Field",
+    focus: "Overlap ranges carefully",
     map: SPLITTERFELD,
     waves: SPLITTERFELD_WAVES,
     startingCredits: 320,
@@ -53,8 +53,8 @@ const GRENZZONE: readonly MissionDefinition[] = [
   },
   {
     id: "glutpass",
-    name: "Glutpass",
-    focus: "Schnelle Gegner bremsen und Gruppen aufhalten",
+    name: "Ember Pass",
+    focus: "Slow fast enemies and hold up groups",
     map: GLUTPASS,
     waves: GLUTPASS_WAVES,
     startingCredits: 340,
@@ -63,8 +63,8 @@ const GRENZZONE: readonly MissionDefinition[] = [
   },
   {
     id: "kernfestung",
-    name: "Kernfestung",
-    focus: "Mehrere Verteidigungszonen und Aura-Unterstützung",
+    name: "Core Fortress",
+    focus: "Several defense zones and aura support",
     map: KERNFESTUNG,
     waves: KERNFESTUNG_WAVES,
     startingCredits: 400,
@@ -74,7 +74,7 @@ const GRENZZONE: readonly MissionDefinition[] = [
 ];
 /** The campaign in play order; each sector is one tab in the mission dialog. */
 export const SECTORS: readonly MissionSector[] = [
-  { id: "grenzzone", name: "Grenzzone", missions: GRENZZONE },
+  { id: "grenzzone", name: "Border Zone", missions: GRENZZONE },
   FROSTGUERTEL,
   SAEUREMOOR,
   ORBITALDECK,

@@ -53,7 +53,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     // In versus, the others' commands act on their own fields; only a send aimed at us is news.
     if (versus && !own && !shared) {
       if (c.type === "send" && result.ok && result.params?.target === view.player + 1)
-        ui.notice(`${playerName(player)} schickt dir ${result.params.enemy}!`, true);
+        ui.notice(`${playerName(player)} sends you ${result.params.enemy}!`, true);
       ui.refresh();
       return;
     }
@@ -85,7 +85,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     /** The sector the mission page opens on next; undefined opens the current mission's sector. */
     missionSector: number | undefined;
   const screens = createScreens(game.content.missions, () => game.mission.id, enter);
-  /** A mission this session has played on, which "Weiterspielen" returns to instead of reloading it. */
+  /** A mission this session has played on, which "Continue" returns to instead of reloading it. */
   const inProgress = () => coop.active() || game.state.wave > 0 || game.state.towers.length > 0;
   /** Shows a screen: pauses or resumes the wave between game and menu and fills the menu page. */
   function enter(to: Screen, from: Screen | null) {
@@ -120,7 +120,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     view.selected = null;
     view.enemy = null;
     const d = game.content.towers[type];
-    ui.notice(`${d.name} ausgewählt. Klicke auf ein freies Feld ${d.placement === "path" ? "auf dem Weg" : "neben dem Pfad"}.`);
+    ui.notice(`${d.name} selected. Click a free cell ${d.placement === "path" ? "on the path" : "next to the path"}.`);
     ui.refresh();
   }
   /** Leaves build mode and drops the selection (Esc, right click). */
@@ -129,7 +129,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     view.build = null;
     view.selected = null;
     view.enemy = null;
-    ui.notice("Auswahl aufgehoben.");
+    ui.notice("Selection cleared.");
     ui.refresh();
   }
   function chooseCell(x: number, y: number, keepBuilding = false) {
@@ -139,7 +139,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     if (tower) {
       view.selected = tower.id;
       view.build = null;
-      ui.notice("Turm ausgewählt. Verbessern oder verkaufen.");
+      ui.notice("Tower selected. Upgrade or sell it.");
       ui.refresh();
       return;
     }
@@ -171,7 +171,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     execute({ type: "mission", id });
     if (!coop.active()) screens.show(GAME);
   }
-  /** "Weiterspielen": back to the mission in progress, else the remembered one from an earlier visit. */
+  /** "Continue": back to the mission in progress, else the remembered one from an earlier visit. */
   function resume() {
     if (inProgress()) return screens.show(GAME);
     const last = missionById(lastMission() ?? "", game.content.missions);
@@ -233,7 +233,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     });
   }
   const fullscreen = () =>
-    toggleFullscreen().catch(() => ui.notice("Vollbild ist in diesem Browser nicht verfügbar.", true));
+    toggleFullscreen().catch(() => ui.notice("Fullscreen is not available in this browser.", true));
   const pauseIfRunning = () => {
     if (isRunning(game.state)) execute({ type: "pause" });
   };
@@ -285,10 +285,10 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       case "sound-btn": {
         try {
           const on = await audio.toggle();
-          b.textContent = on ? "Ton an" : "Ton aus";
+          b.textContent = on ? "Sound on" : "Sound off";
           b.setAttribute("aria-pressed", String(on));
         } catch {
-          ui.notice("Audio ist in diesem Browser nicht verfügbar.", true);
+          ui.notice("Audio is not available in this browser.", true);
         }
         break;
       }
@@ -405,7 +405,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
           y: Math.max(0, Math.min(game.map.rows - 1, p.y + dy)),
         };
         ui.notice(
-          `Feld ${String.fromCharCode(65 + view.hover.x)}${view.hover.y + 1}. ${game.canBuild(view.hover.x, view.hover.y, view.build ?? undefined) ? "Bebaubar." : "Belegt."}`,
+          `Cell ${String.fromCharCode(65 + view.hover.x)}${view.hover.y + 1}. ${game.canBuild(view.hover.x, view.hover.y, view.build ?? undefined) ? "Buildable." : "Occupied."}`,
         );
       }
       if (e.key === "Enter") {

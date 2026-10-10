@@ -82,11 +82,11 @@ function wait(g: Game, until: number) {
 }
 describe("trap-only attack kinds", () => {
   it("are rejected on towers that are not traps", () => {
-    expect(() => validateTower({ ...TOWERS.tesla, attack: { kind: "pit", size: 0.2 } }, "Turm")).toThrow(/nur für Fallen/);
-    expect(() => validateTower(TOWERS.pit, "Turm")).not.toThrow();
+    expect(() => validateTower({ ...TOWERS.tesla, attack: { kind: "pit", size: 0.2 } }, "Tower")).toThrow(/only for traps/);
+    expect(() => validateTower(TOWERS.pit, "Tower")).not.toThrow();
   });
 });
-describe("Krähenfüße", () => {
+describe("Caltrops", () => {
   const { perCell } = TOWERS.spikes.attack as BleedAttack,
     d = TOWERS.spikes.damage;
   it("an enemy bleeds for every cell it walks on, but not while standing or pushed back", () => {

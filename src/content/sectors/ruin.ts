@@ -2,7 +2,7 @@ import type { MissionSector } from "../../core/types";
 import { parseMap } from "../maps";
 import { g, wave } from "../waves";
 // Rubble everywhere: only scattered build cells along the avenue.
-const TRUEMMERALLEE = parseMap("truemmerallee", "Trümmerallee", [
+const TRUEMMERALLEE = parseMap("truemmerallee", "Rubble Avenue", [
   "#..##.#.#.##.##..#",
   "S=====#.##.#..##.#",
   "#.#.#=.#..#.#.#..#",
@@ -17,7 +17,7 @@ const TRUEMMERALLEE = parseMap("truemmerallee", "Trümmerallee", [
   "#.#.#.###.#.#.#.##",
 ], "ruin");
 // Three lanes split by bunker rows; towers only fit into the gaps and the open rows.
-const BUNKERLINIE = parseMap("bunkerlinie", "Bunkerlinie", [
+const BUNKERLINIE = parseMap("bunkerlinie", "Bunker Line", [
   "....#.....#.....#.",
   "S================.",
   "................=.",
@@ -31,7 +31,7 @@ const BUNKERLINIE = parseMap("bunkerlinie", "Bunkerlinie", [
   "....#.....#.....#.",
 ], "ruin");
 // The nave: a short run up to the altar, which the path circles at the end.
-const KATHEDRALE = parseMap("kathedrale", "Kathedrale", [
+const KATHEDRALE = parseMap("kathedrale", "Cathedral", [
   "......######......",
   ".....##....##.....",
   "....##...R..##....",
@@ -46,7 +46,7 @@ const KATHEDRALE = parseMap("kathedrale", "Kathedrale", [
   "....#...S....#....",
 ], "ruin");
 // Two long elevated straights, too far apart for short-range towers to cover both.
-const HOCHBAHN = parseMap("hochbahn", "Hochbahn", [
+const HOCHBAHN = parseMap("hochbahn", "Elevated Rail", [
   "......................",
   "..#....#....#....#....",
   "S===================..",
@@ -60,7 +60,7 @@ const HOCHBAHN = parseMap("hochbahn", "Hochbahn", [
   "......................",
 ], "ruin");
 // Around the walls, through the south gate into the keep.
-const ZITADELLE = parseMap("zitadelle", "Zitadelle", [
+const ZITADELLE = parseMap("zitadelle", "Citadel", [
   "....................",
   "S=================..",
   "..#.............#=..",
@@ -164,12 +164,12 @@ const TRUEMMERALLEE_WAVES = [
 ];
 export const RUINENSTADT: MissionSector = {
   id: "ruin",
-  name: "Ruinenstadt",
+  name: "Ruined City",
   missions: [
-    { id: "truemmerallee", name: "Trümmerallee", focus: "Wenige Bauplätze zwischen den Trümmern: Bollwerke brauchen Lanzen", map: TRUEMMERALLEE, waves: TRUEMMERALLEE_WAVES, startingCredits: 480, reactorEnergy: 20, hpGrowth: 0.8 },
-    { id: "bunkerlinie", name: "Bunkerlinie", focus: "Nur Basistürme: Impuls, Nova, Kryo und Flak", map: BUNKERLINIE, waves: BUNKERLINIE_WAVES, startingCredits: 500, reactorEnergy: 20, hpGrowth: 0.92, availableTowers: ["pulse", "blast", "frost", "flak"] },
-    { id: "kathedrale", name: "Kathedrale", focus: "Kurzer Pfad: das Feuer bündeln, Kommandanten zuerst", map: KATHEDRALE, waves: KATHEDRALE_WAVES, startingCredits: 520, reactorEnergy: 15, hpGrowth: 0.88 },
-    { id: "hochbahn", name: "Hochbahn", focus: "Sprinterschwärme auf langen Geraden, Kommandanten treiben sie an", map: HOCHBAHN, waves: HOCHBAHN_WAVES, startingCredits: 540, reactorEnergy: 20, hpGrowth: 0.92 },
-    { id: "zitadelle", name: "Zitadelle", focus: "Sektorfinale: 15+ Wellen, zwei Titanen zugleich", map: ZITADELLE, waves: ZITADELLE_WAVES, startingCredits: 580, reactorEnergy: 20, hpGrowth: 0.9 },
+    { id: "truemmerallee", name: "Rubble Avenue", focus: "Few build spots among the rubble: Bulwarks need Lances", map: TRUEMMERALLEE, waves: TRUEMMERALLEE_WAVES, startingCredits: 480, reactorEnergy: 20, hpGrowth: 0.8 },
+    { id: "bunkerlinie", name: "Bunker Line", focus: "Basic towers only: Pulse, Nova, Cryo and Flak", map: BUNKERLINIE, waves: BUNKERLINIE_WAVES, startingCredits: 500, reactorEnergy: 20, hpGrowth: 0.92, availableTowers: ["pulse", "blast", "frost", "flak"] },
+    { id: "kathedrale", name: "Cathedral", focus: "Short path: focus fire, Commanders first", map: KATHEDRALE, waves: KATHEDRALE_WAVES, startingCredits: 520, reactorEnergy: 15, hpGrowth: 0.88 },
+    { id: "hochbahn", name: "Elevated Rail", focus: "Sprinter swarms on long straights, Commanders drive them on", map: HOCHBAHN, waves: HOCHBAHN_WAVES, startingCredits: 540, reactorEnergy: 20, hpGrowth: 0.92 },
+    { id: "zitadelle", name: "Citadel", focus: "Sector finale: 15+ waves, two Titans at once", map: ZITADELLE, waves: ZITADELLE_WAVES, startingCredits: 580, reactorEnergy: 20, hpGrowth: 0.9 },
   ],
 };

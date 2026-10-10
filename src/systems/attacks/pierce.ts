@@ -24,8 +24,8 @@ export const pierce: AttackModule<PierceAttack> = {
   aim: "enemy",
   projectile: "forbidden",
   params: {
-    width: { label: "Strahlbreite", valid: (v) => v > 0, unit: " Felder" },
-    falloff: { label: "Schaden je Durchschlag", valid: (v) => v > 0 && v <= 1, unit: " %", show: (v) => v * 100 },
+    width: { label: "Beam width", valid: (v) => v > 0, unit: " cells" },
+    falloff: { label: "Damage per pierce", valid: (v) => v > 0 && v <= 1, unit: " %", show: (v) => v * 100 },
   },
   // Enemies trail along the path, not along the beam: aim where the line hits the most of them.
   choose: (sim, type, from, reach, candidates, spec) => {

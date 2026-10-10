@@ -79,11 +79,11 @@ export interface VolleyAttack {
   /** Different enemies shot at in one salvo. */
   targets: number;
 }
-/** Krähenfüße: damage per cell walked while bleeding. */
+/** Caltrops: damage per cell walked while bleeding. */
 export interface BleedAttack { kind: "bleed"; perCell: number; duration: number }
-/** Haftmine: a bomb stuck to the enemy, blowing up after `fuse` seconds or on its death. */
+/** Sticky Mine: a bomb stuck to the enemy, blowing up after `fuse` seconds or on its death. */
 export interface ChargeAttack { kind: "charge"; fuse: number; radius: number }
-/** Fallgrube: swallows enemies up to this body size whole. */
+/** Pitfall: swallows enemies up to this body size whole. */
 export interface PitAttack { kind: "pit"; size: number }
 /** Alarmdraht: instantly reloads every attack tower within `radius`. */
 export interface AlarmAttack { kind: "alarm"; radius: number }
@@ -105,11 +105,11 @@ export interface NetAttack {
   factor: number;
   duration: number;
 }
-/** Prämienbake: kills in range pay this share of their reward on top. */
+/** Bounty Beacon: kills in range pay this share of their reward on top. */
 export interface BountyAttack { kind: "bounty"; bonus: number }
-/** Reparaturdock: reactor energy restored after every completed wave. */
+/** Repair Dock: reactor energy restored after every completed wave. */
 export interface RepairAttack { kind: "repair"; amount: number }
-/** Peilsender: enemies in range take this much more damage, e.g. 0.15 for +15 %. */
+/** Tracker: enemies in range take this much more damage, e.g. 0.15 for +15 %. */
 export interface MarkAttack { kind: "mark"; amount: number }
 /** Towers without an attack of their own; they are never buffed and have no targets. */
 export type SupportAttack = AuraAttack | IncomeAttack | DetectAttack | BountyAttack | RepairAttack | MarkAttack;
@@ -370,7 +370,7 @@ export type Trait =
     }
   | {
       kind: "refract";
-      /** Damage factor of instant hits (Tesla, Lanze, Fokus, Beben, Gravitron, Störsender), in [0.4, 0.6]. Not disruptable. */
+      /** Damage factor of instant hits (Tesla, Lance, Focus, Quake, Gravitron, Jammer), in [0.4, 0.6]. Not disruptable. */
       factor: number;
     }
   | {
@@ -518,17 +518,17 @@ export interface WaveDefinition {
 export interface MissionDefinition {
   id: string;
   name: string;
-  /** Taktischer Schwerpunkt der Mission. */
+  /** Tactical focus of the mission. */
   focus: string;
   map: MapDefinition;
   waves: readonly WaveDefinition[];
   startingCredits: number;
   reactorEnergy: number;
-  /** HP-Zuwachs pro Welle; Standard 0,14 (+14 %). */
+  /** HP growth per wave; default 0.14 (+14%). */
   hpGrowth?: number;
   /** Buildable towers; all towers when absent. */
   availableTowers?: readonly TowerId[];
-  /** Kreislauf: timed, overlapping waves on a ring map; absent on reactor missions. */
+  /** Circuit: timed, overlapping waves on a ring map; absent on reactor missions. */
   circle?: CircleRules;
 }
 /** Rules of a circle mission; its map must be a `loop`. */
@@ -569,13 +569,13 @@ export type StatusEffect =
   | { kind: "vulnerable"; amount: number; until: number }
   /** Walks backwards at `factor` × speed until `release`; immune to further pulls until `until`. */
   | { kind: "pull"; factor: number; release: number; until: number }
-  /** Störsender: shield, regen, healer, leader, stealth and evade are off until `until`. */
+  /** Jammer: shield, regen, healer, leader, stealth and evade are off until `until`. */
   | { kind: "disrupted"; until: number }
-  /** Fangnetz: slowed to `factor`, and a flyer counts as a ground target. */
+  /** Snare Net: slowed to `factor`, and a flyer counts as a ground target. */
   | { kind: "netted"; factor: number; until: number }
-  /** Krähenfüße: every `BURN_TICK` the cells walked since `last` cost `perCell` each. */
+  /** Caltrops: every `BURN_TICK` the cells walked since `last` cost `perCell` each. */
   | { kind: "bleeding"; perCell: number; last: number; next: number; until: number; source: DamageSource }
-  /** Haftmine: explodes at `until` or when the carrier dies; `until` is -Infinity once it has gone off. */
+  /** Sticky Mine: explodes at `until` or when the carrier dies; `until` is -Infinity once it has gone off. */
   | { kind: "charged"; damage: number; radius: number; until: number; source: DamageSource };
 export type StatusKind = StatusEffect["kind"];
 export interface Enemy extends Point {
@@ -612,7 +612,7 @@ export interface Tower extends Point {
   owner: number;
   /** Whom the tower aims at; absent means "first". */
   priority?: TargetPriority;
-  /** Fokus only: the locked target and its consecutive hits. */
+  /** Focus only: the locked target and its consecutive hits. */
   focus?: { target: number; stacks: number };
 }
 /** Target selection of an attack tower; ties fall back to path progress, then id. */
@@ -642,7 +642,7 @@ export interface Spawn {
 export type GameEvent =
   | { type: "shot"; tower: TowerId; from: Point; to: Point; color: number }
   | { type: "chain"; from: Point; to: Point; color: number }
-  /** `power`: 0–1 display intensity, e.g. a Fokus beam's charge. */
+  /** `power`: 0–1 display intensity, e.g. a Focus beam's charge. */
   | { type: "beam"; from: Point; to: Point; color: number; power?: number }
   | { type: "pulse"; at: Point; radius: number; color: number }
   | { type: "income"; at: Point; amount: number; color: number }

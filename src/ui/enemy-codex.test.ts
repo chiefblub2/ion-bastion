@@ -28,16 +28,16 @@ describe("enemy codex", () => {
     expect(shield.disruptable).toBe(true);
     expect(shield.enemies.map((e) => e.definition.id)).toContain("aegis");
     expect(traits.find((t) => t.kind === "armor")!.disruptable).toBe(false);
-    expect(traits[0]).toMatchObject({ kind: "air", name: "Flieger" });
+    expect(traits[0]).toMatchObject({ kind: "air", name: "Flyer" });
   });
   it("renders both tabs", () => {
     const list = renderEnemyCodex(DEFAULT_CONTENT, "enemies");
     expect(list.tabs).toContain('aria-selected="true"');
-    expect(list.list).toContain("Schildträger");
-    expect(list.list).toContain("SCHILD 60 %");
-    expect(list.list).toContain("ab Mission 01");
+    expect(list.list).toContain("Shield Bearer");
+    expect(list.list).toContain("SHIELD 60%");
+    expect(list.list).toContain("from Mission 01");
     const traits = renderEnemyCodex(DEFAULT_CONTENT, "traits").list;
-    expect(traits).toContain("Tarnung");
-    expect(traits).toContain("Der Störsender schaltet die Eigenschaft ab.");
+    expect(traits).toContain("Stealth");
+    expect(traits).toContain("The Jammer switches the trait off.");
   });
 });

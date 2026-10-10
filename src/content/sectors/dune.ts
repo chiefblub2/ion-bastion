@@ -2,7 +2,7 @@ import type { MissionSector } from "../../core/types";
 import { parseMap } from "../maps";
 import { g, wave } from "../waves";
 // Four long switchbacks of loose sand: wide gaps between the legs make every tower cover two of them.
-const TREIBSAND = parseMap("treibsand", "Treibsand", [
+const TREIBSAND = parseMap("treibsand", "Quicksand", [
   "S===========....",
   "...#.......=...#",
   "...=========....",
@@ -15,7 +15,7 @@ const TREIBSAND = parseMap("treibsand", "Treibsand", [
   "..#.........#...",
 ], "dune");
 // A caravan trail zigzagging up and down five long dune ridges: a tower in the gap between two ridges covers both.
-const KARAWANENWEG = parseMap("karawanenweg", "Karawanenweg", [
+const KARAWANENWEG = parseMap("karawanenweg", "Caravan Road", [
   "..S..====..====.",
   "..=..=..=..=..=.",
   "..=#.=..=..=..=.",
@@ -29,7 +29,7 @@ const KARAWANENWEG = parseMap("karawanenweg", "Karawanenweg", [
   "..====..====..R.",
 ], "dune");
 // Tight zigzag over a sheet of fused glass: five long legs with one free row between them, plenty of path cells for traps.
-const GLASEBENE = parseMap("glasebene", "Glasebene", [
+const GLASEBENE = parseMap("glasebene", "Glass Plain", [
   "S==============.",
   "..........#...=.",
   ".==============.",
@@ -42,7 +42,7 @@ const GLASEBENE = parseMap("glasebene", "Glasebene", [
   "................",
 ], "dune");
 // A ridge road in long switchbacks; enemies get a lot of ground to cover and none may pass.
-const STURMKAMM = parseMap("sturmkamm", "Sturmkamm", [
+const STURMKAMM = parseMap("sturmkamm", "Storm Crest", [
   "S==============...",
   "..............=...",
   "...============...",
@@ -56,7 +56,7 @@ const STURMKAMM = parseMap("sturmkamm", "Sturmkamm", [
   "..#...............",
 ], "dune");
 // A spiral through the dunes towards the oasis in the middle.
-const OASE_NULL = parseMap("oase-null", "Oase Null", [
+const OASE_NULL = parseMap("oase-null", "Oasis Zero", [
   "S=================",
   ".................=",
   "..==============.=",
@@ -71,12 +71,12 @@ const OASE_NULL = parseMap("oase-null", "Oase Null", [
 ], "dune");
 export const DUENENMEER: MissionSector = {
   id: "dune",
-  name: "Dünenmeer",
+  name: "Dune Sea",
   missions: [
     {
       id: "treibsand",
-      name: "Treibsand",
-      focus: "Skarabäus: Panzerung 30 %, dafür sind Korrosion und Wucht gefragt",
+      name: "Quicksand",
+      focus: "Scarab: 30% armor, so Corrosion and heavy hits are in demand",
       map: TREIBSAND,
       waves: [
         wave(35, g("drone", 12, 0.82)),
@@ -102,8 +102,8 @@ export const DUENENMEER: MissionSector = {
     },
     {
       id: "karawanenweg",
-      name: "Karawanenweg",
-      focus: "Gräber tauchen alle 3 Felder ab: nur Fallen und Flächenschaden treffen sie",
+      name: "Caravan Road",
+      focus: "Burrowers dive every 3 cells: only traps and area damage hit them",
       map: KARAWANENWEG,
       waves: [
         wave(35, g("drone", 3, 0.8)),
@@ -130,8 +130,8 @@ export const DUENENMEER: MissionSector = {
     },
     {
       id: "glasebene",
-      name: "Glasebene",
-      focus: "Nur Fallen plus Nova, Kryo und Flak: Gräber tauchen unter jedem Turmfeuer weg, Fallen auf dem Pfad erwischen sie",
+      name: "Glass Plain",
+      focus: "Only traps plus Nova, Cryo and Flak: Burrowers dive under all tower fire, traps on the path catch them",
       map: GLASEBENE,
       waves: [
         wave(35, g("drone", 2, 0.8)),
@@ -158,8 +158,8 @@ export const DUENENMEER: MissionSector = {
     },
     {
       id: "sturmkamm",
-      name: "Sturmkamm",
-      focus: "Nur 10 Reaktorenergie: Auf dem langen Kamm darf nichts durchkommen",
+      name: "Storm Crest",
+      focus: "Only 10 reactor energy: nothing may get through on the long crest",
       map: STURMKAMM,
       waves: [
         wave(35, g("drone", 7, 0.8)),
@@ -187,8 +187,8 @@ export const DUENENMEER: MissionSector = {
     },
     {
       id: "oase-null",
-      name: "Oase Null",
-      focus: "Spirale zur Oase: zwei Echo-Wellen kehren mit voller Härte zurück, zum Schluss zwei Bosse",
+      name: "Oasis Zero",
+      focus: "Spiral to the oasis: two echo waves return at full strength, two bosses at the end",
       map: OASE_NULL,
       // Echo waves repeat an earlier wave far above the linear HP curve.
       waves: [

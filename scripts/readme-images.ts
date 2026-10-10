@@ -39,7 +39,7 @@ const flag = (name: string) => {
 };
 const base = flag("--url") ?? "http://localhost:4173";
 const only = flag("--only");
-if (only && !["towers", "enemies", "screens"].includes(only)) fail("--only erwartet towers, enemies oder screens.");
+if (only && !["towers", "enemies", "screens"].includes(only)) fail("--only expects towers, enemies or screens.");
 const out = resolve("docs/images");
 
 async function icons(browser: Browser) {
@@ -64,7 +64,7 @@ async function icons(browser: Browser) {
 }
 
 async function screen(browser: Browser, shot: (typeof SCREENS)[number]) {
-  const mission = missionById(shot.id) ?? fail(`Unbekannte Mission '${shot.id}'.`),
+  const mission = missionById(shot.id) ?? fail(`Unknown mission '${shot.id}'.`),
     builds = STRATEGIES[mission.id]?.A.builds ?? [],
     credits = mission.startingCredits + builds.reduce((sum, b) => sum + DEFAULT_CONTENT.towers[b.tower].cost, 0),
     page = await browser.newPage({ viewport: shot.full ? { width: 1600, height: 1000 } : { width: 1440, height: 900 } }),
@@ -79,7 +79,7 @@ async function screen(browser: Browser, shot: (typeof SCREENS)[number]) {
   const path = `${out}/screens/${mission.id}.png`;
   if (shot.full) await page.screenshot({ path });
   else await page.locator("#board-wrap").screenshot({ path });
-  console.log(`${mission.id}: Welle ${shot.wave ?? 1}, ${next.i} von ${builds.length} Türmen`);
+  console.log(`${mission.id}: wave ${shot.wave ?? 1}, ${next.i} of ${builds.length} towers`);
   return errors;
 }
 

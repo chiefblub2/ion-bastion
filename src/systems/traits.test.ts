@@ -95,10 +95,10 @@ describe("enemy traits", () => {
   });
   it("malformed traits are rejected with their position", () => {
     expect(() => validateContent(withDroneTraits({ kind: "armor", reduction: 1 }))).toThrow(
-      "Gegner drone › Eigenschaft 1: reduction",
+      "Enemy drone › Trait 1: reduction",
     );
     expect(() => validateContent(withDroneTraits({ kind: "splitOnDeath", type: "ghost", count: 1 }))).toThrow(
-      "Unbekannter Gegner 'ghost'",
+      "Unknown enemy 'ghost'",
     );
   });
 });
@@ -189,11 +189,11 @@ describe("new enemy traits", () => {
     expect(e.hp).toBe(920);
   });
   it("rejects malformed new traits", () => {
-    expect(() => validateContent(withDroneTraits({ kind: "shield", capacity: 1, delay: 2 }))).toThrow("capacity muss in (0, 1)");
-    expect(() => validateContent(withDroneTraits({ kind: "evade", every: 1 }))).toThrow("every muss eine ganze Zahl");
-    expect(() => validateContent(withDroneTraits({ kind: "regen" }))).toThrow("Genau eines von perSecond oder percent");
-    expect(() => validateContent(withDroneTraits({ kind: "regen", perSecond: 2, percent: 0.02 }))).toThrow("Genau eines");
-    expect(() => validateContent(withDroneTraits({ kind: "leader", radius: 0, speed: 0.2, resist: 0.15 }))).toThrow("radius muss > 0");
+    expect(() => validateContent(withDroneTraits({ kind: "shield", capacity: 1, delay: 2 }))).toThrow("capacity must be in (0, 1)");
+    expect(() => validateContent(withDroneTraits({ kind: "evade", every: 1 }))).toThrow("every must be an integer");
+    expect(() => validateContent(withDroneTraits({ kind: "regen" }))).toThrow("exactly one of perSecond or percent");
+    expect(() => validateContent(withDroneTraits({ kind: "regen", perSecond: 2, percent: 0.02 }))).toThrow("exactly one");
+    expect(() => validateContent(withDroneTraits({ kind: "leader", radius: 0, speed: 0.2, resist: 0.15 }))).toThrow("radius must be > 0");
   });
 });
 
@@ -209,7 +209,7 @@ describe("extending content without touching systems, render or UI", () => {
     const sniper = {
       ...TOWERS.pulse,
       id: "sniper",
-      name: "Späher",
+      name: "Scout",
       range: 5,
       interval: 1.2,
       damage: 60,
@@ -692,7 +692,7 @@ describe("momentum", () => {
     expect(traitFlags(g, makeEnemy(1, "drone", 0, 0, 99)).momentum).toBeCloseTo(0.9);
     expect(traitFlags(new Game(), makeEnemy(1, "drone", 0, 0, 10)).momentum).toBe(0);
   });
-  it("is not disrupted by a Störsender", () => {
+  it("is not disrupted by a Jammer", () => {
     const g = swift(), e = makeEnemy(1, "drone", 0, 0, 10);
     applyStatus(g, e, { kind: "disrupted", until: 99 });
     expect(traitSpeedFactor(g, e)).toBeCloseTo(1.3);

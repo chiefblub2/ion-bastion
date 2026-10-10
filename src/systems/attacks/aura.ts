@@ -8,6 +8,6 @@ export const aura: AttackModule<AuraAttack> = {
   validate: (spec) =>
     (["damage", "speed", "range"] as const).every((k) => Number.isFinite(spec.base?.[k]) && spec.base[k] >= 0)
       ? undefined
-      : "Ungültiger Aura-Grundbonus.",
+      : "Invalid aura base bonus.",
   apply: () => {},
 };

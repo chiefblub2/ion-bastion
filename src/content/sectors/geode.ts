@@ -3,7 +3,7 @@ import { parseMap } from "../maps";
 import { g, wave } from "../waves";
 // Golems harden in a global 4 s rhythm, so difficulty comes from steep HP growth; burn and slowing carry the sector.
 // A quartz tunnel: four long legs, the gaps are single rows so every tower reaches two legs.
-const QUARZSTOLLEN_MAP = parseMap("quarzstollen", "Quarzstollen", [
+const QUARZSTOLLEN_MAP = parseMap("quarzstollen", "Quartz Gallery", [
   "S=============",
   "..#......#...=",
   "==============",
@@ -15,7 +15,7 @@ const QUARZSTOLLEN_MAP = parseMap("quarzstollen", "Quarzstollen", [
 ], "geode");
 
 // A hall of mirrors: five legs of alternating shape, every tower covers two of them.
-const SPIEGELSAAL_MAP = parseMap("spiegelsaal", "Spiegelsaal", [
+const SPIEGELSAAL_MAP = parseMap("spiegelsaal", "Hall of Mirrors", [
   "S============",
   "..#.....#...=",
   "=============",
@@ -29,7 +29,7 @@ const SPIEGELSAAL_MAP = parseMap("spiegelsaal", "Spiegelsaal", [
 ], "geode");
 
 // A geode chamber: the path spirals inwards to the reactor, the pockets between the rings are narrow.
-const GEODENKAMMER_MAP = parseMap("geodenkammer", "Geodenkammer", [
+const GEODENKAMMER_MAP = parseMap("geodenkammer", "Geode Chamber", [
   "S===========",
   "...........=",
   "=========..=",
@@ -42,7 +42,7 @@ const GEODENKAMMER_MAP = parseMap("geodenkammer", "Geodenkammer", [
 ], "geode");
 
 // A prism shaft: legs with gaps of one and two rows, crystals as obstacles.
-const PRISMENSCHACHT_MAP = parseMap("prismenschacht", "Prismenschacht", [
+const PRISMENSCHACHT_MAP = parseMap("prismenschacht", "Prism Shaft", [
   "S=========",
   ".#.......=",
   ".#.......=",
@@ -56,7 +56,7 @@ const PRISMENSCHACHT_MAP = parseMap("prismenschacht", "Prismenschacht", [
 ], "geode");
 
 // The crystal heart: six legs with gaps of one row, crystals scattered between them.
-const KRISTALLHERZ_MAP = parseMap("kristallherz", "Kristallherz", [
+const KRISTALLHERZ_MAP = parseMap("kristallherz", "Crystal Heart", [
   "S=============",
   ".#.....#.....=",
   "==============",
@@ -72,12 +72,12 @@ const KRISTALLHERZ_MAP = parseMap("kristallherz", "Kristallherz", [
 
 export const KRISTALLHOEHLE: MissionSector = {
   id: "geode",
-  name: "Kristallhöhle",
+  name: "Crystal Cave",
   missions: [
     {
       id: "quarzstollen",
-      name: "Quarzstollen",
-      focus: "Kristallwächter härten im Takt: der Brand der Glut wirkt voll, Kryo hält sie in Reichweite",
+      name: "Quartz Gallery",
+      focus: "Crystal Wardens harden on a beat: Ember's burn works in full, Cryo keeps them in range",
       map: QUARZSTOLLEN_MAP,
       waves: [
         wave(35, g("drone", 20, 0.7), g("golem", 2, 1, 6)),
@@ -105,8 +105,8 @@ export const KRISTALLHOEHLE: MissionSector = {
     },
     {
       id: "spiegelsaal",
-      name: "Spiegelsaal",
-      focus: "Splitterfalter zerfallen in Gleiter, Echo-Wellen kehren weit stärker zurück",
+      name: "Hall of Mirrors",
+      focus: "Shard Moths break into Gliders, echo waves return much stronger",
       map: SPIEGELSAAL_MAP,
       // Echo waves repeat an earlier wave far above the linear HP curve.
       waves: [
@@ -137,8 +137,8 @@ export const KRISTALLHOEHLE: MissionSector = {
     },
     {
       id: "geodenkammer",
-      name: "Geodenkammer",
-      focus: "Nur 10 Reaktorenergie: kein Kristallwächter und kein Falter darf durch die Spirale",
+      name: "Geode Chamber",
+      focus: "Only 10 reactor energy: no Crystal Warden and no Moth may get through the spiral",
       map: GEODENKAMMER_MAP,
       waves: [
         wave(35, g("drone", 8, 0.7), g("golem", 1, 1, 6)),
@@ -166,8 +166,8 @@ export const KRISTALLHOEHLE: MissionSector = {
     },
     {
       id: "prismenschacht",
-      name: "Prismenschacht",
-      focus: "Phantome tarnen sich zwischen den Kristallen: Detektor bauen, Aura und Raffinerie sind gesperrt",
+      name: "Prism Shaft",
+      focus: "Phantoms cloak themselves between the crystals: build a Detector, Aura and Refinery are locked",
       map: PRISMENSCHACHT_MAP,
       availableTowers: ["pulse", "blast", "frost", "flak", "tesla", "inferno", "stasis", "acid", "decay", "executioner", "mortar", "pit", "mine", "tar", "detector"],
       waves: [
@@ -196,8 +196,8 @@ export const KRISTALLHOEHLE: MissionSector = {
     },
     {
       id: "kristallherz",
-      name: "Kristallherz",
-      focus: "Finale: Kristallwächter, Splitterfalter, Flieger und drei Titanen im Herzen der Höhle",
+      name: "Crystal Heart",
+      focus: "Finale: Crystal Wardens, Shard Moths, flyers and three Titans in the heart of the cave",
       map: KRISTALLHERZ_MAP,
       waves: [
         wave(35, g("drone", 8, 0.7), g("golem", 1, 1, 6)),

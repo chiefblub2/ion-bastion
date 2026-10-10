@@ -10,19 +10,19 @@ interface CoopDeps {
   game: Game;
   view: ViewState;
   ui: Interface;
-  /** "Mission wählen" in the lobby: the host picks the room's mission on the mission page. */
+  /** "Choose mission" in the lobby: the host picks the room's mission on the mission page. */
   pickMission: () => void;
   /** Every command a frame applied, local or from the partner. */
   applied: (applied: Applied) => void;
   setDriver: (driver: Driver | null) => void;
 }
 const ERRORS: Record<Extract<ServerMessage, { type: "error" }>["reason"], string> = {
-  "room-unknown": "Diesen Raum gibt es nicht.",
-  "room-full": "Der Raum ist voll oder die Mission läuft bereits.",
-  "not-host": "Das kann nur der Host.",
-  "not-in-room": "Du bist in keinem Raum.",
-  "players-mode": "Die Spielerzahl passt nicht zu diesem Modus.",
-  "bad-message": "Ungültige Nachricht an den Relay-Server.",
+  "room-unknown": "That room does not exist.",
+  "room-full": "The room is full or the mission is already running.",
+  "not-host": "Only the host can do that.",
+  "not-in-room": "You are not in a room.",
+  "players-mode": "The player count does not fit this mode.",
+  "bad-message": "Invalid message to the relay server.",
 };
 /** Multiplayer: lobby page, mode choice, relay connection and the switch to lockstep frames. */
 export function createCoop({ game, view, ui, pickMission, applied, setDriver }: CoopDeps) {
@@ -37,7 +37,7 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
     mode: ModeId = "coop",
     status = "";
   const CIRCLE_RULES =
-    "Kreislauf: Die Gegner kreisen, bis sie fallen. Wellen kommen per Timer, wer früh ruft, bekommt Credits. Überschreitet ihr gemeinsam das Limit, ist die Mission verloren. Race und Siege gibt es hier nicht.";
+    "Circuit: enemies circle until they fall. Waves come on a timer; calling one early earns credits. If you exceed the limit together, the mission is lost. Race and Siege are not available here.";
   const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   ui.session = () => session;
   function render() {
@@ -63,9 +63,9 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
     el("coop-mission").textContent = game.mission.name;
   }
   function roomStatus(players: number, code: string) {
-    const count = `${players}/${MAX_PLAYERS} Spieler im Raum.`;
-    if (players < 2) return `Warte auf Mitspieler. Gib ihnen den Code ${code}.`;
-    return seat === 0 ? `${count} Wähle den Modus und starte die Mission.` : `${count} Der Host wählt Modus und Mission.`;
+    const count = `${players}/${MAX_PLAYERS} players in the room.`;
+    if (players < 2) return `Waiting for teammates. Give them the code ${code}.`;
+    return seat === 0 ? `${count} Pick the mode and start the mission.` : `${count} The host picks the mode and mission.`;
   }
   function message(m: ServerMessage) {
     switch (m.type) {
@@ -90,7 +90,7 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
           hash: (frame, hash) => client?.send({ type: "hash", frame, hash }),
         });
         setDriver({ advance: () => driver?.advance() });
-        status = `${MODES[m.mode].name} läuft.`;
+        status = `${MODES[m.mode].name} is running.`;
         break;
       }
       case "frames":
@@ -102,11 +102,11 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
         return;
       case "peer-left":
         stopped = true;
-        status = "Ein Mitspieler hat das Spiel verlassen. Der Host kann neu starten, oder du spielst allein weiter.";
-        ui.notice("Mitspieler getrennt. Das Spiel ist angehalten.", true);
+        status = "A teammate left the game. The host can restart, or you can play on alone.";
+        ui.notice("Teammate disconnected. The game is stopped.", true);
         break;
       case "desync":
-        ui.notice(`Spielstände weichen ab (Frame ${m.frame}). Startet die Mission neu.`, true);
+        ui.notice(`Game states diverged (frame ${m.frame}). Restart the mission.`, true);
         return;
       case "error":
         status = ERRORS[m.reason];
@@ -118,7 +118,7 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
   }
   function connect(first: { type: "create" } | { type: "join"; code: string }) {
     if (client) return;
-    status = "Verbinde …";
+    status = "Connecting …";
     client = new RelayClient(relayUrl(), {
       open: () => client?.send(first),
       message,
@@ -128,9 +128,9 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
         room = null;
         if (wasRunning) {
           stopped = true;
-          status = "Verbindung zum Relay verloren.";
-          ui.notice("Verbindung zum Relay verloren. Das Spiel ist angehalten.", true);
-        } else status = `Kein Relay unter ${relayUrl()} erreichbar. Läuft „npm run server“?`;
+          status = "Connection to the relay lost.";
+          ui.notice("Connection to the relay lost. The game is stopped.", true);
+        } else status = `No relay reachable at ${relayUrl()}. Is "npm run server" running?`;
         render();
       },
     });
@@ -171,7 +171,7 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
     const code = (el("coop-code") as HTMLInputElement).value.trim().toUpperCase();
     if (/^[A-Z]{4}$/.test(code)) connect({ type: "join", code });
     else {
-      status = "Der Raumcode hat vier Buchstaben.";
+      status = "The room code has four letters.";
       render();
     }
   });

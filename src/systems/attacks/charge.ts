@@ -7,8 +7,8 @@ export const charge: AttackModule<ChargeAttack> = {
   projectile: "forbidden",
   trapOnly: true,
   params: {
-    fuse: { label: "Zünder", valid: (v) => v > 0, unit: " s" },
-    radius: { label: "Explosionsradius", valid: (v) => v > 0, unit: " Felder" },
+    fuse: { label: "Fuse", valid: (v) => v > 0, unit: " s" },
+    radius: { label: "Blast radius", valid: (v) => v > 0, unit: " cells" },
   },
   // One bomb per enemy: the next one goes to someone without a charge.
   choose: (sim, _type, _from, _reach, candidates) =>

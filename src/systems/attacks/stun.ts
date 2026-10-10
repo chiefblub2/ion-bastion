@@ -9,9 +9,9 @@ export const stun: AttackModule<StunAttack> = {
   aim: "enemy",
   projectile: "forbidden",
   params: {
-    radius: { label: "Pulsradius", valid: (v) => v > 0, unit: " Felder" },
-    duration: { label: "Betäubung", valid: (v) => v > 0, unit: " s" },
-    recovery: { label: "Erholung", valid: (v) => v >= 0, unit: " s" },
+    radius: { label: "Pulse radius", valid: (v) => v > 0, unit: " cells" },
+    duration: { label: "Stun", valid: (v) => v > 0, unit: " s" },
+    recovery: { label: "Recovery", valid: (v) => v >= 0, unit: " s" },
   },
   apply: (sim, src, { at }, damage, spec) => {
     const time = sim.state.time;

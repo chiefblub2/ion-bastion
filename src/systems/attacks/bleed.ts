@@ -4,14 +4,14 @@ import { dist } from "../path";
 import { applyStatus, BURN_TICK } from "../status";
 import { canTarget } from "./targeting";
 import type { AttackModule } from "./types";
-/** Krähenfüße: every enemy on the trap bleeds for each further cell it walks. */
+/** Caltrops: every enemy on the trap bleeds for each further cell it walks. */
 export const bleed: AttackModule<BleedAttack> = {
   aim: "enemy",
   projectile: "forbidden",
   trapOnly: true,
   params: {
-    perCell: { label: "Blutung je Feld", valid: (v) => v > 0 },
-    duration: { label: "Blutungsdauer", valid: (v) => v > 0, unit: " s" },
+    perCell: { label: "Bleed per cell", valid: (v) => v > 0 },
+    duration: { label: "Bleed duration", valid: (v) => v > 0, unit: " s" },
   },
   apply: (sim, src, { from, reach }, damage, spec) => {
     if (!from || !reach) return;

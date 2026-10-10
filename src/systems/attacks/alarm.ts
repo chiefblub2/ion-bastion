@@ -8,7 +8,7 @@ export const alarm: AttackModule<AlarmAttack> = {
   projectile: "forbidden",
   trapOnly: true,
   params: {
-    radius: { label: "Alarmradius", valid: (v) => v > 0, unit: " Felder" },
+    radius: { label: "Alarm radius", valid: (v) => v > 0, unit: " cells" },
   },
   apply: (sim, src, { enemy, from }, damage, spec) => {
     if (!enemy || !from) return;

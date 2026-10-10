@@ -9,9 +9,9 @@ export const chain: AttackModule<ChainAttack> = {
   aim: "enemy",
   projectile: "forbidden",
   params: {
-    jumps: { label: "Sprünge", valid: (v) => Number.isInteger(v) && v >= 1 },
-    range: { label: "Sprungweite", valid: (v) => v > 0, unit: " Felder" },
-    falloff: { label: "Schaden je Sprung", valid: (v) => v > 0 && v <= 1, unit: " %", show: (v) => v * 100 },
+    jumps: { label: "Jumps", valid: (v) => Number.isInteger(v) && v >= 1 },
+    range: { label: "Jump range", valid: (v) => v > 0, unit: " cells" },
+    falloff: { label: "Damage per jump", valid: (v) => v > 0 && v <= 1, unit: " %", show: (v) => v * 100 },
   },
   apply: (sim, src, { enemy }, damage, spec) => {
     if (!enemy) return;

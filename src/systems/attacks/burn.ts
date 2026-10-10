@@ -7,8 +7,8 @@ export const burn: AttackModule<BurnAttack> = {
   aim: "enemy",
   projectile: "optional",
   params: {
-    ratio: { label: "Brandschaden", valid: (v) => v > 0, unit: " % des Treffers", show: (v) => v * 100 },
-    duration: { label: "Branddauer", valid: (v) => v > 0, unit: " s" },
+    ratio: { label: "Burn damage", valid: (v) => v > 0, unit: " % of hit", show: (v) => v * 100 },
+    duration: { label: "Burn duration", valid: (v) => v > 0, unit: " s" },
   },
   apply: (sim, src, { enemy }, damage, spec) => {
     if (!enemy) return;

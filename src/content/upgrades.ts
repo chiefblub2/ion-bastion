@@ -17,10 +17,10 @@ const ATTACK_LEVELS = [
 export function attackUpgrades(base: TowerStats, buildCost: number, specials: LevelSpecials = {}, growsRange = true): readonly UpgradeDefinition[] {
   return ATTACK_LEVELS.map(({ level, cost, damage, range, interval }) => ({
     id: `level-${level}`,
-    label: `Stufe ${level}`,
+    label: `Level ${level}`,
     description: specials[level]?.description ?? (level <= 3
-      ? "Mehr Schaden, größere Reichweite und 10 % kürzere Zeit zwischen Schüssen."
-      : "Spätausbau: teuer, aber pro Credit stärker als ein weiterer Turm. Deutlich mehr Schaden und kürzere Zeit zwischen Schüssen."),
+      ? "More damage, longer range and 10% less time between shots."
+      : "Late upgrade: expensive, but stronger per credit than another tower. Much more damage and less time between shots."),
     cost: Math.round(buildCost * cost),
     requires: level === 2 ? [] : [`level-${level - 1}`],
     effects: {
@@ -40,13 +40,13 @@ export function attackUpgrades(base: TowerStats, buildCost: number, specials: Le
  * plain stat ID and fixes the tower's path; the other paths are excluded from then on.
  */
 const AURA_TRACKS = [
-  { stat: "damage", label: "Schaden", tiers: [[100, 0.25], [180, 0.40], [300, 0.55]], effect: "Schaden für unterstützte Angriffstürme" },
-  { stat: "speed", label: "Angriffstempo", tiers: [[120, 0.20], [200, 0.35], [320, 0.50]], effect: "Angriffe pro Sekunde für unterstützte Türme" },
-  { stat: "range", label: "Reichweite", tiers: [[100, 0.15], [170, 0.25], [280, 0.35]], effect: "Angriffsreichweite für unterstützte Türme" },
+  { stat: "damage", label: "Damage", tiers: [[100, 0.25], [180, 0.40], [300, 0.55]], effect: "damage for supported attack towers" },
+  { stat: "speed", label: "Attack Speed", tiers: [[120, 0.20], [200, 0.35], [320, 0.50]], effect: "attacks per second for supported towers" },
+  { stat: "range", label: "Range", tiers: [[100, 0.15], [170, 0.25], [280, 0.35]], effect: "attack range for supported towers" },
 ] as const;
 
 const auraId = (stat: string, tier: number) => (tier === 1 ? stat : `${stat}-${tier}`);
-const pct = (value: number) => `${Math.round(value * 100)} %`;
+const pct = (value: number) => `${Math.round(value * 100)}%`;
 
 export const AURA_UPGRADES: readonly UpgradeDefinition[] = AURA_TRACKS.flatMap(({ stat, label, tiers, effect }) =>
   tiers.map(([cost, value], index) => ({
@@ -56,8 +56,8 @@ export const AURA_UPGRADES: readonly UpgradeDefinition[] = AURA_TRACKS.flatMap((
     requires: index === 0 ? [] : [auraId(stat, index)],
     path: stat,
     description: index === 0
-      ? `Legt den Pfad fest: +${pct(value)} ${effect}. Die anderen Pfade werden für diesen Turm gesperrt.`
-      : `Erhöht den Bonus von +${pct(tiers[index - 1][1])} auf +${pct(value)} ${effect}.`,
+      ? `Locks in the path: +${pct(value)} ${effect}. The other paths are locked for this tower.`
+      : `Raises the bonus from +${pct(tiers[index - 1][1])} to +${pct(value)} ${effect}.`,
     effects: { aura: { [stat]: value } },
   })),
 );
@@ -70,8 +70,8 @@ const REFINERY_LEVELS = [
 
 export const REFINERY_UPGRADES: readonly UpgradeDefinition[] = REFINERY_LEVELS.map(({ level, cost, amount }) => ({
   id: `level-${level}`,
-  label: `Stufe ${level}`,
-  description: `Mehr Förderleistung: ${amount} Credits nach jeder abgeschlossenen Welle.`,
+  label: `Level ${level}`,
+  description: `More output: ${amount} credits after every completed wave.`,
   cost,
   requires: level === 2 ? [] : [`level-${level - 1}`],
   effects: { level, attack: { amount } },
@@ -85,8 +85,8 @@ const DETECTOR_LEVELS = [
 
 export const DETECTOR_UPGRADES: readonly UpgradeDefinition[] = DETECTOR_LEVELS.map(({ level, cost, range }) => ({
   id: `level-${level}`,
-  label: `Stufe ${level}`,
-  description: `Stärkerer Scanner: deckt getarnte Gegner in ${range} Feldern auf.`,
+  label: `Level ${level}`,
+  description: `Stronger Scanner: reveals stealthed enemies within ${range} cells.`,
   cost,
   requires: level === 2 ? [] : [`level-${level - 1}`],
   effects: { level, stats: { range } },
@@ -96,7 +96,7 @@ export const DETECTOR_UPGRADES: readonly UpgradeDefinition[] = DETECTOR_LEVELS.m
 function supportUpgrades(levels: readonly { cost: number; attack: Record<string, number>; range?: number; description: string }[]): readonly UpgradeDefinition[] {
   return levels.map(({ cost, attack, range, description }, i) => ({
     id: `level-${i + 2}`,
-    label: `Stufe ${i + 2}`,
+    label: `Level ${i + 2}`,
     description,
     cost,
     requires: i === 0 ? [] : [`level-${i + 1}`],
@@ -104,20 +104,20 @@ function supportUpgrades(levels: readonly { cost: number; attack: Record<string,
   }));
 }
 
-/** Prämienbake: more bonus per kill, the last level also a wider radius. */
+/** Bounty Beacon: more bonus per kill, the last level also a wider radius. */
 export const BEACON_UPGRADES = supportUpgrades([
-  { cost: 90, attack: { bonus: 0.75 }, description: "Höhere Prämie: Abschüsse im Radius zahlen 75 % mehr Credits." },
-  { cost: 150, attack: { bonus: 1 }, range: 3, description: "Kopfgeld: doppelte Credits für Abschüsse in drei Feldern Radius." },
+  { cost: 90, attack: { bonus: 0.75 }, description: "Higher Bounty: kills in the radius pay 75% more credits." },
+  { cost: 150, attack: { bonus: 1 }, range: 3, description: "Head Money: double credits for kills within a radius of three cells." },
 ]);
-/** Reparaturdock: more reactor energy per completed wave. */
+/** Repair Dock: more reactor energy per completed wave. */
 export const DOCK_UPGRADES = supportUpgrades([
-  { cost: 160, attack: { amount: 2 }, description: "Zweite Crew: stellt nach jeder Welle 2 Reaktorenergie wieder her." },
-  { cost: 260, attack: { amount: 3 }, description: "Werft: stellt nach jeder Welle 3 Reaktorenergie wieder her." },
+  { cost: 160, attack: { amount: 2 }, description: "Second Crew: restores 2 reactor energy after every wave." },
+  { cost: 260, attack: { amount: 3 }, description: "Shipyard: restores 3 reactor energy after every wave." },
 ]);
-/** Peilsender: stronger marking in a wider radius. */
+/** Tracker: stronger marking in a wider radius. */
 export const TRACKER_UPGRADES = supportUpgrades([
-  { cost: 120, attack: { amount: 0.2 }, range: 2.5, description: "Feinpeilung: Gegner im Radius 2,5 erleiden 20 % mehr Schaden." },
-  { cost: 200, attack: { amount: 0.25 }, range: 2.8, description: "Zielerfassung: Gegner im Radius 2,8 erleiden 25 % mehr Schaden." },
+  { cost: 120, attack: { amount: 0.2 }, range: 2.5, description: "Fine Bearing: enemies within radius 2.5 take 20% more damage." },
+  { cost: 200, attack: { amount: 0.25 }, range: 2.8, description: "Target Lock: enemies within radius 2.8 take 25% more damage." },
 ]);
 
 /** A trap: an attack tower on a path cell; its trigger radius stays the same at every level. */

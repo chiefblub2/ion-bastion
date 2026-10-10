@@ -2,7 +2,7 @@ import type { MissionSector } from "../../core/types";
 import { parseMap } from "../maps";
 import { g, wave } from "../waves";
 // Sector IV: a space station. Ring corridors, airlocks, open zero-g decks and sun sails.
-const ANDOCKRING = parseMap("andockring", "Andockring", [
+const ANDOCKRING = parseMap("andockring", "Docking Ring", [
   "..................",
   "S==============...",
   "..............=...",
@@ -16,7 +16,7 @@ const ANDOCKRING = parseMap("andockring", "Andockring", [
   "...============...",
   ".#.............#..",
 ], "orbit");
-const FRACHTSCHLEUSE = parseMap("frachtschleuse", "Frachtschleuse", [
+const FRACHTSCHLEUSE = parseMap("frachtschleuse", "Cargo Lock", [
   ".....##.........",
   ".........##.....",
   "S===..=====.....",
@@ -29,7 +29,7 @@ const FRACHTSCHLEUSE = parseMap("frachtschleuse", "Frachtschleuse", [
   "..........#.....",
   ".##...##.....#..",
 ], "orbit");
-const SCHWERELOS = parseMap("schwerelos", "Schwerelos", [
+const SCHWERELOS = parseMap("schwerelos", "Zero-G", [
   "..........#.......",
   "S===.......##.....",
   "...=.........#..#.",
@@ -43,7 +43,7 @@ const SCHWERELOS = parseMap("schwerelos", "Schwerelos", [
   "...............=..",
   "..#.....#......R..",
 ], "orbit");
-const SOLARSEGEL = parseMap("solarsegel", "Solarsegel", [
+const SOLARSEGEL = parseMap("solarsegel", "Solar Sail", [
   "......................",
   "S====================.",
   "...##.....##.....##.=.",
@@ -55,7 +55,7 @@ const SOLARSEGEL = parseMap("solarsegel", "Solarsegel", [
   "......................",
   "..#.......#.......#...",
 ], "orbit");
-const KOMMANDOBRUECKE = parseMap("kommandobruecke", "Kommandobrücke", [
+const KOMMANDOBRUECKE = parseMap("kommandobruecke", "Command Bridge", [
   ".S.......##.........",
   ".=..====.#R========.",
   ".=..=..=.##.......=.",
@@ -71,12 +71,12 @@ const KOMMANDOBRUECKE = parseMap("kommandobruecke", "Kommandobrücke", [
 ], "orbit");
 export const ORBITALDECK: MissionSector = {
   id: "orbit",
-  name: "Orbitaldeck",
+  name: "Orbital Deck",
   missions: [
     {
       id: "andockring",
-      name: "Andockring",
-      focus: "Raffinerien früh bauen, Schildträger brauchen Dauerfeuer",
+      name: "Docking Ring",
+      focus: "Build Refineries early, Shield Bearers need sustained fire",
       map: ANDOCKRING,
       waves: [
         wave(30, g("drone", 10, 0.8)),
@@ -108,8 +108,8 @@ export const ORBITALDECK: MissionSector = {
     },
     {
       id: "frachtschleuse",
-      name: "Frachtschleuse",
-      focus: "Knappe Start-Credits: jeder Turm muss sitzen",
+      name: "Cargo Lock",
+      focus: "Tight starting credits: every tower must count",
       map: FRACHTSCHLEUSE,
       waves: [
         wave(70, g("drone", 6, 1)),
@@ -140,8 +140,8 @@ export const ORBITALDECK: MissionSector = {
     },
     {
       id: "schwerelos",
-      name: "Schwerelos",
-      focus: "Überwiegend Luftangriffe: Flak statt Nova, ein Detektor deckt die Phantome auf",
+      name: "Zero-G",
+      focus: "Mostly air attacks: Flak instead of Nova, a Detector reveals the Phantoms",
       map: SCHWERELOS,
       waves: [
         wave(30, g("glider", 8, 0.9)),
@@ -172,8 +172,8 @@ export const ORBITALDECK: MissionSector = {
     },
     {
       id: "solarsegel",
-      name: "Solarsegel",
-      focus: "Lange Strecke: Detektor deckt Phantome auf, Lanzen auf den Geraden",
+      name: "Solar Sail",
+      focus: "Long route: a Detector reveals Phantoms, Lances on the straights",
       map: SOLARSEGEL,
       waves: [
         wave(25, g("drone", 12, 0.7)),
@@ -207,8 +207,8 @@ export const ORBITALDECK: MissionSector = {
     },
     {
       id: "kommandobruecke",
-      name: "Kommandobrücke",
-      focus: "Sektorfinale mit vollem Gegnermix",
+      name: "Command Bridge",
+      focus: "Sector finale with the full enemy mix",
       map: KOMMANDOBRUECKE,
       waves: [
         wave(15, g("drone", 12, 0.7)),

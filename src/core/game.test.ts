@@ -175,14 +175,14 @@ describe("content boundaries", () => {
           ],
         },
       }),
-    ).toThrow("zusammenhängend");
+    ).toThrow("contiguous");
   });
   it("names mission, wave and group of invalid content", () => {
     const m = MISSIONS[4];
     const waves = m.waves.map((w, i) =>
       i === 6 ? { ...w, groups: w.groups.map((g, j) => (j === 1 ? { ...g, count: 0 } : g)) } : w,
     );
-    expect(() => validateMission({ ...m, waves })).toThrow("Mission kernfestung › Welle 7 › Gruppe 2: count");
+    expect(() => validateMission({ ...m, waves })).toThrow("Mission kernfestung › Wave 7 › Group 2: count");
   });
   it("a wave can override the linear HP growth", () => {
     const m = MISSIONS[0];

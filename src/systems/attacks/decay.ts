@@ -6,7 +6,7 @@ export const decay: AttackModule<DecayAttack> = {
   aim: "enemy",
   projectile: "optional",
   params: {
-    percent: { label: "Max.-HP-Schaden", valid: (v) => v > 0 && v < 1, unit: " %", show: (v) => v * 100 },
+    percent: { label: "Max-HP damage", valid: (v) => v > 0 && v < 1, unit: " %", show: (v) => v * 100 },
   },
   apply: (sim, src, { enemy }, damage, spec) => {
     if (enemy) applyDamage(sim, src, enemy, damage + spec.percent * enemy.maxHp, false, hitOf("decay", src));

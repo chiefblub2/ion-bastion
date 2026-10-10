@@ -4,7 +4,7 @@ import { g, wave } from "../waves";
 // Sector VIII, Zahnwerk: ring maps in a clockwork. Cogs gain speed with every lap, pistons
 // harden with every lap, so both have to die early.
 // Crenellated ring: three teeth on the top and bottom edge form pockets that reach several legs.
-const ZAHNKRANZ = parseMap("zahnkranz", "Zahnkranz", [
+const ZAHNKRANZ = parseMap("zahnkranz", "Ring Gear", [
   "...............",
   "...===.===.===.",
   ".S==.===.===.=.",
@@ -18,7 +18,7 @@ const ZAHNKRANZ = parseMap("zahnkranz", "Zahnkranz", [
   "...............",
 ], "gear");
 // Long snake ring: four one-cell corridors fold the ring, so each corridor tower sees two legs.
-const HEMMUNG = parseMap("hemmung", "Hemmung", [
+const HEMMUNG = parseMap("hemmung", "Escapement", [
   ".....................",
   ".S==.=======.=======.",
   ".=.=.=.....=.=.....=.",
@@ -31,7 +31,7 @@ const HEMMUNG = parseMap("hemmung", "Hemmung", [
   ".....................",
 ], "gear");
 // Hourglass ring: both sides pinch in until a three-cell lane between the tips bundles four legs.
-const UNRUH = parseMap("unruh", "Unruh", [
+const UNRUH = parseMap("unruh", "Balance Wheel", [
   "...............",
   ".=============.",
   ".=...........=.",
@@ -45,7 +45,7 @@ const UNRUH = parseMap("unruh", "Unruh", [
   "...............",
 ], "gear");
 // Plus-shaped ring: four arms with three-cell lanes and a hub where all four inner corners meet.
-const PLANETENRAD = parseMap("planetenrad", "Planetenrad", [
+const PLANETENRAD = parseMap("planetenrad", "Planet Gear", [
   "...............",
   ".....S====.....",
   "..#..=...=..#..",
@@ -63,7 +63,7 @@ const PLANETENRAD = parseMap("planetenrad", "Planetenrad", [
   "...............",
 ], "gear");
 // Hooked ring: a notch from the left edge bends down and back, folding one lane into the ring.
-const UHRWERK = parseMap("uhrwerk", "Uhrwerk", [
+const UHRWERK = parseMap("uhrwerk", "Clockwork", [
   "...............",
   ".S============.",
   ".=...........=.",
@@ -78,12 +78,12 @@ const UHRWERK = parseMap("uhrwerk", "Uhrwerk", [
 ], "gear");
 export const ZAHNWERK: MissionSector = {
   id: "gear",
-  name: "Zahnwerk",
+  name: "Gearworks",
   missions: [
     {
       id: "zahnkranz",
-      name: "Zahnkranz",
-      focus: "Zahnräder werden schneller, je länger sie kreisen. Kryo, Gravitron und Tesla bremsen sie früh",
+      name: "Ring Gear",
+      focus: "Cogwheels speed up the longer they circle. Cryo, Gravitron and Tesla slow them early",
       map: ZAHNKRANZ,
       circle: { interval: 20, limit: 36, earlyBonus: 3 },
       waves: [
@@ -104,8 +104,8 @@ export const ZAHNWERK: MissionSector = {
     },
     {
       id: "hemmung",
-      name: "Hemmung",
-      focus: "Kolbenpanzer härten mit jeder Runde. Zerfall, Fokus und Lanze müssen sie in der ersten Runde fällen",
+      name: "Escapement",
+      focus: "Piston Tanks harden with every lap. Decay, Focus and Lance must kill them in the first lap",
       map: HEMMUNG,
       circle: { interval: 18, limit: 32, earlyBonus: 3 },
       waves: [
@@ -126,8 +126,8 @@ export const ZAHNWERK: MissionSector = {
     },
     {
       id: "unruh",
-      name: "Unruh",
-      focus: "Kurze Takte, Welle 8 ist ein Echo mit fünffachen HP. Die Taille hält vier Bahnen unter Feuer",
+      name: "Balance Wheel",
+      focus: "Short beats, wave 8 is an echo with five times the HP. The waist keeps four lanes under fire",
       map: UNRUH,
       circle: { interval: 16, limit: 35, earlyBonus: 3 },
       waves: [
@@ -149,8 +149,8 @@ export const ZAHNWERK: MissionSector = {
     },
     {
       id: "planetenrad",
-      name: "Planetenrad",
-      focus: "Nur Kernsortiment und Kontrolle: Impuls, Nova, Kryo, Flak, Tesla, Gravitron, Lanze, Fokus und Zerfall",
+      name: "Planet Gear",
+      focus: "Core lineup and control only: Pulse, Nova, Cryo, Flak, Tesla, Gravitron, Lance, Focus and Decay",
       map: PLANETENRAD,
       circle: { interval: 18, limit: 36, earlyBonus: 3 },
       waves: [
@@ -173,8 +173,8 @@ export const ZAHNWERK: MissionSector = {
     },
     {
       id: "uhrwerk",
-      name: "Uhrwerk",
-      focus: "Der Haken faltet eine Bahn in den Ring. Zwei Bosse: Zerfall und Fokus, Kryo und Gravitron für die Zahnräder",
+      name: "Clockwork",
+      focus: "The hook folds one lane into the ring. Two bosses: Decay and Focus, Cryo and Gravitron for the Cogwheels",
       map: UHRWERK,
       circle: { interval: 16, limit: 34, earlyBonus: 3 },
       waves: [

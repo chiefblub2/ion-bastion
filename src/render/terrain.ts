@@ -977,7 +977,7 @@ export const THEMES: Record<MapTheme, Theme> = {
       });
     },
   },
-  // Dünenmeer: sandstone spires and half-buried wrecks in rippled sand. First draw of `obstacle` picks the variant (ambient reads it from `hash`).
+  // Dune Sea: sandstone spires and half-buried wrecks in rippled sand. First draw of `obstacle` picks the variant (ambient reads it from `hash`).
   dune: {
     backdrop: 0x1a1206,
     ground: [0x2a1f10, 0x261c0e],
@@ -1097,7 +1097,7 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
   },
-  // Tiefsee: coral and hydrothermal vents, kelp and shells, bubbles and slow light rays. First draw of `obstacle` picks the variant.
+  // Deep Sea: coral and hydrothermal vents, kelp and shells, bubbles and slow light rays. First draw of `obstacle` picks the variant.
   abyss: {
     backdrop: 0x020a14,
     ground: [0x061424, 0x051220],
@@ -1307,7 +1307,7 @@ export const THEMES: Record<MapTheme, Theme> = {
       });
     },
   },
-  // Dschungel: dense trees and mossy temple stones, fireflies and mist.
+  // Jungle: dense trees and mossy temple stones, fireflies and mist.
   jungle: {
     backdrop: 0x08140a,
     ground: [0x0f2412, 0x0d2010],
@@ -1415,7 +1415,7 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
   },
-  // Vulkankette: hellgrauer Aschegrund, Schwefelgelb, Lavaglut; Obsidian-Spitzen und Schwefelkrater.
+  // Volcano Chain: light-grey ash ground, sulphur yellow, lava glow; obsidian spikes and sulphur craters.
   volcano: {
     backdrop: 0x2a2726,
     ground: [0x4a4542, 0x433f3c],
@@ -1516,7 +1516,7 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
   },
-  // Kristallhöhle: türkise Höhle, klare Quarzsäulen und aufgeschnittene Amethyst-Geoden.
+  // Crystal Cave: turquoise cave, clear quartz columns and cut-open amethyst geodes.
   geode: {
     backdrop: 0x081a1d,
     ground: [0x0f2a2e, 0x0d2528],
@@ -1629,7 +1629,7 @@ export const THEMES: Record<MapTheme, Theme> = {
       });
     },
   },
-  // Zahnwerk: brass gears and copper rivets, a slow glint rolling along the path.
+  // Gearworks: brass gears and copper rivets, a slow glint rolling along the path.
   gear: {
     backdrop: 0x1a1208,
     ground: [0x3a2a14, 0x46331a],
@@ -1722,7 +1722,7 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
   },
-  // Mondsee: moonlit rocks with shells and tidepools, foam drifting along the path.
+  // Moon Lake: moonlit rocks with shells and tidepools, foam drifting along the path.
   tide: {
     backdrop: 0x081322,
     ground: [0x14263a, 0x1a2f47],

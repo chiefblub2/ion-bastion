@@ -4,13 +4,13 @@ import { dist } from "../path";
 import { applyStatus } from "../status";
 import { canTarget } from "./targeting";
 import type { AttackModule } from "./types";
-/** Störsender pulse: switches off the special abilities of every enemy around the target. */
+/** Jammer pulse: switches off the special abilities of every enemy around the target. */
 export const disrupt: AttackModule<DisruptAttack> = {
   aim: "enemy",
   projectile: "forbidden",
   params: {
-    radius: { label: "Pulsradius", valid: (v) => v > 0, unit: " Felder" },
-    duration: { label: "Störung", valid: (v) => v > 0, unit: " s" },
+    radius: { label: "Pulse radius", valid: (v) => v > 0, unit: " cells" },
+    duration: { label: "Disruption", valid: (v) => v > 0, unit: " s" },
   },
   apply: (sim, src, { at }, damage, spec) => {
     const until = sim.state.time + spec.duration;

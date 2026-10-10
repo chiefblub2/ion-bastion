@@ -79,35 +79,35 @@ function edge(ok: (f: number) => boolean, up: boolean): number | undefined {
 function tune(m: MissionDefinition, s: { A: Strategy; B: Strategy }): string[] {
   const status = (f: number, strategy?: Strategy) => run(scaled(m, f), strategy).game.state.status;
   const wins: [string, Strategy][] = [["A", s.A], ["B", s.B]];
-  const losses: [string, Strategy | undefined][] = [["leer", undefined]];
-  if (!isTutorial(m)) losses.push([m.circle ? "1 Turm" : "3 Türme", { builds: thinBuilds(m, s.A) }]);
-  if (hasAir(m)) losses.push(["nur Nova", { builds: novaOnly(s.A) }]);
+  const losses: [string, Strategy | undefined][] = [["empty", undefined]];
+  if (!isTutorial(m)) losses.push([m.circle ? "1 tower" : "3 towers", { builds: thinBuilds(m, s.A) }]);
+  if (hasAir(m)) losses.push(["Nova only", { builds: novaOnly(s.A) }]);
   const fmt = (f: number | undefined, bound: number) => (f === undefined ? "–" : f === bound ? `${bound === TUNE_MAX ? ">" : "<"}${f.toFixed(2)}` : f.toFixed(2));
   const top = wins.map(([k, st]) => [k, edge((f) => status(f, st) === "won", true)] as const);
   const bottom = losses.map(([k, st]) => [k, edge((f) => status(f, st) === "lost", false)] as const);
   const lines = [
-    `TUNE HP-Faktor f: gewinnt bis ${top.map(([k, f]) => `${k} ${fmt(f, TUNE_MAX)}`).join(" · ")}; verliert ab ${bottom.map(([k, f]) => `${k} ${fmt(f, TUNE_MIN)}`).join(" · ")}`,
+    `TUNE HP factor f: wins up to ${top.map(([k, f]) => `${k} ${fmt(f, TUNE_MAX)}`).join(" · ")}; loses from ${bottom.map(([k, f]) => `${k} ${fmt(f, TUNE_MIN)}`).join(" · ")}`,
   ];
   if ([...top, ...bottom].some(([, f]) => f === undefined)) {
-    lines.push("TUNE kein Fenster: bei f = 1 schlägt eine Prüfung schon fehl (–)");
+    lines.push("TUNE no window: a check already fails at f = 1 (–)");
     return lines;
   }
   const hi = Math.min(...top.map(([, f]) => f!)),
     lo = Math.max(...bottom.map(([, f]) => f!)),
     mid = (lo + hi) / 2;
   lines.push(
-    `TUNE Fenster f ${fmt(lo, TUNE_MIN)}–${fmt(hi, TUNE_MAX)} (aktuell 1.00, Spielraum −${Math.round((1 - lo) * 100)} % / +${Math.round((hi - 1) * 100)} %)`,
+    `TUNE window f ${fmt(lo, TUNE_MIN)}–${fmt(hi, TUNE_MAX)} (current 1.00, margin −${Math.round((1 - lo) * 100)} % / +${Math.round((hi - 1) * 100)} %)`,
   );
   // With linear growth only, the same final-wave HP as a growth value.
   const n = m.waves.length;
   if (n > 1 && m.waves.every((w) => w.hpMultiplier === undefined)) {
     const growth = (f: number) => ((f * waveHpScale(m, n) - 1) / (n - 1)).toFixed(3);
-    lines.push(`TUNE als hpGrowth (gleiche HP in Welle ${n}): ${growth(lo)}–${growth(hi)} (aktuell ${m.hpGrowth ?? 0.14})`);
+    lines.push(`TUNE as hpGrowth (same HP in wave ${n}): ${growth(lo)}–${growth(hi)} (current ${m.hpGrowth ?? 0.14})`);
   }
   // Cliffs (hpMultiplier waves, splash thresholds) break monotonicity: check one point inside once.
   const midWins = wins.every(([, st]) => status(mid, st) === "won"),
     midLoses = losses.every(([, st]) => status(mid, st) === "lost");
-  if (!midWins || !midLoses) lines.push(`WARN f ${mid.toFixed(2)} im Fenster hält nicht alle Prüfungen (nicht monoton, Klippe) – Wellen einzeln prüfen`);
+  if (!midWins || !midLoses) lines.push(`WARN f ${mid.toFixed(2)} inside the window does not hold all checks (not monotonic, cliff) – check waves individually`);
   return lines;
 }
 
@@ -154,52 +154,52 @@ const verdict = (ok: boolean, label: string) => {
   if (!ok) failures++;
   return `${ok ? "ok  " : "FAIL"} ${label}`;
 };
-for (const id of duplicateIds(sector)) console.log(verdict(false, `id bereits vergeben: ${id}`));
+for (const id of duplicateIds(sector)) console.log(verdict(false, `id already taken: ${id}`));
 const pct = (v: number, of: number) => Math.round((v / of) * 100);
 for (const m of sector.missions) {
   if (only && m.id !== only) continue;
   const s = strategies[m.id];
   console.log(
-    `\n== ${m.id} (${m.name}) · ${m.waves.length} Wellen · ◇${m.startingCredits} · ${m.circle ? `⟳ max. ${m.circle.limit}` : `⚡${m.reactorEnergy}`}`,
+    `\n== ${m.id} (${m.name}) · ${m.waves.length} waves · ◇${m.startingCredits} · ${m.circle ? `⟳ max. ${m.circle.limit}` : `⚡${m.reactorEnergy}`}`,
   );
   const outside = (label: string, value: number, key: string) => {
     const r = curve[key];
-    if (r && (value < r.lo || value > r.hi)) console.log(`WARN Kurve außerhalb: ${label} ${value} (Soll ${r.lo}-${r.hi})`);
+    if (r && (value < r.lo || value > r.hi)) console.log(`WARN curve out of range: ${label} ${value} (target ${r.lo}-${r.hi})`);
   };
   outside("Credits", m.startingCredits, "credits");
-  outside("Wellen", m.waves.length, "waves");
+  outside("Waves", m.waves.length, "waves");
   outside("hpGrowth", m.hpGrowth ?? 0.14, "growth");
-  if (m.waves.length && m.waves.every((w) => w.hpMultiplier !== undefined)) console.log("WARN hpGrowth wird ignoriert: jede Welle hat hpMultiplier");
+  if (m.waves.length && m.waves.every((w) => w.hpMultiplier !== undefined)) console.log("WARN hpGrowth is ignored: every wave has hpMultiplier");
   const map = mapCheck(m);
-  console.log(`Karte: Pfad ${map.length} · baubar ${map.buildable} · Doppelzellen ${map.double}${map.double < 6 ? "  WARN zu wenig Doppelzellen (<6)" : ""}`);
+  console.log(`Map: path ${map.length} · buildable ${map.buildable} · double cells ${map.double}${map.double < 6 ? "  WARN too few double cells (<6)" : ""}`);
   if (!s) {
-    console.log(verdict(false, "Strategien A/B fehlen"));
+    console.log(verdict(false, "strategies A/B missing"));
     continue;
   }
   const lines: string[] = [];
-  lines.push(verdict(run(m).game.state.status === "lost", "ohne Verteidigung verloren"));
+  lines.push(verdict(run(m).game.state.status === "lost", "lost without defense"));
   // Same rules as core/missions.test.ts, via core/mission-checks.ts.
   const thin = m.circle ? 1 : 3;
   if (!isTutorial(m))
-    lines.push(verdict(run(m, { builds: thinBuilds(m, s.A) }).game.state.status === "lost", thin === 1 ? "1 Turm verloren" : "3 Türme verloren"));
-  if (hasAir(m)) lines.push(verdict(run(m, { builds: novaOnly(s.A) }).game.state.status === "lost", "nur Nova verloren"));
+    lines.push(verdict(run(m, { builds: thinBuilds(m, s.A) }).game.state.status === "lost", thin === 1 ? "lost with 1 tower" : "lost with 3 towers"));
+  if (hasAir(m)) lines.push(verdict(run(m, { builds: novaOnly(s.A) }).game.state.status === "lost", "lost with Nova only"));
   const results: { key: string; won: boolean; series: number[] }[] = [];
   for (const key of ["A", "B"] as const) {
     const bad = unbuildable(m, s[key]);
-    if (bad.length) lines.push(verdict(false, `${key}: nicht baubar ${bad.map((b) => `${b.tower}@${b.x},${b.y}`).join(" ")}`));
+    if (bad.length) lines.push(verdict(false, `${key}: not buildable ${bad.map((b) => `${b.tower}@${b.x},${b.y}`).join(" ")}`));
     const { game, series, leaks } = run(m, s[key]),
       won = game.state.status === "won";
     results.push({ key, won, series });
     lines.push(
-      verdict(won, `${key} gewinnt`) +
-        `  ${m.circle ? "Gegner/Welle" : "Energie/Welle"}: ${series.join(" ")}  Türme: ${game.state.towers.length}/${s[key].builds.length}`,
+      verdict(won, `${key} wins`) +
+        `  ${m.circle ? "Enemies/wave" : "Energy/wave"}: ${series.join(" ")}  Towers: ${game.state.towers.length}/${s[key].builds.length}`,
     );
     if (flag("--why") || !won) {
       const leakText = Object.entries(leaks).map(([t, w]) => `${t} ${Object.values(w).reduce((a, b) => a + b, 0)} (W${Object.keys(w).join(",")})`);
       const kills = game.state.towers.filter((t) => t.kills).map((t) => `${t.type}@${t.x},${t.y}: ${t.kills}`);
-      lines.push(`     ${key} Lecks: ${leakText.join(" · ") || "keine"}`);
-      lines.push(`     ${key} Kills/Turm: ${kills.join(" · ") || "keine"}`);
-      lines.push(`     ${key} Credits übrig: ${game.state.wallets[0]}`);
+      lines.push(`     ${key} Leaks: ${leakText.join(" · ") || "none"}`);
+      lines.push(`     ${key} Kills/tower: ${kills.join(" · ") || "none"}`);
+      lines.push(`     ${key} Credits left: ${game.state.wallets[0]}`);
     }
   }
   // Difficulty band: warnings only, they never change the exit code.
@@ -208,21 +208,21 @@ for (const m of sector.missions) {
     const limit = m.circle.limit;
     for (const r of won) {
       const peak = Math.max(...r.series);
-      if (peak <= limit * 0.5) lines.push(`WARN ${r.key}: Spitze ${peak}/${limit} (${pct(peak, limit)} %) nie über 50 % - zu leicht`);
-      else if (peak > limit * 0.9) lines.push(`WARN ${r.key}: Spitze ${peak}/${limit} (${pct(peak, limit)} %) - knapp`);
+      if (peak <= limit * 0.5) lines.push(`WARN ${r.key}: peak ${peak}/${limit} (${pct(peak, limit)} %) never above 50 % - too easy`);
+      else if (peak > limit * 0.9) lines.push(`WARN ${r.key}: peak ${peak}/${limit} (${pct(peak, limit)} %) - tight`);
     }
   } else {
     const start = m.reactorEnergy;
     for (const r of won) {
       const end = r.series.at(-1)!;
-      if (end >= start) lines.push(`WARN ${r.key}: endet mit 100 % Energie - trivial`);
-      else if (end < start * 0.1) lines.push(`WARN ${r.key}: endet mit ${end}/${start} (${pct(end, start)} %) - knapp`);
+      if (end >= start) lines.push(`WARN ${r.key}: ends with 100 % energy - trivial`);
+      else if (end < start * 0.1) lines.push(`WARN ${r.key}: ends with ${end}/${start} (${pct(end, start)} %) - tight`);
     }
     if (results.length === 2 && won.length === 2 && won.every((r) => Math.min(...r.series) > start * 0.6))
-      lines.push(`WARN beide Strategien über 60 % Minimum-Energie (${won.map((r) => Math.min(...r.series)).join("/")} von ${start}) - zu leicht`);
+      lines.push(`WARN both strategies above 60 % minimum energy (${won.map((r) => Math.min(...r.series)).join("/")} of ${start}) - too easy`);
   }
   if (flag("--tune")) lines.push(...tune(m, s));
   console.log(lines.join("\n"));
 }
-console.log(failures ? `\n${failures} Prüfung(en) fehlgeschlagen.` : "\nAlle Prüfungen bestanden.");
+console.log(failures ? `\n${failures} check(s) failed.` : "\nAll checks passed.");
 process.exit(failures ? 1 : 0);

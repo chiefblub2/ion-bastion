@@ -10,7 +10,7 @@ export const pit: AttackModule<PitAttack> = {
   projectile: "forbidden",
   trapOnly: true,
   params: {
-    size: { label: "Max. Gegnergröße", valid: (v) => v > 0, show: (v) => Math.round(v * 100) },
+    size: { label: "Max. enemy size", valid: (v) => v > 0, show: (v) => Math.round(v * 100) },
   },
   choose: (sim, _type, _from, _reach, candidates, spec) => candidates.find((c) => fits(sim, c, spec)) ?? candidates[0],
   apply: (sim, src, { enemy }, damage, spec) => {

@@ -1,12 +1,12 @@
-# ION BASTION – Quellcode
+# ION BASTION – Source code
 
-Stand: veröffentlichte Version mit gemeinsamem Upgrade-System, Aura-Turm, Upgrade-Tooltips und der Überschrift „Türme“.
-Quellcode-Commit: f6e0a90653ebcf5c6524ac956bbd375fc8f756cd
+State: published version with the shared upgrade system, Aura tower, upgrade tooltips and the "Towers" heading.
+Source commit: f6e0a90653ebcf5c6524ac956bbd375fc8f756cd
 
-## Starten
+## Getting started
 
-Voraussetzung: Node.js 22 oder neuer und npm.
-ZIP entpacken und im Terminal ausführen:
+Requirements: Node.js 22 or newer and npm.
+Unzip and run in a terminal:
 
 ```sh
 cd ion-bastion
@@ -14,13 +14,13 @@ npm ci
 npm run dev
 ```
 
-Danach http://localhost:4173 im Browser öffnen.
+Then open http://localhost:4173 in a browser.
 
 Tests: `npm test`
-Produktionsbuild: `npm run build` (Ausgabe in `dist/`)
+Production build: `npm run build` (output in `dist/`)
 
-Spielübersicht: README.md. Architektur und Erweiterung: CLAUDE.md.
+Game overview: README.md. Architecture and extending: CLAUDE.md.
 
-Enthalten sind Quellcode, Tests, Assets, Konfiguration und die Paket-Lockdatei.
-Abhängigkeiten werden mit npm ci installiert. Git-Historie, lokale Abhängigkeiten
-und die Identität der gehosteten Site sind nicht Teil dieses portablen Exports.
+Included are source code, tests, assets, configuration and the package lockfile.
+Dependencies are installed with npm ci. Git history, local dependencies
+and the identity of the hosted site are not part of this portable export.

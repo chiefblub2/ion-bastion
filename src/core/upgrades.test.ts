@@ -111,20 +111,20 @@ describe("upgrade content validation", () => {
   const fixture = (): TowerDefinition => structuredClone(TOWERS.pulse);
   it("rejects duplicate IDs, missing prerequisites and cycles", () => {
     const duplicate = fixture(); duplicate.upgrades = [...duplicate.upgrades, duplicate.upgrades[0]];
-    expect(() => validateUpgradeDefinitions(duplicate)).toThrow("doppelte");
+    expect(() => validateUpgradeDefinitions(duplicate)).toThrow("duplicate");
     const missing = fixture(); missing.upgrades = [{ ...missing.upgrades[0], requires: ["missing"] }];
-    expect(() => validateUpgradeDefinitions(missing)).toThrow("Unbekannte");
+    expect(() => validateUpgradeDefinitions(missing)).toThrow("Unknown");
     const cyclic = fixture(); cyclic.upgrades = cyclic.upgrades.map(u => u.id === "level-2" ? { ...u, requires: ["level-3"] } : u);
-    expect(() => validateUpgradeDefinitions(cyclic)).toThrow("Zyklische");
+    expect(() => validateUpgradeDefinitions(cyclic)).toThrow("Cyclic");
   });
   it("rejects invalid prices and effects and accepts declarative future prerequisites", () => {
     const invalidCost = fixture(); invalidCost.upgrades = [{ ...invalidCost.upgrades[0], cost: -1 }];
-    expect(() => validateUpgradeDefinitions(invalidCost)).toThrow("Kosten");
+    expect(() => validateUpgradeDefinitions(invalidCost)).toThrow("cost");
     const invalidEffect = fixture(); invalidEffect.upgrades = [{ ...invalidEffect.upgrades[0], effects: { stats: { interval: 0 } } }];
-    expect(() => validateUpgradeDefinitions(invalidEffect)).toThrow("Upgrade-Wert");
+    expect(() => validateUpgradeDefinitions(invalidEffect)).toThrow("upgrade value");
     const misplacedAura = fixture(); misplacedAura.upgrades = [{ ...misplacedAura.upgrades[0], effects: { aura: { damage: .3 } } }];
-    expect(() => validateUpgradeDefinitions(misplacedAura)).toThrow("Aura-Upgrade");
-    const future = fixture(); future.upgrades = [...future.upgrades, { id: "level-6", label: "Stufe 6", description: "Mehr Schaden.", cost: 300, requires: ["level-5"], effects: { level: 6, stats: { damage: 80 } } }];
+    expect(() => validateUpgradeDefinitions(misplacedAura)).toThrow("aura upgrade");
+    const future = fixture(); future.upgrades = [...future.upgrades, { id: "level-6", label: "Level 6", description: "More damage.", cost: 300, requires: ["level-5"], effects: { level: 6, stats: { damage: 80 } } }];
     expect(() => validateUpgradeDefinitions(future)).not.toThrow();
   });
 });
@@ -181,7 +181,7 @@ describe("late levels 4 and 5", () => {
   });
   it("rejects attack values on towers that cannot use them", () => {
     const pulse = { ...TOWERS.pulse, upgrades: [{ ...TOWERS.pulse.upgrades[0], effects: { attack: { factor: 0.5 } } }] };
-    expect(() => validateUpgradeDefinitions(pulse)).toThrow("Angriffswert");
+    expect(() => validateUpgradeDefinitions(pulse)).toThrow("attack value");
     const frost = { ...TOWERS.frost, upgrades: [{ ...TOWERS.frost.upgrades[0], effects: { attack: { factor: 1.5 } } }] };
     expect(() => validateUpgradeDefinitions(frost)).toThrow("frost › Upgrade level-2");
   });

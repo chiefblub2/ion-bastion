@@ -15,7 +15,7 @@ function strongest(sim: Sim, kind: AttackKind, key: string, e?: Enemy) {
   }
   return best;
 }
-/** Prämienbake: extra credits for a kill in range, rounded so co-op splits stay whole. */
+/** Bounty Beacon: extra credits for a kill in range, rounded so co-op splits stay whole. */
 export const bountyBonus = (sim: Sim, e: Enemy, reward: number) => Math.round(reward * strongest(sim, "bounty", "bonus", e));
 /** Peilsender: damage multiplier for an enemy in range; 1 without a tracker. */
 export const markFactor = (sim: Sim, e: Enemy) => 1 + strongest(sim, "mark", "amount", e);

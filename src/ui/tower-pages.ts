@@ -3,10 +3,10 @@ import type { AttackKind, TowerDefinition, TowerId } from "../core/types";
 import { isSupport } from "../systems/attacks";
 /** Category tabs of the build menu, in display order. */
 export const TOWER_PAGES = [
-  { id: "attack", name: "Angriff" },
-  { id: "control", name: "Kontrolle" },
-  { id: "trap", name: "Fallen" },
-  { id: "support", name: "Unterstützung" },
+  { id: "attack", name: "Attack" },
+  { id: "control", name: "Control" },
+  { id: "trap", name: "Traps" },
+  { id: "support", name: "Support" },
 ] as const;
 /** Attack kinds whose main job is to hinder or weaken enemies rather than to kill them. */
 const CONTROL_KINDS: ReadonlySet<AttackKind> = new Set(["slow", "stun", "corrode", "pull", "disrupt", "net"]);

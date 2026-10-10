@@ -48,6 +48,6 @@ const row = (u: LiveUnit) =>
   `<li class="live-unit ${u.layer}${u.alive ? "" : " pending"}">${enemyIcon(u.visual, u.color)}<span class="unit-name">${escape(u.name)}</span><b class="live-count">${u.alive}</b><small class="live-queued">${u.queued ? `+${u.queued}` : ""}</small></li>`;
 /** Sidebar panel while a wave runs. */
 export function renderLiveUnits(live: LiveUnits, wave: number): string {
-  return `<div class="selection-heading"><span>IM FELD · WELLE ${String(wave).padStart(2, "0")}</span><b>${live.alive} aktiv${live.queued ? ` · ${live.queued} folgen` : ""}</b></div>
-    ${live.units.length ? `<ul class="live-list">${live.units.map(row).join("")}</ul>` : '<p class="live-empty">Feld frei.</p>'}`;
+  return `<div class="selection-heading"><span>ON FIELD · WAVE ${String(wave).padStart(2, "0")}</span><b>${live.alive} active${live.queued ? ` · ${live.queued} incoming` : ""}</b></div>
+    ${live.units.length ? `<ul class="live-list">${live.units.map(row).join("")}</ul>` : '<p class="live-empty">Field clear.</p>'}`;
 }

@@ -22,15 +22,15 @@ describe("wave forecast", () => {
     expect(next.hasAir).toBe(true);
     const glider = next.enemies.find((e) => e.type === "glider")!;
     expect(glider).toMatchObject({ isNew: true, layer: "air", count: 6 });
-    expect(glider.tags.map((t) => t.label)).toEqual(["LUFT"]);
+    expect(glider.tags.map((t) => t.label)).toEqual(["AIR"]);
     expect(glider.hp).toBe(Math.round(45 * waveHpScale(g.mission, 4)));
     expect(next.total).toBe(24);
     expect(next.totalHp).toBe(next.enemies.reduce((sum, e) => sum + e.count * e.hp, 0));
     const html = renderWaveForecast(next);
-    expect(html).toContain("NÄCHSTE WELLE 04");
-    expect(html).toMatch(/<b>6×<\/b><span class="unit-name">Gleiter<\/span><span class="unit-hp">♡ \d+<\/span><em class="unit-tag air">LUFT/);
-    expect(html).not.toMatch(/Impuls|Kryo|Flak|Tesla/);
-    expect(html).toContain("24 Gegner");
+    expect(html).toContain("NEXT WAVE 04");
+    expect(html).toMatch(/<b>6×<\/b><span class="unit-name">Glider<\/span><span class="unit-hp">♡ \d+<\/span><em class="unit-tag air">AIR/);
+    expect(html).not.toMatch(/Pulse|Cryo|Flak|Tesla/);
+    expect(html).toContain("24 enemies");
   });
   it("shows armor, regeneration, splitting and immunity next to the unit", () => {
     const content = {
@@ -49,10 +49,10 @@ describe("wave forecast", () => {
       },
     };
     const next = waveForecast(new Game(missionById("schleusenring")!, content))!;
-    expect(next.enemies[0].tags.map((t) => t.label)).toEqual(["RÜSTUNG 30 %", "REGEN 4/s", "TEILT ×2", "IMMUN: SLOW"]);
+    expect(next.enemies[0].tags.map((t) => t.label)).toEqual(["ARMOR 30%", "REGEN 4/s", "SPLITS ×2", "IMMUNE: SLOW"]);
     const html = renderWaveForecast(next);
-    expect(html).toContain('<em class="unit-tag trait armor">RÜSTUNG 30 %</em>');
-    expect(html).toContain("Zerfällt beim Tod in 2× Sprinter");
+    expect(html).toContain('<em class="unit-tag trait armor">ARMOR 30%</em>');
+    expect(html).toContain("Splits into 2× Sprinter");
   });
   it("shows the new traits next to the unit", () => {
     const content = {
@@ -77,17 +77,17 @@ describe("wave forecast", () => {
     };
     const next = waveForecast(new Game(missionById("schleusenring")!, content))!;
     expect(next.enemies[0].tags.map((t) => t.label)).toEqual([
-      "SCHILD 30 %",
-      "SPURT",
-      "AUSWEICHEN 1/4",
-      "HEILER",
-      "ANFÜHRER",
-      "GETARNT",
-      "UNAUFHALTSAM",
-      "FLINK",
-      "REGEN 2 %/s",
+      "SHIELD 30%",
+      "SPRINT",
+      "EVADE 1/4",
+      "HEALER",
+      "LEADER",
+      "STEALTH",
+      "UNSTOPPABLE",
+      "SWIFT",
+      "REGEN 2%/s",
     ]);
-    expect(renderWaveForecast(next)).toContain("+20 % Tempo, 15 % Schadensresistenz");
+    expect(renderWaveForecast(next)).toContain("+20% speed, 15% damage resistance");
   });
   it("merges groups of the same type and marks the last wave", () => {
     const g = game("splitterfeld");
@@ -95,7 +95,7 @@ describe("wave forecast", () => {
     const last = waveForecast(g)!;
     expect(last.last).toBe(true);
     expect(last.enemies.find((e) => e.type === "runner")!.count).toBe(28);
-    expect(renderWaveForecast(last)).toContain("LETZTE WELLE 12");
+    expect(renderWaveForecast(last)).toContain("FINAL WAVE 12");
   });
   it("shows the following wave while one is running", () => {
     const g = game("outpost-07");
@@ -134,7 +134,7 @@ describe("enemy icons and shape validation", () => {
   it("rejects invalid shape fields", async () => {
     const { validateEnemy } = await import("../core/validation");
     const base = DEFAULT_CONTENT.enemies.drone;
-    const bad = (visual: unknown) => () => validateEnemy({ ...base, visual } as typeof base, "Gegner x", DEFAULT_CONTENT);
+    const bad = (visual: unknown) => () => validateEnemy({ ...base, visual } as typeof base, "Enemy x", DEFAULT_CONTENT);
     expect(bad({ shape: "star", points: 2, inner: 0.5 })).toThrow("points");
     expect(bad({ shape: "star", points: 5, inner: 1 })).toThrow("inner");
     expect(bad({ shape: "orb", moons: -1 })).toThrow("moons");

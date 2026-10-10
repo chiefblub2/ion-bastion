@@ -7,10 +7,10 @@ const page = (name: string) => TOWER_PAGES.findIndex((p) => p.name === name);
 describe("tower menu pages", () => {
   it("sorts every tower into its category", () => {
     const byPage = TOWER_PAGES.map((_, i) => Object.values(TOWERS).filter((t) => pageOf(t) === i).map((t) => t.id));
-    expect(byPage[page("Angriff")]).toEqual(["pulse", "blast", "flak", "tesla", "lance", "inferno", "decay", "focus", "mortar", "quake", "executioner", "shrapnel"]);
-    expect(byPage[page("Kontrolle")]).toEqual(["frost", "stasis", "acid", "gravity", "jammer", "net"]);
-    expect(byPage[page("Fallen")]).toEqual(["mine", "spikes", "tar", "snare", "grill", "spring", "limpet", "pit", "tripwire"]);
-    expect(byPage[page("Unterstützung")]).toEqual(["aura", "refinery", "detector", "beacon", "dock", "tracker"]);
+    expect(byPage[page("Attack")]).toEqual(["pulse", "blast", "flak", "tesla", "lance", "inferno", "decay", "focus", "mortar", "quake", "executioner", "shrapnel"]);
+    expect(byPage[page("Control")]).toEqual(["frost", "stasis", "acid", "gravity", "jammer", "net"]);
+    expect(byPage[page("Traps")]).toEqual(["mine", "spikes", "tar", "snare", "grill", "spring", "limpet", "pit", "tripwire"]);
+    expect(byPage[page("Support")]).toEqual(["aura", "refinery", "detector", "beacon", "dock", "tracker"]);
   });
   it("orders the menu and hotkeys page by page", () => {
     const g = new Game(),
@@ -22,14 +22,14 @@ describe("tower menu pages", () => {
   });
   it("numbers the towers of every tab from 1 again", () => {
     const g = new Game();
-    expect(hotkeyTowers(g, page("Angriff"))[0]).toBe("pulse");
-    expect(hotkeyTowers(g, page("Kontrolle"))[0]).toBe("frost");
-    expect(hotkeyTowers(g, page("Fallen"))[0]).toBe("mine");
-    expect(hotkeyTowers(g, page("Unterstützung"))[0]).toBe("aura");
-    expect(hotkeyTowers(g, page("Angriff"))).toHaveLength(12);
+    expect(hotkeyTowers(g, page("Attack"))[0]).toBe("pulse");
+    expect(hotkeyTowers(g, page("Control"))[0]).toBe("frost");
+    expect(hotkeyTowers(g, page("Traps"))[0]).toBe("mine");
+    expect(hotkeyTowers(g, page("Support"))[0]).toBe("aura");
+    expect(hotkeyTowers(g, page("Attack"))).toHaveLength(12);
     // Without tabs the keys run over every tower, whatever page is open.
     const short = new Game(MISSIONS.find((m) => m.id === "bunkerlinie")!);
-    expect(hotkeyTowers(short, page("Kontrolle"))).toEqual(towerOrder(short));
+    expect(hotkeyTowers(short, page("Control"))).toEqual(towerOrder(short));
   });
   it("knows which tabs a mission shows", () => {
     const rift = new Game(MISSIONS.find((m) => m.availableTowers?.length === 10)!);

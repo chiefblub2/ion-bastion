@@ -56,10 +56,10 @@ describe("ground and air targeting", () => {
   it("rejects attack towers without targets and enemies without layer", () => {
     expect(() =>
       validateContent({ ...DEFAULT_CONTENT, towers: { ...TOWERS, pulse: { ...TOWERS.pulse, targets: [] } } }),
-    ).toThrow("Turmziele");
+    ).toThrow("tower targets");
     expect(() =>
       validateContent({ ...DEFAULT_CONTENT, enemies: { ...ENEMIES, drone: { ...ENEMIES.drone, layer: "space" as never } } }),
-    ).toThrow("Gegnerebene");
+    ).toThrow("enemy layer");
   });
 });
 
@@ -335,7 +335,7 @@ describe("Gravitron", () => {
     expect(g.state.enemies[0].distance).toBe(0);
   });
 });
-describe("Mörser", () => {
+describe("Mortar", () => {
   const { radius, minRange } = TOWERS.mortar.attack as MortarAttack;
   it("cannot aim inside its dead zone, but fires at enemies beyond it", () => {
     const close = fire("mortar", [enemyAt(100, "drone", 7, 5 + minRange - 0.2)]);
@@ -406,7 +406,7 @@ describe("Schrapnell", () => {
     expect(g.state.projectiles).toHaveLength(5);
   });
 });
-describe("Störsender", () => {
+describe("Jammer", () => {
   const { duration } = TOWERS.jammer.attack as DisruptAttack;
   it("breaks shields, which stay down until their delay after the disruption", () => {
     const g = new Game(),

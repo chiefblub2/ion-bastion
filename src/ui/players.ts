@@ -11,7 +11,7 @@ export interface MultiplayerSession {
 }
 const hex = (color: number) => `#${color.toString(16).padStart(6, "0")}`;
 export const playerColor = (player: number) => hex(PLAYER_COLORS[player] ?? 0xffffff);
-export const playerName = (player: number, me?: number) => (player === me ? "Du" : `Spieler ${player + 1}`);
+export const playerName = (player: number, me?: number) => (player === me ? "You" : `Player ${player + 1}`);
 const dot = (player: number) => `<i class="player-dot" style="--player:${playerColor(player)}"></i>`;
 const pad = (n: number) => String(n).padStart(2, "0");
 /** Strip under the toolbar: partners' credits in co-op, opponents' reactors in versus. */
@@ -26,19 +26,19 @@ export function renderPlayers(game: Game, session: MultiplayerSession, me: numbe
   const chips = others.map((p) => {
     const s = m.fields[p].state,
       tag = !m.isAlive(p)
-        ? "Ausgeschieden"
+        ? "Eliminated"
         : s.status === "won"
-          ? "Fertig"
+          ? "Done"
           : m.waiting() && m.ready[p]
-            ? "Bereit"
+            ? "Ready"
             : "";
-    return `<span class="player-chip${m.isAlive(p) ? "" : " out"}${p === target ? " target" : ""}">${dot(p)}<b>${playerName(p)}</b><span>♡ ${s.lives}</span><span>W ${pad(s.wave)}</span>${tag ? `<em>${tag}</em>` : ""}${p === target ? '<em class="target-tag">◎ Ziel</em>' : ""}</span>`;
+    return `<span class="player-chip${m.isAlive(p) ? "" : " out"}${p === target ? " target" : ""}">${dot(p)}<b>${playerName(p)}</b><span>♡ ${s.lives}</span><span>W ${pad(s.wave)}</span>${tag ? `<em>${tag}</em>` : ""}${p === target ? '<em class="target-tag">◎ Target</em>' : ""}</span>`;
   });
   if (m.waiting()) {
     const waiting = m.alive().filter((p) => m.fields[p].state.status === "ready"),
       ready = waiting.filter((p) => m.ready[p]).length;
     chips.push(
-      `<span class="players-countdown">Nächste Welle in <b>${Math.ceil(m.countdown * FIXED_STEP)} s</b> · ${ready}/${waiting.length} bereit</span>`,
+      `<span class="players-countdown">Next wave in <b>${Math.ceil(m.countdown * FIXED_STEP)} s</b> · ${ready}/${waiting.length} ready</span>`,
     );
   }
   return chips.join("");
@@ -53,10 +53,10 @@ export function renderSends(m: Match, me: number, terminal: boolean) {
     .map(({ enemy, cost, unlocked }) => {
       const d = field.content.enemies[enemy],
         disabled = terminal || target === null || !unlocked || credits < cost;
-      return `<button class="send-card" data-send="${enemy}" style="--accent:${hex(d.color)}" ${disabled ? "disabled" : ""} title="${unlocked ? `${d.name} zu ${target === null ? "niemandem" : playerName(target)} schicken` : "Erst nach seiner ersten Welle verfügbar"}"><strong>${d.name}</strong><b>${unlocked ? `◇ ${cost}` : "🔒"}</b></button>`;
+      return `<button class="send-card" data-send="${enemy}" style="--accent:${hex(d.color)}" ${disabled ? "disabled" : ""} title="${unlocked ? `Send ${d.name} to ${target === null ? "nobody" : playerName(target)}` : "Available after its first wave"}"><strong>${d.name}</strong><b>${unlocked ? `◇ ${cost}` : "🔒"}</b></button>`;
     })
     .join("");
-  return `<div class="section-title"><h2>Schicken</h2><span>${target === null ? "Kein Ziel" : `${dot(target)}${playerName(target)}`}</span></div><div class="send-list">${buttons}</div>`;
+  return `<div class="section-title"><h2>Send</h2><span>${target === null ? "No target" : `${dot(target)}${playerName(target)}`}</span></div><div class="send-list">${buttons}</div>`;
 }
 export interface Outcome {
   icon: string;
@@ -71,26 +71,26 @@ export function versusOutcome(m: Match, me: number): Outcome | null {
   const r = m.result;
   if (r) {
     const ranking = r.ranking
-      .map((p, i) => `${i + 1}. ${playerName(p, me)} (♡ ${m.fields[p].state.lives}${m.isAlive(p) ? "" : ", ausgeschieden"})`)
+      .map((p, i) => `${i + 1}. ${playerName(p, me)} (♡ ${m.fields[p].state.lives}${m.isAlive(p) ? "" : ", eliminated"})`)
       .join(" · ");
     const [icon, title] =
-      r.winner === me ? ["✦", "Sieg."] : r.top.includes(me) ? ["◇", "Unentschieden."] : ["◇", "Niederlage."];
-    return { icon, kicker: `${MODES[m.mode].name.toUpperCase()} BEENDET`, title, copy: ranking, over: true };
+      r.winner === me ? ["✦", "Victory."] : r.top.includes(me) ? ["◇", "Draw."] : ["◇", "Defeat."];
+    return { icon, kicker: `${MODES[m.mode].name.toUpperCase()} OVER`, title, copy: ranking, over: true };
   }
   if (!m.isAlive(me))
     return {
       icon: "◇",
-      kicker: "AUSGESCHIEDEN",
-      title: "Reaktor verloren.",
-      copy: `Du hast Welle ${m.fields[me].state.wave} erreicht. Die anderen spielen weiter.`,
+      kicker: "ELIMINATED",
+      title: "Reactor lost.",
+      copy: `You reached wave ${m.fields[me].state.wave}. The others play on.`,
       over: false,
     };
   if (m.fields[me].state.status === "won")
     return {
       icon: "✦",
-      kicker: "ALLE WELLEN ABGEWEHRT",
-      title: "Die Linie hält.",
-      copy: "Warte, bis die anderen ihre letzte Welle beendet haben.",
+      kicker: "ALL WAVES REPELLED",
+      title: "The line holds.",
+      copy: "Wait until the others finish their last wave.",
       over: false,
     };
   return null;

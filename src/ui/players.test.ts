@@ -13,17 +13,17 @@ describe("multiplayer HUD", () => {
     g.setPlayers(3);
     g.command({ type: "restart" });
     const html = renderPlayers(g, { mode: "coop", players: 3, match: null }, 1);
-    expect(html).toContain("Spieler 1");
-    expect(html).toContain("Spieler 3");
-    expect(html).not.toContain("Spieler 2");
+    expect(html).toContain("Player 1");
+    expect(html).toContain("Player 3");
+    expect(html).not.toContain("Player 2");
   });
   it("shows opponents, the send target and the countdown in versus", () => {
     const m = siege();
     m.command({ type: "ready", player: 2 });
     const html = renderPlayers(m.fields[0], { mode: "siege", players: 3, match: m }, 0);
-    expect(html).toContain("◎ Ziel");
-    expect(html).toContain("Bereit");
-    expect(html).toContain("Nächste Welle in <b>30 s</b> · 1/3 bereit");
+    expect(html).toContain("◎ Target");
+    expect(html).toContain("Ready");
+    expect(html).toContain("Next wave in <b>30 s</b> · 1/3 ready");
   });
   it("offers only affordable, unlocked enemies to send", () => {
     const m = siege(),
@@ -43,8 +43,8 @@ describe("multiplayer HUD", () => {
       m.command({ type: "ready", player: 1 });
       m.tick();
     }
-    expect(versusOutcome(m, 1)?.title).toBe("Sieg.");
-    expect(versusOutcome(m, 0)?.title).toBe("Niederlage.");
-    expect(versusOutcome(m, 0)?.copy).toMatch(/^1\. Spieler 2/);
+    expect(versusOutcome(m, 1)?.title).toBe("Victory.");
+    expect(versusOutcome(m, 0)?.title).toBe("Defeat.");
+    expect(versusOutcome(m, 0)?.copy).toMatch(/^1\. Player 2/);
   });
 });

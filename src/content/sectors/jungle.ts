@@ -3,7 +3,7 @@ import { parseMap } from "../maps";
 import { g, wave } from "../waves";
 // Swarm waves are splash fodder, so difficulty comes from steep HP growth rather than unit count.
 // A vine trail: four long legs, the gaps are single rows so every tower reaches two legs.
-const LIANENPFAD_MAP = parseMap("lianenpfad", "Lianenpfad", [
+const LIANENPFAD_MAP = parseMap("lianenpfad", "Vine Trail", [
   "S==============",
   "..#......#....=",
   "===============",
@@ -16,7 +16,7 @@ const LIANENPFAD_MAP = parseMap("lianenpfad", "Lianenpfad", [
 ], "jungle");
 
 // Temple steps: the path winds inwards around the ziggurat to the reactor.
-const TEMPELSTUFEN_MAP = parseMap("tempelstufen", "Tempelstufen", [
+const TEMPELSTUFEN_MAP = parseMap("tempelstufen", "Temple Steps", [
   "S============",
   "............=",
   "===========.=",
@@ -29,7 +29,7 @@ const TEMPELSTUFEN_MAP = parseMap("tempelstufen", "Tempelstufen", [
 ], "jungle");
 
 // A mangrove swamp: vertical root legs with gaps of one and two cells, mangrove stumps in between.
-const MANGROVENSUMPF_MAP = parseMap("mangrovensumpf", "Mangrovensumpf", [
+const MANGROVENSUMPF_MAP = parseMap("mangrovensumpf", "Mangrove Swamp", [
   "S.====.====",
   "=.=..=.=..=",
   "=.=..=.=..=",
@@ -43,7 +43,7 @@ const MANGROVENSUMPF_MAP = parseMap("mangrovensumpf", "Mangrovensumpf", [
 ], "jungle");
 
 // A snake pit: six tight coils, the gaps are one row wide.
-const SCHLANGENGRUBE_MAP = parseMap("schlangengrube", "Schlangengrube", [
+const SCHLANGENGRUBE_MAP = parseMap("schlangengrube", "Snake Pit", [
   "S============.",
   "............=.",
   ".============.",
@@ -58,7 +58,7 @@ const SCHLANGENGRUBE_MAP = parseMap("schlangengrube", "Schlangengrube", [
 ], "jungle");
 
 // The heart of the jungle: seven legs with gaps of one and two rows.
-const HERZ_MAP = parseMap("herz", "Herz des Dschungels", [
+const HERZ_MAP = parseMap("herz", "Heart of the Jungle", [
   "S==============",
   "..#.....#.....=",
   "===============",
@@ -75,12 +75,12 @@ const HERZ_MAP = parseMap("herz", "Herz des Dschungels", [
 ], "jungle");
 export const DSCHUNGEL: MissionSector = {
   id: "jungle",
-  name: "Dschungel",
+  name: "Jungle",
   missions: [
     {
       id: "lianenpfad",
-      name: "Lianenpfad",
-      focus: "Schwarmameisen schützen sich im Rudel: Flächenschaden und Schrapnell lichten sie",
+      name: "Vine Trail",
+      focus: "Swarm Ants protect each other in a pack: area damage and Shrapnel thin them out",
       map: LIANENPFAD_MAP,
       waves: [
         wave(35, g("ant", 15, 0.3), g("drone", 12, 0.8, 5)),
@@ -108,8 +108,8 @@ export const DSCHUNGEL: MissionSector = {
     },
     {
       id: "tempelstufen",
-      name: "Tempelstufen",
-      focus: "Urwaldkolosse regenerieren in der Spirale: Wucht schlägt Dauerfeuer, Echo-Wellen kehren zurück",
+      name: "Temple Steps",
+      focus: "Jungle Colossi regenerate in the spiral: heavy hits beat sustained fire, echo waves return",
       map: TEMPELSTUFEN_MAP,
       // Echo waves repeat an earlier wave far above the linear HP curve.
       waves: [
@@ -139,8 +139,8 @@ export const DSCHUNGEL: MissionSector = {
     },
     {
       id: "mangrovensumpf",
-      name: "Mangrovensumpf",
-      focus: "Nur Flächen- und Wuchttürme: Nova, Mörser, Beben, Schrapnell, Säure, Zerfall und Henker",
+      name: "Mangrove Swamp",
+      focus: "Only area and heavy-hit towers: Nova, Mortar, Quake, Shrapnel, Acid, Decay and Executioner",
       map: MANGROVENSUMPF_MAP,
       availableTowers: ["pulse", "blast", "frost", "flak", "mortar", "quake", "shrapnel", "acid", "decay", "executioner", "tesla", "pit", "mine"],
       waves: [
@@ -169,8 +169,8 @@ export const DSCHUNGEL: MissionSector = {
     },
     {
       id: "schlangengrube",
-      name: "Schlangengrube",
-      focus: "Nur 10 Reaktorenergie in sechs engen Windungen: kein Schwarm und kein Koloss darf durch",
+      name: "Snake Pit",
+      focus: "Only 10 reactor energy in six tight turns: no swarm and no Colossus may get through",
       map: SCHLANGENGRUBE_MAP,
       waves: [
         wave(35, g("ant", 12, 0.28), g("colossus", 1, 1.6, 6)),
@@ -198,8 +198,8 @@ export const DSCHUNGEL: MissionSector = {
     },
     {
       id: "herz-des-dschungels",
-      name: "Herz des Dschungels",
-      focus: "Finale: Schwärme, Kolosse, Flieger und drei Titanen im Herzen des Urwalds",
+      name: "Heart of the Jungle",
+      focus: "Finale: swarms, Colossi, flyers and three Titans in the heart of the jungle",
       map: HERZ_MAP,
       waves: [
         wave(35, g("ant", 12, 0.28), g("colossus", 1, 1.6, 6)),

@@ -20,7 +20,7 @@ describe("live units", () => {
     const drone = live.units.find((u) => u.type === "drone")!;
     expect(drone.alive + drone.queued).toBe(8);
     const html = renderLiveUnits(live, s.wave);
-    expect(html).toContain("IM FELD · WELLE 01");
+    expect(html).toContain("ON FIELD · WAVE 01");
     expect(html).toContain(`<b class="live-count">${drone.alive}</b>`);
     expect(html).toContain(`+${drone.queued}`);
     expect(html).not.toMatch(/live-hp|live-slowed|title=/);

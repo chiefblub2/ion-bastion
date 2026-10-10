@@ -5,7 +5,7 @@ export const income: AttackModule<IncomeAttack> = {
   aim: "none",
   projectile: "forbidden",
   params: {
-    amount: { label: "Ertrag pro Welle", valid: (v) => Number.isInteger(v) && v > 0, unit: " Credits" },
+    amount: { label: "Yield per wave", valid: (v) => Number.isInteger(v) && v > 0, unit: " Credits" },
   },
   apply: () => {},
 };

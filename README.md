@@ -1,361 +1,361 @@
 # ION BASTION
 
-Tower-Defense im Browser, gebaut mit TypeScript, Phaser 3 und Vite. <!-- counts:start -->73 Missionen in 15 Sektoren<!-- counts:end --> mit eigenen Maps, Wellen und Terrain-Stilen, über dreißig Türme und <!-- counts:start -->62 Gegnertypen<!-- counts:end --> am Boden und in der Luft. Allein spielbar oder mit 2–4 Spielern im Koop- oder Versus-Modus.
+Tower defense in the browser, built with TypeScript, Phaser 3 and Vite. <!-- counts:start -->73 missions in 15 sectors<!-- counts:end --> with their own maps, waves and terrain styles, over thirty towers and <!-- counts:start -->62 enemy types<!-- counts:end --> on the ground and in the air. Play solo or with 2–4 players in co-op or versus mode.
 
-![Mission 54 Glutkammer im Sektor Vulkankette, erste Welle: Glutläufer in den Windungen und die ersten Türme](docs/images/screens/glutkammer.png)
+![Mission 54 Ember Chamber in the Volcano Chain sector, first wave: Ember Runners in the windings and the first towers](docs/images/screens/glutkammer.png)
 
-Das Spiel läuft komplett im Browser; nur der Mehrspieler braucht einen kleinen Relay-Server. Spielstände liegen bewusst nur im Arbeitsspeicher: Neuladen startet die aktuelle Mission neu (sie steht in der Adresse, `?mission=<id>`), `/` führt zum Startbildschirm. Der Browser merkt sich nur die zuletzt gestartete Mission, die der Startbildschirm unter „Weiterspielen“ anbietet.
+The game runs entirely in the browser; only multiplayer needs a small relay server. Saves live in memory on purpose: reloading restarts the current mission (it is in the address, `?mission=<id>`), and `/` leads to the start screen. The browser only remembers the last mission you started, which the start screen offers under "Continue".
 
-## Schnellstart
+## Quick start
 
-Voraussetzung: Node.js 22 oder neuer.
+Requirement: Node.js 22 or newer.
 
 ```sh
 npm ci
-npm run dev      # Spiel auf http://localhost:4173
-npm test         # Tests
-npm run build    # Produktionsbuild nach dist/
+npm run dev      # game on http://localhost:4173
+npm test         # tests
+npm run build    # production build to dist/
 ```
 
-Hinweise für Entwickler und KI-Agenten (Architektur, Konventionen, Inhalte ergänzen) stehen in [CLAUDE.md](CLAUDE.md).
+Notes for developers and AI agents (architecture, conventions, adding content) are in [CLAUDE.md](CLAUDE.md).
 
-## Spielprinzip
+## How it works
 
-Gegner laufen einen festen Pfad entlang zum Reaktor. Erreicht einer den Reaktor, kostet das Reaktorenergie; bei 0 ist die Mission verloren. Zwischen und während der Wellen baust du Türme neben dem Pfad und verbesserst sie. Die erste Welle startest du selbst; danach startet die nächste Welle 10 Sekunden nach dem Ende der vorigen von selbst (mit `N` früher, ohne Bonus). Besiegte Gegner bringen Credits, jede überstandene Welle einen Bonus. Ein Verkauf erstattet 70 % der gesamten Investition.
+Enemies walk a fixed path to the reactor. If one reaches the reactor, it costs reactor energy; at 0 the mission is lost. Between and during waves you build towers next to the path and upgrade them. You start the first wave yourself; after that the next wave starts by itself 10 seconds after the previous one ends (earlier with `N`, without a bonus). Defeated enemies pay credits, and every wave you survive pays a bonus. Selling refunds 70 % of the total investment.
 
 ## Screenshots
 
-Jeder Sektor hat sein eigenes Terrain. Im Kreislauf (unten rechts) gibt es keinen Reaktor: Gegner kreisen, bis sie besiegt sind.
+Every sector has its own terrain. In the Circuit (bottom right) there is no reactor: enemies circle until they are defeated.
 
 <table>
   <tr>
-    <td><img src="docs/images/screens/kernfestung.png" alt="Mission Kernfestung"><br><sub>Kernfestung · Grenzzone</sub></td>
-    <td><img src="docs/images/screens/polarnacht.png" alt="Mission Polarnacht"><br><sub>Polarnacht · Frostgürtel</sub></td>
+    <td><img src="docs/images/screens/kernfestung.png" alt="Mission Core Fortress"><br><sub>Core Fortress · Border Zone</sub></td>
+    <td><img src="docs/images/screens/polarnacht.png" alt="Mission Polar Night"><br><sub>Polar Night · Frost Belt</sub></td>
   </tr>
   <tr>
-    <td><img src="docs/images/screens/korallengraben.png" alt="Mission Korallengraben"><br><sub>Korallengraben · Tiefsee</sub></td>
-    <td><img src="docs/images/screens/glasebene.png" alt="Mission Glasebene"><br><sub>Glasebene · Dünenmeer</sub></td>
+    <td><img src="docs/images/screens/korallengraben.png" alt="Mission Coral Trench"><br><sub>Coral Trench · Deep Sea</sub></td>
+    <td><img src="docs/images/screens/glasebene.png" alt="Mission Glass Plain"><br><sub>Glass Plain · Dune Sea</sub></td>
   </tr>
   <tr>
-    <td><img src="docs/images/screens/kristallherz.png" alt="Mission Kristallherz"><br><sub>Kristallherz · Kristallhöhle</sub></td>
-    <td><img src="docs/images/screens/doppelschleife.png" alt="Mission Doppelschleife"><br><sub>Doppelschleife · Kreislauf</sub></td>
+    <td><img src="docs/images/screens/kristallherz.png" alt="Mission Crystal Heart"><br><sub>Crystal Heart · Crystal Cave</sub></td>
+    <td><img src="docs/images/screens/doppelschleife.png" alt="Mission Double Loop"><br><sub>Double Loop · Circuit</sub></td>
   </tr>
 </table>
 
-## Bedienung
+## Controls
 
-`http://localhost:4173/?mission=<id>` öffnet eine Mission direkt, zum Beispiel `?mission=korallengraben`.
+`http://localhost:4173/?mission=<id>` opens a mission directly, for example `?mission=korallengraben`.
 
-| Eingabe | Aktion |
+| Input | Action |
 | --- | --- |
-| Turm wählen, freies Feld anklicken | Bauen. Danach endet der Baumodus; Shift+Klick baut weitere Türme desselben Typs. |
-| Gebauten Turm anklicken | Verbessern, verkaufen oder Zielpriorität wählen |
-| Gegner anklicken | Lebenspunkte, Schild, Eigenschaften und aktive Effekte anzeigen |
-| `T` | Zielpriorität des ausgewählten Turms weiterschalten |
-| Tabs Angriff · Kontrolle · Fallen · Unterstützung, `Shift`+`1`–`4` | Turmseite wechseln (ab zehn verfügbaren Türmen; auch Pfeiltasten auf den Tabs) |
-| `1`–`9`, `0`, `Q`, `W` | Turm im offenen Tab wählen; jeder Tab beginnt wieder bei `1` (die Taste steht auf der Karte). Ohne Tabs zählen die Tasten über alle Türme. |
-| Rechtsklick, `Esc` oder ✕ | Baumodus und Auswahl aufheben. Ohne Auswahl beendet `Esc` das Vollbild. |
-| `N` | Nächste Welle starten (im Versus: „Bereit“). Ab Welle 2 startet sie 10 s nach dem Ende der vorigen auch von selbst. |
-| Leertaste | Pause, nur während einer Welle oder des Countdowns und nicht im Versus |
-| `F` oder ⛶ | Vollbild |
-| Pfeiltasten + Enter | Tastaturbedienung auf dem fokussierten Spielfeld |
+| Pick a tower, click a free tile | Build. Build mode ends afterwards; Shift+click builds more towers of the same type. |
+| Click a built tower | Upgrade, sell or choose the target priority |
+| Click an enemy | Show hit points, shield, traits and active effects |
+| `T` | Cycle the target priority of the selected tower |
+| Tabs Attack · Control · Traps · Support, `Shift`+`1`–`4` | Switch the tower page (from ten available towers; arrow keys also work on the tabs) |
+| `1`–`9`, `0`, `Q`, `W` | Pick a tower in the open tab; every tab starts at `1` again (the key is shown on the card). Without tabs the keys count across all towers. |
+| Right click, `Esc` or ✕ | Cancel build mode and selection. Without a selection, `Esc` leaves fullscreen. |
+| `N` | Start the next wave (in versus: "Ready"). From wave 2 on it also starts by itself 10 s after the previous one ends. |
+| Space | Pause, only during a wave or the countdown and not in versus |
+| `F` or ⛶ | Fullscreen |
+| Arrow keys + Enter | Keyboard control on the focused battlefield |
 
-Ein Tabwechsel pausiert das Einzelspiel automatisch. Audio ist optional und standardmäßig aus.
+Switching tabs pauses a solo game automatically. Audio is optional and off by default.
 
-## Mehrspieler (2–4 Spieler)
+## Multiplayer (2–4 players)
 
-In zwei Terminals im Projektordner starten:
+Start in two terminals in the project folder:
 
 ```sh
-npm run server   # Relay auf ws://0.0.0.0:4174 (PORT=… überschreibt den Port)
-npm run dev      # Spiel auf http://0.0.0.0:4173
+npm run server   # relay on ws://0.0.0.0:4174 (PORT=… overrides the port)
+npm run dev      # game on http://0.0.0.0:4173
 ```
 
 **Host**
 
-1. `http://localhost:4173` öffnen.
-2. Auf dem Startbildschirm „Mehrspieler“ → „Raum erstellen“. Den vierstelligen Raumcode (z. B. `KJSK`) den Mitspielern schicken.
-3. Optional „Mission wählen“; danach geht es zurück in die Lobby. Ohne Wahl startet die aktuell geladene Mission.
-4. Modus wählen und „Mission starten“, sobald genug Spieler im Raum sind. Alle wechseln dann ins Spiel.
+1. Open `http://localhost:4173`.
+2. On the start screen choose "Multiplayer" → "Create room". Send the four-letter room code (e.g. `KJSK`) to the other players.
+3. Optionally "Choose mission"; you then return to the lobby. Without a choice, the currently loaded mission starts.
+4. Choose a mode and "Start mission" once enough players are in the room. Everyone then switches to the game.
 
-**Mitspieler**
+**Players**
 
-1. Das Spiel vom Rechner des Hosts öffnen: `http://<IP-des-Hosts>:4173`.
-2. „Mehrspieler“ → Raumcode eingeben → „Beitreten“.
-3. Warten, bis der Host die Mission startet. Den Modus sieht man mit dem Start.
+1. Open the game from the host's machine: `http://<host-IP>:4173`.
+2. "Multiplayer" → enter the room code → "Join".
+3. Wait until the host starts the mission. You see the mode when it starts.
 
-**Modi**
+**Modes**
 
-| Modus | Spieler | Regeln |
+| Mode | Players | Rules |
 | --- | --- | --- |
-| Koop | 2–4 | Gemeinsame Karte und Reaktorenergie, getrennte Credits. Start-Credits, Abschussprämien und Wellenbonus werden geteilt; Raffinerien zahlen an ihren Besitzer. Zusammen verdient ihr genau so viel wie ein Einzelspieler. Türme gehören dem Erbauer (farbige Ecke: blau, bernstein, grün, magenta); nur er kann sie verbessern und verkaufen. |
-| Wettlauf | 2–4 | Jeder verteidigt eine eigene Kopie der Mission mit vollen Start-Credits. Die Wellen starten für alle gleichzeitig, sobald alle „Bereit“ gedrückt haben, spätestens nach 30 s. Es gibt keine Pause. Wer seinen Reaktor als Letzter hält, gewinnt. Überstehen mehrere alle Wellen, entscheidet die Reaktorenergie, danach die Zahl der Abschüsse. |
-| Belagerung | 2–4 | Wie Wettlauf. Zusätzlich schickt man unter „Schicken“ Gegner in das Feld des nächsten Mitspielers, der noch im Spiel ist. Das kostet das Vierfache der Abschussprämie. Schicken kann man nur Gegnertypen, die schon in einer Welle vorkamen. Geschickte Gegner bringen dem Verteidiger keine Prämie. |
+| Co-op | 2–4 | Shared map and reactor energy, separate credits. Starting credits, kill bounties and wave bonuses are split; Refineries pay their owner. Together you earn exactly as much as a solo player. Towers belong to their builder (colored corner: blue, amber, green, magenta); only the builder can upgrade and sell them. |
+| Race | 2–4 | Everyone defends their own copy of the mission with full starting credits. Waves start for everyone at the same time once everyone has pressed "Ready", after 30 s at the latest. There is no break. The last player to hold their reactor wins. If several survive all waves, reactor energy decides, then the number of kills. |
+| Siege | 2–4 | Like Race. In addition, under "Send" you send enemies into the field of the next player who is still in the game. That costs four times the kill bounty. You can only send enemy types that have already appeared in a wave. Sent enemies pay the defender no bounty. |
 
-Kreislauf-Missionen laufen im Mehrspieler nur als Koop: Alle verteidigen denselben Ring, das Gegnerlimit gilt für alle zusammen, und jeder kann die nächste Welle früh rufen.
+Circuit missions run in multiplayer as co-op only: everyone defends the same ring, the enemy limit applies to all together, and anyone can call the next wave early.
 
-Mission, Neustart und Tempo bestimmt in allen Modi der Host. Dialoge und Tabwechsel pausieren im Mehrspieler nicht.
+In all modes the host decides mission, restart and speed. Dialogs and tab switches do not pause in multiplayer.
 
-**Probleme**
+**Troubleshooting**
 
-- **„Kein Relay … erreichbar“:** `npm run server` läuft nicht, oder eine Firewall blockiert Port 4174.
-- **Relay auf einem anderen Rechner oder Port:** `http://<IP>:4173/?server=ws://<Relay-IP>:4174`. Ohne diese Angabe verbindet sich das Spiel mit Port 4174 auf dem Rechner, der die Seite ausliefert.
-- **„Der Raum ist voll …“:** Ein Raum hat vier Plätze. Nach dem Missionsstart kann niemand mehr beitreten.
-- **Ein Spieler verlässt den Raum:**
-  - Das Spiel hält an, und die übrigen Spieler rücken auf. Geht der Host, wird der nächste Spieler Host und kann neu starten.
-  - „Raum verlassen“ setzt die Mission allein fort.
-  - Wiederverbinden gibt es noch nicht.
+- **"No relay reachable …":** `npm run server` is not running, or a firewall blocks port 4174.
+- **Relay on another machine or port:** `http://<IP>:4173/?server=ws://<relay-IP>:4174`. Without this, the game connects to port 4174 on the machine that serves the page.
+- **"The room is full …":** A room has four seats. Nobody can join after the mission has started.
+- **A player leaves the room:**
+  - The game stops and the remaining players move up. If the host leaves, the next player becomes host and can relaunch.
+  - "Leave room" continues the mission alone.
+  - Reconnecting is not supported yet.
 
-## Missionen
+## Missions
 
-Das Spiel startet auf dem Startbildschirm mit Weiterspielen, Kampagne, Kreislauf, Mehrspieler, Gegnerakte und Spielhilfe; jeder Punkt ist eine eigene Seite mit „← Zurück“, und auch die Zurück-Taste des Browsers funktioniert. Über „Kampagne“ bzw. „Kreislauf“ sind alle Missionen direkt wählbar, mit einem Tab je Sektor. Im Spiel führt „Menü“ zurück zum Startbildschirm und pausiert die laufende Welle; „Weiterspielen“ setzt sie fort. Nach einem Sieg führt „Nächste Mission“ weiter.
+The game opens on the start screen with Continue, Campaign, Circuit, Multiplayer, Enemy Codex and Help; each item is its own page with "← Back", and the browser's back button works too. Under "Campaign" and "Circuit" all missions can be picked directly, with one tab per sector. In the game, "Menu" returns to the start screen and pauses the running wave; "Continue" resumes it. After a win, "Next mission" moves on.
 
 <!-- missions:start -->
-| Nr. | Mission | Schwerpunkt | Map | Wellen | Credits | HP/Welle |
+| No. | Mission | Focus | Map | Waves | Credits | HP/Wave |
 | --- | --- | --- | --- | --- | --- | --- |
-| **I** | **Grenzzone** | | | | | |
-| 01 | Außenposten 07 | An Kurven bauen | 18 × 12 | 10 | 240 | 14 % |
-| 02 | Schleusenring | Innenkurven, Türme mehrfach feuern lassen | 18 × 12 | 10 | 280 | 45 % |
-| 03 | Splitterfeld | Bauinseln, Reichweiten überlappen | 18 × 12 | 12 | 320 | 60 % |
-| 04 | Glutpass | Schnelle Gegner mit Kryo bremsen | 18 × 12 | 12 | 340 | 45 % |
-| 05 | Kernfestung | Spirale mit drei Verteidigungszonen | 18 × 12 | 15 | 400 | 65 % |
-| **II** | **Frostgürtel** | | | | | |
-| 06 | Eisbrecher | Lange Geraden für die Lanze | 22 × 11 | 13 | 380 | 72 %¹ |
-| 07 | Kryotal | Kryo verlangsamt, Glut brennt nach | 18 × 12 | 13 | 400 | 58 % |
-| 08 | Gletscherspalte | Enges Zickzack für Tesla | 18 × 12 | 14 | 420 | 66 %¹ |
-| 09 | Polarnacht | Gleiterschwärme, Luftabwehr | 18 × 12 | 14 | 440 | 75 % |
-| 10 | Frostwall | Finale: zwei Titanen, Zerfall | 18 × 13 | 15 | 460 | 72 % |
-| **III** | **Säuremoor** | | | | | |
-| 11 | Sickergrube | Korrosion verstärkt alle Türme | 18 × 12 | 13 | 420 | 70 % |
-| 12 | Nebelsumpf | Stasis hält Gruppen an | 21 × 12 | 13 | 440 | 80 % |
-| 13 | Brackwasser | Nur Impuls, Kryo, Korrosion, Flak | 16 × 12 | 14 | 440 | 86 % |
-| 14 | Faulturm | Spirale um den Reaktor, Aura-Cluster | 17 × 13 | 14 | 480 | 86 % |
-| 15 | Giftkessel | Finale: Panzerwellen, Korrosion und Zerfall | 20 × 12 | 15 | 500 | 88 % |
-| **IV** | **Orbitaldeck** | | | | | |
-| 16 | Andockring | Raffinerien früh bauen | 18 × 12 | 14 | 460 | 80 % |
-| 17 | Frachtschleuse | Knappe Start-Credits | 16 × 11 | 14 | 290 | 82 % |
-| 18 | Schwerelos | Überwiegend Luftangriffe | 18 × 12 | 15 | 480 | 83 % |
-| 19 | Solarsegel | Breite Station, lange Strecke | 22 × 10 | 15 | 510 | 90 % |
-| 20 | Kommandobrücke | Finale mit vollem Gegnermix | 20 × 12 | 16 | 540 | 90 % |
-| **V** | **Ruinenstadt** | | | | | |
-| 21 | Trümmerallee | Wenige Bauplätze zwischen Trümmern | 18 × 12 | 15 | 480 | 80 % |
-| 22 | Bunkerlinie | Nur Impuls, Nova, Kryo, Flak | 18 × 11 | 15 | 500 | 92 % |
-| 23 | Kathedrale | Kurzer Pfad, 15 Reaktorenergie | 18 × 12 | 15 | 520 | 88 % |
-| 24 | Hochbahn | Sprinterschwärme auf langen Geraden | 22 × 11 | 16 | 540 | 92 % |
-| 25 | Zitadelle | Finale: zwei Titanen zugleich | 20 × 13 | 16 | 580 | 90 % |
-| **VI** | **Singularität** | | | | | |
-| 26 | Ereignishorizont | Nur 10 Reaktorenergie | 18 × 12 | 16 | 520 | 90 % |
-| 27 | Riss | Sehr kurzer Pfad, kompakte Karte | 15 × 10 | 16 | 560 | 95 % |
-| 28 | Zeitschleife | Einzelne Wellen mit HP-Spitzen | 18 × 12 | 17 | 580 | 110 %¹ |
-| 29 | Nullpunkt | Ohne Aura und Raffinerie, harte Panzer | 18 × 12 | 18 | 590 | 105 % |
-| 30 | Kern der Singularität | Finale: 20 Wellen, drei Titanen | 20 × 13 | 20 | 650 | 110 % |
-| **VII** | **Dünenmeer** | | | | | |
-| 31 | Treibsand | Gepanzerte Skarabäen, Wucht statt Streufeuer | 16 × 10 | 16 | 600 | 110 % |
-| 32 | Karawanenweg | Gräber tauchen ab, Fallen erwischen sie | 16 × 11 | 17 | 620 | 102 % |
-| 33 | Glasebene | Nur Fallen, Nova, Kryo und Flak | 16 × 10 | 16 | 700 | 105 % |
-| 34 | Sturmkamm | Nur 10 Reaktorenergie | 18 × 11 | 18 | 650 | 108 % |
-| 35 | Oase Null | Finale: Echo-Wellen, zwei Titanen | 18 × 11 | 19 | 700 | 112 %¹ |
-| **VIII** | **Tiefsee** | | | | | |
-| 36 | Schelfkante | Panzerkrebse mit Burst, Henker und Fallgrube brechen | 16 × 9 | 17 | 650 | 110 % |
-| 37 | Korallengraben | Heilende Quallen in der Luft, Flak | 15 × 11 | 18 | 670 | 110 % |
-| 38 | Druckkammer | Enge Spirale, 10 Reaktorenergie, Echo-Wellen | 15 × 11 | 18 | 690 | 110 %¹ |
-| 39 | Schwarzer Raucher | Phantome, ohne Aura und Raffinerie | 11 × 14 | 18 | 700 | 110 % |
-| 40 | Abgrund | Finale: alle Tiefseegegner, drei Titanen | 20 × 13 | 20 | 750 | 110 %¹ |
-| **IX** | **Gewitterfront** | | | | | |
-| 41 | Wetterleuchten | Böenläufer rasen in Schüben, Bremsen und Fallen | 16 × 9 | 17 | 680 | 120 %¹ |
-| 42 | Hagelfeld | Sturmvögel, nur 10 Reaktorenergie | 15 × 11 | 18 | 700 | 110 %¹ |
-| 43 | Blitzableiter | Ohne Lanze, Fokus und Gravitron | 15 × 11 | 18 | 710 | 110 % |
-| 44 | Böenschneise | Echo-Wellen in schmalen Gassen | 11 × 14 | 18 | 730 | 120 %¹ |
-| 45 | Auge des Sturms | Finale: drei Titanen | 20 × 13 | 20 | 780 | 120 %¹ |
-| **X** | **Dschungel** | | | | | |
-| 46 | Lianenpfad | Schwarmameisen, Flächenschaden lichtet sie | 15 × 9 | 18 | 720 | 240 % |
-| 47 | Tempelstufen | Regenerierende Kolosse, Echo-Wellen | 13 × 9 | 19 | 750 | 100 %¹ |
-| 48 | Mangrovensumpf | Nur Flächen- und Wuchttürme | 11 × 10 | 18 | 770 | 80 % |
-| 49 | Schlangengrube | Nur 10 Reaktorenergie | 14 × 11 | 18 | 790 | 100 % |
-| 50 | Herz des Dschungels | Finale: drei Titanen | 15 × 13 | 20 | 820 | 58 %¹ |
-| **XI** | **Vulkankette** | | | | | |
-| 51 | Aschefeld | Glutläufer rasen bei wenig HP, Kryo und Henker | 11 × 7 | 18 | 760 | 100 %¹ |
-| 52 | Lavastrom | Aschenschwingen in der Luft, Echo-Wellen | 14 × 9 | 18 | 780 | 100 %¹ |
-| 53 | Schlackengrat | Ohne Kryo, Stasis, Teergrube und Fangeisen | 14 × 9 | 19 | 800 | 110 %¹ |
-| 54 | Glutkammer | Nur 10 Reaktorenergie | 14 × 11 | 19 | 830 | 110 %¹ |
-| 55 | Vulkanschlund | Finale: drei Titanen | 15 × 13 | 20 | 860 | 120 %¹ |
-| **XII** | **Kristallhöhle** | | | | | |
-| 56 | Quarzstollen | Kristallwächter härten im Takt, Glut brennt durch | 14 × 8 | 18 | 800 | 120 % |
-| 57 | Spiegelsaal | Splitterfalter zerfallen in Gleiter, Echo-Wellen | 13 × 10 | 20 | 820 | 120 %¹ |
-| 58 | Geodenkammer | Nur 10 Reaktorenergie | 12 × 9 | 18 | 840 | 100 % |
-| 59 | Prismenschacht | Phantome, ohne Aura und Raffinerie | 10 × 10 | 18 | 860 | 100 % |
-| 60 | Kristallherz | Finale: drei Titanen | 14 × 11 | 20 | 880 | 110 %¹ |
-| **XIII** | **Kreislauf** | | | | | |
-| 61 | Umlaufbahn | Einfacher Ring, max. 30 Gegner, Welle alle 22 s | 18 × 12 | 8 | 400 | 35 % |
-| 62 | Doppelschleife | Einbuchtung bündelt zwei Bahnen, max. 30, alle 20 s | 20 × 12 | 9 | 450 | 45 % |
-| 63 | Mahlstrom | Zwei Einbuchtungen, max. 35, alle 18 s | 20 × 13 | 10 | 500 | 30 % |
-| **XIV** | **Zahnwerk** | | | | | |
-| 64 | Zahnkranz | Zahnräder werden schneller, je länger sie kreisen, max. 36, alle 20 s | 15 × 11 | 10 | 500 | 30 % |
-| 65 | Hemmung | Kolbenpanzer härten mit jeder Runde, max. 32, alle 18 s | 21 × 10 | 10 | 550 | 35 % |
-| 66 | Unruh | Echo in Welle 8, die Taille bündelt vier Bahnen, max. 35, alle 16 s | 15 × 11 | 11 | 550 | 40 %¹ |
-| 67 | Planetenrad | Nur Kern- und Kontrolltürme, max. 36, alle 18 s | 15 × 15 | 11 | 600 | 40 % |
-| 68 | Uhrwerk | Finale: zwei Titanen, max. 34, alle 16 s | 15 × 11 | 12 | 600 | 40 % |
-| **XV** | **Mondsee** | | | | | |
-| 69 | Ebbe | Gischtflügler härten mit jeder Runde, max. 45, alle 18 s | 20 × 11 | 11 | 550 | 35 % |
-| 70 | Flutring | Nautilus: Schild und Schwung, max. 42, alle 17 s | 20 × 11 | 11 | 570 | 38 % |
-| 71 | Brandung | Langer Schlangenring, max. 45, alle 16 s | 22 × 12 | 12 | 600 | 40 % |
-| 72 | Springflut | Kurzes Intervall, enges Limit, max. 35, alle 14 s | 20 × 14 | 12 | 620 | 40 % |
-| 73 | Mondfinsternis | Echo-Welle, Finale: drei Titanen, max. 40, alle 16 s | 20 × 13 | 13 | 650 | 50 %¹ |
+| **I** | **Border Zone** | | | | | |
+| 01 | Outpost 07 | Build at bends | 18 × 12 | 10 | 240 | 14 % |
+| 02 | Lock Ring | Inner bends, let towers fire repeatedly | 18 × 12 | 10 | 280 | 45 % |
+| 03 | Shard Field | Build islands, overlapping ranges | 18 × 12 | 12 | 320 | 60 % |
+| 04 | Ember Pass | Slow fast enemies with Cryo | 18 × 12 | 12 | 340 | 45 % |
+| 05 | Core Fortress | Spiral with three defense zones | 18 × 12 | 15 | 400 | 65 % |
+| **II** | **Frost Belt** | | | | | |
+| 06 | Icebreaker | Long straights for the Lance | 22 × 11 | 13 | 380 | 72 %¹ |
+| 07 | Cryo Valley | Cryo slows, Ember keeps burning | 18 × 12 | 13 | 400 | 58 % |
+| 08 | Crevasse | Tight zigzag for Tesla | 18 × 12 | 14 | 420 | 66 %¹ |
+| 09 | Polar Night | Glider swarms, anti-air | 18 × 12 | 14 | 440 | 75 % |
+| 10 | Frostwall | Finale: two Titans, Decay | 18 × 13 | 15 | 460 | 72 % |
+| **III** | **Acid Moor** | | | | | |
+| 11 | Seepage Pit | Corrosion strengthens all towers | 18 × 12 | 13 | 420 | 70 % |
+| 12 | Fog Swamp | Stasis halts groups | 21 × 12 | 13 | 440 | 80 % |
+| 13 | Brackish Water | Only Pulse, Cryo, Corrosion, Flak | 16 × 12 | 14 | 440 | 86 % |
+| 14 | Digester Tower | Spiral around the reactor, Aura clusters | 17 × 13 | 14 | 480 | 86 % |
+| 15 | Toxic Cauldron | Finale: Tank waves, Corrosion and Decay | 20 × 12 | 15 | 500 | 88 % |
+| **IV** | **Orbital Deck** | | | | | |
+| 16 | Docking Ring | Build Refineries early | 18 × 12 | 14 | 460 | 80 % |
+| 17 | Cargo Lock | Scarce starting credits | 16 × 11 | 14 | 290 | 82 % |
+| 18 | Zero-G | Mostly air attacks | 18 × 12 | 15 | 480 | 83 % |
+| 19 | Solar Sail | Wide station, long route | 22 × 10 | 15 | 510 | 90 % |
+| 20 | Command Bridge | Finale with the full enemy mix | 20 × 12 | 16 | 540 | 90 % |
+| **V** | **Ruined City** | | | | | |
+| 21 | Rubble Avenue | Few build spots between rubble | 18 × 12 | 15 | 480 | 80 % |
+| 22 | Bunker Line | Only Pulse, Nova, Cryo, Flak | 18 × 11 | 15 | 500 | 92 % |
+| 23 | Cathedral | Short path, 15 reactor energy | 18 × 12 | 15 | 520 | 88 % |
+| 24 | Elevated Rail | Sprinter swarms on long straights | 22 × 11 | 16 | 540 | 92 % |
+| 25 | Citadel | Finale: two Titans at once | 20 × 13 | 16 | 580 | 90 % |
+| **VI** | **Singularity** | | | | | |
+| 26 | Event Horizon | Only 10 reactor energy | 18 × 12 | 16 | 520 | 90 % |
+| 27 | Rift | Very short path, compact map | 15 × 10 | 16 | 560 | 95 % |
+| 28 | Time Loop | Single waves with HP spikes | 18 × 12 | 17 | 580 | 110 %¹ |
+| 29 | Zero Point | No Aura or Refinery, hard Tanks | 18 × 12 | 18 | 590 | 105 % |
+| 30 | Core of the Singularity | Finale: 20 waves, three Titans | 20 × 13 | 20 | 650 | 110 % |
+| **VII** | **Dune Sea** | | | | | |
+| 31 | Quicksand | Armored Scarabs, force instead of spray fire | 16 × 10 | 16 | 600 | 110 % |
+| 32 | Caravan Road | Burrowers dive, traps catch them | 16 × 11 | 17 | 620 | 102 % |
+| 33 | Glass Plain | Only traps, Nova, Cryo and Flak | 16 × 10 | 16 | 700 | 105 % |
+| 34 | Storm Crest | Only 10 reactor energy | 18 × 11 | 18 | 650 | 108 % |
+| 35 | Oasis Zero | Finale: echo waves, two Titans | 18 × 11 | 19 | 700 | 112 %¹ |
+| **VIII** | **Deep Sea** | | | | | |
+| 36 | Continental Shelf | Armor Crabs with burst, Executioner and Pitfall break them | 16 × 9 | 17 | 650 | 110 % |
+| 37 | Coral Trench | Healing Jellyfish in the air, Flak | 15 × 11 | 18 | 670 | 110 % |
+| 38 | Pressure Chamber | Tight spiral, 10 reactor energy, echo waves | 15 × 11 | 18 | 690 | 110 %¹ |
+| 39 | Black Smoker | Phantoms, no Aura or Refinery | 11 × 14 | 18 | 700 | 110 % |
+| 40 | Abyss | Finale: all Deep Sea enemies, three Titans | 20 × 13 | 20 | 750 | 110 %¹ |
+| **IX** | **Storm Front** | | | | | |
+| 41 | Heat Lightning | Gust Runners race in bursts, slows and traps | 16 × 9 | 17 | 680 | 120 %¹ |
+| 42 | Hailfield | Stormbirds, only 10 reactor energy | 15 × 11 | 18 | 700 | 110 %¹ |
+| 43 | Lightning Rod | No Lance, Focus or Gravitron | 15 × 11 | 18 | 710 | 110 % |
+| 44 | Gust Corridor | Echo waves in narrow alleys | 11 × 14 | 18 | 730 | 120 %¹ |
+| 45 | Eye of the Storm | Finale: three Titans | 20 × 13 | 20 | 780 | 120 %¹ |
+| **X** | **Jungle** | | | | | |
+| 46 | Vine Trail | Swarm Ants, area damage thins them out | 15 × 9 | 18 | 720 | 240 % |
+| 47 | Temple Steps | Regenerating Colossi, echo waves | 13 × 9 | 19 | 750 | 100 %¹ |
+| 48 | Mangrove Swamp | Only area and force towers | 11 × 10 | 18 | 770 | 80 % |
+| 49 | Snake Pit | Only 10 reactor energy | 14 × 11 | 18 | 790 | 100 % |
+| 50 | Heart of the Jungle | Finale: three Titans | 15 × 13 | 20 | 820 | 58 %¹ |
+| **XI** | **Volcano Chain** | | | | | |
+| 51 | Ashfield | Ember Runners race at low HP, Cryo and Executioner | 11 × 7 | 18 | 760 | 100 %¹ |
+| 52 | Lava Flow | Ash Wings in the air, echo waves | 14 × 9 | 18 | 780 | 100 %¹ |
+| 53 | Slag Ridge | No Cryo, Stasis, Tar Pit or Bear Trap | 14 × 9 | 19 | 800 | 110 %¹ |
+| 54 | Ember Chamber | Only 10 reactor energy | 14 × 11 | 19 | 830 | 110 %¹ |
+| 55 | Volcano Throat | Finale: three Titans | 15 × 13 | 20 | 860 | 120 %¹ |
+| **XII** | **Crystal Cave** | | | | | |
+| 56 | Quartz Gallery | Crystal Wardens harden in rhythm, Ember burns through | 14 × 8 | 18 | 800 | 120 % |
+| 57 | Hall of Mirrors | Shard Moths split into Gliders, echo waves | 13 × 10 | 20 | 820 | 120 %¹ |
+| 58 | Geode Chamber | Only 10 reactor energy | 12 × 9 | 18 | 840 | 100 % |
+| 59 | Prism Shaft | Phantoms, no Aura or Refinery | 10 × 10 | 18 | 860 | 100 % |
+| 60 | Crystal Heart | Finale: three Titans | 14 × 11 | 20 | 880 | 110 %¹ |
+| **XIII** | **Circuit** | | | | | |
+| 61 | Orbit | Simple ring, max. 30 enemies, a wave every 22 s | 18 × 12 | 8 | 400 | 35 % |
+| 62 | Double Loop | A dent merges two lanes, max. 30, every 20 s | 20 × 12 | 9 | 450 | 45 % |
+| 63 | Maelstrom | Two dents, max. 35, every 18 s | 20 × 13 | 10 | 500 | 30 % |
+| **XIV** | **Gearworks** | | | | | |
+| 64 | Ring Gear | Cogwheels speed up the longer they circle, max. 36, every 20 s | 15 × 11 | 10 | 500 | 30 % |
+| 65 | Escapement | Piston Tanks harden every lap, max. 32, every 18 s | 21 × 10 | 10 | 550 | 35 % |
+| 66 | Balance Wheel | Echo in wave 8, the waist merges four lanes, max. 35, every 16 s | 15 × 11 | 11 | 550 | 40 %¹ |
+| 67 | Planet Gear | Only core and control towers, max. 36, every 18 s | 15 × 15 | 11 | 600 | 40 % |
+| 68 | Clockwork | Finale: two Titans, max. 34, every 16 s | 15 × 11 | 12 | 600 | 40 % |
+| **XV** | **Moon Lake** | | | | | |
+| 69 | Ebb | Spray Wings harden every lap, max. 45, every 18 s | 20 × 11 | 11 | 550 | 35 % |
+| 70 | Tide Ring | Nautilus: shield and momentum, max. 42, every 17 s | 20 × 11 | 11 | 570 | 38 % |
+| 71 | Surf | Long serpentine ring, max. 45, every 16 s | 22 × 12 | 12 | 600 | 40 % |
+| 72 | Spring Tide | Short interval, tight limit, max. 35, every 14 s | 20 × 14 | 12 | 620 | 40 % |
+| 73 | Lunar Eclipse | Echo wave, finale: three Titans, max. 40, every 16 s | 20 × 13 | 13 | 650 | 50 %¹ |
 
-¹ Einzelne Wellen haben einen eigenen HP-Faktor statt des linearen Zuwachses.
+¹ Individual waves have their own HP factor instead of the linear growth.
 <!-- missions:end -->
 
-### Kreislauf
+### Circuit
 
-Kreislauf ist ein eigener Spielmodus mit eigenem Reiter in der Missionsauswahl, getrennt von der Kampagne. Er hat drei Sektoren: Kreislauf, Zahnwerk und Mondsee. Seine Missionen spielen auf geschlossenen Ringen ohne Reaktor:
+Circuit is its own game mode with its own tab in the mission picker, separate from the campaign. It has three sectors: Circuit, Gearworks and Moon Lake. Its missions play on closed rings without a reactor:
 
-- Die erste Welle startest du selbst. Danach startet ein Timer jede weitere Welle, auch wenn die vorige noch läuft.
-- Gegner laufen im Kreis, bis sie fallen. Sie richten keinen Reaktorschaden an.
-- Sind mehr Gegner gleichzeitig im Ring als das Limit erlaubt, ist die Mission verloren. Die Anzeige „IM RING“ ersetzt die Reaktorenergie.
-- Mit „Welle ▶“ oder `N` rufst du die nächste Welle früher. Für jede gesparte Sekunde gibt es Credits; den Bonus zeigt der Button an.
-- Wellenbonus und Raffinerie-Einkommen kommen, sobald die nächste Welle startet.
-- Gewonnen ist die Mission, wenn alle Wellen gestartet und alle Gegner besiegt sind.
+- You start the first wave yourself. After that a timer starts every further wave, even if the previous one is still running.
+- Enemies circle until they fall. They deal no reactor damage.
+- If more enemies are in the ring at once than the limit allows, the mission is lost. The "IN RING" display replaces reactor energy.
+- With "Wave ▶" or `N` you call the next wave early. Every second saved pays credits; the button shows the bonus.
+- Wave bonus and Refinery income arrive when the next wave starts.
+- The mission is won when all waves have started and all enemies are defeated.
 
-## Türme
+## Towers
 
-Jeder Gegner bewegt sich am Boden oder in der Luft; jeder Angriffsturm trifft nur bestimmte Ebenen.
+Every enemy moves on the ground or in the air; every attack tower only hits certain layers.
 
-| Turm | Kosten | Angriff | Ziele |
+| Tower | Cost | Attack | Targets |
 | --- | --- | --- | --- |
-| <img src="docs/images/towers/pulse.png" width="36" height="36" alt=""> Impuls | 80 | Einzelziel | Boden · Luft |
-| <img src="docs/images/towers/blast.png" width="36" height="36" alt=""> Nova | 130 | Flächenschaden | nur Boden (auch der Explosionsradius) |
-| <img src="docs/images/towers/frost.png" width="36" height="36" alt=""> Kryo | 100 | Verlangsamung | Boden · Luft |
-| <img src="docs/images/towers/aura.png" width="36" height="36" alt=""> Aura | 160 | Unterstützung, verstärkt Türme im Radius 3 | – |
-| <img src="docs/images/towers/flak.png" width="36" height="36" alt=""> Flak | 90 | Einzelziel, schnell | nur Luft |
-| <img src="docs/images/towers/tesla.png" width="36" height="36" alt=""> Tesla | 150 | Kettenblitz: springt bis zu 3× auf Gegner im Umkreis von 1,6 Feldern, je Sprung 75 % Schaden | Boden · Luft |
-| <img src="docs/images/towers/lance.png" width="36" height="36" alt=""> Lanze | 170 | Durchschlag: Strahl bis Reichweite 4,4, trifft alle Gegner auf der Linie, je weiterem Treffer 85 % | Boden · Luft |
-| <img src="docs/images/towers/inferno.png" width="36" height="36" alt=""> Glut | 120 | Brand: zusätzlich das 2,5-Fache des Treffers über 3 s | Boden · Luft |
-| <img src="docs/images/towers/stasis.png" width="36" height="36" alt=""> Stasis | 140 | Betäubung: Puls im Radius 0,9 hält Gegner 0,8 s an, danach 1,5 s immun | Boden · Luft |
-| <img src="docs/images/towers/acid.png" width="36" height="36" alt=""> Korrosion | 110 | Schwächung: Gegner im Radius 0,8 nehmen 3 s lang 25 % mehr Schaden | Boden · Luft |
-| <img src="docs/images/towers/decay.png" width="36" height="36" alt=""> Zerfall | 160 | Anti-Boss: Treffer plus 4 % der maximalen HP | Boden · Luft |
-| <img src="docs/images/towers/focus.png" width="36" height="36" alt=""> Fokus | 150 | Aufladung: Dauerstrahl hält sein Ziel, jeder Folgetreffer +20 % Schaden, bis zum Dreifachen | Boden · Luft |
-| <img src="docs/images/towers/mortar.png" width="36" height="36" alt=""> Mörser | 160 | Artillerie: Reichweite 5, Explosionsradius 1,3, kann Gegner näher als 1,5 Felder nicht beschießen | nur Boden |
-| <img src="docs/images/towers/quake.png" width="36" height="36" alt=""> Beben | 140 | Nahbereich: Schockwelle trifft alle Gegner in Reichweite 1,8, am Rand noch 50 % | nur Boden |
-| <img src="docs/images/towers/executioner.png" width="36" height="36" alt=""> Henker | 150 | Hinrichtung: Gegner unter 25 % HP erleiden beim Einschlag den vierfachen Schaden | Boden · Luft |
-| <img src="docs/images/towers/shrapnel.png" width="36" height="36" alt=""> Schrapnell | 130 | Mehrfachziel: jede Salve trifft bis zu 3 verschiedene Gegner | Boden · Luft |
-| <img src="docs/images/towers/jammer.png" width="36" height="36" alt=""> Störsender | 130 | Störung: Puls im Radius 1,1 schaltet 3 s lang Schild, Regeneration, Heilung, Tarnung, Ausweichen und Anführer-Bonus ab; Schilde brechen sofort | Boden · Luft |
-| <img src="docs/images/towers/net.png" width="36" height="36" alt=""> Fangnetz | 110 | Luftfalle: Flieger 3 s lang 30 % langsamer und für Bodentürme wie Nova angreifbar | nur Luft |
-| <img src="docs/images/towers/gravity.png" width="36" height="36" alt=""> Gravitron | 170 | Rückstoß: Puls im Radius 1 zieht Gegner 0,6 s lang mit 1,5-fachem Tempo zurück, danach 2,5 s immun; Berserker widerstehen | nur Boden |
-| <img src="docs/images/towers/refinery.png" width="36" height="36" alt=""> Raffinerie | 120 | 25 Credits nach jeder Welle, kein Angriff | – |
-| <img src="docs/images/towers/detector.png" width="36" height="36" alt=""> Detektor | 90 | Deckt getarnte Gegner im Radius 3,5 auf, kein eigener Angriff | – |
-| <img src="docs/images/towers/beacon.png" width="36" height="36" alt=""> Prämienbake | 100 | Abschüsse im Radius 2,5 zahlen 50 % mehr Credits (mehrere Baken zählen nicht doppelt), kein Angriff | – |
-| <img src="docs/images/towers/dock.png" width="36" height="36" alt=""> Reparaturdock | 150 | Stellt nach jeder Welle 1 Reaktorenergie wieder her, bis zum Startwert; nicht im Kreislauf | – |
-| <img src="docs/images/towers/tracker.png" width="36" height="36" alt=""> Peilsender | 140 | Gegner im Radius 2,2 erleiden 15 % mehr Schaden, zusätzlich zu Korrosion, kein Angriff | – |
+| <img src="docs/images/towers/pulse.png" width="36" height="36" alt=""> Pulse | 80 | Single target | Ground · Air |
+| <img src="docs/images/towers/blast.png" width="36" height="36" alt=""> Nova | 130 | Area damage | Ground only (including the blast radius) |
+| <img src="docs/images/towers/frost.png" width="36" height="36" alt=""> Cryo | 100 | Slow | Ground · Air |
+| <img src="docs/images/towers/aura.png" width="36" height="36" alt=""> Aura | 160 | Support, strengthens towers within radius 3 | – |
+| <img src="docs/images/towers/flak.png" width="36" height="36" alt=""> Flak | 90 | Single target, fast | Air only |
+| <img src="docs/images/towers/tesla.png" width="36" height="36" alt=""> Tesla | 150 | Chain lightning: jumps up to 3× to enemies within 1.6 tiles, 75 % damage per jump | Ground · Air |
+| <img src="docs/images/towers/lance.png" width="36" height="36" alt=""> Lance | 170 | Pierce: beam up to range 4.4, hits every enemy on the line, 85 % per further hit | Ground · Air |
+| <img src="docs/images/towers/inferno.png" width="36" height="36" alt=""> Ember | 120 | Burn: additionally 2.5 times the hit over 3 s | Ground · Air |
+| <img src="docs/images/towers/stasis.png" width="36" height="36" alt=""> Stasis | 140 | Stun: pulse in radius 0.9 halts enemies for 0.8 s, then 1.5 s immune | Ground · Air |
+| <img src="docs/images/towers/acid.png" width="36" height="36" alt=""> Corrosion | 110 | Weaken: enemies in radius 0.8 take 25 % more damage for 3 s | Ground · Air |
+| <img src="docs/images/towers/decay.png" width="36" height="36" alt=""> Decay | 160 | Anti-boss: hit plus 4 % of maximum HP | Ground · Air |
+| <img src="docs/images/towers/focus.png" width="36" height="36" alt=""> Focus | 150 | Charge: continuous beam holds its target, every follow-up hit +20 % damage, up to triple | Ground · Air |
+| <img src="docs/images/towers/mortar.png" width="36" height="36" alt=""> Mortar | 160 | Artillery: range 5, blast radius 1.3, cannot fire at enemies closer than 1.5 tiles | Ground only |
+| <img src="docs/images/towers/quake.png" width="36" height="36" alt=""> Quake | 140 | Close range: shockwave hits all enemies within range 1.8, still 50 % at the edge | Ground only |
+| <img src="docs/images/towers/executioner.png" width="36" height="36" alt=""> Executioner | 150 | Execution: enemies below 25 % HP take four times the damage on impact | Ground · Air |
+| <img src="docs/images/towers/shrapnel.png" width="36" height="36" alt=""> Shrapnel | 130 | Multi-target: every salvo hits up to 3 different enemies | Ground · Air |
+| <img src="docs/images/towers/jammer.png" width="36" height="36" alt=""> Jammer | 130 | Disruption: pulse in radius 1.1 switches off shield, regeneration, healing, stealth, evasion and leader bonus for 3 s; shields break at once | Ground · Air |
+| <img src="docs/images/towers/net.png" width="36" height="36" alt=""> Snare Net | 110 | Air trap: flyers 30 % slower for 3 s and targetable by ground towers like Nova | Air only |
+| <img src="docs/images/towers/gravity.png" width="36" height="36" alt=""> Gravitron | 170 | Knockback: pulse in radius 1 pulls enemies back at 1.5 times speed for 0.6 s, then 2.5 s immune; Berserkers resist | Ground only |
+| <img src="docs/images/towers/refinery.png" width="36" height="36" alt=""> Refinery | 120 | 25 credits after every wave, no attack | – |
+| <img src="docs/images/towers/detector.png" width="36" height="36" alt=""> Detector | 90 | Reveals stealthed enemies within radius 3.5, no attack of its own | – |
+| <img src="docs/images/towers/beacon.png" width="36" height="36" alt=""> Bounty Beacon | 100 | Kills within radius 2.5 pay 50 % more credits (several Beacons do not stack), no attack | – |
+| <img src="docs/images/towers/dock.png" width="36" height="36" alt=""> Repair Dock | 150 | Restores 1 reactor energy after every wave, up to the starting value; not in the Circuit | – |
+| <img src="docs/images/towers/tracker.png" width="36" height="36" alt=""> Tracker | 140 | Enemies within radius 2.2 take 15 % more damage, on top of Corrosion, no attack | – |
 
-Nova, Mörser, Flak, Kryo, Henker, Schrapnell und Fangnetz verschießen Geschosse, die Zeit brauchen; schnelle Gegner können Nova-Granaten ausweichen. Tesla, Lanze, Fokus, Beben, Gravitron und Störsender treffen sofort.
+Nova, Mortar, Flak, Cryo, Executioner, Shrapnel and Snare Net fire projectiles that take time; fast enemies can dodge Nova shells. Tesla, Lance, Focus, Quake, Gravitron and Jammer hit instantly.
 
-### Fallen
+### Traps
 
-Fallen baust du direkt auf freie Wegfelder (nicht auf Eingang oder Reaktor). Sie lösen aus, sobald ein Bodengegner auf ihr Feld läuft, auch ein getarnter. Flieger fliegen darüber hinweg. Nach dem Auslösen laden sie nach; ein Licht zeigt, wann sie wieder scharf sind. Fallen haben die fünf Stufen der Angriffstürme, ihr Auslöseradius bleibt aber gleich.
+You build traps directly on free path tiles (not on the entry or the reactor). They trigger as soon as a ground enemy walks onto their tile, even a stealthed one. Flyers pass over them. After triggering they reload; a light shows when they are armed again. Traps have the five levels of the attack towers, but their trigger radius stays the same.
 
-| Falle | Kosten | Wirkung | Stufe 4 / 5 |
+| Trap | Cost | Effect | Level 4 / 5 |
 | --- | --- | --- | --- |
-| <img src="docs/images/towers/mine.png" width="36" height="36" alt=""> Mine | 70 | Explosion mit 80 Schaden im Radius 1,1, 5 s Nachladen | Radius 1,3 / 1,5 |
-| <img src="docs/images/towers/spikes.png" width="36" height="36" alt=""> Krähenfüße | 60 | Blutung: 4 s lang 12 Schaden je weiter gelaufenem Feld; festgehaltene oder zurückgeworfene Gegner bluten nicht | 15 je Feld / 18 je Feld, 5 s |
-| <img src="docs/images/towers/tar.png" width="36" height="36" alt=""> Teergrube | 60 | Gegner laufen 1,5 s mit 45 % Tempo | 40 % für 2 s / 30 % für 2,5 s |
-| <img src="docs/images/towers/snare.png" width="36" height="36" alt=""> Fangeisen | 90 | Hält Gegner 1,5 s fest, danach 2,5 s immun, 4 s Nachladen | 1,8 s / 2,2 s, größerer Griff |
-| <img src="docs/images/towers/grill.png" width="36" height="36" alt=""> Flammenrost | 80 | Brand: das Dreifache des Treffers über 3 s | 3,5-fach / 4-fach über 4 s |
-| <img src="docs/images/towers/spring.png" width="36" height="36" alt=""> Sprungfeder | 100 | Wirft Gegner den Weg zurück, danach 3 s immun; Berserker widerstehen | weiter / noch weiter |
-| <img src="docs/images/towers/limpet.png" width="36" height="36" alt=""> Haftmine | 90 | Heftet eine Bombe an den Gegner: 70 Schaden im Radius 1,2 nach 2 s oder sofort, wenn der Träger stirbt; Kettenreaktionen möglich | Radius 1,4 / 1,6, Zünder 1,5 s |
-| <img src="docs/images/towers/pit.png" width="36" height="36" alt=""> Fallgrube | 120 | Verschlingt kleine Gegner (Drohne, Läufer, Skater, Phantom, Blinker, Rudelwolf, Sprungkäfer, Geröllschwarm) sofort, egal wie viele HP; größere nehmen 60 Schaden; 6 s Abdecken | auch Heiler, Schildträger, Splitter, Schleim, Prismenläufer, Salamander, Märtyrer, Pionier / auch Panzer, Nullfeldträger |
-| <img src="docs/images/towers/tripwire.png" width="36" height="36" alt=""> Alarmdraht | 110 | Lädt beim Auslösen alle Angriffstürme im Radius 2,5 sofort nach; 6 s Spannen | Radius 3 / 3,5 |
+| <img src="docs/images/towers/mine.png" width="36" height="36" alt=""> Mine | 70 | Explosion with 80 damage in radius 1.1, 5 s reload | Radius 1.3 / 1.5 |
+| <img src="docs/images/towers/spikes.png" width="36" height="36" alt=""> Caltrops | 60 | Bleed: for 4 s, 12 damage per further tile walked; held or pushed-back enemies do not bleed | 15 per tile / 18 per tile, 5 s |
+| <img src="docs/images/towers/tar.png" width="36" height="36" alt=""> Tar Pit | 60 | Enemies walk at 45 % speed for 1.5 s | 40 % for 2 s / 30 % for 2.5 s |
+| <img src="docs/images/towers/snare.png" width="36" height="36" alt=""> Bear Trap | 90 | Holds enemies for 1.5 s, then 2.5 s immune, 4 s reload | 1.8 s / 2.2 s, bigger grip |
+| <img src="docs/images/towers/grill.png" width="36" height="36" alt=""> Flame Grate | 80 | Burn: three times the hit over 3 s | 3.5 times / 4 times over 4 s |
+| <img src="docs/images/towers/spring.png" width="36" height="36" alt=""> Spring | 100 | Throws enemies back along the path, then 3 s immune; Berserkers resist | further / even further |
+| <img src="docs/images/towers/limpet.png" width="36" height="36" alt=""> Sticky Mine | 90 | Attaches a bomb to the enemy: 70 damage in radius 1.2 after 2 s, or at once when the carrier dies; chain reactions possible | Radius 1.4 / 1.6, fuse 1.5 s |
+| <img src="docs/images/towers/pit.png" width="36" height="36" alt=""> Pitfall | 120 | Swallows small enemies (Drone, Sprinter, Ice Strider, Phantom, Phase Runner, Packwolf, Jump Beetle, Rubble Swarm) at once, no matter how much HP; larger ones take 60 damage; 6 s to cover up | also Medic, Shield Bearer, Shard, Sludge, Prism Runner, Salamander, Martyr, Pioneer / also Tank, Null-Field Carrier |
+| <img src="docs/images/towers/tripwire.png" width="36" height="36" alt=""> Tripwire | 110 | On triggering, instantly reloads all attack towers within radius 2.5; 6 s to re-tension | Radius 3 / 3.5 |
 
-**Angriffstürme** haben fünf Stufen:
+**Attack towers** have five levels:
 
-| Stufe | Kosten (× Baukosten) | Schaden | Reichweite | Schusstakt |
+| Level | Cost (× build cost) | Damage | Range | Fire interval |
 | --- | --- | --- | --- | --- |
-| 2 | 0,9 | × 1,65 | + 0,3 | × 0,9 |
-| 3 | 1,5 | × 2,72 | + 0,6 | × 0,81 |
-| 4 | 3,0 | × 4,8 | + 0,8 | × 0,66 |
-| 5 | 4,5 | × 7,0 | + 1,0 | × 0,6 |
+| 2 | 0.9 | × 1.65 | + 0.3 | × 0.9 |
+| 3 | 1.5 | × 2.72 | + 0.6 | × 0.81 |
+| 4 | 3.0 | × 4.8 | + 0.8 | × 0.66 |
+| 5 | 4.5 | × 7.0 | + 1.0 | × 0.6 |
 
-Die Stufen 4 und 5 sind teuer, bringen aber mehr Schaden pro Credit als zusätzliche Türme. Spezialtürme verbessern dabei auch ihre Effekte:
+Levels 4 and 5 are expensive, but bring more damage per credit than additional towers. Special towers also upgrade their effects:
 
-| Turm | Stufe 4 | Stufe 5 |
+| Tower | Level 4 | Level 5 |
 | --- | --- | --- |
-| Kryo | verlangsamt auf 45 % Tempo, 2,3 s | 35 % Tempo, 2,8 s |
-| Tesla | 4 Sprünge, 1,8 Felder | 5 Sprünge, 2 Felder |
-| Lanze | verliert je Durchschlag 10 % | 0 %, Strahlbreite 0,5 |
-| Glut | brennt mit dem 3-Fachen | 3,5-Fachen, 3,5 s lang |
-| Stasis | 1 s, Radius 1,1 | 1,2 s, Radius 1,3 |
-| Korrosion | +30 % Schaden | +40 %, Radius 1 |
-| Zerfall | 5 % der maximalen HP | 6 % |
-| Fokus | +25 % je Folgetreffer | +30 %, bis zu 12 Stufen |
-| Mörser | Explosionsradius 1,5 | 1,7, toter Winkel 1,2 |
-| Beben | 70 % am Rand | volle Wucht bis zum Rand |
-| Henker | schon unter 30 % HP | 5-facher Schaden unter 35 % HP |
-| Schrapnell | 4 Ziele pro Salve | 5 Ziele |
-| Störsender | 3,5 s, Radius 1,3 | 4,5 s, Radius 1,5 |
-| Fangnetz | 3,5 s | 40 % langsamer, 4,5 s |
-| Gravitron | Radius 1,2, 1,8-fache Zugkraft | Radius 1,4, 2,2-fach, 0,7 s |
+| Cryo | slows to 45 % speed, 2.3 s | 35 % speed, 2.8 s |
+| Tesla | 4 jumps, 1.8 tiles | 5 jumps, 2 tiles |
+| Lance | loses 10 % per pierce | 0 %, beam width 0.5 |
+| Ember | burns for 3 times | 3.5 times, 3.5 s long |
+| Stasis | 1 s, radius 1.1 | 1.2 s, radius 1.3 |
+| Corrosion | +30 % damage | +40 %, radius 1 |
+| Decay | 5 % of maximum HP | 6 % |
+| Focus | +25 % per follow-up hit | +30 %, up to 12 stacks |
+| Mortar | blast radius 1.5 | 1.7, dead zone 1.2 |
+| Quake | 70 % at the edge | full force to the edge |
+| Executioner | already below 30 % HP | 5 times damage below 35 % HP |
+| Shrapnel | 4 targets per salvo | 5 targets |
+| Jammer | 3.5 s, radius 1.3 | 4.5 s, radius 1.5 |
+| Snare Net | 3.5 s | 40 % slower, 4.5 s |
+| Gravitron | radius 1.2, 1.8 times pull | radius 1.4, 2.2 times, 0.7 s |
 
-Die **Raffinerie** hat drei Stufen und zahlt 25 / 40 / 60 Credits pro Welle (Ausbau für 100 und 160 Credits).
+The **Refinery** has three levels and pays 25 / 40 / 60 credits per wave (upgrades cost 100 and 160 credits).
 
-Weitere Unterstützungstürme mit drei Stufen:
+More support towers with three levels:
 
-| Turm | Stufe 2 | Stufe 3 |
+| Tower | Level 2 | Level 3 |
 | --- | --- | --- |
-| Prämienbake | +75 % · 90 | +100 %, Radius 3 · 150 |
-| Reparaturdock | 2 Energie pro Welle · 160 | 3 Energie · 260 |
-| Peilsender | +20 %, Radius 2,5 · 120 | +25 %, Radius 2,8 · 200 |
+| Bounty Beacon | +75 % · 90 | +100 %, radius 3 · 150 |
+| Repair Dock | 2 energy per wave · 160 | 3 energy · 260 |
+| Tracker | +20 %, radius 2.5 · 120 | +25 %, radius 2.8 · 200 |
 
-**Die Aura** hat keinen Grundbonus. Mit dem ersten Kauf legst du einen von drei Pfaden fest; die anderen beiden sind danach für diesen Turm gesperrt, umentscheiden geht nur über Verkaufen:
+**The Aura** has no base bonus. With the first purchase you commit to one of three paths; the other two are then locked for that tower, and changing your mind means selling:
 
-| Pfad | Stufe I | Stufe II | Stufe III |
+| Path | Level I | Level II | Level III |
 | --- | --- | --- | --- |
-| Schaden | +25 % · 100 | +40 % · 180 | +55 % · 300 |
-| Angriffstempo | +20 % · 120 | +35 % · 200 | +50 % · 320 |
-| Reichweite | +15 % · 100 | +25 % · 170 | +35 % · 280 |
+| Damage | +25 % · 100 | +40 % · 180 | +55 % · 300 |
+| Attack speed | +20 % · 120 | +35 % · 200 | +50 % · 320 |
+| Range | +15 % · 100 | +25 % · 170 | +35 % · 280 |
 
-Überlappen mehrere Auren, gilt je Eigenschaft der größte Bonus. Für mehrere Boni baust du mehrere Auren mit verschiedenen Pfaden. Aura-Türme und Raffinerien werden nie verstärkt.
+If several Auras overlap, the largest bonus applies per stat. For several bonuses, build several Auras with different paths. Aura towers and Refineries are never strengthened.
 
-### Zielprioritäten
+### Target priorities
 
-Jeder Angriffsturm hat eine eigene Zielpriorität. Du stellst sie im Turm-Panel unter „Ziel“ ein oder schaltest sie mit `T` weiter. Sie gilt für alle Gegner in Reichweite, die der Turm treffen kann.
+Every attack tower has its own target priority. You set it in the tower panel under "Target" or cycle it with `T`. It applies to all enemies in range that the tower can hit.
 
-| Priorität | Zielt auf |
+| Priority | Targets |
 | --- | --- |
-| Erster (Standard) | den Gegner, der dem Reaktor am nächsten ist |
-| Letzter | den Gegner, der am weitesten zurückliegt |
-| Stärkster | den Gegner mit den meisten aktuellen HP |
-| Schwächster | den Gegner mit den wenigsten aktuellen HP |
-| Nächster | den Gegner, der dem Turm am nächsten ist |
+| First (default) | the enemy closest to the reactor |
+| Last | the enemy furthest behind |
+| Strongest | the enemy with the most current HP |
+| Weakest | the enemy with the least current HP |
+| Closest | the enemy closest to the tower |
 
-Bei Gleichstand gewinnt der Gegner, der weiter vorne liegt. Die Lanze zielt weiterhin auf die Linie mit den meisten Treffern; die Priorität entscheidet dort nur bei gleicher Trefferzahl. Stirbt das Ziel eines Impuls-, Flak- oder Kryo-Geschosses im Flug, sucht es sich wie bisher den nächsten Gegner. Raffinerie, Detektor und Aura haben keine Zielpriorität. Im Koop kannst du nur die Priorität deiner eigenen Türme ändern.
+On a tie, the enemy further ahead wins. The Lance still aims at the line with the most hits; priority only decides there on equal hit counts. If the target of a Pulse, Flak or Cryo projectile dies in flight, it picks the next enemy as before. Refinery, Detector and Aura have no target priority. In co-op you can only change the priority of your own towers.
 
-## Gegner
+## Enemies
 
-Sektor I nutzt fünf Grundgegner, darunter ab Mission 02 den **Gleiter**: schnell, wenig HP und in der Luft. Eine reine Nova-Verteidigung verliert deshalb jede Mission mit Gleitern. Ab Sektor II kommen je Sektor weitere Gegner mit Eigenschaften dazu. Die Bilder zeigen die Gegner so, wie das Spielfeld sie zeichnet, mit den Markierungen ihrer Eigenschaften:
+Sector I uses five basic enemies, including the **Glider** from mission 02 on: fast, low HP and airborne. A pure Nova defense therefore loses every mission with Gliders. From sector II on, every sector adds further enemies with traits. The images show the enemies as the battlefield draws them, with the markers of their traits:
 
-| Sektor | Neue Gegner |
+| Sector | New enemies |
 | --- | --- |
-| I Grenzzone | <img src="docs/images/enemies/drone.png" width="24" height="24" alt=""> Drohne, <img src="docs/images/enemies/runner.png" width="24" height="24" alt=""> Sprinter (schnell), <img src="docs/images/enemies/tank.png" width="24" height="24" alt=""> Panzer (langsam, viele HP), <img src="docs/images/enemies/boss.png" width="24" height="24" alt=""> Titan (Boss), <img src="docs/images/enemies/glider.png" width="24" height="24" alt=""> Gleiter (fliegt, schnell) |
-| II Frostgürtel | <img src="docs/images/enemies/splitter.png" width="24" height="24" alt=""> Splitter (zerfällt in Drohnen), <img src="docs/images/enemies/skater.png" width="24" height="24" alt=""> Eisläufer (immun gegen Verlangsamung, flink), <img src="docs/images/enemies/wolf.png" width="24" height="24" alt=""> Rudelwolf (im Rudel schneller) |
-| III Säuremoor | <img src="docs/images/enemies/slime.png" width="24" height="24" alt=""> Schleimer (regeneriert), <img src="docs/images/enemies/mender.png" width="24" height="24" alt=""> Sanitäter (heilt andere), <img src="docs/images/enemies/twin.png" width="24" height="24" alt=""> Zwillingsläufer (teilt Schaden mit Artgenossen), <img src="docs/images/enemies/veiler.png" width="24" height="24" alt=""> Schleierweber (tarnt Gegner in der Nähe) |
-| IV Orbitaldeck | <img src="docs/images/enemies/aegis.png" width="24" height="24" alt=""> Schildträger (Schild lädt sich wieder auf), <img src="docs/images/enemies/phantom.png" width="24" height="24" alt=""> Phantom (getarnt, braucht den Detektor), <img src="docs/images/enemies/hopper.png" width="24" height="24" alt=""> Sprungkäfer (springt regelmäßig nach vorn), <img src="docs/images/enemies/hauler.png" width="24" height="24" alt=""> Konvoischlepper (gepanzert, teilt Schaden im Konvoi), <img src="docs/images/enemies/nullbearer.png" width="24" height="24" alt=""> Nullfeldträger (schaltet Unterstützungstürme ab) |
-| V Ruinenstadt | <img src="docs/images/enemies/bulwark.png" width="24" height="24" alt=""> Bollwerk (Rüstung), <img src="docs/images/enemies/warlord.png" width="24" height="24" alt=""> Kommandant (stärkt Gegner in der Nähe), <img src="docs/images/enemies/bunker.png" width="24" height="24" alt=""> Druckbunker (hält Flächenschaden aus), <img src="docs/images/enemies/decoy.png" width="24" height="24" alt=""> Lockvogel (Türme müssen ihn anvisieren), <img src="docs/images/enemies/shade.png" width="24" height="24" alt=""> Schattenkoloss (gepanzert, tarnt Gegner in der Nähe), <img src="docs/images/enemies/sapper.png" width="24" height="24" alt=""> Pionier (entschärft Fallen) |
-| VI Singularität | <img src="docs/images/enemies/blinker.png" width="24" height="24" alt=""> Phasenläufer (weicht jedem n-ten Treffer aus), <img src="docs/images/enemies/berserker.png" width="24" height="24" alt=""> Berserker (unaufhaltsam, spurtet bei wenig HP), <img src="docs/images/enemies/warpdrone.png" width="24" height="24" alt=""> Warpdrohne (fliegt, springt nach vorn), <img src="docs/images/enemies/soulspark.png" width="24" height="24" alt=""> Seelenfunke (fliegt, heilt beim Tod), <img src="docs/images/enemies/phasewing.png" width="24" height="24" alt=""> Phasenflügler (wechselt zwischen Luft und Boden) |
-| VII Dünenmeer | <img src="docs/images/enemies/scarab.png" width="24" height="24" alt=""> Skarabäus (gepanzert und flink), <img src="docs/images/enemies/burrower.png" width="24" height="24" alt=""> Gräber (taucht regelmäßig ab; dann treffen nur Fallen und Flächenschaden), <img src="docs/images/enemies/gapper.png" width="24" height="24" alt=""> Lückenspringer (springt kurz nach vorn), <img src="docs/images/enemies/pebble.png" width="24" height="24" alt=""> Geröllschwarm (hält Flächenschaden aus, Schwarm), <img src="docs/images/enemies/raptor.png" width="24" height="24" alt=""> Sturmfalke (fliegt, im Rudel schneller), <img src="docs/images/enemies/mole.png" width="24" height="24" alt=""> Tunnelmaulwurf (gräbt sich schnell unter der Erde voran) |
-| VIII Tiefsee | <img src="docs/images/enemies/crab.png" width="24" height="24" alt=""> Panzerkrebs (verhärtet, je verletzter er ist), <img src="docs/images/enemies/jelly.png" width="24" height="24" alt=""> Qualle (fliegt und heilt Gegner in der Nähe), <img src="docs/images/enemies/chainling.png" width="24" height="24" alt=""> Kettenqualle (fliegt, teilt Schaden), <img src="docs/images/enemies/buoy.png" width="24" height="24" alt=""> Leuchtboje (fliegt, Schild, Türme müssen sie anvisieren) |
-| IX Gewitterfront | <img src="docs/images/enemies/gale.png" width="24" height="24" alt=""> Böenläufer (rast in Schüben), <img src="docs/images/enemies/stormbird.png" width="24" height="24" alt=""> Sturmvogel (fliegt, Schild und flink), <img src="docs/images/enemies/airship.png" width="24" height="24" alt=""> Luftschiff (schwer gepanzerter Flieger, wirft Gleiter ab), <img src="docs/images/enemies/drafter.png" width="24" height="24" alt=""> Kolonnenläufer (im Pulk schneller), <img src="docs/images/enemies/mirrorwing.png" width="24" height="24" alt=""> Spiegelflügler (fliegt, bricht Strahlen), <img src="docs/images/enemies/insulator.png" width="24" height="24" alt=""> Isolator (unterbricht Tesla-Ketten), <img src="docs/images/enemies/staticloud.png" width="24" height="24" alt=""> Störwolke (fliegt, Türme in der Nähe feuern langsamer) |
-| X Dschungel | <img src="docs/images/enemies/ant.png" width="24" height="24" alt=""> Schwarmameise (weniger Schaden im Rudel), <img src="docs/images/enemies/colossus.png" width="24" height="24" alt=""> Urwaldkoloss (gepanzert, regeneriert), <img src="docs/images/enemies/martyr.png" width="24" height="24" alt=""> Märtyrer (heilt beim Tod), <img src="docs/images/enemies/thornback.png" width="24" height="24" alt=""> Dornrücken (bestraft Türme in der Nähe mit Abklingzeit) |
-| XI Vulkankette | <img src="docs/images/enemies/ember.png" width="24" height="24" alt=""> Glutläufer (wird schneller, je mehr HP fehlen), <img src="docs/images/enemies/ashwing.png" width="24" height="24" alt=""> Aschenschwinge (fliegt, gepanzert, immun gegen Verlangsamung), <img src="docs/images/enemies/salamander.png" width="24" height="24" alt=""> Salamander und <img src="docs/images/enemies/cinderwing.png" width="24" height="24" alt=""> Magmafalter (immun gegen Brand und Blutung), <img src="docs/images/enemies/flare.png" width="24" height="24" alt=""> Blender (senkt die Reichweite von Türmen) |
-| XII Kristallhöhle | <img src="docs/images/enemies/golem.png" width="24" height="24" alt=""> Kristallwächter (härtet sich im Takt gegen Treffer, Brand wirkt voll), <img src="docs/images/enemies/moth.png" width="24" height="24" alt=""> Splitterfalter (fliegt, zerfällt in zwei Gleiter), <img src="docs/images/enemies/prism.png" width="24" height="24" alt=""> Prismenläufer (bricht Strahlen), <img src="docs/images/enemies/monolith.png" width="24" height="24" alt=""> Monolith (kein Treffer über 6 % seiner HP) |
-| XIV Zahnwerk | <img src="docs/images/enemies/cog.png" width="24" height="24" alt=""> Zahnrad (wird schneller, je länger es kreist), <img src="docs/images/enemies/piston.png" width="24" height="24" alt=""> Kolbenpanzer (gepanzert, nimmt mit jeder Runde weniger Schaden) |
-| XV Mondsee | <img src="docs/images/enemies/tidewing.png" width="24" height="24" alt=""> Gischtflügler (fliegt, nimmt mit jeder Runde weniger Schaden), <img src="docs/images/enemies/nautilus.png" width="24" height="24" alt=""> Nautilus (Schild, wird schneller, je länger er kreist) |
+| I Border Zone | <img src="docs/images/enemies/drone.png" width="24" height="24" alt=""> Drone, <img src="docs/images/enemies/runner.png" width="24" height="24" alt=""> Sprinter (fast), <img src="docs/images/enemies/tank.png" width="24" height="24" alt=""> Tank (slow, lots of HP), <img src="docs/images/enemies/boss.png" width="24" height="24" alt=""> Titan (boss), <img src="docs/images/enemies/glider.png" width="24" height="24" alt=""> Glider (flies, fast) |
+| II Frost Belt | <img src="docs/images/enemies/splitter.png" width="24" height="24" alt=""> Shard (splits into Drones), <img src="docs/images/enemies/skater.png" width="24" height="24" alt=""> Ice Strider (immune to slow, nimble), <img src="docs/images/enemies/wolf.png" width="24" height="24" alt=""> Packwolf (faster in a pack) |
+| III Acid Moor | <img src="docs/images/enemies/slime.png" width="24" height="24" alt=""> Sludge (regenerates), <img src="docs/images/enemies/mender.png" width="24" height="24" alt=""> Medic (heals others), <img src="docs/images/enemies/twin.png" width="24" height="24" alt=""> Twin Runner (shares damage with its kind), <img src="docs/images/enemies/veiler.png" width="24" height="24" alt=""> Veil Weaver (cloaks nearby enemies) |
+| IV Orbital Deck | <img src="docs/images/enemies/aegis.png" width="24" height="24" alt=""> Shield Bearer (shield recharges), <img src="docs/images/enemies/phantom.png" width="24" height="24" alt=""> Phantom (stealthed, needs the Detector), <img src="docs/images/enemies/hopper.png" width="24" height="24" alt=""> Jump Beetle (regularly leaps forward), <img src="docs/images/enemies/hauler.png" width="24" height="24" alt=""> Convoy Hauler (armored, shares damage in the convoy), <img src="docs/images/enemies/nullbearer.png" width="24" height="24" alt=""> Null-Field Carrier (switches off support towers) |
+| V Ruined City | <img src="docs/images/enemies/bulwark.png" width="24" height="24" alt=""> Bulwark (armor), <img src="docs/images/enemies/warlord.png" width="24" height="24" alt=""> Commander (strengthens nearby enemies), <img src="docs/images/enemies/bunker.png" width="24" height="24" alt=""> Pressure Bunker (withstands area damage), <img src="docs/images/enemies/decoy.png" width="24" height="24" alt=""> Decoy (towers must target it), <img src="docs/images/enemies/shade.png" width="24" height="24" alt=""> Shadow Colossus (armored, cloaks nearby enemies), <img src="docs/images/enemies/sapper.png" width="24" height="24" alt=""> Pioneer (defuses traps) |
+| VI Singularity | <img src="docs/images/enemies/blinker.png" width="24" height="24" alt=""> Phase Runner (dodges every nth hit), <img src="docs/images/enemies/berserker.png" width="24" height="24" alt=""> Berserker (unstoppable, sprints at low HP), <img src="docs/images/enemies/warpdrone.png" width="24" height="24" alt=""> Warp Drone (flies, jumps ahead), <img src="docs/images/enemies/soulspark.png" width="24" height="24" alt=""> Soul Spark (flies, heals on death), <img src="docs/images/enemies/phasewing.png" width="24" height="24" alt=""> Phase Wing (switches between air and ground) |
+| VII Dune Sea | <img src="docs/images/enemies/scarab.png" width="24" height="24" alt=""> Scarab (armored and nimble), <img src="docs/images/enemies/burrower.png" width="24" height="24" alt=""> Burrower (regularly dives; then only traps and area damage hit), <img src="docs/images/enemies/gapper.png" width="24" height="24" alt=""> Gap Jumper (briefly jumps forward), <img src="docs/images/enemies/pebble.png" width="24" height="24" alt=""> Rubble Swarm (withstands area damage, swarm), <img src="docs/images/enemies/raptor.png" width="24" height="24" alt=""> Storm Falcon (flies, faster in a pack), <img src="docs/images/enemies/mole.png" width="24" height="24" alt=""> Tunnel Mole (digs quickly underground) |
+| VIII Deep Sea | <img src="docs/images/enemies/crab.png" width="24" height="24" alt=""> Armor Crab (hardens the more hurt it is), <img src="docs/images/enemies/jelly.png" width="24" height="24" alt=""> Jellyfish (flies and heals nearby enemies), <img src="docs/images/enemies/chainling.png" width="24" height="24" alt=""> Chain Jelly (flies, shares damage), <img src="docs/images/enemies/buoy.png" width="24" height="24" alt=""> Beacon Buoy (flies, shield, towers must target it) |
+| IX Storm Front | <img src="docs/images/enemies/gale.png" width="24" height="24" alt=""> Gust Runner (races in bursts), <img src="docs/images/enemies/stormbird.png" width="24" height="24" alt=""> Stormbird (flies, shield and nimble), <img src="docs/images/enemies/airship.png" width="24" height="24" alt=""> Airship (heavily armored flyer, drops Gliders), <img src="docs/images/enemies/drafter.png" width="24" height="24" alt=""> Column Runner (faster in a cluster), <img src="docs/images/enemies/mirrorwing.png" width="24" height="24" alt=""> Mirror Wing (flies, deflects beams), <img src="docs/images/enemies/insulator.png" width="24" height="24" alt=""> Insulator (interrupts Tesla chains), <img src="docs/images/enemies/staticloud.png" width="24" height="24" alt=""> Disruption Cloud (flies, nearby towers fire slower) |
+| X Jungle | <img src="docs/images/enemies/ant.png" width="24" height="24" alt=""> Swarm Ant (less damage in a pack), <img src="docs/images/enemies/colossus.png" width="24" height="24" alt=""> Jungle Colossus (armored, regenerates), <img src="docs/images/enemies/martyr.png" width="24" height="24" alt=""> Martyr (heals on death), <img src="docs/images/enemies/thornback.png" width="24" height="24" alt=""> Thornback (punishes nearby towers with cooldown) |
+| XI Volcano Chain | <img src="docs/images/enemies/ember.png" width="24" height="24" alt=""> Ember Runner (speeds up the more HP it is missing), <img src="docs/images/enemies/ashwing.png" width="24" height="24" alt=""> Ash Wing (flies, armored, immune to slow), <img src="docs/images/enemies/salamander.png" width="24" height="24" alt=""> Salamander and <img src="docs/images/enemies/cinderwing.png" width="24" height="24" alt=""> Magma Moth (immune to burn and bleed), <img src="docs/images/enemies/flare.png" width="24" height="24" alt=""> Dazzler (reduces tower range) |
+| XII Crystal Cave | <img src="docs/images/enemies/golem.png" width="24" height="24" alt=""> Crystal Warden (hardens against hits in rhythm, burn works in full), <img src="docs/images/enemies/moth.png" width="24" height="24" alt=""> Shard Moth (flies, splits into two Gliders), <img src="docs/images/enemies/prism.png" width="24" height="24" alt=""> Prism Runner (deflects beams), <img src="docs/images/enemies/monolith.png" width="24" height="24" alt=""> Monolith (no hit above 6 % of its HP) |
+| XIV Gearworks | <img src="docs/images/enemies/cog.png" width="24" height="24" alt=""> Cogwheel (speeds up the longer it circles), <img src="docs/images/enemies/piston.png" width="24" height="24" alt=""> Piston Tank (armored, takes less damage every lap) |
+| XV Moon Lake | <img src="docs/images/enemies/tidewing.png" width="24" height="24" alt=""> Spray Wing (flies, takes less damage every lap), <img src="docs/images/enemies/nautilus.png" width="24" height="24" alt=""> Nautilus (shield, speeds up the longer it circles) |
 
-Zehn weitere Gegner sind fertig, kommen aber noch in keiner Mission vor. Der Gegner-Kodex führt sie unter „in keiner Mission“: <img src="docs/images/enemies/leaper.png" width="24" height="24" alt=""> Sprungspinne (springt regelmäßig in die Luft), <img src="docs/images/enemies/skimmer.png" width="24" height="24" alt=""> Tauchflosser (fliegt, taucht regelmäßig zum Boden ab, flink), <img src="docs/images/enemies/warden.png" width="24" height="24" alt=""> Dämpfer (macht sich und Gegner in der Nähe immun gegen Verlangsamung, Betäubung und Sog), <img src="docs/images/enemies/broodmother.png" width="24" height="24" alt=""> Brutmutter (gepanzert, legt unterwegs Schwarmameisen), <img src="docs/images/enemies/sparkworm.png" width="24" height="24" alt=""> Funkenwurm (legt beim Tod Türme in der Nähe kurz lahm), <img src="docs/images/enemies/molter.png" width="24" height="24" alt=""> Häutling (gepanzert bis halbe HP, danach schnell), <img src="docs/images/enemies/wisp.png" width="24" height="24" alt=""> Irrlicht (fliegt, getarnt, weicht aus), <img src="docs/images/enemies/hydra.png" width="24" height="24" alt=""> Hydra (regeneriert, zerfällt in zwei Hydraköpfe), <img src="docs/images/enemies/hydraling.png" width="24" height="24" alt=""> Hydrakopf (wird schneller, je mehr HP fehlen) und <img src="docs/images/enemies/stormcell.png" width="24" height="24" alt=""> Gewitterzelle (fliegt, Schild, legt beim Tod Türme lahm).
+Ten more enemies are finished but do not appear in any mission yet. The Enemy Codex lists them under "in no mission": <img src="docs/images/enemies/leaper.png" width="24" height="24" alt=""> Leap Spider (regularly leaps into the air), <img src="docs/images/enemies/skimmer.png" width="24" height="24" alt=""> Diver (flies, regularly dives to the ground, nimble), <img src="docs/images/enemies/warden.png" width="24" height="24" alt=""> Damper (makes itself and nearby enemies immune to slow, stun and pull), <img src="docs/images/enemies/broodmother.png" width="24" height="24" alt=""> Broodmother (armored, lays Swarm Ants along the way), <img src="docs/images/enemies/sparkworm.png" width="24" height="24" alt=""> Spark Worm (briefly disables nearby towers on death), <img src="docs/images/enemies/molter.png" width="24" height="24" alt=""> Molter (armored down to half HP, then fast), <img src="docs/images/enemies/wisp.png" width="24" height="24" alt=""> Will-o'-Wisp (flies, stealthed, evades), <img src="docs/images/enemies/hydra.png" width="24" height="24" alt=""> Hydra (regenerates, splits into two Hydra Heads), <img src="docs/images/enemies/hydraling.png" width="24" height="24" alt=""> Hydra Head (speeds up the more HP it is missing) and <img src="docs/images/enemies/stormcell.png" width="24" height="24" alt=""> Thunder Cell (flies, shield, disables towers on death).
 
-Getarnte Gegner und Träger eines Tarnfelds kommen nur in Missionen vor, in denen der Detektor baubar ist.
+Stealthed enemies and carriers of a cloak field only appear in missions where the Detector can be built.
 
-## Grenzen
+## Limits
 
-- Fester Pfad, Gegner lassen sich nicht umleiten.
-- Kein gespeicherter Spielstand oder Missionsfortschritt.
-- Im Mehrspieler kein Wiederverbinden und kein Beitritt nach dem Missionsstart.
-- Die Simulation ist deterministisch und kommt ohne Zufall aus. Die Maps nutzen geometrische Markierungen statt Bildassets.
+- Fixed path, enemies cannot be redirected.
+- No saved game or mission progress.
+- In multiplayer, no reconnecting and no joining after the mission has started.
+- The simulation is deterministic and needs no randomness. The maps use geometric markers instead of image assets.

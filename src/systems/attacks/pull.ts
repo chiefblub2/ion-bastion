@@ -9,10 +9,10 @@ export const pull: AttackModule<PullAttack> = {
   aim: "enemy",
   projectile: "forbidden",
   params: {
-    radius: { label: "Pulsradius", valid: (v) => v > 0, unit: " Felder" },
-    strength: { label: "Zugkraft", valid: (v) => v > 0, unit: " ×" },
-    duration: { label: "Zugdauer", valid: (v) => v > 0, unit: " s" },
-    recovery: { label: "Erholung", valid: (v) => v >= 0, unit: " s" },
+    radius: { label: "Pulse radius", valid: (v) => v > 0, unit: " cells" },
+    strength: { label: "Pull strength", valid: (v) => v > 0, unit: " ×" },
+    duration: { label: "Pull duration", valid: (v) => v > 0, unit: " s" },
+    recovery: { label: "Recovery", valid: (v) => v >= 0, unit: " s" },
   },
   apply: (sim, src, { at }, damage, spec) => {
     const time = sim.state.time;

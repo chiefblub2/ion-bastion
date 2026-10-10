@@ -2,7 +2,7 @@ import type { MissionSector } from "../../core/types";
 import { parseMap } from "../maps";
 import { g, wave } from "../waves";
 // Heat lightning: five tight legs; every tower between two legs reaches both.
-const WETTERLEUCHTEN_MAP = parseMap("wetterleuchten", "Wetterleuchten", [
+const WETTERLEUCHTEN_MAP = parseMap("wetterleuchten", "Heat Lightning", [
   "S===============",
   "..#......#.....=",
   "================",
@@ -15,7 +15,7 @@ const WETTERLEUCHTEN_MAP = parseMap("wetterleuchten", "Wetterleuchten", [
 ], "storm");
 
 // A hail field: legs alternate between a narrow and a wide gap.
-const HAGELFELD_MAP = parseMap("hagelfeld", "Hagelfeld", [
+const HAGELFELD_MAP = parseMap("hagelfeld", "Hailfield", [
   "S==============",
   "..............=",
   "===============",
@@ -30,7 +30,7 @@ const HAGELFELD_MAP = parseMap("hagelfeld", "Hagelfeld", [
 ], "storm");
 
 // A lightning rod: the path spirals inwards to the reactor.
-const BLITZABLEITER_MAP = parseMap("blitzableiter", "Blitzableiter", [
+const BLITZABLEITER_MAP = parseMap("blitzableiter", "Lightning Rod", [
   "S==============",
   "..............=",
   "=============.=",
@@ -45,7 +45,7 @@ const BLITZABLEITER_MAP = parseMap("blitzableiter", "Blitzableiter", [
 ], "storm");
 
 // A gust lane: six vertical legs, the gaps are single columns partly blocked by pylons.
-const BOEENSCHNEISE_MAP = parseMap("boeenschneise", "Böenschneise", [
+const BOEENSCHNEISE_MAP = parseMap("boeenschneise", "Gust Corridor", [
   "S.===.===..",
   "=.=.=.=.=.R",
   "=.=.=.=.=.=",
@@ -63,7 +63,7 @@ const BOEENSCHNEISE_MAP = parseMap("boeenschneise", "Böenschneise", [
 ], "storm");
 
 // The eye of the storm: seven long legs.
-const AUGE_MAP = parseMap("auge-des-sturms", "Auge des Sturms", [
+const AUGE_MAP = parseMap("auge-des-sturms", "Eye of the Storm", [
   "S===================",
   "..#........#.......=",
   "====================",
@@ -81,12 +81,12 @@ const AUGE_MAP = parseMap("auge-des-sturms", "Auge des Sturms", [
 
 export const GEWITTERFRONT: MissionSector = {
   id: "storm",
-  name: "Gewitterfront",
+  name: "Storm Front",
   missions: [
     {
       id: "wetterleuchten",
-      name: "Wetterleuchten",
-      focus: "Böenläufer rasen in Schüben über die letzte Zelle: Bremsen und Fallen halten sie im Feuer",
+      name: "Heat Lightning",
+      focus: "Gust Runners rush over the last cell in surges: slows and traps keep them under fire",
       map: WETTERLEUCHTEN_MAP,
       waves: [
         wave(35, g("drone", 8, 0.8), g("gale", 2, 1.2, 4)),
@@ -113,8 +113,8 @@ export const GEWITTERFRONT: MissionSector = {
     },
     {
       id: "hagelfeld",
-      name: "Hagelfeld",
-      focus: "Sturmvögel schirmen sich ab und fliegen schnell: nur 10 Reaktorenergie, Flak muss Dauerfeuer halten",
+      name: "Hailfield",
+      focus: "Stormbirds shield themselves and fly fast: only 10 reactor energy, Flak must keep up sustained fire",
       map: HAGELFELD_MAP,
       waves: [
         wave(35, g("drone", 6, 0.8), g("stormbird", 2, 1.0, 4)),
@@ -142,8 +142,8 @@ export const GEWITTERFRONT: MissionSector = {
     },
     {
       id: "blitzableiter",
-      name: "Blitzableiter",
-      focus: "Ohne Lanze, Fokus und Gravitron in der engen Spirale: kurze Reichweiten gegen Böen und Vögel",
+      name: "Lightning Rod",
+      focus: "No Lance, Focus or Gravitron in the tight spiral: short ranges against gusts and birds",
       map: BLITZABLEITER_MAP,
       availableTowers: ["pulse", "blast", "frost", "flak", "tesla", "inferno", "stasis", "acid", "decay", "executioner", "mortar", "shrapnel", "net", "mine", "spikes", "tar", "snare", "pit"],
       waves: [
@@ -172,8 +172,8 @@ export const GEWITTERFRONT: MissionSector = {
     },
     {
       id: "boeenschneise",
-      name: "Böenschneise",
-      focus: "Echo-Wellen kehren in schmalen Gassen mit voller Härte zurück, Böen und Vögel im Wechsel",
+      name: "Gust Corridor",
+      focus: "Echo waves return at full strength in narrow alleys, gusts and birds alternating",
       map: BOEENSCHNEISE_MAP,
       // Echo waves repeat an earlier wave far above the linear HP curve.
       waves: [
@@ -202,8 +202,8 @@ export const GEWITTERFRONT: MissionSector = {
     },
     {
       id: "auge-des-sturms",
-      name: "Auge des Sturms",
-      focus: "Finale: Böen, Sturmvögel, Phantome und drei Titanen im Auge der Gewitterfront",
+      name: "Eye of the Storm",
+      focus: "Finale: gusts, Stormbirds, Phantoms and three Titans in the eye of the storm front",
       map: AUGE_MAP,
       waves: [
         wave(35, g("drone", 6, 0.8), g("gale", 2, 1.2, 4)),

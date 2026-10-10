@@ -18,20 +18,20 @@ Read CLAUDE.md ("Adding content") first.
 
 - **Themes:** they must differ from the existing `MapTheme`s (`core/types.ts`) in name *and* look. Read the obstacle comments of `THEMES` in `render/terrain.ts` first (e.g. `ember` is already basalt with glowing cracks, `shard` violet crystals, `volcano` ash and obsidian, `geode` quartz and amethyst). Suggest two with a clear look.
 - **Missions and enemies:** 5 missions and 2 new enemies per sector is the convention.
-- **Position:** before Kreislauf, which always stays the last sector.
+- **Position:** before Circuit, which always stays the last sector.
 
 ## 1. Design sheet (you, about 5 min)
 
 Fill this in once and paste it unchanged into every brief.
 
 ```
-SECTOR <id> "<German name>", theme <theme>, after <previous sector>
+SECTOR <id> "<name>", theme <theme>, after <previous sector>
   palette: backdrop 0x…, ground [0x…, 0x…], accent 0x…; look: <obstacles / decor / ambient in one line each>
   curve: credits <a>–<b>, hpGrowth <a>–<b>, waves <a>–<b>, finale <n> boss
   missions (ids must be new): <id> <Name>, … (mission 1 introduces enemy 1, mission 2 enemy 2, finale last)
-ENEMY <id> "<German name>": <layer>, hp <>, speed <>, reward <>, leak <>, size <>, traits [<…>]; counters: <towers>
+ENEMY <id> "<name>": <layer>, hp <>, speed <>, reward <>, leak <>, size <>, traits [<…>]; counters: <towers>
 TRAIT <kind> { <params> }: <formula>; hook <speed|onDamage|isHidden|…>; flag <TraitFlags field>;
-  tag "<LABEL>" / "<German title>"; render: <marker>
+  tag "<LABEL>" / "<title>"; render: <marker>
 ```
 
 **Curve:** extrapolate from the existing sectors, don't guess. `npx vite-node scripts/mission-table.ts` prints credits, waves and HP growth per mission. Each sector is a bit harder than the one before. Example: the last two packs ran credits 680–780 and 720–820, waves 17–20.
@@ -63,7 +63,7 @@ ui/wave-forecast.ts, render/enemies.ts, content/enemies.ts, render/terrain.ts, c
    unless the design sheet says so.
 3. systems/traits.test.ts: tests per trait (window/formula edges, validation).
 4. ui/wave-forecast.ts TRAIT_TAGS; render/enemies.ts markers (visual extras via EnemyVisual fields, never d.id checks).
-5. content/enemies.ts: the enemies exactly as specified, German one-line comment above each.
+5. content/enemies.ts: the enemies exactly as specified, English one-line comment above each.
 6. render/terrain.ts: placeholder THEMES entries with the palette (minimal obstacle/decor, empty ambient).
 7. Stubs, NOT registered anywhere: content/sectors/<id>.ts exporting <CONST>: MissionSector (missions: []),
    core/strategies/<id>.ts exporting <ID>_STRATEGIES = {}.
@@ -130,11 +130,11 @@ Run the expensive checks once, after all edits. Agents' final balance runs count
    - `content/missions.ts`: add `import { <CONST> } from "./sectors/<id>";` and put the constant in `SECTORS` before `KREISLAUF`.
    - `core/strategies/index.ts`: add `import { <ID>_STRATEGIES } from "./<id>";` and `...<ID>_STRATEGIES,` in `STRATEGIES`.
 2. Text work, all before the test run:
-   - `npx vite-node scripts/mission-table.ts --write` updates the README mission table and intro counts and keeps the existing short focus texts. Shorten the focus of the rows it lists by hand (style: "Nur 10 Reaktorenergie", "Finale: drei Titanen").
+   - `npx vite-node scripts/mission-table.ts --write` updates the README mission table and intro counts and keeps the existing short focus texts. Shorten the focus of the rows it lists by hand (style: "Only 10 reactor energy", "Finale: three Titans").
    - README enemy table: one row per new sector, each enemy as `<img src="docs/images/enemies/<id>.png" width="24" height="24" alt=""> Name (…)`. With `npm run dev` running, `npx vite-node scripts/readme-images.ts -- --only enemies` writes the icons.
    - CLAUDE.md: the trait list under "Enemy", plus special rules of the new traits (e.g. an `isHidden` extension).
-   - Player texts (mission `focus`, README) use the in-game tower names (`name` in `content/towers.ts`: Kryo, Glut, Teergrube, Stasis, Fangeisen …), never ids like frost or inferno. `grep -n "Frost\|Inferno\|Stase" src/content/sectors/<id>.ts` catches the usual slips.
-3. One `npm run test:full` (about 5 s, input cache off; the campaign runs in `replay-N.test.ts` shards, new golden snapshots are written automatically). Then `npx vite-node scripts/snapshot-diff.ts -- --expect ""`: only "Neu", nothing changed or removed.
+   - Player texts, all English (mission `focus`, README) use the in-game tower names (`name` in `content/towers.ts`: Cryo, Ember, Tar Pit, Stasis, Bear Trap …), never ids like frost or inferno. `grep -n "Frost\|Inferno\|Stase" src/content/sectors/<id>.ts` catches the usual slips.
+3. One `npm run test:full` (about 5 s, input cache off; the campaign runs in `replay-N.test.ts` shards, new golden snapshots are written automatically). Then `npx vite-node scripts/snapshot-diff.ts -- --expect ""`: only "New", nothing changed or removed.
 4. One `npm run build` (it already runs `tsc`; no separate `tsc`). Later edits to `focus` strings, README or CLAUDE.md need no new test run; only `.ts` changes the simulation reads do.
 5. **Visual check, mandatory:**
    - `npm run dev` in the background, then

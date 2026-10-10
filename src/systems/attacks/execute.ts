@@ -6,8 +6,8 @@ export const execute: AttackModule<ExecuteAttack> = {
   aim: "enemy",
   projectile: "optional",
   params: {
-    threshold: { label: "Hinrichtung unter", valid: (v) => v > 0 && v < 1, unit: " % HP", show: (v) => v * 100 },
-    multiplier: { label: "Hinrichtungsschaden", valid: (v) => v >= 1, unit: " ×" },
+    threshold: { label: "Execute below", valid: (v) => v > 0 && v < 1, unit: " % HP", show: (v) => v * 100 },
+    multiplier: { label: "Execution damage", valid: (v) => v >= 1, unit: " ×" },
   },
   apply: (sim, src, { enemy }, damage, spec) => {
     if (!enemy) return;

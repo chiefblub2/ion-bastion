@@ -2,7 +2,7 @@ import type { EnemyDefinition, EnemyId } from "../core/types";
 export const ENEMY_CONTENT = {
   drone: {
     id: "drone",
-    name: "Drohne",
+    name: "Drone",
     hp: 55,
     speed: 1.45,
     reward: 9,
@@ -26,7 +26,7 @@ export const ENEMY_CONTENT = {
   },
   tank: {
     id: "tank",
-    name: "Panzer",
+    name: "Tank",
     hp: 210,
     speed: 0.95,
     reward: 20,
@@ -50,7 +50,7 @@ export const ENEMY_CONTENT = {
   },
   glider: {
     id: "glider",
-    name: "Gleiter",
+    name: "Glider",
     hp: 45,
     speed: 1.9,
     reward: 11,
@@ -60,11 +60,11 @@ export const ENEMY_CONTENT = {
     layer: "air",
     visual: { shape: "glider" },
   },
-  // --- Trait enemies, introduced from Sektor II on ---
-  // Eisläufer: schneller Läufer, immun gegen Verlangsamung, Glut statt Kryo.
+  // --- Trait enemies, introduced from Sector II on ---
+  // Ice Strider: fast runner, immune to slow; Ember instead of Cryo.
   skater: {
     id: "skater",
-    name: "Eisläufer",
+    name: "Ice Strider",
     hp: 50,
     speed: 1.8,
     reward: 11,
@@ -75,10 +75,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 3, rotation: Math.PI },
     traits: [{ kind: "slowImmune" }, { kind: "swift", speed: 0.35, hp: 0.2 }],
   },
-  // Splitter: zerfällt beim Tod in Drohnen, Lanzen auf den Geraden.
+  // Shard: splits into Drones on death; Lances on the straights.
   splitter: {
     id: "splitter",
-    name: "Splitter",
+    name: "Shard",
     hp: 120,
     speed: 1.1,
     reward: 12,
@@ -89,10 +89,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 6 },
     traits: [{ kind: "splitOnDeath", type: "drone", count: 3 }],
   },
-  // Skarabäus: gepanzerter Läufer, Wucht und Fallen statt Streufeuer.
+  // Scarab: armored runner; heavy hits and traps instead of spray fire.
   scarab: {
     id: "scarab",
-    name: "Skarabäus",
+    name: "Scarab",
     hp: 80,
     speed: 1.5,
     reward: 14,
@@ -103,10 +103,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 6, rotation: Math.PI / 6 },
     traits: [{ kind: "armor", reduction: 0.3 }, { kind: "swift", speed: 0.3, hp: 0.15 }],
   },
-  // Gräber: taucht ab, nur Fallen und Flächenschaden treffen ihn unter der Erde.
+  // Burrower: dives underground; only traps and area damage hit it there.
   burrower: {
     id: "burrower",
-    name: "Gräber",
+    name: "Burrower",
     hp: 140,
     speed: 1.05,
     reward: 16,
@@ -117,10 +117,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 5, rotation: Math.PI / 2 },
     traits: [{ kind: "burrow", every: 3, length: 1.2 }],
   },
-  // Böenläufer: rast in kurzen Schüben, wer ihn trifft, muss das Tempo vorhalten.
+  // Gust Runner: dashes in short bursts; whoever shoots it must lead the target.
   gale: {
     id: "gale",
-    name: "Böenläufer",
+    name: "Gust Runner",
     hp: 110,
     speed: 1.2,
     reward: 14,
@@ -131,10 +131,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 3, rotation: Math.PI },
     traits: [{ kind: "surge", every: 4, length: 1, factor: 2.2 }],
   },
-  // Sturmvogel: schneller Flieger mit Schild, Flak und Impuls müssen ihn schnell brechen.
+  // Stormbird: fast shielded flyer; Flak and Pulse must break it quickly.
   stormbird: {
     id: "stormbird",
-    name: "Sturmvogel",
+    name: "Stormbird",
     hp: 70,
     speed: 1.6,
     reward: 15,
@@ -145,10 +145,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "glider" },
     traits: [{ kind: "shield", capacity: 0.5, delay: 2.5 }, { kind: "swift", speed: 0.2, hp: 0.1 }],
   },
-  // Schwarmameise: schwach allein, im Rudel kaum zu knacken; Flächenschaden lohnt.
+  // Swarm Ant: weak alone, hard to crack as a pack; area damage pays off.
   ant: {
     id: "ant",
-    name: "Schwarmameise",
+    name: "Swarm Ant",
     hp: 45,
     speed: 1.35,
     reward: 7,
@@ -159,10 +159,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 6 },
     traits: [{ kind: "swarm", radius: 1.0, per: 0.1, max: 0.5 }],
   },
-  // Urwaldkoloss: gepanzert und regenerierend, braucht Wucht statt Dauerfeuer.
+  // Jungle Colossus: armored and regenerating; needs heavy hits instead of sustained fire.
   colossus: {
     id: "colossus",
-    name: "Urwaldkoloss",
+    name: "Jungle Colossus",
     hp: 420,
     speed: 0.7,
     reward: 40,
@@ -173,10 +173,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 8, rotation: Math.PI / 8 },
     traits: [{ kind: "armor", reduction: 0.25 }, { kind: "regen", percent: 0.015 }],
   },
-  // Panzerkrebs: wird mit jeder Wunde zäher, Burst und Zerfall schlagen Dauerfeuer.
+  // Armor Crab: toughens with every wound; Burst and Decay beat sustained fire.
   crab: {
     id: "crab",
-    name: "Panzerkrebs",
+    name: "Armor Crab",
     hp: 260,
     speed: 0.8,
     reward: 24,
@@ -187,10 +187,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 8 },
     traits: [{ kind: "harden", max: 0.6 }],
   },
-  // Glutläufer: wird schneller, je mehr HP fehlen; Frost, Stase, Teer und Henker bremsen oder beenden ihn.
+  // Ember Runner: speeds up as HP drops; Frost, Stasis, Tar Pit and Executioner slow or finish it.
   ember: {
     id: "ember",
-    name: "Glutläufer",
+    name: "Ember Runner",
     hp: 100,
     speed: 1.2,
     reward: 15,
@@ -201,10 +201,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 5, rotation: -Math.PI / 2 },
     traits: [{ kind: "rage", max: 1.0 }],
   },
-  // Aschenschwinge: gepanzerter Flieger, immun gegen Verlangsamung; Flak und Tesla holen ihn herunter.
+  // Ash Wing: armored flyer, immune to slow; Flak and Tesla bring it down.
   ashwing: {
     id: "ashwing",
-    name: "Aschenschwinge",
+    name: "Ash Wing",
     hp: 130,
     speed: 1.0,
     reward: 18,
@@ -215,10 +215,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 4, rotation: Math.PI / 4 },
     traits: [{ kind: "armor", reduction: 0.25 }, { kind: "slowImmune" }],
   },
-  // Kristallwächter: härtet sich im Takt gegen Treffer, Brand wirkt voll; Frost und Teer halten ihn länger in Reichweite.
+  // Crystal Warden: hardens against hits in a rhythm, burn works in full; Frost and Tar Pit keep it in range longer.
   golem: {
     id: "golem",
-    name: "Kristallwächter",
+    name: "Crystal Warden",
     hp: 320,
     speed: 0.8,
     reward: 28,
@@ -229,10 +229,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 6, rotation: Math.PI / 6 },
     traits: [{ kind: "facet", every: 4, length: 2, reduction: 0.7 }],
   },
-  // Splitterfalter: schneller Flieger, zerfällt in zwei Gleiter; Flak und Tesla räumen die Schwärme.
+  // Shard Moth: fast flyer, splits into two Gliders; Flak and Tesla clear the swarms.
   moth: {
     id: "moth",
-    name: "Splitterfalter",
+    name: "Shard Moth",
     hp: 70,
     speed: 1.45,
     reward: 12,
@@ -243,10 +243,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 3, rotation: 0 },
     traits: [{ kind: "splitOnDeath", type: "glider", count: 2 }],
   },
-  // Luftschiff: schwer gepanzerter Flieger, wirft beim Absturz Gleiter ab; aufgerüstete Flak und Tesla holen es herunter.
+  // Airship: heavily armored flyer, drops Gliders when it crashes; upgraded Flak and Tesla bring it down.
   airship: {
     id: "airship",
-    name: "Luftschiff",
+    name: "Airship",
     hp: 300,
     speed: 0.75,
     reward: 30,
@@ -257,10 +257,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 6, rotation: 0 },
     traits: [{ kind: "armor", reduction: 0.2 }, { kind: "splitOnDeath", type: "glider", count: 3 }],
   },
-  // Qualle: schwebender Heiler, Flak holt sie herunter.
+  // Jellyfish: hovering healer; Flak brings it down.
   jelly: {
     id: "jelly",
-    name: "Qualle",
+    name: "Jellyfish",
     hp: 90,
     speed: 1.2,
     reward: 15,
@@ -271,10 +271,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 7, tentacles: 5 },
     traits: [{ kind: "healer", radius: 1.4, percent: 0.03 }],
   },
-  // Schleimer: regeneriert, Burst-Schaden schlägt Dauerfeuer.
+  // Sludge: regenerates; Burst damage beats sustained fire.
   slime: {
     id: "slime",
-    name: "Schleimer",
+    name: "Sludge",
     hp: 150,
     speed: 1.0,
     reward: 15,
@@ -285,10 +285,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 7 },
     traits: [{ kind: "regen", percent: 0.02 }],
   },
-  // Sanitäter: heilt Umstehende, zuerst töten.
+  // Medic: heals bystanders, kill first.
   mender: {
     id: "mender",
-    name: "Sanitäter",
+    name: "Medic",
     hp: 90,
     speed: 1.15,
     reward: 16,
@@ -299,10 +299,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 5 },
     traits: [{ kind: "healer", radius: 1.5, percent: 0.04 }],
   },
-  // Schildträger: Schild regeneriert nach kurzer Pause.
+  // Shield Bearer: shield regenerates after a short pause.
   aegis: {
     id: "aegis",
-    name: "Schildträger",
+    name: "Shield Bearer",
     hp: 85,
     speed: 1.15,
     reward: 16,
@@ -313,7 +313,7 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 6, rotation: Math.PI / 6 },
     traits: [{ kind: "shield", capacity: 0.6, delay: 3 }],
   },
-  // Phantom: getarnt, nur mit Detektor angreifbar.
+  // Phantom: stealthed, can only be attacked with a Detector.
   phantom: {
     id: "phantom",
     name: "Phantom",
@@ -327,10 +327,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 3 },
     traits: [{ kind: "stealth" }],
   },
-  // Bollwerk: schwere Rüstung, braucht Wucht statt Streufeuer.
+  // Bulwark: heavy armor, needs heavy hits instead of spray fire.
   bulwark: {
     id: "bulwark",
-    name: "Bollwerk",
+    name: "Bulwark",
     hp: 200,
     speed: 0.85,
     reward: 26,
@@ -341,10 +341,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 4 },
     traits: [{ kind: "armor", reduction: 0.35 }],
   },
-  // Kommandant: stärkt Gegner in der Nähe.
+  // Commander: strengthens nearby enemies.
   warlord: {
     id: "warlord",
-    name: "Kommandant",
+    name: "Commander",
     hp: 240,
     speed: 0.8,
     reward: 36,
@@ -355,10 +355,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 5, rotation: Math.PI },
     traits: [{ kind: "leader", radius: 1.6, speed: 0.2, resist: 0.15 }],
   },
-  // Phasenläufer: weicht periodisch Treffern aus.
+  // Phase Runner: periodically dodges hits.
   blinker: {
     id: "blinker",
-    name: "Phasenläufer",
+    name: "Phase Runner",
     hp: 70,
     speed: 1.7,
     reward: 13,
@@ -369,7 +369,7 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 4, rotation: Math.PI / 4 },
     traits: [{ kind: "evade", every: 3 }],
   },
-  // Berserker: nicht aufzuhalten, sprintet bei halber Gesundheit.
+  // Berserker: unstoppable, sprints at half health.
   berserker: {
     id: "berserker",
     name: "Berserker",
@@ -383,10 +383,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 6 },
     traits: [{ kind: "unstoppable" }, { kind: "sprint", threshold: 0.5, factor: 1.7, duration: 2.5 }],
   },
-  // Sprungspinne: springt periodisch in die Luft; Impuls, Tesla und Lanze treffen beide Ebenen.
+  // Leap Spider: periodically leaps into the air; Pulse, Tesla and Lance hit both layers.
   leaper: {
     id: "leaper",
-    name: "Sprungspinne",
+    name: "Leap Spider",
     hp: 95,
     speed: 1.35,
     reward: 16,
@@ -397,10 +397,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "star", points: 8, inner: 0.45 },
     traits: [{ kind: "leap", every: 3, length: 1 }],
   },
-  // Tauchflosser: Flieger, der zum Boden abtaucht; Impuls, Tesla und Schrapnell treffen ihn immer.
+  // Diver: flyer that dives to the ground; Pulse, Tesla and Shrapnel always hit it.
   skimmer: {
     id: "skimmer",
-    name: "Tauchflosser",
+    name: "Diver",
     hp: 85,
     speed: 1.5,
     reward: 16,
@@ -414,10 +414,10 @@ export const ENEMY_CONTENT = {
       { kind: "swift", speed: 0.2, hp: 0.1 },
     ],
   },
-  // Dämpfer: macht sich und Nachbarn immun gegen Kontrolle; Lanze, Fokus oder Störsender.
+  // Damper: makes itself and its neighbors immune to control; Lance, Focus or Jammer.
   warden: {
     id: "warden",
-    name: "Dämpfer",
+    name: "Damper",
     hp: 170,
     speed: 0.95,
     reward: 24,
@@ -428,10 +428,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "orb", moons: 3 },
     traits: [{ kind: "dampen", radius: 1.6 }],
   },
-  // Brutmutter: gepanzert, legt unterwegs Schwarmameisen; Fokus, Lanze, Zerfall, Störsender stoppt die Brut.
+  // Broodmother: armored, lays Swarm Ants along the way; Focus, Lance, Decay; Jammer stops the brood.
   broodmother: {
     id: "broodmother",
-    name: "Brutmutter",
+    name: "Broodmother",
     hp: 400,
     speed: 0.72,
     reward: 36,
@@ -445,10 +445,10 @@ export const ENEMY_CONTENT = {
       { kind: "armor", reduction: 0.15 },
     ],
   },
-  // Funkenwurm: legt beim Tod Türme in der Nähe lahm; Lanze, Mörser oder Fallen fern der Türme.
+  // Spark Worm: disables nearby towers on death; Lance, Mortar or traps far from the towers.
   sparkworm: {
     id: "sparkworm",
-    name: "Funkenwurm",
+    name: "Spark Worm",
     hp: 210,
     speed: 1.0,
     reward: 22,
@@ -459,10 +459,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "worm", segments: 5 },
     traits: [{ kind: "overload", radius: 1.8, cycles: 2 }],
   },
-  // Häutling: erst gepanzert, unter halber Gesundheit schnell; Zerfall und Fokus, danach Kryo.
+  // Molter: armored at first, fast below half health; Decay and Focus, then Cryo.
   molter: {
     id: "molter",
-    name: "Häutling",
+    name: "Molter",
     hp: 240,
     speed: 0.85,
     reward: 24,
@@ -473,10 +473,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 6, rotation: 0.5 },
     traits: [{ kind: "molt", threshold: 0.5, armor: 0.5, speed: 1.8 }],
   },
-  // Irrlicht: getarnter Flieger, der Treffern ausweicht; Detektor mit Flak oder Tesla, Glut.
+  // Will-o'-Wisp: stealthed flyer that dodges hits; Detector with Flak or Tesla, Ember.
   wisp: {
     id: "wisp",
-    name: "Irrlicht",
+    name: "Will-o'-Wisp",
     hp: 60,
     speed: 1.55,
     reward: 15,
@@ -487,7 +487,7 @@ export const ENEMY_CONTENT = {
     visual: { shape: "orb", moons: 0 },
     traits: [{ kind: "stealth" }, { kind: "evade", every: 4 }],
   },
-  // Hydra: regeneriert und teilt sich in zwei Hydraköpfe; Störsender, Nova, Beben.
+  // Hydra: regenerates and splits into two Hydra Heads; Jammer, Nova, Quake.
   hydra: {
     id: "hydra",
     name: "Hydra",
@@ -504,10 +504,10 @@ export const ENEMY_CONTENT = {
       { kind: "splitOnDeath", type: "hydraling", count: 2 },
     ],
   },
-  // Hydrakopf: Teilstück der Hydra, wird verwundet schneller; Nova, Schrapnell, Henker.
+  // Hydra Head: fragment of the Hydra, speeds up when wounded; Nova, Shrapnel, Executioner.
   hydraling: {
     id: "hydraling",
-    name: "Hydrakopf",
+    name: "Hydra Head",
     hp: 70,
     speed: 1.35,
     reward: 8,
@@ -518,10 +518,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "star", points: 5, inner: 0.55 },
     traits: [{ kind: "rage", max: 0.8 }],
   },
-  // Gewitterzelle: Flieger mit Schild, legt beim Tod Türme lahm; Flak, Tesla, Störsender.
+  // Thunder Cell: shielded flyer, disables towers on death; Flak, Tesla, Jammer.
   stormcell: {
     id: "stormcell",
-    name: "Gewitterzelle",
+    name: "Thunder Cell",
     hp: 160,
     speed: 0.85,
     reward: 26,
@@ -535,10 +535,10 @@ export const ENEMY_CONTENT = {
       { kind: "shield", capacity: 0.3, delay: 3 },
     ],
   },
-  // Zahnrad: wird mit jedem Feld schneller; Kryo, Gravitron (Sog nimmt den Schwung) und Tesla.
+  // Cogwheel: speeds up with every cell; Cryo, Gravitron (the pull takes its momentum) and Tesla.
   cog: {
     id: "cog",
-    name: "Zahnrad",
+    name: "Cogwheel",
     hp: 90,
     speed: 1.25,
     reward: 13,
@@ -549,10 +549,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "star", points: 8, inner: 0.7 },
     traits: [{ kind: "momentum", per: 0.03, max: 0.9 }],
   },
-  // Kolbenpanzer: gepanzert und mit jeder Runde härter; Zerfall, Fokus und Lanze, am besten in der ersten Runde.
+  // Piston Tank: armored and harder with every lap; Decay, Focus and Lance, best in the first lap.
   piston: {
     id: "piston",
-    name: "Kolbenpanzer",
+    name: "Piston Tank",
     hp: 300,
     speed: 0.85,
     reward: 30,
@@ -563,10 +563,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 4, rotation: Math.PI / 4 },
     traits: [{ kind: "armor", reduction: 0.2 }, { kind: "lap", per: 0.15, max: 0.6 }],
   },
-  // Gischtflügler: schneller Flieger, der mit jeder Runde härter wird; Flak und Tesla.
+  // Spray Wing: fast flyer that gets harder with every lap; Flak and Tesla.
   tidewing: {
     id: "tidewing",
-    name: "Gischtflügler",
+    name: "Spray Wing",
     hp: 85,
     speed: 1.5,
     reward: 14,
@@ -577,7 +577,7 @@ export const ENEMY_CONTENT = {
     visual: { shape: "glider" },
     traits: [{ kind: "lap", per: 0.12, max: 0.48 }],
   },
-  // Nautilus: geschildert und mit Schwung; Störsender, Gravitron und Zerfall.
+  // Nautilus: shielded and with momentum; Jammer, Gravitron and Decay.
   nautilus: {
     id: "nautilus",
     name: "Nautilus",
@@ -591,11 +591,11 @@ export const ENEMY_CONTENT = {
     visual: { shape: "orb", moons: 0 },
     traits: [{ kind: "shield", capacity: 0.4, delay: 3 }, { kind: "momentum", per: 0.02, max: 0.8 }],
   },
-  // --- Neue Eigenschaften: noch in keiner Mission platziert ---
-  // Prismenläufer: Brechung: Sofort-Treffer halbiert; Impuls, Nova und Mörser.
+  // --- New traits: not placed in any mission yet ---
+  // Prism Runner: Refraction: halves instant hits; Pulse, Nova and Mortar.
   prism: {
     id: "prism",
-    name: "Prismenläufer",
+    name: "Prism Runner",
     hp: 140,
     speed: 1.1,
     reward: 16,
@@ -606,10 +606,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "star", points: 6, inner: 0.6 },
     traits: [{ kind: "refract", factor: 0.5 }],
   },
-  // Spiegelflügler: Brechung in der Luft: Tesla halbiert; Flak und Impuls.
+  // Mirror Wing: Refraction in the air: halves Tesla; Flak and Pulse.
   mirrorwing: {
     id: "mirrorwing",
-    name: "Spiegelflügler",
+    name: "Mirror Wing",
     hp: 110,
     speed: 1.35,
     reward: 17,
@@ -620,10 +620,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "glider" },
     traits: [{ kind: "refract", factor: 0.5 }],
   },
-  // Druckbunker: Druckfest: Flächenschaden stark gemindert; Impuls, Fokus, Lanze und Korrosion.
+  // Pressure Bunker: Blastproof: area damage greatly reduced; Pulse, Focus, Lance and Corrosion.
   bunker: {
     id: "bunker",
-    name: "Druckbunker",
+    name: "Pressure Bunker",
     hp: 340,
     speed: 0.75,
     reward: 30,
@@ -634,10 +634,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 6, rotation: Math.PI / 2 },
     traits: [{ kind: "blastproof", reduction: 0.6 }, { kind: "armor", reduction: 0.1 }],
   },
-  // Geröllschwarm: Druckfest und im Schwarm zäh: Tesla, Schrapnell und Krähenfüße.
+  // Rubble Swarm: Blastproof and tough in a swarm: Tesla, Shrapnel and Caltrops.
   pebble: {
     id: "pebble",
-    name: "Geröllschwarm",
+    name: "Rubble Swarm",
     hp: 38,
     speed: 1.4,
     reward: 8,
@@ -648,10 +648,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 5, rotation: 0.3 },
     traits: [{ kind: "blastproof", reduction: 0.5 }, { kind: "swarm", radius: 1, per: 0.08, max: 0.4 }],
   },
-  // Isolator: Isoliert: Tesla-Ketten brechen an ihm ab; Nova, Impuls und Mörser.
+  // Insulator: Insulated: Tesla chains break off at it; Nova, Pulse and Mortar.
   insulator: {
     id: "insulator",
-    name: "Isolator",
+    name: "Insulator",
     hp: 170,
     speed: 1.0,
     reward: 18,
@@ -662,7 +662,7 @@ export const ENEMY_CONTENT = {
     visual: { shape: "orb", moons: 1 },
     traits: [{ kind: "insulated" }],
   },
-  // Salamander: Hitzeschild: immun gegen Brand und Blutung; Impuls, Zerfall und Nova.
+  // Salamander: Heat Shield: immune to burn and bleed; Pulse, Decay and Nova.
   salamander: {
     id: "salamander",
     name: "Salamander",
@@ -676,10 +676,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "worm", segments: 3 },
     traits: [{ kind: "heatshield" }],
   },
-  // Magmafalter: Hitzeschild in der Luft: Flak und Tesla statt Glut.
+  // Magma Moth: Heat Shield in the air: Flak and Tesla instead of Ember.
   cinderwing: {
     id: "cinderwing",
-    name: "Magmafalter",
+    name: "Magma Moth",
     hp: 100,
     speed: 1.4,
     reward: 16,
@@ -690,7 +690,7 @@ export const ENEMY_CONTENT = {
     visual: { shape: "glider" },
     traits: [{ kind: "heatshield" }],
   },
-  // Monolith: Spiegelpanzer: jeder Treffer höchstens 6 % der HP; Tesla, Impuls, Glut und Henker.
+  // Monolith: Mirror Armor: each hit at most 6 % of HP; Tesla, Pulse, Ember and Executioner.
   monolith: {
     id: "monolith",
     name: "Monolith",
@@ -704,10 +704,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 4, rotation: Math.PI / 8 },
     traits: [{ kind: "mirror", cap: 0.06 }],
   },
-  // Zwillingsläufer: Verbund: teilt Schaden mit Artgenossen im Radius; Nova, Mörser und Henker.
+  // Twin Runner: Link: shares damage with its own kind in radius; Nova, Mortar and Executioner.
   twin: {
     id: "twin",
-    name: "Zwillingsläufer",
+    name: "Twin Runner",
     hp: 120,
     speed: 1.1,
     reward: 14,
@@ -718,10 +718,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "orb", moons: 2 },
     traits: [{ kind: "link", radius: 1.6 }],
   },
-  // Kettenqualle: Verbund in der Luft: Tesla und Flak.
+  // Chain Jelly: Link in the air: Tesla and Flak.
   chainling: {
     id: "chainling",
-    name: "Kettenqualle",
+    name: "Chain Jelly",
     hp: 75,
     speed: 1.35,
     reward: 13,
@@ -732,10 +732,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 7, tentacles: 3 },
     traits: [{ kind: "link", radius: 1.4 }],
   },
-  // Lockvogel: Köder: Türme im Radius müssen ihn anvisieren; Korrosion, Zerfall und Henker.
+  // Decoy: Lure: towers in radius must target it; Corrosion, Decay and Executioner.
   decoy: {
     id: "decoy",
-    name: "Lockvogel",
+    name: "Decoy",
     hp: 260,
     speed: 0.85,
     reward: 28,
@@ -746,10 +746,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "star", points: 5, inner: 0.5 },
     traits: [{ kind: "taunt", radius: 2.5 }, { kind: "armor", reduction: 0.3 }],
   },
-  // Leuchtboje: Köder mit Schild in der Luft: Flak, Tesla und Störsender.
+  // Beacon Buoy: shielded lure in the air: Flak, Tesla and Jammer.
   buoy: {
     id: "buoy",
-    name: "Leuchtboje",
+    name: "Beacon Buoy",
     hp: 160,
     speed: 0.9,
     reward: 24,
@@ -760,10 +760,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "orb", moons: 5 },
     traits: [{ kind: "taunt", radius: 2 }, { kind: "shield", capacity: 0.4, delay: 3 }],
   },
-  // Märtyrer: Opfergabe: heilt beim Tod seine Nachbarn; Nova, Mörser und Störsender.
+  // Martyr: Sacrifice: heals its neighbors on death; Nova, Mortar and Jammer.
   martyr: {
     id: "martyr",
-    name: "Märtyrer",
+    name: "Martyr",
     hp: 110,
     speed: 1.1,
     reward: 14,
@@ -774,10 +774,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 3, rotation: Math.PI / 2 },
     traits: [{ kind: "martyr", radius: 1.8, heal: 0.25 }],
   },
-  // Seelenfunke: Opfergabe in der Luft: Flak und Tesla.
+  // Soul Spark: Sacrifice in the air: Flak and Tesla.
   soulspark: {
     id: "soulspark",
-    name: "Seelenfunke",
+    name: "Soul Spark",
     hp: 60,
     speed: 1.55,
     reward: 12,
@@ -788,10 +788,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "star", points: 4, inner: 0.4 },
     traits: [{ kind: "martyr", radius: 1.5, heal: 0.12 }],
   },
-  // Rudelwolf: Rudel: wird mit jedem Nachbarn schneller; Kryo, Nova und Gravitron.
+  // Packwolf: Pack: speeds up with every neighbor; Cryo, Nova and Gravitron.
   wolf: {
     id: "wolf",
-    name: "Rudelwolf",
+    name: "Packwolf",
     hp: 75,
     speed: 1.3,
     reward: 11,
@@ -802,10 +802,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 5, rotation: Math.PI },
     traits: [{ kind: "pack", radius: 1.5, perAlly: 0.08, max: 0.4 }],
   },
-  // Sturmfalke: Rudel in der Luft: Tesla und Flak.
+  // Storm Falcon: Pack in the air: Tesla and Flak.
   raptor: {
     id: "raptor",
-    name: "Sturmfalke",
+    name: "Storm Falcon",
     hp: 65,
     speed: 1.6,
     reward: 12,
@@ -816,10 +816,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "glider" },
     traits: [{ kind: "pack", radius: 1.5, perAlly: 0.1, max: 0.5 }],
   },
-  // Kolonnenläufer: Rudel im Windschatten: Kryo, Nova und Gravitron.
+  // Column Runner: Pack in the slipstream: Cryo, Nova and Gravitron.
   drafter: {
     id: "drafter",
-    name: "Kolonnenläufer",
+    name: "Column Runner",
     hp: 70,
     speed: 1.35,
     reward: 11,
@@ -830,10 +830,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 3, rotation: -Math.PI / 2 },
     traits: [{ kind: "pack", radius: 1.5, perAlly: 0.08, max: 0.4 }],
   },
-  // Schleierweber: Tarnfeld: tarnt Nachbarn bis ein Detektor sie erfasst; Detektor, Lanze und Mörser.
+  // Veil Weaver: Cloak Field: cloaks neighbors until a Detector reveals them; Detector, Lance and Mortar.
   veiler: {
     id: "veiler",
-    name: "Schleierweber",
+    name: "Veil Weaver",
     hp: 130,
     speed: 1.0,
     reward: 20,
@@ -844,10 +844,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 7, rotation: 0.2, tentacles: 2 },
     traits: [{ kind: "cloakField", radius: 1.6 }],
   },
-  // Schattenkoloss: Tarnfeld mit Panzer: Detektor, Korrosion und Lanze.
+  // Shadow Colossus: Cloak Field with armor: Detector, Corrosion and Lance.
   shade: {
     id: "shade",
-    name: "Schattenkoloss",
+    name: "Shadow Colossus",
     hp: 380,
     speed: 0.75,
     reward: 38,
@@ -858,10 +858,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 8, rotation: 0.4 },
     traits: [{ kind: "cloakField", radius: 1.8 }, { kind: "armor", reduction: 0.15 }],
   },
-  // Sprungkäfer: Sprungantrieb: springt Felder voraus und überspringt Fallen; Lanze, Tesla und Kryo-Zonen.
+  // Jump Beetle: Jump Drive: jumps cells ahead and skips traps; Lance, Tesla and Cryo zones.
   hopper: {
     id: "hopper",
-    name: "Sprungkäfer",
+    name: "Jump Beetle",
     hp: 90,
     speed: 1.2,
     reward: 14,
@@ -872,10 +872,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "star", points: 6, inner: 0.3 },
     traits: [{ kind: "blink", every: 4, jump: 2 }],
   },
-  // Warpdrohne: Sprungantrieb in der Luft: Flak und Tesla.
+  // Warp Drone: Jump Drive in the air: Flak and Tesla.
   warpdrone: {
     id: "warpdrone",
-    name: "Warpdrohne",
+    name: "Warp Drone",
     hp: 80,
     speed: 1.3,
     reward: 15,
@@ -886,10 +886,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "glider" },
     traits: [{ kind: "blink", every: 5, jump: 3 }],
   },
-  // Lückenspringer: Häufige kurze Sprünge: Lanze, Tesla und Kryo-Zonen.
+  // Gap Jumper: Frequent short jumps: Lance, Tesla and Cryo zones.
   gapper: {
     id: "gapper",
-    name: "Lückenspringer",
+    name: "Gap Jumper",
     hp: 100,
     speed: 1.0,
     reward: 15,
@@ -900,10 +900,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 5, rotation: 0.7 },
     traits: [{ kind: "blink", every: 3, jump: 1.5 }],
   },
-  // Tunnelmaulwurf: Tunnelgang: unter der Erde schneller und nur für Fallen und Fläche greifbar; Beben, Mine und Teergrube.
+  // Tunnel Mole: Tunneling: faster underground and only reachable by traps and area damage; Quake, Mine and Tar Pit.
   mole: {
     id: "mole",
-    name: "Tunnelmaulwurf",
+    name: "Tunnel Mole",
     hp: 180,
     speed: 0.95,
     reward: 20,
@@ -914,10 +914,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "worm", segments: 4 },
     traits: [{ kind: "tunnel", every: 5, length: 2, speed: 2 }],
   },
-  // Konvoischlepper: Verbund mit Panzer: Nova, Mörser, Korrosion und Henker.
+  // Convoy Hauler: Link with Tank: Nova, Mortar, Corrosion and Executioner.
   hauler: {
     id: "hauler",
-    name: "Konvoischlepper",
+    name: "Convoy Hauler",
     hp: 280,
     speed: 0.8,
     reward: 28,
@@ -928,10 +928,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 6, rotation: 0.2 },
     traits: [{ kind: "link", radius: 1.5 }, { kind: "armor", reduction: 0.2 }],
   },
-  // Phasenflügler: Phasenwechsel: wechselt zwischen Luft und Boden; Tesla und Fangnetz.
+  // Phase Wing: Phase Shift: alternates between air and ground; Tesla and Snare Net.
   phasewing: {
     id: "phasewing",
-    name: "Phasenflügler",
+    name: "Phase Wing",
     hp: 110,
     speed: 1.3,
     reward: 17,
@@ -942,10 +942,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "star", points: 4, inner: 0.6 },
     traits: [{ kind: "phase", period: 3.5, air: 1.5 }],
   },
-  // Blender: Blendlicht: Türme in der Nähe verlieren Reichweite; Lanze, Mörser und Störsender.
+  // Dazzler: Dazzle: nearby towers lose range; Lance, Mortar and Jammer.
   flare: {
     id: "flare",
-    name: "Blender",
+    name: "Dazzler",
     hp: 160,
     speed: 0.95,
     reward: 20,
@@ -956,10 +956,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "star", points: 12, inner: 0.5 },
     traits: [{ kind: "blind", radius: 2.5, range: 0.3 }],
   },
-  // Störwolke: Störfeld: Türme in der Nähe feuern langsamer; Flak, Tesla und Aura.
+  // Disruption Cloud: Interference: nearby towers fire slower; Flak, Tesla and Aura.
   staticloud: {
     id: "staticloud",
-    name: "Störwolke",
+    name: "Disruption Cloud",
     hp: 140,
     speed: 0.9,
     reward: 22,
@@ -970,10 +970,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "orb", moons: 6 },
     traits: [{ kind: "jam", radius: 2, slow: 0.4 }],
   },
-  // Pionier: Entschärfer: Fallen in der Nähe lösen nicht aus; Impuls, Lanze und Störsender.
+  // Pioneer: Defuser: nearby traps do not trigger; Pulse, Lance and Jammer.
   sapper: {
     id: "sapper",
-    name: "Pionier",
+    name: "Pioneer",
     hp: 140,
     speed: 1.05,
     reward: 18,
@@ -984,10 +984,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 4, rotation: 0.9 },
     traits: [{ kind: "defuse", radius: 1.5 }, { kind: "armor", reduction: 0.1 }],
   },
-  // Nullfeldträger: Nullfeld: Unterstützung in der Nähe wirkungslos; Störsender, Lanze und Mörser.
+  // Null-Field Carrier: Null Field: nearby support is ineffective; Jammer, Lance and Mortar.
   nullbearer: {
     id: "nullbearer",
-    name: "Nullfeldträger",
+    name: "Null-Field Carrier",
     hp: 210,
     speed: 0.9,
     reward: 26,
@@ -998,10 +998,10 @@ export const ENEMY_CONTENT = {
     visual: { shape: "polygon", sides: 9 },
     traits: [{ kind: "suppress", radius: 2.5 }],
   },
-  // Dornrücken: Vergeltung: Türme in der Nähe laden nach einem Treffer langsamer; Lanze, Mörser, Glut und Fallen.
+  // Thornback: Retaliation: nearby towers reload slower after a hit; Lance, Mortar, Ember and traps.
   thornback: {
     id: "thornback",
-    name: "Dornrücken",
+    name: "Thornback",
     hp: 240,
     speed: 0.9,
     reward: 26,

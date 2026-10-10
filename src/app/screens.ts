@@ -28,7 +28,7 @@ export const sameScreen = (a: Screen, b: Screen) => a.view === b.view && (a.view
 type Entry = Screen & { depth: number };
 /**
  * Navigation through the History API: every screen is a history entry, so the browser's Back button works.
- * `depth` counts the in-app entries before the current one; "Zurück" only steps back through those.
+ * `depth` counts the in-app entries before the current one; "Back" only steps back through those.
  */
 export function createScreens(missions: readonly MissionDefinition[], missionId: () => string, enter: (to: Screen, from: Screen | null) => void) {
   let current: Screen | null = null,
@@ -66,7 +66,7 @@ export function createScreens(missions: readonly MissionDefinition[], missionId:
       if (depth > 0) history.back();
       else this.show(HOME, { replace: true });
     },
-    /** Rewrites the game URL after the mission changed, e.g. "Nächste Mission". */
+    /** Rewrites the game URL after the mission changed, e.g. "Next mission". */
     syncUrl() {
       if (current?.view === "game") history.replaceState({ ...GAME, depth } satisfies Entry, "", url(GAME));
     },

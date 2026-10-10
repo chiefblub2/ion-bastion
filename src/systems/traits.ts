@@ -24,20 +24,20 @@ interface TraitModule<T extends Trait> {
   speed?(trait: T, enemy: Enemy, time: number, sim: Sim): number;
 }
 type Registry = { [K in TraitKind]: TraitModule<Extract<Trait, { kind: K }>> };
-const share = (name: string, v: number) => (v > 0 && v < 1 ? undefined : `${name} muss in (0, 1) liegen.`);
-const positive = (name: string, v: number) => (v > 0 ? undefined : `${name} muss > 0 sein.`);
-const between = (name: string, v: number, lo: number, hi: number) => (v >= lo && v <= hi ? undefined : `${name} muss in [${lo}, ${hi}] liegen.`);
+const share = (name: string, v: number) => (v > 0 && v < 1 ? undefined : `${name} must be in (0, 1).`);
+const positive = (name: string, v: number) => (v > 0 ? undefined : `${name} must be > 0.`);
+const between = (name: string, v: number, lo: number, hi: number) => (v >= lo && v <= hi ? undefined : `${name} must be in [${lo}, ${hi}].`);
 const first = (...errors: (string | undefined)[]) => errors.find(Boolean);
 /** Enemy abilities. A new ability is one entry here plus content. */
 const TRAITS: Registry = {
   armor: {
-    validate: (t) => (t.reduction >= 0 && t.reduction < 1 ? undefined : "reduction muss in [0, 1) liegen."),
+    validate: (t) => (t.reduction >= 0 && t.reduction < 1 ? undefined : "reduction must be in [0, 1)."),
     onDamage: (t, amount) => amount * (1 - t.reduction),
   },
   regen: {
     validate: (t) =>
       (t.perSecond === undefined) === (t.percent === undefined)
-        ? "Genau eines von perSecond oder percent angeben."
+        ? "Specify exactly one of perSecond or percent."
         : t.perSecond !== undefined
           ? positive("perSecond", t.perSecond)
           : share("percent", t.percent!),
@@ -48,10 +48,10 @@ const TRAITS: Registry = {
   splitOnDeath: {
     validate: (t, content) =>
       !Object.hasOwn(content.enemies, t.type)
-        ? `Unbekannter Gegner '${t.type}'.`
+        ? `Unknown enemy '${t.type}'.`
         : Number.isInteger(t.count) && t.count >= 1
           ? undefined
-          : "count muss eine ganze Zahl ≥ 1 sein.",
+          : "count must be an integer ≥ 1.",
     onDeath: (t, e, sim) => {
       for (let i = 0; i < t.count; i++) {
         const child = createEnemy(sim, t.type as EnemyId, Math.max(0, e.distance - i * SPLIT_SPACING));
@@ -80,7 +80,7 @@ const TRAITS: Registry = {
     },
   },
   sprint: {
-    validate: (t) => first(share("threshold", t.threshold), t.factor > 1 ? undefined : "factor muss > 1 sein.", positive("duration", t.duration)),
+    validate: (t) => first(share("threshold", t.threshold), t.factor > 1 ? undefined : "factor must be > 1.", positive("duration", t.duration)),
     onHit: (t, e, sim) => {
       if (e.sprinted || e.hp <= 0 || e.hp >= t.threshold * e.maxHp) return;
       e.sprinted = true;
@@ -89,7 +89,7 @@ const TRAITS: Registry = {
     speed: (t, e, time) => (time < (e.sprintUntil ?? -Infinity) ? t.factor : 1),
   },
   evade: {
-    validate: (t) => (Number.isInteger(t.every) && t.every >= 2 ? undefined : "every muss eine ganze Zahl ≥ 2 sein."),
+    validate: (t) => (Number.isInteger(t.every) && t.every >= 2 ? undefined : "every must be an integer ≥ 2."),
     onDamage: (t, amount, e, sim, dot) => {
       if (dot) return amount;
       e.hits = (e.hits ?? 0) + 1;
@@ -119,7 +119,7 @@ const TRAITS: Registry = {
     speed: (t) => 1 + t.speed,
   },
   burrow: {
-    validate: (t) => first(positive("every", t.every), positive("length", t.length), t.length < t.every ? undefined : "length muss kleiner als every sein."),
+    validate: (t) => first(positive("every", t.every), positive("length", t.length), t.length < t.every ? undefined : "length must be less than every."),
   },
   harden: {
     validate: (t) => share("max", t.max),
@@ -127,7 +127,7 @@ const TRAITS: Registry = {
   },
   surge: {
     validate: (t) =>
-      first(positive("every", t.every), positive("length", t.length), t.length < t.every ? undefined : "length muss kleiner als every sein.", t.factor > 1 ? undefined : "factor muss > 1 sein."),
+      first(positive("every", t.every), positive("length", t.length), t.length < t.every ? undefined : "length must be less than every.", t.factor > 1 ? undefined : "factor must be > 1."),
     speed: (t, e) => (isSurging(t, e) ? t.factor : 1),
   },
   swarm: {
@@ -140,12 +140,12 @@ const TRAITS: Registry = {
   },
   facet: {
     validate: (t) =>
-      first(positive("every", t.every), positive("length", t.length), t.length < t.every ? undefined : "length muss kleiner als every sein.", share("reduction", t.reduction)),
+      first(positive("every", t.every), positive("length", t.length), t.length < t.every ? undefined : "length must be less than every.", share("reduction", t.reduction)),
     onDamage: (t, amount, _, sim, dot) => (!dot && isFaceted(t, sim.state.time) ? amount * (1 - t.reduction) : amount),
   },
   leap: {
     validate: (t) =>
-      first(positive("every", t.every), positive("length", t.length), t.length < t.every ? undefined : "length muss kleiner als every sein."),
+      first(positive("every", t.every), positive("length", t.length), t.length < t.every ? undefined : "length must be less than every."),
   },
   dampen: {
     validate: (t) => positive("radius", t.radius),
@@ -153,8 +153,8 @@ const TRAITS: Registry = {
   brood: {
     validate: (t, content) =>
       !Object.hasOwn(content.enemies, t.type)
-        ? `Unbekannter Gegner '${t.type}'.`
-        : first(positive("every", t.every), Number.isInteger(t.max) && t.max >= 1 ? undefined : "max muss eine ganze Zahl ≥ 1 sein."),
+        ? `Unknown enemy '${t.type}'.`
+        : first(positive("every", t.every), Number.isInteger(t.max) && t.max >= 1 ? undefined : "max must be an integer ≥ 1."),
     onSpawn: (_, e) => {
       e.brood = 0;
     },
@@ -178,7 +178,7 @@ const TRAITS: Registry = {
     },
   },
   molt: {
-    validate: (t) => first(share("threshold", t.threshold), share("armor", t.armor), t.speed > 1 ? undefined : "speed muss > 1 sein."),
+    validate: (t) => first(share("threshold", t.threshold), share("armor", t.armor), t.speed > 1 ? undefined : "speed must be > 1."),
     onDamage: (t, amount, e) => (isPlated(t, e) ? amount * (1 - t.armor) : amount),
     speed: (t, e) => (isPlated(t, e) ? 1 : t.speed),
   },
@@ -229,7 +229,7 @@ const TRAITS: Registry = {
   blink: { validate: (t) => first(between("every", t.every, 3, 5), between("jump", t.jump, 1.5, 3)) },
   tunnel: {
     validate: (t) =>
-      first(positive("every", t.every), positive("length", t.length), t.length < t.every ? undefined : "length muss kleiner als every sein.", between("speed", t.speed, 1.8, 2.2)),
+      first(positive("every", t.every), positive("length", t.length), t.length < t.every ? undefined : "length must be less than every.", between("speed", t.speed, 1.8, 2.2)),
     speed: (t, e) => (inDistanceWindow(t, e) ? t.speed : 1),
   },
   // The layer lives in `layerOf`.
@@ -258,7 +258,7 @@ const packShare = (t: { radius: number; perAlly: number; max: number }, e: Enemy
 };
 /** Time-based layer window of a phase enemy: in the air for the first `air` seconds of every `period`. */
 const isPhasedAir = (t: { period: number; air: number }, time: number) => time % t.period < t.air;
-const unitShare = (name: string, v: number) => (v > 0 && v <= 1 ? undefined : `${name} muss in (0, 1] liegen.`);
+const unitShare = (name: string, v: number) => (v > 0 && v <= 1 ? undefined : `${name} must be in (0, 1].`);
 /** Current speed bonus share of a momentum enemy: grows with the path distance, 0 when pulled back before the start. */
 const momentumShare = (t: { per: number; max: number }, e: Enemy) => Math.min(t.max, t.per * Math.max(0, e.distance));
 /** Completed laps of a ring map; always 0 on reactor maps. Derived from the distance, so a pull-back loses laps correctly. */
@@ -292,7 +292,7 @@ const hardenShare = (max: number, e: Enemy) => max * (1 - e.hp / e.maxHp);
 const DAMAGE_STAGE: Partial<Record<TraitKind, number>> = { evade: -1, shield: 1, mirror: 2 };
 const stage = (t: Trait) => DAMAGE_STAGE[t.kind] ?? 0;
 const moduleOf = (t: Trait) => TRAITS[t.kind] as TraitModule<Trait> | undefined;
-/** Abilities a Störsender switches off; physical properties such as armor stay. */
+/** Abilities a Jammer switches off; physical properties such as armor stay. */
 export const DISRUPTABLE: ReadonlySet<TraitKind> = new Set(["shield", "regen", "healer", "leader", "stealth", "evade", "dampen", "brood", "link", "taunt", "martyr", "cloakField", "retaliate", "blink", "blind", "jam", "defuse", "suppress"]);
 const NO_TRAITS: readonly Trait[] = [];
 const traitsOf = (sim: Sim, e: Enemy): readonly Trait[] => {
@@ -327,7 +327,7 @@ function* activeCarriers<K extends AreaKind>(sim: Sim, kind: K): Generator<[Enem
 
 export function validateTrait(trait: Trait, content: ContentPack): string | undefined {
   const module = moduleOf(trait);
-  return module ? module.validate(trait, content) : `Unbekannte Eigenschaft '${(trait as Trait).kind}'.`;
+  return module ? module.validate(trait, content) : `Unknown trait '${(trait as Trait).kind}'.`;
 }
 export function modifyDamage(sim: Sim, e: Enemy, amount: number, dot = false, hit?: Hit) {
   amount *= 1 - leaderBonus(sim, e).resist;

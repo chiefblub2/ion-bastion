@@ -19,8 +19,8 @@ export function bindFullscreen(onChange: () => void) {
     else keyboard()?.unlock?.();
     root.classList.toggle("is-fullscreen", on);
     button.setAttribute("aria-pressed", String(on));
-    button.setAttribute("aria-label", on ? "Vollbild beenden (F)" : "Vollbild (F)");
-    button.title = on ? "Vollbild beenden (F)" : "Vollbild (F)";
+    button.setAttribute("aria-label", on ? "Exit fullscreen (F)" : "Fullscreen (F)");
+    button.title = on ? "Exit fullscreen (F)" : "Fullscreen (F)";
     requestAnimationFrame(onChange);
   };
   document.addEventListener("fullscreenchange", sync);
@@ -29,7 +29,7 @@ export function bindFullscreen(onChange: () => void) {
     isActive: () => !!document.fullscreenElement,
     /** Rejects when the browser refuses, e.g. without a user gesture. */
     async toggle() {
-      if (!supported) throw new Error("Vollbild wird nicht unterstützt.");
+      if (!supported) throw new Error("Fullscreen is not supported.");
       if (document.fullscreenElement) await document.exitFullscreen();
       else await root.requestFullscreen({ navigationUI: "hide" });
     },

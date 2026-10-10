@@ -15,6 +15,8 @@ import { CELL, px } from "./shapes";
 import { drawAmbient, drawTerrain, themeAccent } from "./terrain";
 import { drawTower } from "./towers";
 export { CELL } from "./shapes";
+/** Upper bound for the canvas's longer side in pixels, so a huge 4K full screen stays cheap to fill. */
+const MAX_CANVAS = 4096;
 export interface ViewState {
   build: TowerId | null;
   selected: number | null;
@@ -79,6 +81,9 @@ export class Battlefield extends Phaser.Scene {
   driver: Driver;
   private clock = 0;
   private lastUI = 0;
+  /** Canvas pixels per world pixel; text renders at this resolution so it stays sharp when the board is scaled up. */
+  private textResolution = 1;
+  private observer?: ResizeObserver;
   constructor(
     private sim: Game,
     private view: ViewState,
@@ -90,14 +95,18 @@ export class Battlefield extends Phaser.Scene {
   create() {
     this.effects = [];
     this.driver.reset?.();
+    this.resize();
+    // FIT never changes the game size on its own; follow every size change of the board (window, full screen, layout).
+    if (!this.observer && this.scale.parent) {
+      this.observer = new ResizeObserver(() => this.fit());
+      this.observer.observe(this.scale.parent);
+    }
     drawTerrain(this, this.sim.map, (x, y) => this.sim.isBlocked(x, y));
     this.ambient = this.add.graphics();
     this.ink = this.add.graphics();
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
-      this.view.hover = {
-        x: Math.floor(p.x / CELL),
-        y: Math.floor(p.y / CELL),
-      };
+      const w = this.cameras.main.getWorldPoint(p.x, p.y);
+      this.view.hover = { x: Math.floor(w.x / CELL), y: Math.floor(w.y / CELL) };
     });
     this.input.on("gameout", () => {
       this.view.hover = null;
@@ -106,27 +115,54 @@ export class Battlefield extends Phaser.Scene {
     this.input.mouse?.disableContextMenu();
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
       if (p.rightButtonDown()) return this.hooks.cancel();
-      const shift = (p.event as MouseEvent | undefined)?.shiftKey ?? false;
-      const enemy = this.view.build ? undefined : enemyAt(this.sim, p.x, p.y, CELL);
+      const shift = (p.event as MouseEvent | undefined)?.shiftKey ?? false,
+        w = this.cameras.main.getWorldPoint(p.x, p.y);
+      const enemy = this.view.build ? undefined : enemyAt(this.sim, w.x, w.y, CELL);
       if (enemy) return this.hooks.chooseEnemy(enemy.id);
-      this.hooks.chooseCell(Math.floor(p.x / CELL), Math.floor(p.y / CELL), shift);
+      this.hooks.chooseCell(Math.floor(w.x / CELL), Math.floor(w.y / CELL), shift);
     });
+    this.sharpenText();
     this.hooks.refresh();
   }
   /** Refits the canvas after its container changed size, e.g. entering full screen or leaving the start screen. */
   fit() {
     // Before Phaser has booted the scene there is nothing to fit yet.
-    if (!this.scale) return;
-    this.scale.getParentBounds();
+    if (!this.scale || !this.cameras?.main) return;
+    this.resize();
     this.scale.refresh();
   }
-  /** Redraws the terrain after a mission change and fits the canvas to the map size. */
+  /** Redraws the terrain after a mission change; `create()` sizes the canvas for the new map. */
   reload() {
-    const { columns, rows } = this.sim.map;
-    // The board's aspect ratio follows the map; refresh() alone would fit into the old, cached parent size.
-    this.scale.getParentBounds();
-    this.scale.setGameSize(columns * CELL, rows * CELL);
     this.scene.restart();
+  }
+  /**
+   * Renders the canvas at the board's device-pixel size instead of the world size, so FIT does not upscale
+   * a small bitmap (blurry in full screen and on HiDPI screens). The camera zoom keeps world coordinates in CELL units.
+   */
+  private resize() {
+    this.scale.getParentBounds();
+    const parent = this.scale.parentSize,
+      worldWidth = this.sim.map.columns * CELL,
+      worldHeight = this.sim.map.rows * CELL;
+    // The menu view hides the board (0×0); keep the last size until it is shown again.
+    if (parent.width <= 0 || parent.height <= 0) return;
+    const fit = Math.min(parent.width / worldWidth, parent.height / worldHeight),
+      dpr = Math.min(window.devicePixelRatio || 1, 2),
+      zoom = Math.min(fit * dpr, MAX_CANVAS / Math.max(worldWidth, worldHeight)),
+      width = Math.max(1, Math.round(worldWidth * zoom)),
+      height = Math.max(1, Math.round(worldHeight * zoom));
+    if (width !== this.scale.gameSize.width || height !== this.scale.gameSize.height) this.scale.setGameSize(width, height);
+    this.cameras.main.setOrigin(0, 0).setSize(width, height).setZoom(width / worldWidth, height / worldHeight);
+    this.textResolution = Math.max(1, zoom);
+    this.sharpenText();
+  }
+  private sharpenText() {
+    for (const child of this.children.list)
+      if (child instanceof Phaser.GameObjects.Text) {
+        child.setResolution(this.textResolution);
+        // Phaser reads the source resolution only at construction; without this the bigger bitmap would also draw bigger.
+        child.frame.source.resolution = this.textResolution;
+      }
   }
   /** Direction of travel at a path distance, for oriented flying units. */
   private heading(distance: number) {
@@ -167,6 +203,7 @@ export class Battlefield extends Phaser.Scene {
         color: `#${e.color.toString(16).padStart(6, "0")}`,
         stroke: "#10161b",
         strokeThickness: 4,
+        resolution: this.textResolution,
       })
       .setOrigin(0.5)
       .setDepth(10);
@@ -203,7 +240,7 @@ export class Battlefield extends Phaser.Scene {
         g.fillCircle(x, y, r);
         g.lineStyle(1.5, color, 0.35);
         g.strokeCircle(x, y, r);
-        // Mörser: the dead zone it cannot fire into, as a dashed inner ring.
+        // Mortar: the dead zone it cannot fire into, as a dashed inner ring.
         const attack = resolveUpgrades(preview, content).attack,
           dead = (attackModule(attack)?.minRange?.(attack) ?? 0) * CELL;
         if (dead > 0)

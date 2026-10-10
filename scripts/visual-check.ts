@@ -24,7 +24,7 @@ const flag = (name: string) => {
 const out = resolve(flag("--out") ?? "visual-check");
 const base = flag("--url") ?? "http://localhost:4173";
 const only = flag("--enemies")?.split(",") as EnemyId[] | undefined;
-const missions = args.map((id) => missionById(id) ?? fail(`Unbekannte Mission '${id}'.`));
+const missions = args.map((id) => missionById(id) ?? fail(`Unknown mission '${id}'.`));
 if (!missions.length) fail("Usage: npx vite-node scripts/visual-check.ts -- <missionId>... [--out <dir>] [--enemies a,b]");
 
 /** Enemy types whose first campaign appearance is in `mission`. */
@@ -44,7 +44,7 @@ function targets(mission: MissionDefinition) {
   for (const type of wanted) {
     const index = mission.waves.findIndex((w) => w.groups.some((g) => g.type === type));
     if (index < 0) {
-      console.warn(`${mission.id}: '${type}' kommt in keiner Welle vor.`);
+      console.warn(`${mission.id}: '${type}' does not appear in any wave.`);
       continue;
     }
     const group = mission.waves[index].groups.find((g) => g.type === type)!;
@@ -69,7 +69,7 @@ async function check(page: Page, mission: MissionDefinition) {
     const next = { i: 0 };
     await buildAffordable(page, mission, next);
     await call(page, "start_defense_wave");
-    console.log(`${mission.id}: Welle ${wave} gestartet, ${next.i} Türme`);
+    console.log(`${mission.id}: wave ${wave} started, ${next.i} towers`);
     // At 2× a group delay of d game seconds passes in d/2 real seconds; then let a few units enter.
     await page.waitForTimeout(target.delay * 500 + 3000);
     const file = `${out}/${mission.id}-w${wave}-${target.enemies.join("-")}.png`;

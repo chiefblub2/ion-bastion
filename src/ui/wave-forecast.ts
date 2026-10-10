@@ -56,7 +56,7 @@ export function waveForecast(game: Game): ForecastWave | null {
       hp: Math.round(d.hp * waveHpScale(game.mission, n) * traitHpFactor(game.content, type)),
       isNew: !earlier.has(type),
       tags: [
-        ...(d.layer === "air" ? [{ kind: "air" as const, label: "LUFT", title: "Fliegt – nur Türme mit Luftziel treffen" }] : []),
+        ...(d.layer === "air" ? [{ kind: "air" as const, label: "AIR", title: "Flies: only towers that can target air can hit it" }] : []),
         ...(d.traits ?? []).map((t) => traitTag(t, game.content)),
       ],
     };
@@ -72,91 +72,91 @@ export function waveForecast(game: Game): ForecastWave | null {
 }
 type TagText = Omit<ForecastTag, "kind">;
 const TRAIT_TAGS: { [K in TraitKind]: (t: Extract<Trait, { kind: K }>, content: ContentPack) => TagText } = {
-  armor: (t) => ({ label: `RÜSTUNG ${number(t.reduction * 100)} %`, title: `Rüstung: blockt ${number(t.reduction * 100)} % jedes Treffers` }),
+  armor: (t) => ({ label: `ARMOR ${number(t.reduction * 100)}%`, title: `Armor: blocks ${number(t.reduction * 100)}% of every hit` }),
   regen: (t) =>
     t.percent !== undefined
-      ? { label: `REGEN ${number(t.percent * 100)} %/s`, title: `Regeneriert ${number(t.percent * 100)} % seiner maximalen HP pro Sekunde` }
-      : { label: `REGEN ${number(t.perSecond ?? 0)}/s`, title: `Regeneriert ${number(t.perSecond ?? 0)} HP pro Sekunde` },
+      ? { label: `REGEN ${number(t.percent * 100)}%/s`, title: `Regenerates ${number(t.percent * 100)}% of its max HP per second` }
+      : { label: `REGEN ${number(t.perSecond ?? 0)}/s`, title: `Regenerates ${number(t.perSecond ?? 0)} HP per second` },
   splitOnDeath: (t, content) => ({
-    label: `TEILT ×${t.count}`,
-    title: `Zerfällt beim Tod in ${t.count}× ${content.enemies[t.type as EnemyId]?.name ?? t.type}`,
+    label: `SPLITS ×${t.count}`,
+    title: `Splits into ${t.count}× ${content.enemies[t.type as EnemyId]?.name ?? t.type}`,
   }),
-  slowImmune: () => ({ label: "IMMUN: SLOW", title: "Immun gegen Verlangsamung" }),
+  slowImmune: () => ({ label: "IMMUNE: SLOW", title: "Immune to slowing" }),
   shield: (t) => ({
-    label: `SCHILD ${number(t.capacity * 100)} %`,
-    title: `Schild über ${number(t.capacity * 100)} % der HP; lädt nach ${number(t.delay)} s ohne Treffer wieder auf`,
+    label: `SHIELD ${number(t.capacity * 100)}%`,
+    title: `Shield worth ${number(t.capacity * 100)}% of HP; recharges after ${number(t.delay)} s without a hit`,
   }),
   sprint: (t) => ({
-    label: "SPURT",
-    title: `Unter ${number(t.threshold * 100)} % HP einmalig ${number(t.duration)} s lang ${number((t.factor - 1) * 100)} % schneller`,
+    label: "SPRINT",
+    title: `Once below ${number(t.threshold * 100)}% HP: ${number((t.factor - 1) * 100)}% faster for ${number(t.duration)} s`,
   }),
-  evade: (t) => ({ label: `AUSWEICHEN 1/${t.every}`, title: `Weicht jedem ${t.every}. Treffer aus; Brand trifft immer` }),
+  evade: (t) => ({ label: `EVADE 1/${t.every}`, title: `Dodges every ${t.every}th hit; burning always hits` }),
   burrow: (t) => ({
-    label: "GRÄBT SICH EIN",
-    title: `Taucht alle ${number(t.every)} Felder für ${number(t.length)} Felder ab: nur Fallen und Flächenschaden treffen`,
+    label: "BURROWS",
+    title: `Burrows for ${number(t.length)} cells every ${number(t.every)} cells: only traps and area damage hit`,
   }),
-  harden: (t) => ({ label: "VERHÄRTET", title: `Bis zu ${number(t.max * 100)} % Schadensreduktion, je verletzter er ist` }),
+  harden: (t) => ({ label: "HARDENS", title: `Up to ${number(t.max * 100)}% damage reduction the more hurt it is` }),
   surge: (t) => ({
-    label: "BÖEN",
-    title: `Rast alle ${number(t.every)} Felder für ${number(t.length)} Felder mit +${number((t.factor - 1) * 100)} % Tempo`,
+    label: "GUSTS",
+    title: `Rushes for ${number(t.length)} cells every ${number(t.every)} cells with +${number((t.factor - 1) * 100)}% speed`,
   }),
   swarm: (t) => ({
-    label: "SCHWARM",
-    title: `Pro Artgenosse in ${number(t.radius)} Feldern ${number(t.per * 100)} % weniger Schaden, höchstens ${number(t.max * 100)} %`,
+    label: "SWARM",
+    title: `${number(t.per * 100)}% less damage per same-type enemy within ${number(t.radius)} cells, at most ${number(t.max * 100)}%`,
   }),
-  rage: (t) => ({ label: "WUT", title: `Wird schneller, je mehr HP fehlen: bis zu ${number(t.max * 100)} % schneller kurz vor dem Tod` }),
+  rage: (t) => ({ label: "RAGE", title: `Speeds up as HP drops: up to ${number(t.max * 100)}% faster near death` }),
   facet: (t) => ({
-    label: "FACETTE",
-    title: `Alle ${number(t.every)} s für ${number(t.length)} s ${number(t.reduction * 100)} % weniger Schaden durch Treffer, Brand wirkt voll`,
+    label: "FACET",
+    title: `For ${number(t.length)} s every ${number(t.every)} s: ${number(t.reduction * 100)}% less damage from hits, burning works in full`,
   }),
-  leap: (t) => ({ label: "SPRUNG", title: `Wechselt alle ${number(t.every)} Felder für ${number(t.length)} Felder die Ebene (Boden ↔ Luft)` }),
-  dampen: (t) => ({ label: "DÄMPFT", title: `Er und Gegner im Umkreis von ${number(t.radius)} Feldern sind immun gegen Verlangsamung, Betäubung und Sog` }),
+  leap: (t) => ({ label: "LEAP", title: `Switches layer (Ground ↔ Air) for ${number(t.length)} cells every ${number(t.every)} cells` }),
+  dampen: (t) => ({ label: "DAMPENS", title: `It and enemies within ${number(t.radius)} cells are immune to slow, stun and pull` }),
   brood: (t, content) => ({
-    label: "BRUT",
-    title: `Legt alle ${number(t.every)} Felder einen ${content.enemies[t.type as EnemyId]?.name ?? t.type} ab (max. ${t.max})`,
+    label: "BROOD",
+    title: `Lays a ${content.enemies[t.type as EnemyId]?.name ?? t.type} every ${number(t.every)} cells (max. ${t.max})`,
   }),
-  overload: (t) => ({ label: "ÜBERLAST", title: `Legt beim Tod Angriffstürme im Umkreis von ${number(t.radius)} Feldern für ${number(t.cycles)} Schusszyklen lahm` }),
-  refract: (t) => ({ label: "BRECH", title: `Brechung: Sofort-Treffer (Tesla, Lanze, Fokus, Beben, Gravitron, Störsender) ×${number(t.factor)}` }),
-  blastproof: (t) => ({ label: "DRUCK", title: `Druckfest: Flächenschaden −${number(t.reduction * 100)} %` }),
-  insulated: () => ({ label: "ISO", title: "Isoliert: Tesla-Ketten brechen ab" }),
-  heatshield: () => ({ label: "HITZE", title: "Hitzeschild: immun gegen Brand und Blutung" }),
-  mirror: (t) => ({ label: "SPIEGEL", title: `Spiegelpanzer: max. ${number(t.cap * 100)} % der HP pro Treffer` }),
-  link: (t) => ({ label: "VERBUND", title: `Verbund: teilt Schaden im Radius ${number(t.radius)}` }),
-  taunt: (t) => ({ label: "KÖDER", title: `Köder: Türme im Radius ${number(t.radius)} müssen ihn anvisieren` }),
-  martyr: (t) => ({ label: "OPFER", title: `Opfergabe: heilt beim Tod ${number(t.heal * 100)} % im Radius ${number(t.radius)}` }),
-  cloakField: (t) => ({ label: "TARNFELD", title: `Tarnfeld: tarnt Nachbarn im Radius ${number(t.radius)}` }),
-  retaliate: (t) => ({ label: "VERGELT", title: `Vergeltung: Türme im Radius ${number(t.radius)} +${number(t.cycles)} Zyklen Abklingzeit` }),
-  pack: (t) => ({ label: "RUDEL", title: `Rudel: +${number(t.perAlly * 100)} % Tempo je Nachbar (max. +${number(t.max * 100)} %, Radius ${number(t.radius)})` }),
-  blink: (t) => ({ label: "WARP", title: `Sprungantrieb: alle ${number(t.every)} Felder ${number(t.jump)} Felder weit` }),
-  tunnel: (t) => ({ label: "TUNNEL", title: `Tunnelgang: unter der Erde ${number(t.speed)}× schneller` }),
-  phase: (t) => ({ label: "PHASE", title: `Phasenwechsel: ${number(t.air)} s von ${number(t.period)} s in der Luft` }),
-  blind: (t) => ({ label: "BLEND", title: `Blendlicht: −${number(t.range * 100)} % Reichweite im Radius ${number(t.radius)}` }),
-  jam: (t) => ({ label: "STÖR", title: `Störfeld: Türme im Radius ${number(t.radius)} feuern ${number(t.slow * 100)} % langsamer` }),
-  defuse: (t) => ({ label: "ENTSCH", title: `Entschärfer: Fallen im Radius ${number(t.radius)} lösen nicht aus` }),
-  suppress: (t) => ({ label: "NULL", title: `Nullfeld: Unterstützung im Radius ${number(t.radius)} wirkungslos` }),
+  overload: (t) => ({ label: "OVERLOAD", title: `On death, disables attack towers within ${number(t.radius)} cells for ${number(t.cycles)} firing cycles` }),
+  refract: (t) => ({ label: "REFRACT", title: `Refraction: instant hits (Tesla, Lance, Focus, Quake, Gravitron, Jammer) ×${number(t.factor)}` }),
+  blastproof: (t) => ({ label: "BLASTPROOF", title: `Blastproof: area damage −${number(t.reduction * 100)}%` }),
+  insulated: () => ({ label: "INSULATED", title: "Insulated: Tesla chains break off" }),
+  heatshield: () => ({ label: "HEATSHIELD", title: "Heat shield: immune to burning and bleeding" }),
+  mirror: (t) => ({ label: "MIRROR", title: `Mirror plating: max. ${number(t.cap * 100)}% of HP per hit` }),
+  link: (t) => ({ label: "LINK", title: `Link: splits damage within radius ${number(t.radius)}` }),
+  taunt: (t) => ({ label: "TAUNT", title: `Taunt: towers within radius ${number(t.radius)} must target it` }),
+  martyr: (t) => ({ label: "MARTYR", title: `Sacrifice: heals ${number(t.heal * 100)}% on death within radius ${number(t.radius)}` }),
+  cloakField: (t) => ({ label: "CLOAK FIELD", title: `Cloak field: cloaks neighbors within radius ${number(t.radius)}` }),
+  retaliate: (t) => ({ label: "RETALIATE", title: `Retaliation: towers within radius ${number(t.radius)} get +${number(t.cycles)} cycles of cooldown` }),
+  pack: (t) => ({ label: "PACK", title: `Pack: +${number(t.perAlly * 100)}% speed per neighbor (max. +${number(t.max * 100)}%, radius ${number(t.radius)})` }),
+  blink: (t) => ({ label: "BLINK", title: `Jump drive: jumps ${number(t.jump)} cells every ${number(t.every)} cells` }),
+  tunnel: (t) => ({ label: "TUNNEL", title: `Tunneling: ${number(t.speed)}× faster underground` }),
+  phase: (t) => ({ label: "PHASE", title: `Phase shift: ${number(t.air)} s of every ${number(t.period)} s in the air` }),
+  blind: (t) => ({ label: "BLIND", title: `Glare: −${number(t.range * 100)}% range within radius ${number(t.radius)}` }),
+  jam: (t) => ({ label: "JAM", title: `Jamming field: towers within radius ${number(t.radius)} fire ${number(t.slow * 100)}% slower` }),
+  defuse: (t) => ({ label: "DEFUSE", title: `Defuser: traps within radius ${number(t.radius)} do not trigger` }),
+  suppress: (t) => ({ label: "NULL", title: `Null field: support within radius ${number(t.radius)} is ineffective` }),
   molt: (t) => ({
-    label: "HÄUTUNG",
-    title: `Gepanzert (${number(t.armor * 100)} % weniger Schaden) bis ${number(t.threshold * 100)} % HP, danach ${number(t.speed)}× so schnell`,
+    label: "MOLT",
+    title: `Armored (${number(t.armor * 100)}% less damage) down to ${number(t.threshold * 100)}% HP, then ${number(t.speed)}× as fast`,
   }),
   momentum: (t) => ({
-    label: "SCHWUNG",
-    title: `Wird schneller, je länger er kreist: bis zu +${number(t.max * 100)} % Tempo (+${number(t.per * 100)} % pro Feld)`,
+    label: "MOMENTUM",
+    title: `Speeds up the longer it circles: up to +${number(t.max * 100)}% speed (+${number(t.per * 100)}% per cell)`,
   }),
   lap: (t) => ({
-    label: "RUNDEN",
-    title: `Härter mit jeder Runde: ${number(t.per * 100)} % weniger Schaden pro vollendeter Runde, höchstens ${number(t.max * 100)} %`,
+    label: "LAPS",
+    title: `Tougher every lap: ${number(t.per * 100)}% less damage per completed lap, at most ${number(t.max * 100)}%`,
   }),
   healer: (t) => ({
-    label: "HEILER",
-    title: `Heilt Gegner in ${number(t.radius)} Feldern um ${number(t.percent * 100)} % ihrer HP pro Sekunde`,
+    label: "HEALER",
+    title: `Heals enemies within ${number(t.radius)} cells by ${number(t.percent * 100)}% of their HP per second`,
   }),
   leader: (t) => ({
-    label: "ANFÜHRER",
-    title: `Gegner in ${number(t.radius)} Feldern: +${number(t.speed * 100)} % Tempo, ${number(t.resist * 100)} % Schadensresistenz`,
+    label: "LEADER",
+    title: `Enemies within ${number(t.radius)} cells: +${number(t.speed * 100)}% speed, ${number(t.resist * 100)}% damage resistance`,
   }),
-  stealth: () => ({ label: "GETARNT", title: "Getarnt: nur im Bereich eines Detektors anvisierbar; Flächenschaden trifft immer" }),
-  unstoppable: () => ({ label: "UNAUFHALTSAM", title: "Kann nicht verlangsamt, eingefroren oder betäubt werden" }),
-  swift: (t) => ({ label: "FLINK", title: `${number(t.speed * 100)} % schneller, dafür ${number(t.hp * 100)} % weniger HP` }),
+  stealth: () => ({ label: "STEALTH", title: "Stealth: can only be targeted within range of a Detector; area damage always hits" }),
+  unstoppable: () => ({ label: "UNSTOPPABLE", title: "Cannot be slowed, frozen or stunned" }),
+  swift: (t) => ({ label: "SWIFT", title: `${number(t.speed * 100)}% faster, but ${number(t.hp * 100)}% less HP` }),
 };
 export function traitTag(t: Trait, content: ContentPack): ForecastTag {
   const text = (TRAIT_TAGS[t.kind] as (t: Trait, content: ContentPack) => TagText)(t, content);
@@ -198,7 +198,7 @@ export function enemyIcon(visual: EnemyVisual, color: number): string {
   }
 }
 
-export const LAYER = { ground: "Boden", air: "Luft" } as const;
+export const LAYER = { ground: "Ground", air: "Air" } as const;
 function badges(w: ForecastWave) {
   return w.enemies
     .map((e) => {
@@ -206,15 +206,15 @@ function badges(w: ForecastWave) {
       const tags = e.tags
         .map((t) => `<em class="unit-tag ${t.kind === "air" ? "air" : `trait ${t.kind}`}">${escape(t.label)}</em>`)
         .join("");
-      return `<li class="unit-badge ${e.layer}" title="${escape(title)}">${enemyIcon(e.visual, e.color)}<b>${e.count}×</b><span class="unit-name">${escape(e.name)}</span><span class="unit-hp">♡ ${number(e.hp)}</span>${tags}${e.isNew ? '<em class="unit-tag new">NEU</em>' : ""}</li>`;
+      return `<li class="unit-badge ${e.layer}" title="${escape(title)}">${enemyIcon(e.visual, e.color)}<b>${e.count}×</b><span class="unit-name">${escape(e.name)}</span><span class="unit-hp">♡ ${number(e.hp)}</span>${tags}${e.isNew ? '<em class="unit-tag new">NEW</em>' : ""}</li>`;
     })
     .join("");
 }
 /** Compact strip for the field toolbar: label, size of the wave and one badge per enemy type. */
 export function renderWaveForecast(w: ForecastWave): string {
-  const label = `${w.last ? "LETZTE WELLE" : "NÄCHSTE WELLE"} ${String(w.number).padStart(2, "0")}`;
-  return `<section class="next-wave${w.hasAir ? " has-air" : ""}" aria-label="${w.last ? "Letzte" : "Nächste"} Welle ${w.number}">
-      <div class="next-wave-head"><span class="stat-label">${label}</span><small>${w.total} Gegner · ≈ ${number(Math.round(w.totalHp / 100) * 100)} HP</small></div>
+  const label = `${w.last ? "FINAL WAVE" : "NEXT WAVE"} ${String(w.number).padStart(2, "0")}`;
+  return `<section class="next-wave${w.hasAir ? " has-air" : ""}" aria-label="${w.last ? "Final" : "Next"} wave ${w.number}">
+      <div class="next-wave-head"><span class="stat-label">${label}</span><small>${w.total} ${w.total === 1 ? "enemy" : "enemies"} · ≈ ${number(Math.round(w.totalHp / 100) * 100)} HP</small></div>
       <ul class="unit-badges">${badges(w)}</ul>
     </section>`;
 }

@@ -3,7 +3,7 @@ import { parseMap } from "../maps";
 import { g, wave } from "../waves";
 
 // Ash field: a simple three-leg snake, the gaps are single rows so every tower reaches two legs.
-const ASCHEFELD_MAP = parseMap("aschefeld", "Aschefeld", [
+const ASCHEFELD_MAP = parseMap("aschefeld", "Ashfield", [
   "S==========",
   "..#.....#.=",
   "===========",
@@ -14,7 +14,7 @@ const ASCHEFELD_MAP = parseMap("aschefeld", "Aschefeld", [
 ], "volcano");
 
 // Lava stream: five legs along the river bed, basalt blocks between them.
-const LAVASTROM_MAP = parseMap("lavastrom", "Lavastrom", [
+const LAVASTROM_MAP = parseMap("lavastrom", "Lava Flow", [
   "S=============",
   "..#.....#....=",
   "==============",
@@ -27,7 +27,7 @@ const LAVASTROM_MAP = parseMap("lavastrom", "Lavastrom", [
 ], "volcano");
 
 // Slag ridge: a narrow ridge with four legs, one-row gaps.
-const SCHLACKENGRAT_MAP = parseMap("schlackengrat", "Schlackengrat", [
+const SCHLACKENGRAT_MAP = parseMap("schlackengrat", "Slag Ridge", [
   "S============.",
   "............=.",
   ".============.",
@@ -40,7 +40,7 @@ const SCHLACKENGRAT_MAP = parseMap("schlackengrat", "Schlackengrat", [
 ], "volcano");
 
 // Ember chamber: six tight coils towards the reactor.
-const GLUTKAMMER_MAP = parseMap("glutkammer", "Glutkammer", [
+const GLUTKAMMER_MAP = parseMap("glutkammer", "Ember Chamber", [
   "S============.",
   "............=.",
   ".============.",
@@ -55,7 +55,7 @@ const GLUTKAMMER_MAP = parseMap("glutkammer", "Glutkammer", [
 ], "volcano");
 
 // Volcano vent: seven legs with gaps of one and two rows.
-const VULKANSCHLUND_MAP = parseMap("vulkanschlund", "Vulkanschlund", [
+const VULKANSCHLUND_MAP = parseMap("vulkanschlund", "Volcano Throat", [
   "S==============",
   "..#.....#.....=",
   "===============",
@@ -73,12 +73,12 @@ const VULKANSCHLUND_MAP = parseMap("vulkanschlund", "Vulkanschlund", [
 
 export const VULKANKETTE: MissionSector = {
   id: "volcano",
-  name: "Vulkankette",
+  name: "Volcano Chain",
   missions: [
     {
       id: "aschefeld",
-      name: "Aschefeld",
-      focus: "Glutläufer werden schneller, je mehr HP fehlen: Kryo und Teergrube bremsen, der Henker beendet sie",
+      name: "Ashfield",
+      focus: "Ember Runners speed up the more HP they lose: Cryo and Tar Pit slow them, the Executioner finishes them",
       map: ASCHEFELD_MAP,
       waves: [
         wave(35, g("ember", 16, 0.8), g("drone", 14, 0.6, 6)),
@@ -106,8 +106,8 @@ export const VULKANKETTE: MissionSector = {
     },
     {
       id: "lavastrom",
-      name: "Lavastrom",
-      focus: "Aschenschwingen sind verlangsamungsimmun: Flak und Tesla holen sie herunter, Echo-Wellen kehren zurück",
+      name: "Lava Flow",
+      focus: "Ash Wings are immune to slows: Flak and Tesla bring them down, echo waves return",
       map: LAVASTROM_MAP,
       // Echo waves repeat an earlier wave far above the linear HP curve.
       waves: [
@@ -136,8 +136,8 @@ export const VULKANKETTE: MissionSector = {
     },
     {
       id: "schlackengrat",
-      name: "Schlackengrat",
-      focus: "Keine Verlangsamung gegen rasende Glutläufer: Wucht-Türme und der Henker müssen sie fällen",
+      name: "Slag Ridge",
+      focus: "No slowing against raging Ember Runners: heavy-hit towers and the Executioner must fell them",
       map: SCHLACKENGRAT_MAP,
       availableTowers: ["pulse", "blast", "flak", "tesla", "lance", "inferno", "acid", "decay", "focus", "mortar", "quake", "executioner", "shrapnel", "mine", "spikes", "pit"],
       waves: [
@@ -167,8 +167,8 @@ export const VULKANKETTE: MissionSector = {
     },
     {
       id: "glutkammer",
-      name: "Glutkammer",
-      focus: "Nur 10 Reaktorenergie: kein Glutläufer und keine Schwinge darf in den Windungen durchkommen",
+      name: "Ember Chamber",
+      focus: "Only 10 reactor energy: no Ember Runner and no Wing may get through the turns",
       map: GLUTKAMMER_MAP,
       waves: [
         wave(35, g("ember", 16, 0.8), g("tank", 4, 1.6, 6)),
@@ -197,8 +197,8 @@ export const VULKANKETTE: MissionSector = {
     },
     {
       id: "vulkanschlund",
-      name: "Vulkanschlund",
-      focus: "Finale: Glutläufer, Aschenschwingen, Flieger und drei Titanen im Schlund des Vulkans",
+      name: "Volcano Throat",
+      focus: "Finale: Ember Runners, Ash Wings, flyers and three Titans in the volcano's throat",
       map: VULKANSCHLUND_MAP,
       waves: [
         wave(35, g("ember", 8, 0.8), g("tank", 2, 1.6, 6)),

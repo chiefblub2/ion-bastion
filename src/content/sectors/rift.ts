@@ -2,7 +2,7 @@ import type { MissionSector } from "../../core/types";
 import { parseMap } from "../maps";
 import { g, wave } from "../waves";
 // The path circles a black hole twice and ends right at its edge; with only 10 energy nothing may slip through.
-const EREIGNISHORIZONT = parseMap("ereignishorizont", "Ereignishorizont", [
+const EREIGNISHORIZONT = parseMap("ereignishorizont", "Event Horizon", [
   "S===============..",
   "...............=..",
   "...===========.=.#",
@@ -17,7 +17,7 @@ const EREIGNISHORIZONT = parseMap("ereignishorizont", "Ereignishorizont", [
   "================..",
 ], "rift");
 // A jagged crack across a compact field: very little path to work with.
-const RISS = parseMap("riss", "Riss", [
+const RISS = parseMap("riss", "Rift", [
   "S====....#.....",
   "....=.......#..",
   "#.===..........",
@@ -30,7 +30,7 @@ const RISS = parseMap("riss", "Riss", [
   ".........#.....",
 ], "rift");
 // An hourglass: top and bottom bars joined by one diagonal, the other diagonal in rock.
-const ZEITSCHLEIFE = parseMap("zeitschleife", "Zeitschleife", [
+const ZEITSCHLEIFE = parseMap("zeitschleife", "Time Loop", [
   "S=================",
   ".................=",
   "...##..........===",
@@ -45,7 +45,7 @@ const ZEITSCHLEIFE = parseMap("zeitschleife", "Zeitschleife", [
   ".================R",
 ], "rift");
 // Long straight legs through a frozen crystal lattice: columns of tanks for piercing shots.
-const NULLPUNKT = parseMap("nullpunkt", "Nullpunkt", [
+const NULLPUNKT = parseMap("nullpunkt", "Zero Point", [
   "...S..............",
   ".#.=...#...#......",
   "...=..====..====..",
@@ -60,7 +60,7 @@ const NULLPUNKT = parseMap("nullpunkt", "Nullpunkt", [
   "......#........R..",
 ], "rift");
 // The enemies pour out of the core and spiral outwards to the reactor.
-const SINGULARITAET_MAP = parseMap("singularitaet", "Kern der Singularität", [
+const SINGULARITAET_MAP = parseMap("singularitaet", "Core of the Singularity", [
   "...#..........#.....",
   "..#.................",
   "......=========..#..",
@@ -77,12 +77,12 @@ const SINGULARITAET_MAP = parseMap("singularitaet", "Kern der Singularität", [
 ], "rift");
 export const SINGULARITAET: MissionSector = {
   id: "rift",
-  name: "Singularität",
+  name: "Singularity",
   missions: [
     {
       id: "ereignishorizont",
-      name: "Ereignishorizont",
-      focus: "Nur 10 Reaktorenergie: Phasenläufer weichen aus, kein Gegner darf durch",
+      name: "Event Horizon",
+      focus: "Only 10 reactor energy: Phase Runners dodge, no enemy may get through",
       map: EREIGNISHORIZONT,
       waves: [
         wave(35, g("drone", 10, 0.82)),
@@ -108,8 +108,8 @@ export const SINGULARITAET: MissionSector = {
     },
     {
       id: "riss",
-      name: "Riss",
-      focus: "Kurzer Pfad: Berserker sind nicht zu stoppen, Lanzen durchbohren sie",
+      name: "Rift",
+      focus: "Short path: Berserkers cannot be stopped, Lances pierce them",
       map: RISS,
       waves: [
         wave(35, g("drone", 8, 0.9)),
@@ -135,8 +135,8 @@ export const SINGULARITAET: MissionSector = {
     },
     {
       id: "zeitschleife",
-      name: "Zeitschleife",
-      focus: "Einzelne Wellen kehren mit voller Härte zurück",
+      name: "Time Loop",
+      focus: "Some waves return at full strength",
       map: ZEITSCHLEIFE,
       // Echo waves repeat an earlier wave far above the linear HP curve.
       waves: [
@@ -164,8 +164,8 @@ export const SINGULARITAET: MissionSector = {
     },
     {
       id: "nullpunkt",
-      name: "Nullpunkt",
-      focus: "Ohne Aura und Raffinerie gegen harte Panzer",
+      name: "Zero Point",
+      focus: "Against tough tanks without Aura and Refinery",
       map: NULLPUNKT,
       availableTowers: ["pulse", "blast", "frost", "flak", "tesla", "lance", "inferno", "stasis", "acid", "decay"],
       waves: [
@@ -194,8 +194,8 @@ export const SINGULARITAET: MissionSector = {
     },
     {
       id: "singularitaet",
-      name: "Kern der Singularität",
-      focus: "Finale: alle Gegnertypen, Detektor gegen Phantome, drei Titanen",
+      name: "Core of the Singularity",
+      focus: "Finale: all enemy types, Detector against Phantoms, three Titans",
       map: SINGULARITAET_MAP,
       waves: [
         wave(35, g("drone", 10, 0.8)),

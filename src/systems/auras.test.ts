@@ -96,19 +96,19 @@ describe("aura commands and lifecycle", () => {
       expect(g.command({ type: "upgrade", id, upgrade }).ok).toBe(false);
     const start = upgradeControl(t, g.state.towers);
     expect(start.match(/data-upgrade=/g)).toHaveLength(3);
-    expect(start).toContain("legt den Pfad fest");
+    expect(start).toContain("Locks in the path");
     expect(g.command({ type: "upgrade", id, upgrade: "damage" }).ok).toBe(true);
     const afterFirst = upgradeControl(t, g.state.towers);
     expect(afterFirst.match(/data-upgrade=/g)).toHaveLength(1);
     expect(afterFirst).toContain('data-upgrade="damage-2"');
-    expect(afterFirst).toContain("+25 % → +40 %");
+    expect(afterFirst).toContain("+25% → +40%");
     expect(afterFirst).toContain("--path-color:#ff7a5c");
     for (const upgrade of ["damage-2", "damage-3"]) g.command({ type: "upgrade", id, upgrade });
     const maxed = upgradeControl(t, g.state.towers);
     expect(maxed.match(/data-upgrade=/g)).toHaveLength(1);
     expect(maxed.match(/✓/g)).toHaveLength(1);
-    expect(maxed).toContain("Schaden III");
-    expect(towerDetails("aura", t, g.state.towers)).toContain("PFAD SCHADEN · 3 / 3");
+    expect(maxed).toContain("Damage III");
+    expect(towerDetails("aura", t, g.state.towers)).toContain("PATH DAMAGE · 3 / 3");
   });
   it("takes on the colour of its path", () => {
     const t = tower(1, "aura", 0, 0);
@@ -121,7 +121,7 @@ describe("aura commands and lifecycle", () => {
     const noVisual = { ...aura, upgrades: aura.upgrades.map(u => u.id === "range" ? { ...u, path: "reach" } : u) };
     expect(() => validateUpgradeDefinitions(noVisual)).toThrow("visual.paths");
     const crossed = { ...aura, upgrades: aura.upgrades.map(u => u.id === "speed-2" ? { ...u, requires: ["damage"] } : u) };
-    expect(() => validateUpgradeDefinitions(crossed)).toThrow("anderem Pfad");
+    expect(() => validateUpgradeDefinitions(crossed)).toThrow("another path");
   });
   it("rejects insufficient credits, wrong tower types and invalid upgrade keys atomically", () => {
     const g = new Game(), id = g.command({ type: "build", tower: "aura", x: 4, y: 4 }).id!;
@@ -190,14 +190,14 @@ describe("combat and interface integration", () => {
   it("upgrade previews and selected stats include the same active aura as combat", () => {
     const target = tower(1, "pulse", 1, 0), source = tower(2, "aura", 0, 0, ["damage"]);
     const towers = [target, source], preview = upgradeControl(target, towers);
-    expect(preview).toContain("22,5"); // 18 * 1.25
-    expect(preview).toContain("37,5"); // next upgrades: ["level-2", "level-3"]0 * 1.25
-    expect(towerDetails("pulse", target, towers)).toContain("18 + 4,5 Aura");
-    expect(upgradeControl({ ...target, upgrades: ["level-2", "level-3"] }, towers)).toContain("Stufe 3 → 4");
-    expect(upgradeControl({ ...target, upgrades: ["level-2", "level-3", "level-4", "level-5"] }, towers)).toContain("Maximale Stufe");
+    expect(preview).toContain("22.5"); // 18 * 1.25
+    expect(preview).toContain("37.5"); // next upgrades: ["level-2", "level-3"]0 * 1.25
+    expect(towerDetails("pulse", target, towers)).toContain("18 + 4.5 Aura");
+    expect(upgradeControl({ ...target, upgrades: ["level-2", "level-3"] }, towers)).toContain("Level 3 → 4");
+    expect(upgradeControl({ ...target, upgrades: ["level-2", "level-3", "level-4", "level-5"] }, towers)).toContain("Max level");
     const controls = upgradeControl(source, towers);
     expect((controls.match(/data-upgrade=/g) ?? [])).toHaveLength(1);
-    expect(controls).toContain("+25 % → +40 %"); // tier I owned, tier II offered
-    expect(towerDetails("aura", source, towers)).toContain("<b>1</b> Türme unterstützt");
+    expect(controls).toContain("+25% → +40%"); // tier I owned, tier II offered
+    expect(towerDetails("aura", source, towers)).toContain("<b>1</b> tower supported");
   });
 });

@@ -6,7 +6,7 @@ import { previewUpgrade, resolveUpgrades, upgradeOptions, towerLevel } from "../
 import { escape, number, statValue } from "./format";
 
 const row = (label: string, before: number, after: number, unit = "") =>
-  `<div class="upgrade-change"><span>${label}</span><span class="upgrade-before">${number(before)}${unit}</span><span aria-label="wird zu">→</span><strong>${number(after)}${unit}</strong></div>`;
+  `<div class="upgrade-change"><span>${label}</span><span class="upgrade-before">${number(before)}${unit}</span><span aria-label="becomes">→</span><strong>${number(after)}${unit}</strong></div>`;
 
 /** Inline accent for path upgrades, taken from the tower's path visuals. */
 const pathColorFor = (definition: TowerDefinition) => (path?: string) => {
@@ -25,7 +25,7 @@ export function upgradeControl(tower: Tower, towers: readonly Tower[] = [], cont
   const superseded = new Set(all.filter(option => !hidden(option)).flatMap(option => option.definition!.requires));
   const options = all.filter(option =>
     !hidden(option) && (option.status !== "purchased" || (support && !superseded.has(option.definition!.id))));
-  if (!options.length) return '<button class="upgrade" disabled>Maximale Stufe</button>';
+  if (!options.length) return '<button class="upgrade" disabled>Max level</button>';
   return `<div class="upgrade-options ${support ? "aura-upgrades" : ""}">${options.map(option => {
     const upgrade = option.definition!;
     const purchased = option.status === "purchased";
@@ -41,33 +41,33 @@ export function upgradeControl(tower: Tower, towers: readonly Tower[] = [], cont
     const attackAfter = describeAttack(resolveUpgrades(nextTower, content).attack, changedAttack);
     const changes = [
       ...(["damage", "range", "interval"] as const).filter(key => upgrade.effects.stats?.[key] !== undefined).map(key =>
-        row(({damage: "Schaden", range: "Reichweite", interval: "Schusstakt"})[key], current[key], next[key], key === "interval" ? " s" : "")),
+        row(({damage: "Damage", range: "Range", interval: "Fire interval"})[key], current[key], next[key], key === "interval" ? " s" : "")),
       ...attackBefore.map((before, i) => row(before.label, before.value, attackAfter[i].value, before.unit)),
       ...AURA_STATS.filter(key => upgrade.effects.aura?.[key] !== undefined).map(key =>
-        row(({damage: "Schaden", speed: "Angriffstempo", range: "Reichweite"})[key], currentAura[key] * 100, nextAura[key] * 100, " %")),
+        row(({damage: "Damage", speed: "Attack speed", range: "Range"})[key], currentAura[key] * 100, nextAura[key] * 100, "%")),
     ].join("");
     const auraKey = AURA_STATS.find(key => upgrade.effects.aura?.[key] !== undefined);
     const summary = auraKey
-      ? purchased ? `+${number(currentAura[auraKey] * 100)} % aktiv` : `+${number(currentAura[auraKey] * 100)} % → +${number(nextAura[auraKey] * 100)} %`
+      ? purchased ? `+${number(currentAura[auraKey] * 100)}% active` : `+${number(currentAura[auraKey] * 100)}% → +${number(nextAura[auraKey] * 100)}%`
       : "";
     const title = upgrade.effects.level !== undefined
-      ? `Stufe ${towerLevel(tower, content)} → ${towerLevel(nextTower, content)}`
-      : `${escape(upgrade.label)}${purchased ? " · aktiv" : ""}`;
+      ? `Level ${towerLevel(tower, content)} → ${towerLevel(nextTower, content)}`
+      : `${escape(upgrade.label)}${purchased ? " · active" : ""}`;
     const tooltipId = `upgrade-tooltip-${upgrade.id}`;
     const unchanged = describeAttack(resolveUpgrades(tower, content).attack).filter(r => !changedAttack.includes(r.key));
     const special = support
-      ? `${tower.upgrades.length ? "" : "Der erste Kauf legt den Pfad fest; die anderen Pfade werden gesperrt. "}Der Aura-Radius bleibt bei ${number(current.range)} Feldern. Pro Eigenschaft gilt nur der stärkste Aura-Bonus.`
-      : unchanged.length ? `Unverändert: ${unchanged.map(r => `${r.label} ${statValue(r)}`).join(", ")}.` : "";
+      ? `${tower.upgrades.length ? "" : "The first purchase sets the path; the other paths are locked. "}The Aura radius stays at ${number(current.range)} cells. Only the strongest Aura bonus applies per stat.`
+      : unchanged.length ? `Unchanged: ${unchanged.map(r => `${r.label} ${statValue(r)}`).join(", ")}.` : "";
     return `<div class="upgrade-control">
       <button class="upgrade ${support ? "aura-upgrade" : ""}" data-upgrade="${upgrade.id}"${pathColor(upgrade.path)} aria-describedby="${tooltipId}" ${purchased ? "disabled" : ""}>
-        ${support ? `<span>${escape(upgrade.label)}<small>${summary}</small></span><b>${purchased ? "✓" : `◇ ${upgrade.cost}`}</b>` : `${upgrade.effects.level !== undefined ? "Verbessern" : escape(upgrade.label)} · ◇ ${upgrade.cost}`}
+        ${support ? `<span>${escape(upgrade.label)}<small>${summary}</small></span><b>${purchased ? "✓" : `◇ ${upgrade.cost}`}</b>` : `${upgrade.effects.level !== undefined ? "Upgrade" : escape(upgrade.label)} · ◇ ${upgrade.cost}`}
       </button>
-      <button class="upgrade-info" aria-label="${escape(upgrade.label)} erklären" aria-controls="${tooltipId}" aria-expanded="false" aria-describedby="${tooltipId}">ⓘ</button>
+      <button class="upgrade-info" aria-label="Explain ${escape(upgrade.label)}" aria-controls="${tooltipId}" aria-expanded="false" aria-describedby="${tooltipId}">ⓘ</button>
       <div id="${tooltipId}" class="upgrade-tooltip" role="tooltip" hidden>
         <strong class="upgrade-tooltip-title">${title}</strong>${changes}
         <p>${escape(upgrade.description)}</p>
         ${special ? `<p class="upgrade-unchanged">${special}</p>` : ""}
-        ${Object.values(current.bonuses).some(Boolean) ? '<p class="upgrade-unchanged">Aktive Aura-Boni sind in beiden Werten enthalten.</p>' : ""}
+        ${Object.values(current.bonuses).some(Boolean) ? '<p class="upgrade-unchanged">Active Aura bonuses are included in both values.</p>' : ""}
       </div>
     </div>`;
   }).join("")}</div>`;

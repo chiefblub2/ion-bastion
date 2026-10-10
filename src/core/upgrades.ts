@@ -175,10 +175,10 @@ export function validateUpgradeDefinitions(tower: TowerDefinition, path = tower.
       fail = (reason: string) => {
         throw new ContentError(at, reason);
       };
-    if (!/^[a-z][a-z0-9-]*$/.test(upgrade.id) || definitions.has(upgrade.id)) fail("Ungültige oder doppelte Upgrade-ID.");
-    if (!Number.isInteger(upgrade.cost) || upgrade.cost <= 0) fail("Ungültige Upgrade-Kosten.");
-    if (!upgrade.label || !upgrade.description || !Array.isArray(upgrade.requires)) fail("Unvollständiges Upgrade.");
-    if (upgrade.path !== undefined && (typeof upgrade.path !== "string" || !upgrade.path)) fail("Ungültiger Upgrade-Pfad.");
+    if (!/^[a-z][a-z0-9-]*$/.test(upgrade.id) || definitions.has(upgrade.id)) fail("Invalid or duplicate upgrade ID.");
+    if (!Number.isInteger(upgrade.cost) || upgrade.cost <= 0) fail("Invalid upgrade cost.");
+    if (!upgrade.label || !upgrade.description || !Array.isArray(upgrade.requires)) fail("Incomplete upgrade.");
+    if (upgrade.path !== undefined && (typeof upgrade.path !== "string" || !upgrade.path)) fail("Invalid upgrade path.");
     if (upgrade.path && tower.visual?.paths && !tower.visual.paths[upgrade.path]) fail(`Pfad '${upgrade.path}' ohne Optik (visual.paths).`);
     const effects = upgrade.effects;
     if (
@@ -190,11 +190,11 @@ export function validateUpgradeDefinitions(tower: TowerDefinition, path = tower.
         effects.level !== undefined
       )
     )
-      fail("Upgrade ohne Effekt.");
+      fail("Upgrade without effect.");
     const attackProblem = effects.attack && attackOverrideError(tower.attack, effects.attack);
     if (attackProblem) fail(attackProblem);
     if (effects.level !== undefined && (!Number.isInteger(effects.level) || effects.level < 2))
-      fail("Ungültige Upgrade-Stufe.");
+      fail("Invalid upgrade level.");
     for (const [key, value] of Object.entries(effects.stats ?? {}))
       if (
         !["damage", "range", "interval"].includes(key) ||
@@ -202,10 +202,10 @@ export function validateUpgradeDefinitions(tower: TowerDefinition, path = tower.
         value < 0 ||
         (key !== "damage" && value <= 0)
       )
-        fail(`Ungültiger Upgrade-Wert '${key}'.`);
+        fail(`Invalid upgrade value '${key}'.`);
     for (const [key, value] of Object.entries(effects.aura ?? {}))
       if (tower.attack.kind !== "aura" || !["damage", "speed", "range"].includes(key) || !Number.isFinite(value) || value < 0)
-        fail(`Ungültiger Aura-Upgrade-Wert '${key}'.`);
+        fail(`Invalid aura upgrade value '${key}'.`);
     definitions.set(upgrade.id, upgrade);
   }
   const done = new Set<string>(),
@@ -213,13 +213,13 @@ export function validateUpgradeDefinitions(tower: TowerDefinition, path = tower.
   const visit = (id: string, from: string) => {
     if (done.has(id)) return;
     const upgrade = definitions.get(id);
-    if (!upgrade) throw new ContentError(`${path} › Upgrade ${from}`, `Unbekannte Upgrade-Voraussetzung '${id}'.`);
-    if (active.has(id)) throw new ContentError(`${path} › Upgrade ${id}`, "Zyklische Upgrade-Voraussetzungen.");
+    if (!upgrade) throw new ContentError(`${path} › Upgrade ${from}`, `Unknown upgrade requirement '${id}'.`);
+    if (active.has(id)) throw new ContentError(`${path} › Upgrade ${id}`, "Cyclic upgrade requirements.");
     active.add(id);
     for (const prerequisite of upgrade.requires) {
       visit(prerequisite, id);
       if (definitions.get(prerequisite)!.path !== upgrade.path)
-        throw new ContentError(`${path} › Upgrade ${id}`, "Voraussetzung aus anderem Pfad.");
+        throw new ContentError(`${path} › Upgrade ${id}`, "Requirement from another path.");
     }
     active.delete(id);
     done.add(id);

@@ -6,8 +6,8 @@ export const focus: AttackModule<FocusAttack> = {
   aim: "enemy",
   projectile: "forbidden",
   params: {
-    ramp: { label: "Aufladung je Treffer", valid: (v) => v > 0, unit: " %", show: (v) => v * 100 },
-    stacks: { label: "Max. Stufen", valid: (v) => Number.isInteger(v) && v >= 1 },
+    ramp: { label: "Charge per hit", valid: (v) => v > 0, unit: " %", show: (v) => v * 100 },
+    stacks: { label: "Max. levels", valid: (v) => Number.isInteger(v) && v >= 1 },
   },
   // Holds the locked target while it stays in range, whatever the priority says.
   choose: (_sim, _type, _from, _reach, candidates, _spec, tower) =>

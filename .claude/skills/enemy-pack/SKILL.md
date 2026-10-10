@@ -1,6 +1,6 @@
 ---
 name: enemy-pack
-description: Add one or more new enemies (optionally with new traits or visual extras) to ION BASTION and work them into existing missions, with Sonnet agents only where they pay off. Use when the user asks for new enemies, a new enemy type, a new trait or enemy ability ("neue Gegner", "Gegnertyp", "Eigenschaft", "Fähigkeit") without asking for new missions or sectors. For new missions or sectors use the mission-pack skill instead; it includes enemies.
+description: Add one or more new enemies (optionally with new traits or visual extras) to ION BASTION and work them into existing missions, with Sonnet agents only where they pay off. Use when the user asks for new enemies, a new enemy type, a new trait or enemy ability ("new enemies", "enemy type", "trait", "ability") without asking for new missions or sectors. For new missions or sectors use the mission-pack skill instead; it includes enemies.
 ---
 
 # Enemy pack
@@ -32,19 +32,19 @@ Enemies that only use existing traits need no Phase 0: write them into `content/
 Fill this in once and paste it unchanged into every brief.
 
 ```
-ENEMY <id> "<German name>": <layer>, hp <>, speed <>, reward <>, leak <>, size <>, color 0x…,
+ENEMY <id> "<name>": <layer>, hp <>, speed <>, reward <>, leak <>, size <>, color 0x…,
   visual { shape <polygon|glider>, sides <>, rotation <> [, <new EnemyVisual field>] }, traits [<…>]
   role: <one line>; counters: <≥2 existing towers>; resists: <towers>
   placement: <missionId> waves <n,…> (replace/add groups: g("<id>", count, interval, delay))
 TRAIT <kind> { <params with ranges> }: <formula>; hook <speed|onDamage|onTick|onDeath|resists|isHidden>;
-  disruptable <yes/no>; flag <TraitFlags field>; tag "<LABEL>" / "<German title>"; render: <marker, below/above body>
+  disruptable <yes/no>; flag <TraitFlags field>; tag "<LABEL>" / "<title>"; render: <marker, below/above body>
 ```
 
 **Stats:** start from the nearest enemy with the same role in the `--enemies` table and adjust from there.
 - Ranges: fast about hp 45–110 / speed 1.2–1.6, tank about hp 260–420 / speed 0.7–0.9, flyer hp 60–140.
-- `reward`: the neighbour's reward plus 2–6 per trait. In Belagerung, sending costs 4× reward (`sendCost`), so a cheap but dangerous enemy breaks versus.
+- `reward`: the neighbour's reward plus 2–6 per trait. In Siege, sending costs 4× reward (`sendCost`), so a cheap but dangerous enemy breaks versus.
 - `leak` 1 for fodder, 2 for tanks and flyers, 3+ only for bosses.
-- `size` decides Fallgrube: it swallows `size` ≤ 0.2, at level 4 ≤ 0.25, at level 5 ≤ 0.28 (`content/towers.ts`, pit). Note in the sheet which threshold the enemy falls under.
+- `size` decides Pitfall: it swallows `size` ≤ 0.2, at level 4 ≤ 0.25, at level 5 ≤ 0.28 (`content/towers.ts`, pit). Note in the sheet which threshold the enemy falls under.
 - At least 2 counter towers from the existing roster. Flyers must be counterable with `flak`/`tesla`.
 
 **Traits:**
@@ -61,12 +61,12 @@ existing traits harden/surge/swarm (core/types.ts, systems/traits.ts + traits.te
 render/enemies.ts, content/enemies.ts):
 <ENEMY SHEET>
 1. core/types.ts: Trait union members with doc comments (ranges, statelessness); new EnemyVisual fields if any.
-2. systems/traits.ts: TRAITS entries (validate with German messages + hook), helper with a one-line doc comment,
+2. systems/traits.ts: TRAITS entries (validate with English messages + hook), helper with a one-line doc comment,
    TraitFlags/traitFlags fields. DISRUPTABLE only if the sheet says so.
 3. systems/traits.test.ts: tests per trait (formula and window edges, validation rejects bad params).
-4. ui/wave-forecast.ts TRAIT_TAGS (German label and title with the params' numbers); render/enemies.ts TRAIT_COLORS
+4. ui/wave-forecast.ts TRAIT_TAGS (English label and title with the params' numbers); render/enemies.ts TRAIT_COLORS
    entry and marker (visual extras via EnemyVisual fields, never d.id checks).
-5. content/enemies.ts: the enemies exactly as specified, German one-line comment above each (trait + counters).
+5. content/enemies.ts: the enemies exactly as specified, English one-line comment above each (trait + counters).
 Do NOT touch missions or strategies.
 Gate: npx tsc --noEmit; npx vitest run src/systems src/ui; npx vitest run src/core/replay (no -u, all shards, must pass
 unchanged). "every enemy type appears in the campaign" fails until placement — expected. Do not commit.
@@ -114,10 +114,10 @@ Run the expensive checks once, after all edits. `git status` first: files outsid
    Only missions on the placement lines may appear. Any other mission means the trait leaks into solo state (an optional field that is not `undefined`, a changed iteration order): fix it, don't accept it.
 2. Text work, before the final test run:
    - `npx vite-node scripts/mission-table.ts --write` (enemy count in the README intro, mission table if waves changed).
-   - README "Gegner": add the enemies to their sector's row (`<img src="docs/images/enemies/<id>.png" width="24" height="24" alt=""> Name (Eigenschaft kurz)`), or a sentence below the table if they join several sectors. With `npm run dev` running, `npx vite-node scripts/readme-images.ts -- --only enemies` writes the icons (`docs/images/enemies/`).
-   - Fallgrube, if a new enemy is under a pit threshold: the level descriptions in `content/towers.ts` and the README trap row both name the swallowed enemies.
+   - README "Enemies": add the enemies to their sector's row (`<img src="docs/images/enemies/<id>.png" width="24" height="24" alt=""> Name (short trait)`), or a sentence below the table if they join several sectors. With `npm run dev` running, `npx vite-node scripts/readme-images.ts -- --only enemies` writes the icons (`docs/images/enemies/`).
+   - Pitfall, if a new enemy is under a pit threshold: the level descriptions in `content/towers.ts` and the README trap row both name the swallowed enemies.
    - CLAUDE.md: the trait list under "Enemy", plus special rules of new traits (an `isHidden` extension, a new `Enemy` field in `stateHash`, DISRUPTABLE).
-   - Player texts use the in-game tower names (`name` in `content/towers.ts`: Kryo, Glut, Teergrube …), never ids like frost or inferno.
+   - Player texts (English) use the in-game tower names (`name` in `content/towers.ts`: Cryo, Ember, Tar Pit …), never ids like frost or inferno.
 3. One `npm run test:full` (cache off, about 5 s) and one `npm run build` (it already runs `tsc`). Later edits to texts, README or CLAUDE.md need no new run.
 4. **Visual check, mandatory:**
    - `npm run dev` in the background, then

@@ -14,33 +14,33 @@ export interface ModeDefinition {
 export const MODES: Readonly<Record<ModeId, ModeDefinition>> = {
   coop: {
     id: "coop",
-    name: "Koop",
+    name: "Co-op",
     minPlayers: 2,
     maxPlayers: 4,
     versus: false,
     sends: false,
     rules:
-      "Ihr verteidigt dieselbe Karte und teilt die Reaktorenergie. Jeder hat eigene Credits: Start-Credits, Abschussprämien und Wellenbonus werden geteilt, Raffinerien zahlen an ihren Besitzer. Türme verbessern und verkaufen kann nur, wer sie gebaut hat. Mission, Neustart und Tempo bestimmt der Host.",
+      "You defend the same map and share the reactor energy. Everyone has their own credits: starting credits, kill bounties and wave bonuses are split, Refineries pay their owner. Only the player who built a tower can upgrade or sell it. The host controls mission, restart and speed.",
   },
   race: {
     id: "race",
-    name: "Wettlauf",
+    name: "Race",
     minPlayers: 2,
     maxPlayers: 4,
     versus: true,
     sends: false,
     rules:
-      "Jeder verteidigt seine eigene Kopie der Mission gegen dieselben Wellen. Die Wellen starten für alle gleichzeitig, sobald alle bereit sind oder der Countdown abläuft. Wer seinen Reaktor als Letzter hält, gewinnt; überstehen mehrere alle Wellen, entscheidet die Reaktorenergie.",
+      "Everyone defends their own copy of the mission against the same waves. Waves start for everyone at the same time, once all players are ready or the countdown runs out. The last player holding their reactor wins; if several survive all waves, reactor energy decides.",
   },
   siege: {
     id: "siege",
-    name: "Belagerung",
+    name: "Siege",
     minPlayers: 2,
     maxPlayers: 4,
     versus: true,
     sends: true,
     rules:
-      "Wie Wettlauf, aber ihr könnt Credits ausgeben, um Gegner in das Feld des nächsten Mitspielers zu schicken. Geschickte Gegner bringen dem Verteidiger keine Prämie. Schicken kannst du nur Gegnertypen, die schon in einer Welle vorkamen.",
+      "Like Race, but you can spend credits to send enemies into the next player's field. Sent enemies give the defender no bounty. You can only send enemy types that have already appeared in a wave.",
   },
 };
 export const MODE_IDS = Object.keys(MODES) as ModeId[];

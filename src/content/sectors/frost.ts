@@ -2,7 +2,7 @@ import type { MissionSector } from "../../core/types";
 import { parseMap } from "../maps";
 import { g, wave } from "../waves";
 /** Three long straights through pack ice: a Lanze at the end of a straight hits the whole column. */
-const EISBRECHER = parseMap("eisbrecher", "Eisbrecher", [
+const EISBRECHER = parseMap("eisbrecher", "Icebreaker", [
   "......#.......#.......",
   "S===================..",
   "...................=..",
@@ -16,7 +16,7 @@ const EISBRECHER = parseMap("eisbrecher", "Eisbrecher", [
   "....#..........#......",
 ], "frost");
 /** An M-shaped valley: the gaps between its legs reach two legs at once. */
-const KRYOTAL = parseMap("kryotal", "Kryotal", [
+const KRYOTAL = parseMap("kryotal", "Cryo Valley", [
   "#..S..##....##.R..",
   "...=.......#...=..",
   "...=...=====...=..",
@@ -31,7 +31,7 @@ const KRYOTAL = parseMap("kryotal", "Kryotal", [
   "......##..........",
 ], "frost");
 /** Five tight vertical folds, one cell apart: chain lightning jumps from fold to fold. */
-const GLETSCHERSPALTE = parseMap("gletscherspalte", "Gletscherspalte", [
+const GLETSCHERSPALTE = parseMap("gletscherspalte", "Crevasse", [
   "#...S.......#.....",
   "....=.===.===.....",
   "..#.=.=.=.=.=.....",
@@ -46,7 +46,7 @@ const GLETSCHERSPALTE = parseMap("gletscherspalte", "Gletscherspalte", [
   "..##.......##.....",
 ], "frost");
 /** Two staircases form a V: air defense in the notch covers both arms. */
-const POLARNACHT = parseMap("polarnacht", "Polarnacht", [
+const POLARNACHT = parseMap("polarnacht", "Polar Night", [
   "S==.........#.....",
   "..=...........#...",
   "..===.........===.",
@@ -78,12 +78,12 @@ const FROSTWALL = parseMap("frostwall", "Frostwall", [
 ], "frost");
 export const FROSTGUERTEL: MissionSector = {
   id: "frost",
-  name: "Frostgürtel",
+  name: "Frost Belt",
   missions: [
     {
       id: "eisbrecher",
-      name: "Eisbrecher",
-      focus: "Lange Geraden: die Lanze durchschlägt ganze Reihen",
+      name: "Icebreaker",
+      focus: "Long straights: the Lance pierces whole rows",
       map: EISBRECHER,
       waves: [
         wave(35, g("drone", 12, 0.7)),
@@ -115,8 +115,8 @@ export const FROSTGUERTEL: MissionSector = {
     },
     {
       id: "kryotal",
-      name: "Kryotal",
-      focus: "Kryo verlangsamt, Glut brennt nach",
+      name: "Cryo Valley",
+      focus: "Cryo slows, Ember keeps burning",
       map: KRYOTAL,
       waves: [
         wave(35, g("runner", 8, 0.8)),
@@ -145,8 +145,8 @@ export const FROSTGUERTEL: MissionSector = {
     },
     {
       id: "gletscherspalte",
-      name: "Gletscherspalte",
-      focus: "Enges Zickzack: Tesla-Blitze springen weit",
+      name: "Crevasse",
+      focus: "Tight zigzag: Tesla bolts jump far",
       map: GLETSCHERSPALTE,
       waves: [
         wave(35, g("drone", 14, 0.55)),
@@ -179,8 +179,8 @@ export const FROSTGUERTEL: MissionSector = {
     },
     {
       id: "polarnacht",
-      name: "Polarnacht",
-      focus: "Gleiterschwärme, Luftabwehr ist Pflicht",
+      name: "Polar Night",
+      focus: "Glider swarms, anti-air is a must",
       map: POLARNACHT,
       waves: [
         wave(35, g("glider", 10, 0.7)),
@@ -211,7 +211,7 @@ export const FROSTGUERTEL: MissionSector = {
     {
       id: "frostwall",
       name: "Frostwall",
-      focus: "Sektorfinale: zwei Titanen, Zerfall knackt sie",
+      focus: "Sector finale: two Titans, Decay cracks them",
       map: FROSTWALL,
       waves: [
         wave(35, g("drone", 14, 0.55)),

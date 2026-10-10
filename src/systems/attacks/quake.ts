@@ -8,7 +8,7 @@ export const quake: AttackModule<QuakeAttack> = {
   aim: "enemy",
   projectile: "forbidden",
   params: {
-    edge: { label: "Schaden am Rand", valid: (v) => v > 0 && v <= 1, unit: " %", show: (v) => v * 100 },
+    edge: { label: "Edge damage", valid: (v) => v > 0 && v <= 1, unit: " %", show: (v) => v * 100 },
   },
   apply: (sim, src, { from, reach }, damage, spec) => {
     if (!from || !reach) return;

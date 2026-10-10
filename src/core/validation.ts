@@ -14,8 +14,8 @@ const validated = new WeakSet<ContentPack>();
 /** Towers and enemies of a pack; checked once per pack object. */
 export function validateContent(content: ContentPack) {
   if (validated.has(content)) return;
-  for (const [id, e] of Object.entries(content.enemies)) validateEnemy(e, `Gegner ${id}`, content);
-  for (const [id, t] of Object.entries(content.towers)) validateTower(t, `Turm ${id}`);
+  for (const [id, e] of Object.entries(content.enemies)) validateEnemy(e, `Enemy ${id}`, content);
+  for (const [id, t] of Object.entries(content.towers)) validateTower(t, `Tower ${id}`);
   if (content.sectors) validateSectors(content);
   validated.add(content);
 }
@@ -25,31 +25,31 @@ export function validateSectors(content: ContentPack) {
   const ids = content.sectors!.flatMap((s) => s.missions.map((m) => m.id));
   check(
     ids.length === content.missions.length && ids.every((id, i) => id === content.missions[i].id),
-    "Sektoren",
-    "Die Sektoren müssen genau die Missionen in Spielreihenfolge enthalten.",
+    "Sectors",
+    "The sectors must contain exactly the missions, in play order.",
   );
-  for (const s of content.sectors!) check(s.missions.length, `Sektor ${s.id}`, "Keine Missionen.");
+  for (const s of content.sectors!) check(s.missions.length, `Sector ${s.id}`, "No missions.");
 }
 
 export function validateEnemy(e: EnemyDefinition, path: string, content: ContentPack) {
-  check(LAYERS.includes(e.layer), path, "Ungültige Gegnerebene.");
-  check(e.hp > 0 && e.speed > 0 && e.reward >= 0 && e.size > 0, path, "Ungültige Gegnerwerte.");
-  check(Number.isInteger(e.leak) && e.leak >= 1, path, "Ungültiger Reaktorschaden (leak).");
-  check(e.visual, path, "Darstellung (visual) fehlt.");
-  validateVisual(e.visual, `${path} › Darstellung`);
+  check(LAYERS.includes(e.layer), path, "Invalid enemy layer.");
+  check(e.hp > 0 && e.speed > 0 && e.reward >= 0 && e.size > 0, path, "Invalid enemy values.");
+  check(Number.isInteger(e.leak) && e.leak >= 1, path, "Invalid reactor damage (leak).");
+  check(e.visual, path, "Missing visual.");
+  validateVisual(e.visual, `${path} › Visual`);
   for (const [i, trait] of (e.traits ?? []).entries()) {
     const problem = validateTrait(trait, content);
-    check(!problem, `${path} › Eigenschaft ${i + 1}`, problem!);
+    check(!problem, `${path} › Trait ${i + 1}`, problem!);
   }
 }
 
 /** Shape fields of the new body shapes; polygon and glider have none to check. */
 export function validateVisual(v: EnemyDefinition["visual"], path: string) {
   if (v.shape === "star") {
-    check(Number.isInteger(v.points) && v.points >= 3, path, "Ungültige Zackenzahl (points): ganze Zahl ab 3.");
-    check(v.inner > 0 && v.inner < 1, path, "Ungültiger Innenradius (inner): zwischen 0 und 1.");
-  } else if (v.shape === "orb") check(Number.isInteger(v.moons) && v.moons >= 0, path, "Ungültige Mondzahl (moons): ganze Zahl ab 0.");
-  else if (v.shape === "worm") check(Number.isInteger(v.segments) && v.segments >= 2, path, "Ungültige Segmentzahl (segments): ganze Zahl ab 2.");
+    check(Number.isInteger(v.points) && v.points >= 3, path, "Invalid points: integer of at least 3.");
+    check(v.inner > 0 && v.inner < 1, path, "Invalid inner radius (inner): between 0 and 1.");
+  } else if (v.shape === "orb") check(Number.isInteger(v.moons) && v.moons >= 0, path, "Invalid moons: integer of at least 0.");
+  else if (v.shape === "worm") check(Number.isInteger(v.segments) && v.segments >= 2, path, "Invalid segments: integer of at least 2.");
 }
 
 export function validateTower(t: TowerDefinition, path: string) {
@@ -57,77 +57,77 @@ export function validateTower(t: TowerDefinition, path: string) {
   check(
     Array.isArray(t.targets) && t.targets.every((l) => LAYERS.includes(l)) && support === (t.targets.length === 0),
     path,
-    "Ungültige Turmziele.",
+    "Invalid tower targets.",
   );
   validateAttack(t, path);
   const module = attackModule(t.attack)!;
   if (t.projectile)
-    check(t.projectile.speed > 0 && module.projectile !== "forbidden", path, "Ungültiges Projektil.");
+    check(t.projectile.speed > 0 && module.projectile !== "forbidden", path, "Invalid projectile.");
   // Only an aura needs a radius; other support towers may have none.
   const area = !support || t.attack.kind === "aura";
-  check(t.cost > 0 && (area ? t.range > 0 : t.range >= 0) && t.damage >= 0 && (support || t.interval > 0), path, "Ungültiger Turm.");
-  if (support) check(t.damage === 0 && t.interval === 0, path, "Ungültiger Unterstützungsturm: kein Schaden, kein Schusstakt.");
-  check(!module.trapOnly || t.placement === "path", path, "Diese Angriffsart gibt es nur für Fallen.");
+  check(t.cost > 0 && (area ? t.range > 0 : t.range >= 0) && t.damage >= 0 && (support || t.interval > 0), path, "Invalid tower.");
+  if (support) check(t.damage === 0 && t.interval === 0, path, "Invalid support tower: no damage, no fire interval.");
+  check(!module.trapOnly || t.placement === "path", path, "This attack kind exists only for traps.");
   if (t.placement !== undefined)
-    check(t.placement === "path" && !support, path, "Ungültige Platzierung: nur Angriffstürme können als Falle auf dem Weg stehen.");
-  check(t.visual?.icon, path, "Symbol (visual.icon) fehlt.");
+    check(t.placement === "path" && !support, path, "Invalid placement: only attack towers can sit on the path as a trap.");
+  check(t.visual?.icon, path, "Missing icon (visual.icon).");
   validateUpgradeDefinitions(t, path);
 }
 
 export function validateMap(map: MapDefinition, path: string) {
-  check(map.path.length >= 2, path, "Die Map benötigt einen Pfad.");
+  check(map.path.length >= 2, path, "The map needs a path.");
   const valid = (p: Point) =>
     Number.isInteger(p.x) && Number.isInteger(p.y) && p.x >= 0 && p.y >= 0 && p.x < map.columns && p.y < map.rows;
   const cells = new Set<string>();
   map.path.forEach((p, i) => {
-    check(valid(p) && !cells.has(`${p.x},${p.y}`), path, `Ungültiges Pfadfeld ${p.x},${p.y}.`);
+    check(valid(p) && !cells.has(`${p.x},${p.y}`), path, `Invalid path cell ${p.x},${p.y}.`);
     cells.add(`${p.x},${p.y}`);
     if (i) {
       const prev = map.path[i - 1];
       check(
         Math.abs(p.x - prev.x) + Math.abs(p.y - prev.y) === 1,
         path,
-        `Der Pfad muss zusammenhängend sein (Lücke bei ${p.x},${p.y}).`,
+        `The path must be contiguous (gap at ${p.x},${p.y}).`,
       );
     }
   });
   if (map.loop) {
     const first = map.path[0],
       last = map.path[map.path.length - 1];
-    check(map.path.length >= 4 && Math.abs(first.x - last.x) + Math.abs(first.y - last.y) === 1, path, "Der Ring muss geschlossen sein.");
+    check(map.path.length >= 4 && Math.abs(first.x - last.x) + Math.abs(first.y - last.y) === 1, path, "The ring must be closed.");
   }
   for (const p of map.blocked)
-    check(valid(p) && !cells.has(`${p.x},${p.y}`), path, `Ungültiges Hindernis ${p.x},${p.y}.`);
-  check(map.path.length + map.blocked.length < map.columns * map.rows, path, "Die Map benötigt freie Bauflächen.");
+    check(valid(p) && !cells.has(`${p.x},${p.y}`), path, `Invalid obstacle ${p.x},${p.y}.`);
+  check(map.path.length + map.blocked.length < map.columns * map.rows, path, "The map needs free build cells.");
 }
 
 export function validateMission(m: MissionDefinition, content: ContentPack = DEFAULT_CONTENT) {
   validateContent(content);
   const path = `Mission ${m.id}`;
   for (const v of [m.startingCredits, m.reactorEnergy])
-    check(Number.isInteger(v) && v > 0, path, "Ungültige Startwerte.");
-  check(m.hpGrowth === undefined || m.hpGrowth >= 0, path, "Ungültiger HP-Zuwachs.");
+    check(Number.isInteger(v) && v > 0, path, "Invalid starting values.");
+  check(m.hpGrowth === undefined || m.hpGrowth >= 0, path, "Invalid HP growth.");
   validateMap(m.map, `${path} › Map ${m.map.id}`);
-  check(!m.circle === !m.map.loop, path, "Kreislauf-Missionen brauchen eine Ring-Map und umgekehrt.");
+  check(!m.circle === !m.map.loop, path, "Circuit missions need a ring map and vice versa.");
   if (m.circle) {
     const c = m.circle;
-    check(c.interval > 0 && Number.isInteger(c.limit) && c.limit > 0 && c.earlyBonus >= 0, path, "Ungültige Kreislauf-Regeln.");
+    check(c.interval > 0 && Number.isInteger(c.limit) && c.limit > 0 && c.earlyBonus >= 0, path, "Invalid circuit rules.");
   }
-  check(m.waves.length, path, "Keine Wellen definiert.");
+  check(m.waves.length, path, "No waves defined.");
   m.waves.forEach((w, i) => {
-    const at = `${path} › Welle ${i + 1}`;
-    check(w.groups.length && w.bonus >= 0, at, "Ungültige Welle.");
-    check(w.hpMultiplier === undefined || w.hpMultiplier > 0, at, "hpMultiplier muss > 0 sein.");
+    const at = `${path} › Wave ${i + 1}`;
+    check(w.groups.length && w.bonus >= 0, at, "Invalid wave.");
+    check(w.hpMultiplier === undefined || w.hpMultiplier > 0, at, "hpMultiplier must be > 0.");
     w.groups.forEach((g, j) => {
-      const group = `${at} › Gruppe ${j + 1}`;
-      check(Object.hasOwn(content.enemies, g.type), group, `Unbekannter Gegner '${g.type}'.`);
-      check(Number.isInteger(g.count) && g.count >= 1, group, "count muss eine ganze Zahl ≥ 1 sein.");
-      check(g.interval > 0 && g.delay >= 0, group, "interval muss > 0 und delay ≥ 0 sein.");
+      const group = `${at} › Group ${j + 1}`;
+      check(Object.hasOwn(content.enemies, g.type), group, `Unknown enemy '${g.type}'.`);
+      check(Number.isInteger(g.count) && g.count >= 1, group, "count must be an integer ≥ 1.");
+      check(g.interval > 0 && g.delay >= 0, group, "interval must be > 0 and delay ≥ 0.");
     });
   });
   if (m.availableTowers) {
-    check(m.availableTowers.length, path, "availableTowers ist leer.");
+    check(m.availableTowers.length, path, "availableTowers is empty.");
     for (const id of m.availableTowers)
-      check(Object.hasOwn(content.towers, id), path, `Unbekannter Turm '${id}' in availableTowers.`);
+      check(Object.hasOwn(content.towers, id), path, `Unknown tower '${id}' in availableTowers.`);
   }
 }

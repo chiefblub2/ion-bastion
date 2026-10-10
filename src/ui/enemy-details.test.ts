@@ -10,28 +10,28 @@ describe("enemy details", () => {
     const g = new Game(),
       e = { ...makeEnemy(1, "glider", 3, 3), hp: 412.3, maxHp: 900 };
     const html = enemyDetails(g, e);
-    expect(html).toContain("GEGNER AUSGEWÄHLT");
+    expect(html).toContain("ENEMY SELECTED");
     expect(html).toContain(g.content.enemies.glider.name);
     expect(html).toContain("<b>413</b> / 900 HP");
-    expect(html).toContain(">LUFT<");
-    expect(html).toContain("Luft");
+    expect(html).toContain(">AIR<");
+    expect(html).toContain("Air");
     expect(html).toContain(`◇ ${g.content.enemies.glider.reward}`);
-    expect(html).not.toContain("gesendet von");
+    expect(html).not.toContain("sent by");
   });
   it("lists traits, shield and active status effects", () => {
     const g = new Game(),
       e = { ...makeEnemy(1, "aegis", 3, 3), shield: 120 };
     e.status.push({ kind: "slow", factor: 0.5, until: g.state.time + 2 });
     const html = enemyDetails(g, e);
-    expect(html).toContain("SCHILD 60 %");
-    expect(html).toContain("Schild <b>120</b>");
-    expect(html).toContain("VERLANGSAMT");
-    expect(html).not.toContain("BRENNT");
-    expect(enemyDetails(g, makeEnemy(2, "bulwark", 3, 3))).toContain("RÜSTUNG 35 %");
+    expect(html).toContain("SHIELD 60%");
+    expect(html).toContain("Shield <b>120</b>");
+    expect(html).toContain("SLOWED");
+    expect(html).not.toContain("BURNING");
+    expect(enemyDetails(g, makeEnemy(2, "bulwark", 3, 3))).toContain("ARMOR 35%");
   });
   it("names the sender of a versus enemy, which pays no reward", () => {
     const html = enemyDetails(new Game(), { ...makeEnemy(1, "drone", 3, 3), sentBy: 1 });
-    expect(html).toContain("gesendet von <b>Spieler 2</b>");
+    expect(html).toContain("sent by <b>Player 2</b>");
     expect(html).toContain("◇ 0");
   });
   it("changes its key with HP so the panel stays live", () => {

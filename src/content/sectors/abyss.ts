@@ -2,7 +2,7 @@ import type { MissionSector } from "../../core/types";
 import { parseMap } from "../maps";
 import { g, wave } from "../waves";
 // A shelf edge: five tight legs; every tower between two legs reaches both.
-const SCHELFKANTE_MAP = parseMap("schelfkante", "Schelfkante", [
+const SCHELFKANTE_MAP = parseMap("schelfkante", "Continental Shelf", [
   "S===============",
   "..#......#.....=",
   "================",
@@ -15,7 +15,7 @@ const SCHELFKANTE_MAP = parseMap("schelfkante", "Schelfkante", [
 ], "abyss");
 
 // A coral trench: legs alternate between a narrow and a wide reef gap.
-const KORALLENGRABEN_MAP = parseMap("korallengraben", "Korallengraben", [
+const KORALLENGRABEN_MAP = parseMap("korallengraben", "Coral Trench", [
   "S==============",
   "..............=",
   "===============",
@@ -30,7 +30,7 @@ const KORALLENGRABEN_MAP = parseMap("korallengraben", "Korallengraben", [
 ], "abyss");
 
 // A pressure chamber: the path spirals inwards to the reactor; the gaps between the rings are one cell wide.
-const DRUCKKAMMER_MAP = parseMap("druckkammer", "Druckkammer", [
+const DRUCKKAMMER_MAP = parseMap("druckkammer", "Pressure Chamber", [
   "S==============",
   "..............=",
   "=============.=",
@@ -45,7 +45,7 @@ const DRUCKKAMMER_MAP = parseMap("druckkammer", "Druckkammer", [
 ], "abyss");
 
 // Six vertical legs between black smokers: the gaps are single columns, partly blocked by chimneys.
-const RAUCHER_MAP = parseMap("raucher", "Schwarzer Raucher", [
+const RAUCHER_MAP = parseMap("raucher", "Black Smoker", [
   "S.===.===..",
   "=.=.=.=.=.R",
   "=.=.=.=.=.=",
@@ -63,7 +63,7 @@ const RAUCHER_MAP = parseMap("raucher", "Schwarzer Raucher", [
 ], "abyss");
 
 // The abyss: seven long legs, the wide gaps give room for everything.
-const ABGRUND_MAP = parseMap("abgrund", "Abgrund", [
+const ABGRUND_MAP = parseMap("abgrund", "Abyss", [
   "S===================",
   "..#........#.......=",
   "====================",
@@ -80,12 +80,12 @@ const ABGRUND_MAP = parseMap("abgrund", "Abgrund", [
 ], "abyss");
 export const TIEFSEE: MissionSector = {
   id: "abyss",
-  name: "Tiefsee",
+  name: "Deep Sea",
   missions: [
     {
       id: "schelfkante",
-      name: "Schelfkante",
-      focus: "Panzerkrebse härten sich mit jedem Treffer: Burst, Henker und Fallgrube brechen sie",
+      name: "Continental Shelf",
+      focus: "Armor Crabs harden with every hit: Burst, Executioner and Pitfall break them",
       map: SCHELFKANTE_MAP,
       waves: [
         wave(35, g("drone", 8, 0.8), g("crab", 1, 1.6, 4)),
@@ -112,8 +112,8 @@ export const TIEFSEE: MissionSector = {
     },
     {
       id: "korallengraben",
-      name: "Korallengraben",
-      focus: "Quallen heilen ihre Schwärme aus der Luft: Flak holt sie herunter",
+      name: "Coral Trench",
+      focus: "Jellyfish heal their swarms from the air: Flak brings them down",
       map: KORALLENGRABEN_MAP,
       waves: [
         wave(35, g("drone", 6, 0.8), g("jelly", 1, 1.1, 4)),
@@ -141,8 +141,8 @@ export const TIEFSEE: MissionSector = {
     },
     {
       id: "druckkammer",
-      name: "Druckkammer",
-      focus: "Nur 10 Reaktorenergie in einer engen Spirale: Echo-Wellen kehren mit voller Härte zurück",
+      name: "Pressure Chamber",
+      focus: "Only 10 reactor energy in a tight spiral: echo waves return at full strength",
       map: DRUCKKAMMER_MAP,
       // Echo waves repeat an earlier wave far above the linear HP curve.
       waves: [
@@ -171,8 +171,8 @@ export const TIEFSEE: MissionSector = {
     },
     {
       id: "raucher",
-      name: "Schwarzer Raucher",
-      focus: "Phantome im Rauch: ohne Detektor sind sie unsichtbar, dafür fehlen Aura und Raffinerie",
+      name: "Black Smoker",
+      focus: "Phantoms in the smoke: invisible without a Detector, and Aura and Refinery are unavailable",
       map: RAUCHER_MAP,
       availableTowers: ["pulse", "blast", "frost", "flak", "tesla", "lance", "inferno", "stasis", "acid", "decay", "executioner", "mortar", "pit", "mine", "tar", "detector"],
       waves: [
@@ -201,8 +201,8 @@ export const TIEFSEE: MissionSector = {
     },
     {
       id: "abgrund",
-      name: "Abgrund",
-      focus: "Finale: Krebse, Quallen, Phantome und drei Titanen am Grund des Grabens",
+      name: "Abyss",
+      focus: "Finale: crabs, jellyfish, Phantoms and three Titans at the bottom of the trench",
       map: ABGRUND_MAP,
       waves: [
         wave(35, g("drone", 6, 0.8), g("crab", 1, 1.6, 4)),
