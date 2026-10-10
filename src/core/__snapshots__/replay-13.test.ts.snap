@@ -1,0 +1,255 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`golden replays > glasebene defense A 1`] = `
+"w1 ready lives=20 gold=56 kills=2 towerKills=0/0/2/0/0/0
+w2 ready lives=20 gold=146 kills=6 towerKills=1/0/5/0/0/0
+w3 ready lives=20 gold=160 kills=10 towerKills=1/0/5/2/1/1
+w4 ready lives=18 gold=182 kills=15 towerKills=3/1/5/3/1/2
+w5 ready lives=17 gold=230 kills=23 towerKills=4/1/7/4/3/4
+w6 ready lives=17 gold=128 kills=27 towerKills=4/2/10/4/3/4
+w7 ready lives=17 gold=180 kills=36 towerKills=5/2/13/5/5/6
+w8 ready lives=17 gold=231 kills=43 towerKills=5/2/14/5/5/12
+w9 ready lives=17 gold=234 kills=49 towerKills=5/3/15/6/7/13
+w10 ready lives=17 gold=260 kills=57 towerKills=5/3/16/7/8/18
+w11 ready lives=17 gold=271 kills=67 towerKills=9/3/19/8/8/20
+w12 ready lives=17 gold=281 kills=75 towerKills=9/3/21/9/10/23
+w13 ready lives=17 gold=282 kills=84 towerKills=11/3/23/12/11/24
+w14 ready lives=17 gold=270 kills=94 towerKills=11/3/26/12/11/31
+w15 ready lives=17 gold=290 kills=107 towerKills=11/3/28/15/13/37
+w16 won lives=7 gold=634 kills=119 towerKills=11/3/31/16/17/41"
+`;
+
+exports[`golden replays > glasebene defense A 2`] = `"w16 won lives=7 gold=634 kills=119 towerKills=11/3/31/16/17/41"`;
+
+exports[`golden replays > glasebene defense B 1`] = `
+"w1 ready lives=20 gold=121 kills=2 towerKills=2/0
+w2 ready lives=20 gold=121 kills=6 towerKills=6/0/0
+w3 ready lives=20 gold=135 kills=10 towerKills=8/1/1
+w4 ready lives=20 gold=128 kills=16 towerKills=14/1/1
+w5 ready lives=20 gold=280 kills=25 towerKills=20/2/3
+w6 ready lives=20 gold=120 kills=29 towerKills=24/2/3/0
+w7 ready lives=20 gold=172 kills=38 towerKills=29/5/4/0
+w8 ready lives=20 gold=225 kills=45 towerKills=32/6/4/3/0
+w9 ready lives=20 gold=159 kills=51 towerKills=33/8/6/4/0/0
+w10 ready lives=20 gold=275 kills=59 towerKills=36/9/7/7/0/0
+w11 ready lives=20 gold=301 kills=69 towerKills=40/10/7/8/4/0
+w12 ready lives=20 gold=311 kills=77 towerKills=42/11/9/11/4/0
+w13 ready lives=20 gold=312 kills=86 towerKills=44/12/10/14/6/0
+w14 ready lives=20 gold=300 kills=96 towerKills=49/13/10/18/6/0
+w15 ready lives=20 gold=320 kills=109 towerKills=52/16/12/23/6/0
+w16 won lives=10 gold=364 kills=121 towerKills=53/17/16/29/6/0"
+`;
+
+exports[`golden replays > glasebene defense B 2`] = `"w16 won lives=10 gold=364 kills=121 towerKills=53/17/16/29/6/0"`;
+
+exports[`golden replays > gletscherspalte defense A 1`] = `
+"w1 ready lives=20 gold=189 kills=14 towerKills=0/14/0
+w2 ready lives=20 gold=259 kills=34 towerKills=2/29/0/3
+w3 ready lives=20 gold=294 kills=55 towerKills=5/39/4/5/2
+w4 ready lives=20 gold=391 kills=84 towerKills=5/50/4/6/2/17
+w5 ready lives=20 gold=336 kills=112 towerKills=5/66/7/10/2/22
+w6 ready lives=20 gold=620 kills=164 towerKills=14/77/7/15/6/45
+w7 ready lives=20 gold=755 kills=204 towerKills=16/85/8/22/6/67
+w8 ready lives=20 gold=607 kills=252 towerKills=18/95/8/29/6/96
+w9 ready lives=20 gold=926 kills=306 towerKills=22/114/13/38/6/113
+w10 ready lives=20 gold=852 kills=356 towerKills=26/136/13/44/6/131
+w11 ready lives=20 gold=1246 kills=424 towerKills=29/155/18/51/9/162
+w12 ready lives=20 gold=1220 kills=488 towerKills=37/174/25/67/10/175
+w13 ready lives=20 gold=1381 kills=600 towerKills=50/193/28/77/26/226
+w14 won lives=18 gold=1494 kills=709 towerKills=69/209/33/86/41/271"
+`;
+
+exports[`golden replays > gletscherspalte defense A 2`] = `"w14 won lives=18 gold=1494 kills=709 towerKills=69/209/33/86/41/271"`;
+
+exports[`golden replays > gletscherspalte defense B 1`] = `
+"w1 ready lives=20 gold=204 kills=14 towerKills=14/0
+w2 ready lives=20 gold=307 kills=34 towerKills=34/0
+w3 ready lives=20 gold=288 kills=55 towerKills=49/0/6
+w4 ready lives=20 gold=416 kills=84 towerKills=77/1/6
+w5 ready lives=20 gold=404 kills=112 towerKills=91/1/19/1
+w6 ready lives=20 gold=598 kills=164 towerKills=111/3/19/31
+w7 ready lives=20 gold=693 kills=204 towerKills=133/4/25/42/0
+w8 ready lives=20 gold=785 kills=252 towerKills=149/4/25/62/12
+w9 ready lives=20 gold=624 kills=306 towerKills=173/4/32/85/12
+w10 ready lives=20 gold=910 kills=356 towerKills=193/14/32/105/12
+w11 ready lives=20 gold=854 kills=424 towerKills=218/22/43/124/17
+w12 ready lives=20 gold=1143 kills=488 towerKills=250/23/55/142/18
+w13 ready lives=20 gold=1754 kills=600 towerKills=314/39/72/153/22
+w14 won lives=15 gold=3182 kills=705 towerKills=362/73/85/157/28"
+`;
+
+exports[`golden replays > gletscherspalte defense B 2`] = `"w14 won lives=15 gold=3182 kills=705 towerKills=362/73/85/157/28"`;
+
+exports[`golden replays > kryotal defense A 1`] = `
+"w1 ready lives=20 gold=143 kills=8 towerKills=8/0
+w2 ready lives=20 gold=229 kills=22 towerKills=22/0
+w3 ready lives=20 gold=244 kills=31 towerKills=31/0
+w4 ready lives=20 gold=233 kills=48 towerKills=48/0
+w5 ready lives=20 gold=220 kills=60 towerKills=60/0/0
+w6 ready lives=20 gold=332 kills=82 towerKills=82/0/0
+w7 ready lives=20 gold=307 kills=98 towerKills=92/2/4
+w8 ready lives=20 gold=459 kills=128 towerKills=109/6/4/9
+w9 ready lives=20 gold=434 kills=146 towerKills=118/8/5/15/0
+w10 ready lives=20 gold=464 kills=178 towerKills=137/10/5/20/6/0
+w11 ready lives=16 gold=531 kills=208 towerKills=149/15/8/26/7/3/0
+w12 ready lives=16 gold=746 kills=250 towerKills=158/17/11/42/10/3/9
+w13 won lives=6 gold=843 kills=295 towerKills=168/24/15/53/11/9/15"
+`;
+
+exports[`golden replays > kryotal defense A 2`] = `"w13 won lives=6 gold=843 kills=295 towerKills=168/24/15/53/11/9/15"`;
+
+exports[`golden replays > kryotal defense B 1`] = `
+"w1 ready lives=20 gold=138 kills=8 towerKills=8/0
+w2 ready lives=20 gold=197 kills=22 towerKills=22/0
+w3 ready lives=20 gold=212 kills=31 towerKills=29/2/0
+w4 ready lives=20 gold=270 kills=48 towerKills=32/11/0/5
+w5 ready lives=20 gold=215 kills=60 towerKills=34/21/0/5
+w6 ready lives=20 gold=312 kills=82 towerKills=44/27/0/11
+w7 ready lives=20 gold=392 kills=98 towerKills=54/33/0/11
+w8 ready lives=20 gold=591 kills=128 towerKills=65/44/3/16
+w9 ready lives=18 gold=636 kills=145 towerKills=70/53/6/16
+w10 ready lives=18 gold=664 kills=177 towerKills=89/56/6/26
+w11 ready lives=18 gold=792 kills=209 towerKills=109/60/6/34
+w12 ready lives=18 gold=1007 kills=251 towerKills=130/71/6/44
+w13 won lives=18 gold=1414 kills=301 towerKills=147/91/7/56"
+`;
+
+exports[`golden replays > kryotal defense B 2`] = `"w13 won lives=18 gold=1414 kills=301 towerKills=147/91/7/56"`;
+
+exports[`golden replays > polarnacht defense A 1`] = `
+"w1 ready lives=20 gold=195 kills=10 towerKills=0/9/0/1
+w2 ready lives=20 gold=287 kills=32 towerKills=8/13/6/3/2
+w3 ready lives=20 gold=265 kills=48 towerKills=8/20/6/8/6
+w4 ready lives=20 gold=290 kills=64 towerKills=11/25/7/12/9
+w5 ready lives=18 gold=394 kills=94 towerKills=20/35/12/18/9
+w6 ready lives=18 gold=410 kills=120 towerKills=20/48/12/25/15
+w7 ready lives=18 gold=593 kills=146 towerKills=27/52/13/34/20
+w8 ready lives=18 gold=603 kills=194 towerKills=38/56/26/51/23
+w9 ready lives=18 gold=926 kills=242 towerKills=48/62/30/70/32
+w10 ready lives=18 gold=782 kills=280 towerKills=56/62/34/77/51
+w11 ready lives=18 gold=1082 kills=340 towerKills=56/72/54/92/66
+w12 ready lives=18 gold=1160 kills=406 towerKills=64/77/82/103/80
+w13 ready lives=18 gold=1425 kills=466 towerKills=72/86/89/121/98
+w14 won lives=18 gold=2761 kills=560 towerKills=79/108/116/129/128"
+`;
+
+exports[`golden replays > polarnacht defense A 2`] = `"w14 won lives=18 gold=2761 kills=560 towerKills=79/108/116/129/128"`;
+
+exports[`golden replays > polarnacht defense B 1`] = `
+"w1 ready lives=20 gold=150 kills=10 towerKills=7/3
+w2 ready lives=20 gold=269 kills=32 towerKills=19/13
+w3 ready lives=20 gold=265 kills=48 towerKills=31/17
+w4 ready lives=20 gold=302 kills=64 towerKills=38/26
+w5 ready lives=20 gold=446 kills=96 towerKills=48/40/0/8
+w6 ready lives=20 gold=465 kills=122 towerKills=52/48/7/15
+w7 ready lives=14 gold=458 kills=145 towerKills=59/52/8/26/0
+w8 ready lives=12 gold=678 kills=191 towerKills=67/58/23/34/9
+w9 ready lives=11 gold=630 kills=238 towerKills=73/65/38/48/14
+w10 ready lives=3 gold=766 kills=272 towerKills=75/71/48/58/20
+w11 ready lives=3 gold=1066 kills=332 towerKills=79/72/74/75/32
+w12 ready lives=3 gold=1054 kills=398 towerKills=93/82/76/109/38
+w13 ready lives=3 gold=1319 kills=458 towerKills=104/90/100/124/40
+w14 won lives=3 gold=1980 kills=552 towerKills=132/103/110/147/60"
+`;
+
+exports[`golden replays > polarnacht defense B 2`] = `"w14 won lives=3 gold=1980 kills=552 towerKills=132/103/110/147/60"`;
+
+exports[`golden replays > singularitaet defense A 1`] = `
+"w1 ready lives=20 gold=175 kills=10 towerKills=0/1/0/9
+w2 ready lives=20 gold=260 kills=25 towerKills=0/4/0/17/4
+w3 ready lives=20 gold=239 kills=43 towerKills=0/5/0/26/5/7/0
+w4 ready lives=20 gold=259 kills=54 towerKills=1/5/0/32/6/7/0/3
+w5 ready lives=20 gold=334 kills=78 towerKills=1/9/0/39/8/11/0/10/0
+w6 ready lives=20 gold=329 kills=93 towerKills=3/9/0/42/9/16/0/11/0/3/0
+w7 ready lives=20 gold=437 kills=120 towerKills=4/12/0/50/10/21/0/14/0/6/1/2
+w8 ready lives=20 gold=319 kills=139 towerKills=5/13/0/52/10/26/0/17/0/12/1/3
+w9 ready lives=20 gold=571 kills=180 towerKills=5/18/0/57/10/34/0/21/0/22/1/12
+w10 ready lives=14 gold=436 kills=206 towerKills=6/24/0/58/11/37/0/22/0/26/4/18
+w11 ready lives=14 gold=629 kills=238 towerKills=10/26/0/63/15/40/0/25/0/32/5/22
+w12 ready lives=6 gold=540 kills=272 towerKills=10/33/0/66/18/46/0/28/0/41/5/25
+w13 ready lives=6 gold=560 kills=296 towerKills=10/34/0/67/20/49/0/32/1/46/10/27
+w14 ready lives=6 gold=845 kills=353 towerKills=12/37/0/70/23/61/0/36/4/61/19/30
+w15 ready lives=6 gold=733 kills=394 towerKills=15/39/0/74/25/69/0/41/4/69/22/36
+w16 ready lives=6 gold=839 kills=437 towerKills=18/46/0/78/28/79/0/47/5/72/22/42
+w17 ready lives=6 gold=917 kills=488 towerKills=21/51/0/82/36/87/0/52/7/79/23/50
+w18 ready lives=6 gold=911 kills=535 towerKills=23/57/0/90/40/101/0/59/7/82/23/53
+w19 ready lives=6 gold=894 kills=588 towerKills=25/63/0/95/52/112/0/64/8/86/24/59
+w20 won lives=6 gold=1816 kills=643 towerKills=28/68/0/101/62/124/0/67/8/94/24/67"
+`;
+
+exports[`golden replays > singularitaet defense A 2`] = `"w20 won lives=6 gold=1816 kills=643 towerKills=28/68/0/101/62/124/0/67/8/94/24/67"`;
+
+exports[`golden replays > singularitaet defense B 1`] = `
+"w1 ready lives=20 gold=213 kills=10 towerKills=10/0
+w2 ready lives=20 gold=290 kills=25 towerKills=21/4
+w3 ready lives=20 gold=329 kills=43 towerKills=33/10
+w4 ready lives=20 gold=196 kills=54 towerKills=40/11/3
+w5 ready lives=20 gold=353 kills=78 towerKills=53/16/9/0
+w6 ready lives=20 gold=316 kills=93 towerKills=57/18/11/7
+w7 ready lives=20 gold=411 kills=120 towerKills=65/23/22/10
+w8 ready lives=20 gold=369 kills=139 towerKills=69/27/27/16
+w9 ready lives=19 gold=507 kills=179 towerKills=77/33/41/25/3
+w10 ready lives=19 gold=589 kills=208 towerKills=83/36/49/30/10/0
+w11 ready lives=16 gold=516 kills=237 towerKills=89/45/54/33/14/2/0
+w12 ready lives=16 gold=513 kills=275 towerKills=93/49/72/38/18/4/0/1
+w13 ready lives=16 gold=538 kills=299 towerKills=99/51/75/42/21/7/0/4/0
+w14 ready lives=12 gold=797 kills=352 towerKills=107/54/89/56/30/9/0/5/2
+w15 ready lives=12 gold=715 kills=393 towerKills=114/60/94/63/34/13/1/6/8
+w16 ready lives=12 gold=1031 kills=436 towerKills=122/63/99/80/36/16/1/8/11
+w17 ready lives=10 gold=901 kills=485 towerKills=135/68/106/88/41/21/1/11/14
+w18 ready lives=10 gold=1195 kills=532 towerKills=138/74/111/106/44/23/3/11/22
+w19 ready lives=10 gold=1073 kills=585 towerKills=151/77/119/113/49/33/4/14/25
+w20 won lives=9 gold=1381 kills=639 towerKills=161/88/125/116/53/45/5/17/29"
+`;
+
+exports[`golden replays > singularitaet defense B 2`] = `"w20 won lives=9 gold=1381 kills=639 towerKills=161/88/125/116/53/45/5/17/29"`;
+
+exports[`golden replays > spiegelsaal defense A 1`] = `
+"w1 ready lives=20 gold=227 kills=9 towerKills=0/9
+w2 ready lives=20 gold=243 kills=27 towerKills=12/15/0
+w3 ready lives=20 gold=240 kills=41 towerKills=21/19/1
+w4 ready lives=20 gold=288 kills=59 towerKills=35/22/2
+w5 ready lives=20 gold=226 kills=66 towerKills=40/24/2/0
+w6 ready lives=20 gold=386 kills=86 towerKills=55/28/2/1
+w7 ready lives=20 gold=372 kills=103 towerKills=70/30/2/1
+w8 ready lives=20 gold=387 kills=130 towerKills=79/47/3/1
+w9 ready lives=20 gold=247 kills=139 towerKills=85/49/3/2
+w10 ready lives=20 gold=528 kills=166 towerKills=95/58/6/6/1
+w11 ready lives=20 gold=508 kills=195 towerKills=105/69/8/10/3/0
+w12 ready lives=20 gold=534 kills=219 towerKills=116/77/8/15/3/0/0
+w13 ready lives=20 gold=573 kills=259 towerKills=128/86/10/20/6/0/7/2
+w14 ready lives=20 gold=381 kills=272 towerKills=133/87/10/22/7/0/7/5/1
+w15 ready lives=12 gold=870 kills=315 towerKills=140/99/12/30/11/3/7/12/1
+w16 ready lives=12 gold=802 kills=344 towerKills=151/106/12/32/13/6/8/15/1
+w17 ready lives=11 gold=695 kills=384 towerKills=164/114/13/35/14/13/10/19/2
+w18 ready lives=7 gold=1095 kills=442 towerKills=177/126/16/38/18/18/20/24/5
+w19 ready lives=6 gold=1019 kills=492 towerKills=190/137/17/42/22/25/22/31/6
+w20 won lives=6 gold=1483 kills=541 towerKills=202/143/23/44/25/32/24/37/11"
+`;
+
+exports[`golden replays > spiegelsaal defense A 2`] = `"w20 won lives=6 gold=1483 kills=541 towerKills=202/143/23/44/25/32/24/37/11"`;
+
+exports[`golden replays > spiegelsaal defense B 1`] = `
+"w1 ready lives=20 gold=227 kills=9 towerKills=0/9
+w2 ready lives=20 gold=343 kills=27 towerKills=12/15
+w3 ready lives=20 gold=340 kills=41 towerKills=22/19
+w4 ready lives=20 gold=343 kills=59 towerKills=36/23/0
+w5 ready lives=20 gold=284 kills=66 towerKills=41/25/0
+w6 ready lives=20 gold=358 kills=86 towerKills=54/32/0/0
+w7 ready lives=20 gold=304 kills=103 towerKills=67/36/0/0/0
+w8 ready lives=20 gold=448 kills=130 towerKills=78/44/3/1/4/0
+w9 ready lives=20 gold=288 kills=139 towerKills=84/46/4/1/4/0/0
+w10 ready lives=18 gold=427 kills=165 towerKills=100/56/4/1/4/0/0
+w11 ready lives=18 gold=542 kills=194 towerKills=112/66/6/1/7/0/2/0
+w12 ready lives=16 gold=602 kills=217 towerKills=123/71/9/1/7/0/3/3
+w13 ready lives=16 gold=503 kills=257 towerKills=134/80/13/1/12/0/12/5
+w14 ready lives=16 gold=471 kills=270 towerKills=140/83/14/1/12/0/13/7
+w15 ready lives=13 gold=787 kills=315 towerKills=153/97/16/1/12/0/17/19
+w16 ready lives=13 gold=914 kills=344 towerKills=169/104/16/1/12/0/18/24
+w17 ready lives=13 gold=743 kills=385 towerKills=182/115/22/1/16/0/19/30
+w18 ready lives=13 gold=1187 kills=447 towerKills=198/131/27/2/26/0/27/36
+w19 ready lives=13 gold=942 kills=498 towerKills=215/148/31/2/27/0/32/43
+w20 won lives=13 gold=1256 kills=547 towerKills=226/162/36/3/28/0/41/51"
+`;
+
+exports[`golden replays > spiegelsaal defense B 2`] = `"w20 won lives=13 gold=1256 kills=547 towerKills=226/162/36/3/28/0/41/51"`;

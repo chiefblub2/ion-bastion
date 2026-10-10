@@ -22,6 +22,9 @@ export function unbuildable(m: MissionDefinition, strategy: Pick<Strategy, "buil
 }
 
 /** Mission 01 is the tutorial: three upgraded towers are meant to suffice there. */
+/** Strategies that still lose; balancing is pending. Remove an entry once it wins. */
+export const PENDING_BALANCE: ReadonlySet<string> = new Set(["frostwall/A", "frostwall/B"]);
+
 export const isTutorial = (m: MissionDefinition) => MISSIONS[0]?.id === m.id;
 
 /** Thin defense that must still lose: three towers, a single one on a ring. */

@@ -13,6 +13,7 @@ npm run server     # multiplayer relay on :4174 (PORT=… overrides)
 npm test           # vitest run, all tests
 npm run build      # tsc --noEmit && vite build → dist/
 npx vitest run src/core/match.test.ts     # single file
+npx vitest run src/core/replay            # all golden replays (every replay*.test.ts shard)
 npx vitest run -u                         # update snapshots (golden replays: only on purpose, review the diff)
 npx vite-node scripts/balance.ts -- src/content/sectors/frost.ts src/core/strategies/frost.ts
                                           # balance check for one sector (optional `--curve credits=680-780,waves=17-20[,growth=1.1-1.2]` adds WARNs); sector I: -- src/content/missions.ts src/core/strategies/index.ts 0
@@ -22,6 +23,9 @@ npx vite-node scripts/mission-table.ts --enemies
                                           # markdown reference table of all enemies (stats, traits) for designing new ones
 npx vite-node scripts/mission-table.ts --write
                                           # rewrite the README table and intro counts in place (keeps shortened focus texts by mission name; prints "Schwerpunkt kürzen: <name>" for new missions)
+npx vite-node scripts/visual-check.ts -- <missionId>... [--enemies a,b] [--out dir]
+                                          # with `npm run dev` running: headless system Chrome (playwright-core) builds strategy A via the WebMCP
+                                          # tools, plays at 2× to the first wave of each new (or given) enemy and saves terrain + wave PNGs
 ```
 
 Always run `npm test` and `npm run build` before you finish. The chunk-size warning from `vite build` is expected.
@@ -53,7 +57,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 - **All state changes go through `Game.command`** (or `Match.command` in versus). Each `HANDLERS` entry has an optional `allowedIn` status guard. Render and UI code only read state.
 - **The simulation is deterministic:** fixed step `FIXED_STEP = 1/30`, no `Math.random`, no wall-clock time, and stable iteration order. Multiplayer relies on it, as do the golden replays. The only randomness is `roomCode` on the server.
 - **Graphics never change the simulation.** Events (`GameEvent` union) are drained after each render frame.
-- **Golden replays** (`core/replay.test.ts` + `__snapshots__`) record every mission × strategy. If a snapshot changes, the simulation changed. Update with `-u` only when that is intended.
+- **Golden replays** (`core/campaign-tests.ts`, run by the `core/replay-N.test.ts` shards, + `__snapshots__`) record every mission × strategy. If a snapshot changes, the simulation changed. Update with `-u` only when that is intended.
 - **Solo play is the baseline.** New optional fields on state, enemies or spawns must stay `undefined` in solo, so the snapshots stay unchanged (example: `sentBy`).
 - **Content is separate from runtime instances.** Upgrades never mutate definitions, and `Tower.upgrades: string[]` is the only source of upgrade progress.
 - `Game` accepts its own `ContentPack` (`new Game(mission, content)`). Pure queries (`resolveUpgrades`, `effectiveTowerStats`, …) take `content` as the last, optional parameter. `resolveUpgrades` is cached per content pack and upgrade list.
@@ -126,8 +130,9 @@ Whole mission packs (new sectors, themes, enemies) follow the project skill `.cl
 
 ## Tests
 
-- Tests are pure Vitest with no DOM; they build a `Game` (or `Match`/`Room`) directly. Helpers in `core/test-helpers.ts`: `finishWave`, `play`, `makeEnemy`, `landProjectiles`. `play` lives in `core/play.ts` (no vitest import) so `scripts/balance.ts` can reuse it; the mission rules (air, stealth, buildability, thin defense, Nova-only, tutorial exemption) live in `core/mission-checks.ts` and are shared by `missions.test.ts` and the balance script.
-- `core/missions.test.ts` plays each mission with two deterministic strategies (`core/strategies/`) to a win. It also checks that missions are lost without towers, with only three towers from mission 02 on, and with a Nova-only defense against gliders. `PENDING_BALANCE` lists strategies that do not win yet (currently Frostwall A/B); their win tests are skipped.
+- Tests are pure Vitest with no DOM; they build a `Game` (or `Match`/`Room`) directly. Helpers in `core/test-helpers.ts`: `finishWave`, `play`, `makeEnemy`, `landProjectiles`. `play` lives in `core/play.ts` (no vitest import) so `scripts/balance.ts` can reuse it; the mission rules (air, stealth, buildability, thin defense, Nova-only, tutorial exemption) live in `core/mission-checks.ts` and are shared by the campaign tests and the balance script.
+- Campaign simulations live in `core/campaign-tests.ts` and are split into `SHARDS` files `core/replay-N.test.ts` by `fnv(mission.id)` (vitest runs files in parallel; a stable hash keeps snapshots in their file when sectors are inserted). Each mission × strategy (`core/strategies/`) is simulated once: the golden replay snapshot and the win check share that run. The shards also check that missions are lost without towers, with only three towers from mission 02 on, and with a Nova-only defense against gliders. `PENDING_BALANCE` (`core/mission-checks.ts`) lists strategies that do not win yet (currently Frostwall A/B); their replays run without the win check. Campaign tests have a 60 s timeout so a busy machine does not trip vitest's 5 s default.
+- `core/missions.test.ts` keeps the campaign-wide content rules (ids, sector grouping, stealth only with a detector, every enemy appears). `core/replay.test.ts` holds one hand-played golden replay.
 - Multiplayer tests:
   - `core/coop.test.ts`: co-op economy
   - `core/match.test.ts`: versus rules

@@ -1,26 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { MISSIONS } from "../content/missions";
 import { Game } from "./game";
-import { finishWave, play } from "./test-helpers";
-import { STRATEGIES } from "./strategies";
-/**
- * Golden replays: every mission and strategy must produce exactly the same
- * course of the game. A snapshot change means the simulation changed; update
- * it only on purpose (`npx vitest run -u`) and review the diff.
- */
-function trace(game: Game) {
-  const s = game.state;
-  return `w${s.wave} ${s.status} lives=${s.lives} gold=${s.wallets[0]} kills=${s.kills} towerKills=${s.towers.map((t) => t.kills).join("/")}`;
-}
+import { finishWave } from "./test-helpers";
+import { trace } from "./campaign-tests";
+/** Golden replay of a hand-played game; the campaign replays live in `campaign-tests.ts` (`replay-N.test.ts`). */
 describe("golden replays", () => {
-  for (const m of MISSIONS)
-    for (const key of ["A", "B"] as const)
-      it(`${m.id} defense ${key}`, () => {
-        const waves: string[] = [];
-        const { game } = play(m, STRATEGIES[m.id][key], (g) => waves.push(trace(g)));
-        expect(waves.join("\n")).toMatchSnapshot();
-        expect(trace(game)).toMatchSnapshot();
-      });
   it("mixed fire on the outpost, including a sale mid-wave", () => {
     const g = new Game();
     g.state.wallets[0] = 2000;

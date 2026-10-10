@@ -1033,6 +1033,15 @@ dialog strong {
     height: 32px;
     font-size: 20px;
   }
+  /* Five header buttons do not fit beside the brand; they wrap into rows below it. */
+  .topbar {
+    flex-wrap: wrap;
+  }
+  .header-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-left: 0;
+  }
   .header-actions .quiet {
     font-size: 12px;
     padding: 8px;
@@ -1415,6 +1424,139 @@ dialog strong {
 .mission-stats b {
   font: 500 12px var(--mono);
   white-space: nowrap;
+}
+/* Enemy codex: wider dialog with a tab bar and a scrolling card list. */
+.codex-dialog {
+  width: min(760px, calc(100% - 32px));
+}
+.codex-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 18px 0 14px;
+}
+.codex-tab {
+  padding: 8px 14px;
+  background: #131f29;
+  border: 1px solid #2e3e49;
+  border-radius: 8px;
+  color: #a1b1ba;
+  font-size: 13px;
+}
+.codex-tab small {
+  font: 500 10px var(--mono);
+  color: #7d9099;
+}
+.codex-tab:hover {
+  background: #1c2b34;
+  border-color: var(--mint);
+}
+.codex-tab[aria-selected="true"] {
+  color: #e5eeec;
+  border-color: var(--mint);
+  background: color-mix(in srgb, var(--mint) 8%, #0d1920);
+  box-shadow: inset 0 -2px var(--mint);
+}
+.codex-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 10px;
+}
+.codex-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: #131f29;
+  border: 1px solid #2e3e49;
+  border-radius: 8px;
+}
+.codex-card.air {
+  border-color: #2f5a68;
+}
+.codex-card header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.codex-card header .enemy-icon {
+  width: 30px;
+  height: 30px;
+}
+.codex-card header span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.codex-card strong {
+  font: 600 21px/1.1 "Barlow Condensed", sans-serif;
+}
+.codex-card header small {
+  font-size: 12px;
+  color: #a1b1ba;
+}
+dialog .codex-card p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.codex-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+@media (max-width: 520px) {
+  .codex-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.codex-stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: #0f1921;
+  border-radius: 5px;
+}
+.codex-stats b {
+  font: 500 13px var(--mono);
+  white-space: nowrap;
+}
+.codex-stats span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.codex-traits,
+.codex-carriers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+dialog .codex-traits li,
+dialog .codex-carriers li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.codex-traits .unit-tag {
+  flex: none;
+}
+dialog .codex-carriers li {
+  align-items: center;
+}
+.codex-carriers li span {
+  color: #d0dfdf;
+}
+dialog p.codex-plain {
+  font-size: 12px;
+  color: var(--muted);
 }
 .selection > p.tower-targets {
   font-size: 12px;

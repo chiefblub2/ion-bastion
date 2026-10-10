@@ -68,7 +68,7 @@ render/enemies.ts, content/enemies.ts):
    entry and marker (visual extras via EnemyVisual fields, never d.id checks).
 5. content/enemies.ts: the enemies exactly as specified, German one-line comment above each (trait + counters).
 Do NOT touch missions or strategies.
-Gate: npx tsc --noEmit; npx vitest run src/systems src/ui; npx vitest run src/core/replay.test.ts (no -u, must pass
+Gate: npx tsc --noEmit; npx vitest run src/systems src/ui; npx vitest run src/core/replay (no -u, all shards, must pass
 unchanged). "every enemy type appears in the campaign" fails until placement — expected. Do not commit.
 Report: files changed, test results, deviations from the sheet.
 ```
@@ -95,7 +95,7 @@ Balance lessons:
 - hpMultiplier waves are cliff-sensitive (±2 flips a result); re-run after every change.
 - If a strategy still loses after about 6 rounds, lower the new enemy's count before touching other groups.
 - If the enemy itself is the problem (unkillable, trivial), stop and report a stat proposal instead of hiding it in waves.
-Forbidden: editing enemy stats, traits or any other file, missions not on the placement lines, running replay.test.ts /
+Forbidden: editing enemy stats, traits or any other file, missions not on the placement lines, running src/core/replay* /
 npm test / npm run build / -u, PENDING_BALANCE entries, temporary debug scripts. Do not commit.
 Report: baseline vs. final output, per mission the wave changes (before → after), stat proposals.
 ```
@@ -104,21 +104,25 @@ Stat proposals: apply them yourself in `content/enemies.ts` and re-run the loop 
 
 ## 5. Integration (you)
 
-1. Run `npx vitest run src/core/replay.test.ts -u`, then list the changed missions:
+Run the expensive checks once, after all edits. `git status` first: files outside this pack mean another session works in the same tree; leave them alone and name them in the report.
+
+1. Run `npx vitest run src/core/replay -u` (all shards, about 10 s), then list the changed missions:
    `git diff -U0 src/core/__snapshots__ | grep -o '^[-+]exports\[.golden replays > [a-z0-9-]*' | sort -u`
    Only missions on the placement lines may appear. Any other mission means the trait leaks into solo state (an optional field that is not `undefined`, a changed iteration order): fix it, don't accept it.
-2. Run `npm test` and `npm run build`.
-3. Run `npx vite-node scripts/mission-table.ts --write` (enemy count in the README intro, mission table if waves changed).
-4. By hand:
+2. Text work, before the final test run:
+   - `npx vite-node scripts/mission-table.ts --write` (enemy count in the README intro, mission table if waves changed).
    - README "Gegner": add the enemies to their sector's row (`Name (Eigenschaft kurz)`), or a sentence below the table if they join several sectors.
    - Fallgrube, if a new enemy is under a pit threshold: the level descriptions in `content/towers.ts` and the README trap row both name the swallowed enemies.
    - CLAUDE.md: the trait list under "Enemy", plus special rules of new traits (an `isHidden` extension, a new `Enemy` field in `stateHash`, DISRUPTABLE).
-5. **Visual check, mandatory:**
-   - Run `npm run dev` in the background.
-   - Use the `run` skill on a placement mission via `http://localhost:4173/?mission=<id>` and play to a wave with the new enemy.
-   - Look at the body, the trait marker (and its changing state, e.g. a window or HP share), the forecast tag and the enemy tooltip on click.
-   - If that is not possible, say so explicitly in the final report.
-6. Final report to the user:
+   - Player texts use the in-game tower names (`name` in `content/towers.ts`: Kryo, Glut, Teergrube …), never ids like frost or inferno.
+3. One `npm test` and one `npm run build` (it already runs `tsc`). Later edits to texts, README or CLAUDE.md need no new run.
+4. **Visual check, mandatory:**
+   - `npm run dev` in the background, then
+     `npx vite-node scripts/visual-check.ts -- <placement mission> --enemies <id>[,<id>] --out <scratchpad>/vc`
+     (builds strategy A, plays at 2× to the first wave with each enemy, screenshots terrain and the field with the forecast).
+   - Read every PNG: the body and the trait marker (a damaged enemy shows HP-driven markers). For a changing state (window, HP share) run it twice or compare two enemies.
+   - If that is not possible, say so explicitly in the final report. Stop the dev server afterwards.
+5. Final report to the user:
    - the new enemies (stats, traits, counters) and traits
    - where they appear (mission, waves) and which snapshots changed
    - test and build results

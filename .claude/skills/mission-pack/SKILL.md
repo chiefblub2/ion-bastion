@@ -10,13 +10,13 @@ Playbook for adding new sectors fast. Your own job is the **design sheet** and t
 Last run: two sectors, 10 missions, 4 enemies and 2 traits.
 - Foundation: about 2 min.
 - Three parallel agents: about 7.5 min.
-- Integration: about 5 min.
+- Integration: about 3 min (`npm test` about 10 s, visual check about 75 s for four missions).
 
 Read CLAUDE.md ("Adding content") first.
 
 ## 0. Ask up front (one AskUserQuestion)
 
-- **Themes:** they must differ from the existing `MapTheme`s (`core/types.ts`). Suggest two with a clear look.
+- **Themes:** they must differ from the existing `MapTheme`s (`core/types.ts`) in name *and* look. Read the obstacle comments of `THEMES` in `render/terrain.ts` first (e.g. `ember` is already basalt with glowing cracks, `shard` violet crystals, `volcano` ash and obsidian, `geode` quartz and amethyst). Suggest two with a clear look.
 - **Missions and enemies:** 5 missions and 2 new enemies per sector is the convention.
 - **Position:** before Kreislauf, which always stays the last sector.
 
@@ -67,7 +67,7 @@ ui/wave-forecast.ts, render/enemies.ts, content/enemies.ts, render/terrain.ts, c
 6. render/terrain.ts: placeholder THEMES entries with the palette (minimal obstacle/decor, empty ambient).
 7. Stubs, NOT registered anywhere: content/sectors/<id>.ts exporting <CONST>: MissionSector (missions: []),
    core/strategies/<id>.ts exporting <ID>_STRATEGIES = {}.
-Gate: npx tsc --noEmit; npx vitest run src/systems src/ui; npx vitest run src/core/replay.test.ts (no -u). Then
+Gate: npx tsc --noEmit; npx vitest run src/systems src/ui; npx vitest run src/core/replay (no -u; all shards). Then
 `git diff --numstat src/core/__snapshots__` must show no deleted lines (second column 0; an empty diff is fine).
 "every enemy type appears in the campaign" fails until integration — expected. Do not commit.
 Report: files changed, test results, any deviation from the design sheet.
@@ -101,7 +101,7 @@ Balance lessons:
 - Shielded or fast flyers leak first; give both strategies enough flak/tesla.
 - If a strategy still loses after about 6 rounds, soften the waves.
 Forbidden: editing any other file (enemy stats included — report instead), registering the sector, running
-replay.test.ts / npm test / npm run build / -u, PENDING_BALANCE entries, temporary debug scripts. Ignore tsc errors in
+src/core/replay* / npm test / npm run build / -u, PENDING_BALANCE entries, temporary debug scripts. Ignore tsc errors in
 other agents' files. Do not commit.
 Report: table (id, name, twist, credits, hpGrowth, waves, energy) + final energy per strategy + deviations.
 ```
@@ -120,20 +120,26 @@ Do not run tests or build, and do not commit.
 
 ## 4. Phase 2: integration (you)
 
+Run the expensive checks once, after all edits. Agents' final balance runs count; do not re-run the balance script.
+
+0. `git status`: files outside this pack mean another session works in the same tree. Leave them alone, and name them in the report.
 1. Register the sectors. The order in both lists is the campaign order.
    - `content/missions.ts`: add `import { <CONST> } from "./sectors/<id>";` and put the constant in `SECTORS` before `KREISLAUF`.
    - `core/strategies/index.ts`: add `import { <ID>_STRATEGIES } from "./<id>";` and `...<ID>_STRATEGIES,` in `STRATEGIES`.
-2. Run `npm test`. New golden snapshots are written automatically. Then check `git diff --numstat src/core/__snapshots__`: no deleted lines.
-3. Run `npm run build`.
-4. Run `npx vite-node scripts/mission-table.ts --write`. It updates the README mission table and intro counts and keeps the existing short focus texts. Shorten the focus of the rows it lists by hand.
-5. By hand:
+2. Text work, all before the test run:
+   - `npx vite-node scripts/mission-table.ts --write` updates the README mission table and intro counts and keeps the existing short focus texts. Shorten the focus of the rows it lists by hand (style: "Nur 10 Reaktorenergie", "Finale: drei Titanen").
    - README enemy table: one row per new sector.
    - CLAUDE.md: the trait list under "Enemy", plus special rules of the new traits (e.g. an `isHidden` extension).
-6. **Visual check, mandatory:**
-   - Run `npm run dev` in the background.
-   - Use the `run` skill for one mission per new theme, opened via `http://localhost:4173/?mission=<id>`.
-   - Look at the terrain and every new enemy, in waves where it appears.
+   - Player texts (mission `focus`, README) use the in-game tower names (`name` in `content/towers.ts`: Kryo, Glut, Teergrube, Stasis, Fangeisen …), never ids like frost or inferno. `grep -n "Frost\|Inferno\|Stase" src/content/sectors/<id>.ts` catches the usual slips.
+3. One `npm test` (about 10 s; the campaign runs in `replay-N.test.ts` shards, new golden snapshots are written automatically). Then `git diff --numstat src/core/__snapshots__`: no deleted lines.
+4. One `npm run build` (it already runs `tsc`; no separate `tsc`). Later edits to `focus` strings, README or CLAUDE.md need no new test run; only `.ts` changes the simulation reads do.
+5. **Visual check, mandatory:**
+   - `npm run dev` in the background, then
+     `npx vite-node scripts/visual-check.ts -- <intro mission of each new enemy> --out <scratchpad>/vc`
+     (it builds strategy A, plays at 2× to the first wave of each newly introduced enemy and screenshots terrain and that wave; missions run in parallel).
+   - Read every PNG: terrain of each new theme, every new enemy body and trait marker.
    - If that is not possible, say so explicitly in the final report.
+6. Stop the dev server (`lsof -ti:4173 -sTCP:LISTEN | xargs kill`).
 7. Final report to the user:
    - the missions per sector
    - the new enemies and traits

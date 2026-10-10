@@ -159,7 +159,7 @@ const DAMAGE_STAGE: Partial<Record<TraitKind, number>> = { evade: -1, shield: 1 
 const stage = (t: Trait) => DAMAGE_STAGE[t.kind] ?? 0;
 const moduleOf = (t: Trait) => TRAITS[t.kind] as TraitModule<Trait> | undefined;
 /** Abilities a Störsender switches off; physical properties such as armor stay. */
-const DISRUPTABLE: ReadonlySet<TraitKind> = new Set(["shield", "regen", "healer", "leader", "stealth", "evade"]);
+export const DISRUPTABLE: ReadonlySet<TraitKind> = new Set(["shield", "regen", "healer", "leader", "stealth", "evade"]);
 const NO_TRAITS: readonly Trait[] = [];
 const traitsOf = (sim: Sim, e: Enemy): readonly Trait[] => {
   const traits = sim.content.enemies[e.type].traits ?? NO_TRAITS;

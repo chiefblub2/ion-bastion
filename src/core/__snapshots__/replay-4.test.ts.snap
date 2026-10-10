@@ -1,0 +1,93 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`golden replays > korallengraben defense A 1`] = `
+"w1 ready lives=20 gold=172 kills=7 towerKills=7/0
+w2 ready lives=20 gold=215 kills=14 towerKills=14/0
+w3 ready lives=20 gold=210 kills=19 towerKills=19/0
+w4 ready lives=20 gold=170 kills=23 towerKills=23/0/0
+w5 ready lives=20 gold=258 kills=39 towerKills=34/0/5
+w6 ready lives=20 gold=193 kills=45 towerKills=36/0/9
+w7 ready lives=20 gold=198 kills=54 towerKills=41/0/12/1
+w8 ready lives=20 gold=200 kills=59 towerKills=43/0/13/3
+w9 ready lives=20 gold=222 kills=68 towerKills=45/0/17/6/0
+w10 ready lives=20 gold=231 kills=71 towerKills=47/0/17/6/1
+w11 ready lives=20 gold=188 kills=76 towerKills=48/0/19/7/2
+w12 ready lives=20 gold=252 kills=83 towerKills=48/0/22/8/4/1
+w13 ready lives=20 gold=248 kills=93 towerKills=54/0/23/10/5/1/0
+w14 ready lives=20 gold=204 kills=97 towerKills=55/0/24/11/6/1/0
+w15 ready lives=20 gold=179 kills=101 towerKills=56/0/25/12/7/1/0
+w16 ready lives=20 gold=249 kills=109 towerKills=58/0/26/13/11/1/0/0
+w17 ready lives=20 gold=294 kills=113 towerKills=59/0/26/13/14/1/0/0
+w18 won lives=10 gold=361 kills=121 towerKills=60/1/27/14/15/2/1/1"
+`;
+
+exports[`golden replays > korallengraben defense A 2`] = `"w18 won lives=10 gold=361 kills=121 towerKills=60/1/27/14/15/2/1/1"`;
+
+exports[`golden replays > korallengraben defense B 1`] = `
+"w1 ready lives=20 gold=172 kills=7 towerKills=7/0
+w2 ready lives=20 gold=215 kills=14 towerKills=14/0
+w3 ready lives=20 gold=210 kills=19 towerKills=19/0
+w4 ready lives=20 gold=170 kills=23 towerKills=23/0/0
+w5 ready lives=20 gold=258 kills=39 towerKills=34/0/5
+w6 ready lives=20 gold=193 kills=45 towerKills=36/0/9
+w7 ready lives=20 gold=208 kills=54 towerKills=40/0/14/0
+w8 ready lives=18 gold=199 kills=58 towerKills=43/0/14/1
+w9 ready lives=18 gold=241 kills=67 towerKills=48/0/18/1/0
+w10 ready lives=18 gold=178 kills=70 towerKills=49/0/18/3/0/0
+w11 ready lives=16 gold=253 kills=74 towerKills=50/0/20/3/0/1
+w12 ready lives=12 gold=168 kills=79 towerKills=54/0/20/3/1/1/0
+w13 ready lives=12 gold=281 kills=89 towerKills=57/0/24/4/1/2/1
+w14 ready lives=12 gold=303 kills=93 towerKills=57/0/24/5/2/4/1
+w15 ready lives=12 gold=278 kills=97 towerKills=59/0/24/5/2/6/1
+w16 ready lives=12 gold=258 kills=105 towerKills=60/0/26/6/5/6/2
+w17 ready lives=12 gold=268 kills=109 towerKills=61/0/26/8/5/7/2/0
+w18 won lives=2 gold=407 kills=117 towerKills=63/1/26/9/5/8/3/2"
+`;
+
+exports[`golden replays > korallengraben defense B 2`] = `"w18 won lives=2 gold=407 kills=117 towerKills=63/1/26/9/5/8/3/2"`;
+
+exports[`golden replays > lavastrom defense A 1`] = `
+"w1 ready lives=20 gold=341 kills=15 towerKills=15/0
+w2 ready lives=20 gold=339 kills=33 towerKills=26/4/3
+w3 ready lives=20 gold=508 kills=54 towerKills=29/22/3
+w4 ready lives=20 gold=366 kills=72 towerKills=31/32/9/0
+w5 ready lives=20 gold=364 kills=91 towerKills=36/41/9/5
+w6 ready lives=20 gold=432 kills=113 towerKills=40/54/13/6
+w7 ready lives=20 gold=468 kills=136 towerKills=52/57/20/7
+w8 ready lives=20 gold=503 kills=159 towerKills=62/68/20/9
+w9 ready lives=20 gold=393 kills=182 towerKills=72/70/24/16
+w10 ready lives=20 gold=509 kills=205 towerKills=80/76/24/24/1
+w11 ready lives=20 gold=577 kills=230 towerKills=84/83/30/30/3/0
+w12 ready lives=20 gold=497 kills=255 towerKills=86/91/35/32/3/8/0
+w13 ready lives=20 gold=557 kills=281 towerKills=92/96/35/37/4/17/0
+w14 ready lives=20 gold=500 kills=303 towerKills=92/101/46/38/6/20/0
+w15 ready lives=20 gold=546 kills=327 towerKills=93/105/46/45/8/30/0
+w16 ready lives=18 gold=518 kills=353 towerKills=94/109/49/47/9/44/0/1
+w17 ready lives=18 gold=638 kills=383 towerKills=96/113/49/51/12/58/0/4
+w18 won lives=18 gold=779 kills=411 towerKills=101/115/51/51/14/71/1/7"
+`;
+
+exports[`golden replays > lavastrom defense A 2`] = `"w18 won lives=18 gold=779 kills=411 towerKills=101/115/51/51/14/71/1/7"`;
+
+exports[`golden replays > lavastrom defense B 1`] = `
+"w1 ready lives=20 gold=341 kills=15 towerKills=15/0
+w2 ready lives=20 gold=339 kills=33 towerKills=26/4/3
+w3 ready lives=20 gold=508 kills=54 towerKills=29/22/3
+w4 ready lives=20 gold=366 kills=72 towerKills=31/32/9/0
+w5 ready lives=20 gold=364 kills=91 towerKills=36/41/9/5
+w6 ready lives=20 gold=432 kills=113 towerKills=40/54/13/6
+w7 ready lives=20 gold=468 kills=136 towerKills=52/57/20/7
+w8 ready lives=20 gold=503 kills=159 towerKills=62/68/20/9
+w9 ready lives=20 gold=393 kills=182 towerKills=72/70/24/16
+w10 ready lives=18 gold=559 kills=204 towerKills=79/80/24/21/0
+w11 ready lives=18 gold=582 kills=229 towerKills=85/89/29/21/0/5
+w12 ready lives=18 gold=556 kills=254 towerKills=87/93/33/23/0/15/3
+w13 ready lives=18 gold=537 kills=280 towerKills=89/102/33/24/0/24/7/1
+w14 ready lives=18 gold=429 kills=302 towerKills=89/105/44/27/0/28/8/1/0/0
+w15 ready lives=14 gold=520 kills=323 towerKills=92/112/44/28/0/29/12/6/0/0
+w16 ready lives=13 gold=522 kills=349 towerKills=94/118/46/31/0/34/13/11/1/1/0
+w17 ready lives=11 gold=637 kills=378 towerKills=97/123/46/31/0/47/17/13/1/1/2
+w18 won lives=8 gold=776 kills=403 towerKills=98/128/48/32/0/51/21/16/1/4/2/2"
+`;
+
+exports[`golden replays > lavastrom defense B 2`] = `"w18 won lives=8 gold=776 kills=403 towerKills=98/128/48/32/0/51/21/16/1/4/2/2"`;

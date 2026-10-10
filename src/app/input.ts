@@ -4,7 +4,7 @@ import { TARGET_PRIORITIES } from "../systems/combat";
 import { hasPage, hotkeyTowers, isPaged, pageOf, towerOrder } from "../ui/tower-pages";
 import { isSupport } from "../systems/attacks";
 import type { MatchCommand } from "../core/match";
-import { type Interface, nextMission, renderMission, renderMissionList, TOWER_KEYS } from "../ui/interface";
+import { type Interface, nextMission, renderCodex, renderMission, renderMissionList, TOWER_KEYS } from "../ui/interface";
 import { describeResult } from "../ui/messages";
 import { playerName } from "../ui/players";
 import type { Driver, ViewState } from "../render/scene";
@@ -12,6 +12,7 @@ import type { Applied } from "../net/lockstep";
 import type { Audio } from "./audio";
 import { createCoop } from "./coop";
 import { createDialogs } from "./dialogs";
+import type { CodexTab } from "../ui/enemy-codex";
 interface InputDeps {
   game: Game;
   view: ViewState;
@@ -139,6 +140,19 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     e.preventDefault();
     showTowerPage(pages[(next + pages.length) % pages.length]);
   });
+  /** Switches the enemy codex to another tab and keeps the focus on the tab bar. */
+  function showCodexTab(tab: CodexTab) {
+    renderCodex(game, tab);
+    document.getElementById(`codex-tab-${tab}`)?.focus();
+  }
+  document.getElementById("codex-tabs")!.addEventListener("keydown", (e) => {
+    const current = (e.target as HTMLElement).closest<HTMLElement>("[data-codex-tab]")?.dataset.codexTab,
+      other: CodexTab = current === "enemies" ? "traits" : "enemies";
+    const next = ({ ArrowRight: other, ArrowLeft: other, Home: "enemies", End: "traits" } as const)[e.key as "Home"];
+    if (!next) return;
+    e.preventDefault();
+    showCodexTab(next);
+  });
   // Arrow keys, Home and End move between the sector tabs.
   document.getElementById("sector-tabs")!.addEventListener("keydown", (e) => {
     const count = game.content.sectors?.length ?? 0,
@@ -160,6 +174,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
     if (b.dataset.mission) return selectMission(b.dataset.mission);
     if (b.dataset.send) return execute({ type: "send", enemy: b.dataset.send as EnemyId });
     if (b.dataset.sector) return showSector(Number(b.dataset.sector));
+    if (b.dataset.codexTab) return showCodexTab(b.dataset.codexTab as CodexTab);
     if (b.dataset.towerPage) return showTowerPage(Number(b.dataset.towerPage));
     if (b.dataset.priority && view.selected !== null) {
       execute({ type: "target", id: view.selected, priority: b.dataset.priority as TargetPriority });
@@ -211,6 +226,13 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, setDrive
       case "close-help":
       case "help-done":
         dialogs.close("help");
+        break;
+      case "codex-btn":
+        renderCodex(game);
+        dialogs.open("codex");
+        break;
+      case "close-codex":
+        dialogs.close("codex");
         break;
       case "missions-btn":
       case "overlay-missions":

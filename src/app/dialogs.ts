@@ -1,6 +1,6 @@
 import type { Game } from "../core/game";
 import type { Command, CommandResult } from "../core/types";
-export type DialogName = "help" | "restart" | "missions" | "coop";
+export type DialogName = "help" | "restart" | "missions" | "coop" | "codex";
 /** Modal dialogs pause a running wave and resume it when closed; not in co-op, where `autoPause` is false. */
 export function createDialogs(game: Game, execute: (c: Command) => CommandResult, autoPause: () => boolean = () => true) {
   const dialogs: Record<DialogName, HTMLDialogElement> = {
@@ -8,6 +8,7 @@ export function createDialogs(game: Game, execute: (c: Command) => CommandResult
     restart: document.getElementById("restart-dialog") as HTMLDialogElement,
     missions: document.getElementById("mission-dialog") as HTMLDialogElement,
     coop: document.getElementById("coop-dialog") as HTMLDialogElement,
+    codex: document.getElementById("codex-dialog") as HTMLDialogElement,
   };
   let resumeAfterDialog = false;
   for (const d of Object.values(dialogs))

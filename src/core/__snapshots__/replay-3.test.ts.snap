@@ -1,0 +1,141 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`golden replays > hagelfeld defense A 1`] = `
+"w1 ready lives=10 gold=136 kills=8 towerKills=8/0
+w2 ready lives=10 gold=129 kills=16 towerKills=16/0
+w3 ready lives=10 gold=274 kills=22 towerKills=22/0
+w4 ready lives=10 gold=141 kills=28 towerKills=28/0
+w5 ready lives=9 gold=286 kills=36 towerKills=35/1
+w6 ready lives=9 gold=176 kills=43 towerKills=39/3/1
+w7 ready lives=9 gold=214 kills=53 towerKills=46/4/2/1
+w8 ready lives=9 gold=279 kills=61 towerKills=49/9/2/1
+w9 ready lives=9 gold=249 kills=70 towerKills=55/11/3/1
+w10 ready lives=7 gold=205 kills=76 towerKills=57/12/3/4
+w11 ready lives=7 gold=282 kills=89 towerKills=63/14/5/7/0
+w12 ready lives=7 gold=229 kills=95 towerKills=66/15/5/9/0/0
+w13 ready lives=7 gold=250 kills=107 towerKills=73/16/5/11/0/2
+w14 ready lives=7 gold=241 kills=117 towerKills=76/16/6/13/0/6/0/0
+w15 ready lives=7 gold=324 kills=125 towerKills=78/18/6/15/0/8/0/0
+w16 ready lives=7 gold=294 kills=136 towerKills=81/20/6/16/2/10/1/0/0
+w17 ready lives=5 gold=235 kills=143 towerKills=81/21/6/20/3/11/1/0/0
+w18 won lives=5 gold=427 kills=151 towerKills=85/22/6/22/3/12/1/0/0"
+`;
+
+exports[`golden replays > hagelfeld defense A 2`] = `"w18 won lives=5 gold=427 kills=151 towerKills=85/22/6/22/3/12/1/0/0"`;
+
+exports[`golden replays > hagelfeld defense B 1`] = `
+"w1 ready lives=10 gold=136 kills=8 towerKills=8/0
+w2 ready lives=10 gold=129 kills=16 towerKills=16/0
+w3 ready lives=10 gold=274 kills=22 towerKills=22/0
+w4 ready lives=10 gold=141 kills=28 towerKills=28/0
+w5 ready lives=9 gold=286 kills=36 towerKills=35/1
+w6 ready lives=9 gold=176 kills=43 towerKills=39/3/1
+w7 ready lives=9 gold=204 kills=53 towerKills=46/4/2/1
+w8 ready lives=9 gold=260 kills=61 towerKills=49/9/2/1
+w9 ready lives=9 gold=230 kills=70 towerKills=55/11/3/1
+w10 ready lives=7 gold=241 kills=76 towerKills=57/15/3/1/0
+w11 ready lives=7 gold=335 kills=89 towerKills=61/17/5/2/4
+w12 ready lives=7 gold=195 kills=95 towerKills=64/19/5/3/4/0
+w13 ready lives=7 gold=351 kills=107 towerKills=71/22/5/3/6/0
+w14 ready lives=7 gold=307 kills=117 towerKills=72/24/7/4/7/3/0
+w15 ready lives=7 gold=239 kills=125 towerKills=74/26/7/5/7/4/2/0/0
+w16 ready lives=7 gold=245 kills=136 towerKills=78/26/7/5/10/5/4/1/0
+w17 ready lives=6 gold=338 kills=144 towerKills=78/27/7/6/11/6/7/2/0
+w18 won lives=6 gold=400 kills=152 towerKills=82/27/7/7/12/8/7/2/0/0"
+`;
+
+exports[`golden replays > hagelfeld defense B 2`] = `"w18 won lives=6 gold=400 kills=152 towerKills=82/27/7/7/12/8/7/2/0/0"`;
+
+exports[`golden replays > mangrovensumpf defense A 1`] = `
+"w1 ready lives=20 gold=170 kills=13 towerKills=1/12
+w2 ready lives=20 gold=290 kills=35 towerKills=1/34/0
+w3 ready lives=20 gold=298 kills=53 towerKills=2/46/5
+w4 ready lives=20 gold=333 kills=75 towerKills=2/68/5
+w5 ready lives=20 gold=296 kills=91 towerKills=3/83/5
+w6 ready lives=20 gold=505 kills=128 towerKills=15/103/10/0
+w7 ready lives=17 gold=378 kills=147 towerKills=23/113/10/1
+w8 ready lives=17 gold=387 kills=183 towerKills=33/132/17/1
+w9 ready lives=14 gold=405 kills=206 towerKills=44/136/17/6/3
+w10 ready lives=14 gold=505 kills=253 towerKills=63/151/24/7/8/0
+w11 ready lives=11 gold=256 kills=257 towerKills=64/151/24/8/10/0/0
+w12 ready lives=11 gold=601 kills=300 towerKills=83/159/31/12/13/1/1
+w13 ready lives=8 gold=407 kills=328 towerKills=86/182/31/13/13/1/2
+w14 ready lives=8 gold=546 kills=379 towerKills=89/211/37/13/15/1/13
+w15 ready lives=5 gold=546 kills=407 towerKills=106/217/37/15/18/1/13
+w16 ready lives=5 gold=647 kills=455 towerKills=111/239/45/15/22/1/22
+w17 ready lives=2 gold=476 kills=487 towerKills=124/249/45/16/26/2/24/1
+w18 won lives=2 gold=770 kills=528 towerKills=135/262/53/17/30/3/26/2"
+`;
+
+exports[`golden replays > mangrovensumpf defense A 2`] = `"w18 won lives=2 gold=770 kills=528 towerKills=135/262/53/17/30/3/26/2"`;
+
+exports[`golden replays > mangrovensumpf defense B 1`] = `
+"w1 ready lives=20 gold=170 kills=13 towerKills=1/12
+w2 ready lives=20 gold=290 kills=35 towerKills=1/34/0
+w3 ready lives=20 gold=298 kills=53 towerKills=2/46/5
+w4 ready lives=20 gold=333 kills=75 towerKills=2/68/5
+w5 ready lives=20 gold=296 kills=91 towerKills=3/83/5
+w6 ready lives=20 gold=375 kills=128 towerKills=13/105/10/0/0
+w7 ready lives=17 gold=371 kills=147 towerKills=22/115/10/0/0
+w8 ready lives=17 gold=395 kills=183 towerKills=31/131/17/0/4/0
+w9 ready lives=14 gold=338 kills=206 towerKills=42/137/17/0/7/3
+w10 ready lives=14 gold=563 kills=253 towerKills=54/148/24/4/15/8
+w11 ready lives=11 gold=310 kills=257 towerKills=55/148/24/5/15/10/0
+w12 ready lives=11 gold=508 kills=300 towerKills=68/157/32/7/20/13/3
+w13 ready lives=8 gold=409 kills=328 towerKills=79/164/32/8/22/16/7/0
+w14 ready lives=8 gold=554 kills=379 towerKills=90/182/41/10/25/18/10/3
+w15 ready lives=8 gold=469 kills=408 towerKills=98/195/41/13/25/20/12/4/0
+w16 ready lives=8 gold=654 kills=456 towerKills=100/211/49/13/26/21/32/4/0
+w17 ready lives=8 gold=743 kills=489 towerKills=112/222/49/15/27/25/33/6/0
+w18 won lives=8 gold=1016 kills=530 towerKills=120/231/57/17/31/28/33/13/0"
+`;
+
+exports[`golden replays > mangrovensumpf defense B 2`] = `"w18 won lives=8 gold=1016 kills=530 towerKills=120/231/57/17/31/28/33/13/0"`;
+
+exports[`golden replays > schlackengrat defense A 1`] = `
+"w1 ready lives=20 gold=426 kills=19 towerKills=19/0
+w2 ready lives=20 gold=406 kills=41 towerKills=34/3/4
+w3 ready lives=20 gold=486 kills=68 towerKills=48/16/4
+w4 ready lives=20 gold=473 kills=93 towerKills=56/27/10
+w5 ready lives=20 gold=540 kills=118 towerKills=69/39/10
+w6 ready lives=20 gold=639 kills=146 towerKills=77/53/16
+w7 ready lives=20 gold=609 kills=176 towerKills=93/67/16
+w8 ready lives=20 gold=501 kills=202 towerKills=107/71/24/0
+w9 ready lives=20 gold=606 kills=231 towerKills=124/78/24/5
+w10 ready lives=20 gold=668 kills=262 towerKills=130/83/28/10/11
+w11 ready lives=20 gold=693 kills=296 towerKills=141/94/28/13/20/0
+w12 ready lives=20 gold=462 kills=323 towerKills=141/99/41/15/26/1/0
+w13 ready lives=20 gold=687 kills=354 towerKills=145/110/41/16/38/3/0/1
+w14 ready lives=18 gold=726 kills=387 towerKills=152/115/45/19/47/5/2/1/1
+w15 ready lives=18 gold=886 kills=426 towerKills=154/124/45/21/58/9/8/1/6
+w16 ready lives=18 gold=516 kills=460 towerKills=168/129/47/22/62/9/12/2/6/3/0
+w17 ready lives=18 gold=689 kills=495 towerKills=172/143/47/22/71/10/13/2/8/7/0/0
+w18 ready lives=18 gold=749 kills=531 towerKills=176/152/48/22/84/10/13/2/11/8/3/2
+w19 won lives=18 gold=837 kills=565 towerKills=179/159/50/22/89/13/14/3/13/11/5/7/0"
+`;
+
+exports[`golden replays > schlackengrat defense A 2`] = `"w19 won lives=18 gold=837 kills=565 towerKills=179/159/50/22/89/13/14/3/13/11/5/7/0"`;
+
+exports[`golden replays > schlackengrat defense B 1`] = `
+"w1 ready lives=20 gold=426 kills=19 towerKills=19/0
+w2 ready lives=20 gold=406 kills=41 towerKills=34/3/4
+w3 ready lives=20 gold=486 kills=68 towerKills=48/16/4
+w4 ready lives=20 gold=473 kills=93 towerKills=56/27/10
+w5 ready lives=20 gold=540 kills=118 towerKills=69/39/10
+w6 ready lives=20 gold=639 kills=146 towerKills=77/53/16
+w7 ready lives=20 gold=609 kills=176 towerKills=93/67/16
+w8 ready lives=20 gold=501 kills=202 towerKills=107/71/24/0
+w9 ready lives=20 gold=606 kills=231 towerKills=124/78/24/5
+w10 ready lives=20 gold=586 kills=262 towerKills=137/80/33/9/3/0
+w11 ready lives=20 gold=652 kills=296 towerKills=148/92/33/12/5/6/0
+w12 ready lives=20 gold=494 kills=323 towerKills=148/94/49/17/8/6/1/0
+w13 ready lives=20 gold=681 kills=354 towerKills=158/99/49/24/12/11/1/0/0
+w14 ready lives=20 gold=649 kills=388 towerKills=163/106/53/29/15/18/1/3/0
+w15 ready lives=20 gold=753 kills=427 towerKills=179/115/53/35/16/24/1/4/0/0/0
+w16 ready lives=20 gold=542 kills=461 towerKills=194/117/57/40/18/25/2/7/0/1/0/0
+w17 ready lives=20 gold=867 kills=496 towerKills=206/124/57/42/20/27/3/9/1/1/1/5
+w18 ready lives=20 gold=927 kills=532 towerKills=212/131/60/44/22/30/6/9/3/3/2/10
+w19 won lives=10 gold=864 kills=565 towerKills=215/139/61/44/24/37/6/10/3/6/5/15"
+`;
+
+exports[`golden replays > schlackengrat defense B 2`] = `"w19 won lives=10 gold=864 kills=565 towerKills=215/139/61/44/24/37/6/10/3/6/5/15"`;
