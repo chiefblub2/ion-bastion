@@ -1,3 +1,4 @@
+import { specializationUpgrades, specializationVisuals } from "./specializations";
 import type { TowerStats, UpgradeDefinition, TowerDefinition, AttackSpec, SupportAttack } from "../core/types";
 /** Extra effects and text for individual late levels of one tower. */
 export type LevelSpecials = Partial<Record<number, { attack: Readonly<Record<string, number>>; description: string }>>;
@@ -125,7 +126,17 @@ export function trapTower<T extends Omit<TowerDefinition, "upgrades" | "attack" 
   return { ...definition, placement: "path" as const, upgrades: attackUpgrades(definition, definition.cost, specials, false) };
 }
 
-/** Derive the default level path from the single base-tower definition. */
+/**
+ * Derive the default level path from the single base-tower definition, followed by the three
+ * specialization paths (levels 6 to 8) that branch off level 5.
+ */
 export function attackTower<T extends Omit<TowerDefinition, "upgrades" | "attack"> & { attack: Exclude<AttackSpec, SupportAttack> }>(definition: T, specials: LevelSpecials = {}) {
-  return { ...definition, upgrades: attackUpgrades(definition, definition.cost, specials) };
+  const levels = attackUpgrades(definition, definition.cost, specials);
+  const l5 = { damage: definition.damage, range: definition.range, interval: definition.interval, ...levels[levels.length - 1].effects.stats };
+  const paths = specializationVisuals(definition.id);
+  return {
+    ...definition,
+    ...(paths ? { visual: { ...definition.visual, paths } } : {}),
+    upgrades: [...levels, ...specializationUpgrades(definition.id, definition.cost, l5)],
+  };
 }

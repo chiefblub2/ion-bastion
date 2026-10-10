@@ -1,5 +1,5 @@
 import { Game } from "./game";
-import { upgradeOptions } from "./upgrades";
+import { isSpecialization, upgradeOptions } from "./upgrades";
 import type { GameEvent, MissionDefinition, TowerId } from "./types";
 // Free of vitest so that scripts (balance.ts) can run it too; test-helpers re-exports it.
 export interface Build {
@@ -33,7 +33,8 @@ export function play(
     const options = g.state.towers
       .flatMap((t) =>
         upgradeOptions(t, g.state.wallets[0])
-          .filter((o) => o.status === "available")
+          // Specializations stay out of the test strategies, so the golden replays keep their balance.
+          .filter((o) => o.status === "available" && !isSpecialization(o.definition!))
           .map((o) => ({ id: t.id, upgrade: o.definition!.id, cost: o.definition!.cost })),
       )
       .sort((a, b) => a.cost - b.cost);

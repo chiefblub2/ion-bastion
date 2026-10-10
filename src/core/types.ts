@@ -1,3 +1,5 @@
+import type { SpecializationSpec } from "./specialization-types";
+export type { SpecializationSpec } from "./specialization-types";
 export type Point = { x: number; y: number };
 export type TowerId = keyof typeof import("../content/towers").TOWER_CONTENT;
 export type EnemyId = keyof typeof import("../content/enemies").ENEMY_CONTENT;
@@ -166,6 +168,8 @@ export interface UpgradeDefinition {
     /** Overrides numeric parameters of the tower's attack, e.g. `{ factor: 0.45 }`. */
     attack?: Readonly<Record<string, number>>;
     level?: number;
+    /** Specialization ability (levels 6 to 8); a later tier replaces it completely. */
+    specialization?: SpecializationSpec;
   };
 }
 
@@ -205,7 +209,13 @@ export type TurretStyle =
   | "tracker";
 export type ProjectileStyle = "tracer" | "shell" | "crystal" | "twin" | "ember" | "glob" | "orb" | "net";
 export type PathMotif = "blades" | "vortex" | "rings";
-export interface PathVisual { color: number; motif: PathMotif }
+export interface PathVisual {
+  color: number;
+  motif: PathMotif;
+  /** Display name and tactical role of a specialization path; Aura paths take the name from their upgrades. */
+  name?: string;
+  role?: string;
+}
 export interface TowerVisual {
   /** Symbol on the build card. */
   icon: string;
