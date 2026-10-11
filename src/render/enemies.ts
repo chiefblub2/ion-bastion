@@ -2,88 +2,144 @@ import type { Enemy, EnemyDefinition, EnemyVisual } from "../core/types";
 import type { StatusFlags } from "../systems/status";
 import type { TraitFlags } from "../systems/traits";
 import { polygon, star, type Ink } from "./shapes";
-interface BodyContext {
-  g: Ink;
+/**
+ * Everything the three enemy stages need, built once per enemy and frame by `enemyContext`.
+ * Stages, bottom to top: `drawEnemyUnderlay` (fields, trails, rings, shadow), `drawEnemyBody` (the unit itself)
+ * and `drawEnemyOverlay` (markers, HP bar). Each may draw into its own Graphics; `drawEnemy` runs all three into one.
+ */
+export interface EnemyDrawContext {
   x: number;
   y: number;
+  /** Pixel size of one cell; area traits give their radius in cells. */
+  cell: number;
+  /** Body radius in pixels. */
   r: number;
-  color: number;
+  enemy: Enemy;
+  definition: Readonly<EnemyDefinition>;
   /** Direction of travel. */
   heading: number;
-  /** Flying unit: drawn with a distant shadow, whatever its shape. */
+  status: StatusFlags;
+  traits: TraitFlags;
+  /** Render time in seconds, for animated bodies and markers. */
+  clock: number;
+  /** Drawn as a flying unit (distant shadow, lifted body), whatever its shape: a flyer, a phase in the air, a leaping walker. */
   air: boolean;
-  /** Render time in seconds, for animated bodies. */
-  clock?: number;
+  /** Stealthed and unrevealed: the overlay draws only a shimmering outline, the other stages nothing. */
+  hidden: boolean;
+  /** The README gallery draws bare units. */
+  hpBar: boolean;
 }
-/** Enemy bodies by `visual.shape`. A new look is one entry here. */
-const BODIES: { [K in EnemyVisual["shape"]]: (ctx: BodyContext, visual: Extract<EnemyVisual, { shape: K }>) => void } = {
-  polygon: ({ g, x, y, r, color, air }, visual) => {
-    g.fillStyle(0x030a0c, air ? 0.3 : 0.55);
-    if (air) g.fillEllipse(x, y + 14, r * 1.8, r * 0.9);
-    else g.fillEllipse(x, y + 6, r * 2.3, r * 1.5);
-    polygon(g, x, y - (air ? 4 : 0), r, visual.sides, color, visual.rotation ?? 0);
-    polygon(g, x, y - (air ? 4 : 0), r * 0.4, 4, 0x442e36, 0);
+export function enemyContext(
+  x: number,
+  y: number,
+  cell: number,
+  enemy: Enemy,
+  definition: Readonly<EnemyDefinition>,
+  heading: number,
+  status: StatusFlags,
+  traits: TraitFlags,
+  clock: number,
+  hpBar = true,
+): EnemyDrawContext {
+  const air = traits.phase ? traits.phase === "air" : traits.leaping ? definition.layer !== "air" : definition.layer === "air";
+  return { x, y, cell, r: definition.size * cell, enemy, definition, heading, status, traits, clock, air, hidden: traits.stealth && !traits.revealed, hpBar };
+}
+interface Shape<V> {
+  /** Ground or air shadow; part of the underlay, so a sprite body can replace `body` and keep it. */
+  shadow: (g: Ink, c: EnemyDrawContext, visual: V) => void;
+  body: (g: Ink, c: EnemyDrawContext, visual: V) => void;
+}
+/** Shadow of a compact body: faint and far below a flyer, darker and close under a walker. */
+function dropShadow(g: Ink, { x, y, r }: EnemyDrawContext, air: boolean, alpha = 0.55, w = 2.3, h = 1.5) {
+  g.fillStyle(0x030a0c, air ? 0.3 : alpha);
+  if (air) g.fillEllipse(x, y + 14, r * 1.8, r * 0.9);
+  else g.fillEllipse(x, y + 6, r * w, r * h);
+}
+/** Flyers float a little above their position. */
+const lift = ({ y, air }: EnemyDrawContext) => y - (air ? 4 : 0);
+/** One worm segment: a chain trailing behind the head with a gentle sway. */
+function wormSegment({ x, r, heading, clock }: EnemyDrawContext, cy: number, segments: number, i: number) {
+  const back = { x: -Math.cos(heading), y: -Math.sin(heading) },
+    sway = Math.sin(clock * 4 - i * 0.9) * r * 0.35 * Math.min(i, 1.5),
+    d = i * r * 0.95;
+  return { x: x + back.x * d - back.y * sway, y: cy + back.y * d + back.x * sway, rad: r * (1 - (i * 0.55) / segments) };
+}
+/** Enemy looks by `visual.shape`. A new look is one entry here. */
+const SHAPES: { [K in EnemyVisual["shape"]]: Shape<Extract<EnemyVisual, { shape: K }>> } = {
+  polygon: {
+    shadow: (g, c) => dropShadow(g, c, c.air),
+    body: (g, c, visual) => {
+      const cy = lift(c);
+      polygon(g, c.x, cy, c.r, visual.sides, c.definition.color, visual.rotation ?? 0);
+      polygon(g, c.x, cy, c.r * 0.4, 4, 0x442e36, 0);
+    },
   },
   // Spiky star; turns a little with the heading so legs feel alive.
-  star: ({ g, x, y, r, color, heading, air }, visual) => {
-    g.fillStyle(0x030a0c, air ? 0.3 : 0.55);
-    if (air) g.fillEllipse(x, y + 14, r * 1.8, r * 0.9);
-    else g.fillEllipse(x, y + 6, r * 2.3, r * 1.5);
-    const cy = y - (air ? 4 : 0);
-    star(g, x, cy, r * 1.15, r * 1.15 * visual.inner, visual.points, color, heading * 0.35);
-    polygon(g, x, cy, r * 0.35, 4, 0x442e36, heading * 0.35);
+  star: {
+    shadow: (g, c) => dropShadow(g, c, c.air),
+    body: (g, c, visual) => {
+      const { x, r, heading } = c,
+        cy = lift(c);
+      star(g, x, cy, r * 1.15, r * 1.15 * visual.inner, visual.points, c.definition.color, heading * 0.35);
+      polygon(g, x, cy, r * 0.35, 4, 0x442e36, heading * 0.35);
+    },
   },
   // Round body: glow ring, core, highlight and orbiting moons.
-  orb: ({ g, x, y, r, color, air, clock = 0 }, visual) => {
-    g.fillStyle(0x030a0c, air ? 0.3 : 0.5);
-    if (air) g.fillEllipse(x, y + 14, r * 1.8, r * 0.9);
-    else g.fillEllipse(x, y + 6, r * 2.1, r * 1.4);
-    const cy = y - (air ? 4 : 0);
-    g.fillStyle(color, 0.22);
-    g.fillCircle(x, cy, r * 1.25);
-    g.fillStyle(color);
-    g.fillCircle(x, cy, r * 0.8);
-    g.fillStyle(0xffffff, 0.45);
-    g.fillCircle(x - r * 0.25, cy - r * 0.25, r * 0.25);
-    for (let i = 0; i < visual.moons; i++) {
-      const a = clock * 2 + (i * Math.PI * 2) / visual.moons;
-      g.fillStyle(0xffffff, 0.85);
-      g.fillCircle(x + Math.cos(a) * r * 1.35, cy + Math.sin(a) * r * 1.35, Math.max(2, r * 0.17));
-    }
-  },
-  // Segmented chain trailing behind the head with a gentle sway.
-  worm: ({ g, x, y, r, color, heading, air, clock = 0 }, visual) => {
-    const back = { x: -Math.cos(heading), y: -Math.sin(heading) },
-      cy = y - (air ? 4 : 0),
-      seg = (i: number) => {
-        const sway = Math.sin(clock * 4 - i * 0.9) * r * 0.35 * Math.min(i, 1.5),
-          d = i * r * 0.95;
-        return { x: x + back.x * d - back.y * sway, y: cy + back.y * d + back.x * sway, rad: r * (1 - (i * 0.55) / visual.segments) };
-      };
-    g.fillStyle(0x030a0c, air ? 0.3 : 0.5);
-    for (let i = 0; i < visual.segments; i++) {
-      const s = seg(i);
-      g.fillEllipse(s.x, s.y + (air ? 14 : 6), s.rad * 2, s.rad * 1.2);
-    }
-    for (let i = visual.segments - 1; i >= 0; i--) {
-      const s = seg(i);
-      g.fillStyle(0x0c1417, 0.9);
-      g.fillCircle(s.x, s.y, s.rad + 1.5);
+  orb: {
+    shadow: (g, c) => dropShadow(g, c, c.air, 0.5, 2.1, 1.4),
+    body: (g, c, visual) => {
+      const { x, r, clock } = c,
+        color = c.definition.color,
+        cy = lift(c);
+      g.fillStyle(color, 0.22);
+      g.fillCircle(x, cy, r * 1.25);
       g.fillStyle(color);
-      g.fillCircle(s.x, s.y, s.rad);
-    }
-    g.fillStyle(0x442e36);
-    g.fillCircle(x + Math.cos(heading) * r * 0.3, cy + Math.sin(heading) * r * 0.3, r * 0.25);
+      g.fillCircle(x, cy, r * 0.8);
+      g.fillStyle(0xffffff, 0.45);
+      g.fillCircle(x - r * 0.25, cy - r * 0.25, r * 0.25);
+      for (let i = 0; i < visual.moons; i++) {
+        const a = clock * 2 + (i * Math.PI * 2) / visual.moons;
+        g.fillStyle(0xffffff, 0.85);
+        g.fillCircle(x + Math.cos(a) * r * 1.35, cy + Math.sin(a) * r * 1.35, Math.max(2, r * 0.17));
+      }
+    },
   },
-  // Flying: faint, distant shadow and an arrow pointing along the path.
-  glider: ({ g, x, y, r, color, heading: a }) => {
-    g.fillStyle(0x030a0c, 0.3);
-    g.fillEllipse(x, y + 14, r * 1.8, r * 0.9);
-    const p = (ang: number, rad: number) => ({ x: x + Math.cos(a + ang) * rad, y: y + Math.sin(a + ang) * rad });
-    g.fillStyle(color);
-    g.fillPoints([p(0, r * 1.3), p(2.5, r * 1.2), p(Math.PI, r * 0.35), p(-2.5, r * 1.2)], true);
+  // Segmented chain trailing behind the head; every segment casts its own shadow.
+  worm: {
+    shadow: (g, c, visual) => {
+      const cy = lift(c);
+      g.fillStyle(0x030a0c, c.air ? 0.3 : 0.5);
+      for (let i = 0; i < visual.segments; i++) {
+        const s = wormSegment(c, cy, visual.segments, i);
+        g.fillEllipse(s.x, s.y + (c.air ? 14 : 6), s.rad * 2, s.rad * 1.2);
+      }
+    },
+    body: (g, c, visual) => {
+      const { x, r, heading } = c,
+        cy = lift(c);
+      for (let i = visual.segments - 1; i >= 0; i--) {
+        const s = wormSegment(c, cy, visual.segments, i);
+        g.fillStyle(0x0c1417, 0.9);
+        g.fillCircle(s.x, s.y, s.rad + 1.5);
+        g.fillStyle(c.definition.color);
+        g.fillCircle(s.x, s.y, s.rad);
+      }
+      g.fillStyle(0x442e36);
+      g.fillCircle(x + Math.cos(heading) * r * 0.3, cy + Math.sin(heading) * r * 0.3, r * 0.25);
+    },
+  },
+  // Flying: always the faint, distant shadow, and an arrow pointing along the path (never lifted).
+  glider: {
+    shadow: (g, c) => dropShadow(g, c, true),
+    body: (g, { x, y, r, heading: a, definition }) => {
+      const p = (ang: number, rad: number) => ({ x: x + Math.cos(a + ang) * rad, y: y + Math.sin(a + ang) * rad });
+      g.fillStyle(definition.color);
+      g.fillPoints([p(0, r * 1.3), p(2.5, r * 1.2), p(Math.PI, r * 0.35), p(-2.5, r * 1.2)], true);
+    },
   },
 };
+/** The registry entry of a visual, with its union narrowed away (each entry only ever gets its own shape). */
+const shapeOf = (visual: EnemyVisual) => SHAPES[visual.shape] as Shape<EnemyVisual>;
 /** Status marker colours; they match the towers that cause the effect. */
 const STATUS_COLORS = { slowed: 0xa5a2ff, stunned: 0x5cf2d6, burning: 0xff6a3d, vulnerable: 0xb6f04a, pulled: 0x4d7cff, disrupted: 0xff3df2, netted: 0xe0c068, bleeding: 0xd7263d, charged: 0xff4d4d };
 const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff9e, scan: 0x6fd3ff, regen: 0x93f5b8, armor: 0xc9d1d9, immune: 0x9fe6ff, split: 0x442e36, sand: 0xc9a46a, plate: 0xff9a7a, gust: 0x9fd8ff, swarm: 0xb6ff6a, rage: 0xff5a1a, facet: 0x7ff4ea, leap: 0xbfe9ff, dampen: 0x8a7dff, brood: 0xe8d27a, overload: 0xffe14d, molt: 0xe6a0b4, momentum: 0xffb347, lap: 0xd9a441, refract: 0xe6f7ff, blastproof: 0xb59a7a, insulated: 0xf2d95c, heatshield: 0xff7a3d, mirror: 0xdfe8f2, link: 0x7ae0c8, taunt: 0xff6b8a, martyr: 0xf2e6c9, pack: 0xb8c4d0, cloak: 0x8e7cc3, blink: 0x6fe39a, tunnel: 0x9c7a54, phase: 0xc792ea, blind: 0xfff27a, jam: 0x90a4b8, defuse: 0xd4a373, suppress: 0x7a8899, retaliate: 0x8bb174 };
@@ -101,7 +157,9 @@ function field(g: Ink, x: number, y: number, radius: number, cell: number, color
   }
 }
 /** Markers under the body: auras of leaders and healers, motion trails, outlines. */
-function traitsBelow(g: Ink, x: number, y: number, r: number, cell: number, color: number, heading: number, t: TraitFlags, clock: number) {
+function traitsBelow(g: Ink, c: EnemyDrawContext) {
+  const { x, y, r, cell, heading, traits: t, clock } = c,
+    color = c.definition.color;
   if (t.leader) {
     g.lineStyle(1, TRAIT_COLORS.leader, 0.22);
     g.strokeCircle(x, y, t.leader * cell);
@@ -263,7 +321,7 @@ function traitsBelow(g: Ink, x: number, y: number, r: number, cell: number, colo
   }
 }
 /** Markers on top of the body: shield bubble, crown, cross, scan brackets. */
-function traitsAbove(g: Ink, x: number, y: number, r: number, t: TraitFlags, clock: number) {
+function traitsAbove(g: Ink, { x, y, r, traits: t, clock }: EnemyDrawContext) {
   if (t.shield > 0) {
     g.fillStyle(TRAIT_COLORS.shield, 0.1 * t.shield);
     g.fillCircle(x, y, r + 6);
@@ -432,33 +490,8 @@ function traitsAbove(g: Ink, x: number, y: number, r: number, t: TraitFlags, clo
     }
   }
 }
-export function drawEnemy(
-  g: Ink,
-  x: number,
-  y: number,
-  size: number,
-  e: Enemy,
-  d: Readonly<EnemyDefinition>,
-  heading: number,
-  status: StatusFlags,
-  traits: TraitFlags,
-  clock: number,
-  /** The README gallery draws bare units. */
-  hpBar = true,
-) {
-  const r = d.size * size;
-  // Stealthed and unrevealed: only a shimmering outline, no body or HP bar.
-  if (traits.stealth && !traits.revealed) {
-    g.lineStyle(1.5, d.color, 0.3 + 0.15 * Math.sin(clock * 5 + e.id));
-    for (let i = 0; i < 8; i++) {
-      const a = clock + (i * Math.PI) / 4;
-      g.beginPath();
-      g.arc(x, y, r, a, a + 0.45);
-      g.strokePath();
-    }
-    return;
-  }
-  traitsBelow(g, x, y, r, size, d.color, heading, traits, clock);
+/** Status rings and sparks under the body: they belong to the ground the unit stands on. */
+function statusBelow(g: Ink, { x, y, r, heading, status, clock, enemy: e }: EnemyDrawContext) {
   if (status.vulnerable) {
     g.fillStyle(STATUS_COLORS.vulnerable, 0.18);
     g.fillCircle(x, y, r + 8);
@@ -500,31 +533,29 @@ export function drawEnemy(
       g.strokePath();
     }
   }
-  // Tentacles trail behind the body, swaying with the clock.
-  if (d.visual.shape === "polygon" && d.visual.tentacles) {
-    const count = d.visual.tentacles;
-    g.lineStyle(1.5, d.color, 0.55);
-    for (let k = 0; k < count; k++) {
-      const i = k - (count - 1) / 2;
-      const sx = x - Math.cos(heading) * r * 0.5 - Math.sin(heading) * i * r * 0.35,
-        sy = y - Math.sin(heading) * r * 0.5 + Math.cos(heading) * i * r * 0.35,
-        w = Math.sin(clock * 5 + i * 1.3 + e.id) * r * 0.35;
-      g.strokePoints(
-        [
-          { x: sx, y: sy },
-          { x: sx - Math.cos(heading) * r * 0.9 - Math.sin(heading) * w, y: sy - Math.sin(heading) * r * 0.9 + Math.cos(heading) * w },
-          { x: sx - Math.cos(heading) * r * 1.7 + Math.sin(heading) * w, y: sy - Math.sin(heading) * r * 1.7 - Math.cos(heading) * w },
-        ],
-        false,
-      );
-    }
+}
+/** Tentacles trail behind a polygon body, swaying with the clock. */
+function tentacles(g: Ink, { x, y, r, heading, clock, enemy: e, definition: d }: EnemyDrawContext) {
+  if (d.visual.shape !== "polygon" || !d.visual.tentacles) return;
+  const count = d.visual.tentacles;
+  g.lineStyle(1.5, d.color, 0.55);
+  for (let k = 0; k < count; k++) {
+    const i = k - (count - 1) / 2;
+    const sx = x - Math.cos(heading) * r * 0.5 - Math.sin(heading) * i * r * 0.35,
+      sy = y - Math.sin(heading) * r * 0.5 + Math.cos(heading) * i * r * 0.35,
+      w = Math.sin(clock * 5 + i * 1.3 + e.id) * r * 0.35;
+    g.strokePoints(
+      [
+        { x: sx, y: sy },
+        { x: sx - Math.cos(heading) * r * 0.9 - Math.sin(heading) * w, y: sy - Math.sin(heading) * r * 0.9 + Math.cos(heading) * w },
+        { x: sx - Math.cos(heading) * r * 1.7 + Math.sin(heading) * w, y: sy - Math.sin(heading) * r * 1.7 - Math.cos(heading) * w },
+      ],
+      false,
+    );
   }
-  // Burrowed: only a faint body above the mound.
-  if (traits.burrowed) {
-    polygon(g, x, y, r * 0.8, d.visual.shape === "polygon" ? d.visual.sides : 4, d.color, d.visual.shape === "polygon" ? (d.visual.rotation ?? 0) : 0, 0.3);
-  } else
-    (BODIES[d.visual.shape] as (ctx: BodyContext, visual: EnemyVisual) => void)({ g, x, y, r, color: d.color, heading, air: traits.phase ? traits.phase === "air" : traits.leaping ? d.layer !== "air" : d.layer === "air", clock }, d.visual);
-  traitsAbove(g, x, y, r, traits, clock);
+}
+/** Status markers stuck on the body: net, bomb, flames. */
+function statusAbove(g: Ink, { x, y, r, status, clock }: EnemyDrawContext) {
   // Netted: a mesh drawn over the body.
   if (status.netted) {
     g.lineStyle(1.2, STATUS_COLORS.netted, 0.9);
@@ -545,9 +576,64 @@ export function drawEnemy(
     g.fillStyle(STATUS_COLORS.burning, 0.9);
     for (const [dx, dy] of [[-0.6, -0.2], [0.5, -0.5], [0.1, 0.4]]) g.fillCircle(x + dx * r, y + dy * r, 2.2);
   }
-  if (!hpBar) return;
+}
+/**
+ * Everything behind the body: trait fields and trails, status rings, tentacles and, last, the shape's shadow
+ * (it used to open the body, so it still darkens the rings and tentacles drawn before it).
+ */
+export function drawEnemyUnderlay(g: Ink, c: EnemyDrawContext) {
+  if (c.hidden) return;
+  traitsBelow(g, c);
+  statusBelow(g, c);
+  tentacles(g, c);
+  // Burrowed units cast no shadow: the mound stands in for it.
+  if (!c.traits.burrowed) shapeOf(c.definition.visual).shadow(g, c, c.definition.visual);
+}
+/** The unit itself, without shadow or markers. Hidden stealth units have none; burrowed ones only a faint shape. */
+export function drawEnemyBody(g: Ink, c: EnemyDrawContext) {
+  if (c.hidden) return;
+  const { x, y, r, definition: d } = c;
+  if (c.traits.burrowed) polygon(g, x, y, r * 0.8, d.visual.shape === "polygon" ? d.visual.sides : 4, d.color, d.visual.shape === "polygon" ? (d.visual.rotation ?? 0) : 0, 0.3);
+  else shapeOf(d.visual).body(g, c, d.visual);
+}
+/** Markers on the body and the HP bar; a hidden stealth unit shows only its shimmering outline. */
+export function drawEnemyOverlay(g: Ink, c: EnemyDrawContext) {
+  const { x, y, r, enemy: e, definition: d, clock } = c;
+  if (c.hidden) {
+    g.lineStyle(1.5, d.color, 0.3 + 0.15 * Math.sin(clock * 5 + e.id));
+    for (let i = 0; i < 8; i++) {
+      const a = clock + (i * Math.PI) / 4;
+      g.beginPath();
+      g.arc(x, y, r, a, a + 0.45);
+      g.strokePath();
+    }
+    return;
+  }
+  traitsAbove(g, c);
+  statusAbove(g, c);
+  if (!c.hpBar) return;
   g.fillStyle(0x050c12);
   g.fillRoundedRect(x - r - 1, y - r - 9, r * 2 + 2, 5, 2);
   g.fillStyle(e.hp / e.maxHp > 0.4 ? 0x93f5b8 : 0xff738a);
   g.fillRect(x - r, y - r - 8, Math.max(0, (r * 2 * e.hp) / e.maxHp), 3);
+}
+/** One enemy with all three stages into a single Graphics (gallery); the battlefield draws the stages on their own layers. */
+export function drawEnemy(
+  g: Ink,
+  x: number,
+  y: number,
+  size: number,
+  e: Enemy,
+  d: Readonly<EnemyDefinition>,
+  heading: number,
+  status: StatusFlags,
+  traits: TraitFlags,
+  clock: number,
+  /** The README gallery draws bare units. */
+  hpBar = true,
+) {
+  const c = enemyContext(x, y, size, e, d, heading, status, traits, clock, hpBar);
+  drawEnemyUnderlay(g, c);
+  drawEnemyBody(g, c);
+  drawEnemyOverlay(g, c);
 }

@@ -9,7 +9,7 @@ import { enemyAt } from "./pick";
 import type { GameEvent, GameState, Point, TowerId } from "../core/types";
 import { PLAYER_COLORS } from "../net/protocol";
 import { drawEffect, effectLifetime, INCOME_LIFETIME, isVisual, type EffectOrigin, type VisualEvent } from "./effects";
-import { drawEnemy } from "./enemies";
+import { drawEnemyBody, drawEnemyOverlay, drawEnemyUnderlay, enemyContext } from "./enemies";
 import { CELL, px, type Pen } from "./shapes";
 import { drawAmbient, drawTerrain, themeAccent, themeGlow } from "./terrain";
 import { drawTower } from "./towers";
@@ -80,7 +80,14 @@ export class Battlefield extends Phaser.Scene {
   /** Towers and their light lie below the enemies, so units cover them and health bars are never lit. */
   private towerInk!: Phaser.GameObjects.Graphics;
   private towerGlow!: Phaser.GameObjects.Graphics;
-  /** Enemies, shots and effects, and the additive light of shots and effects above them. */
+  /**
+   * Enemies in three stages, each a layer across all units: fields, trails and shadows, then bodies, then markers and
+   * HP bars. A body never covers another unit's HP bar, and the body layer can later be swapped for sprites.
+   */
+  private enemyUnderlay!: Phaser.GameObjects.Graphics;
+  private enemyBody!: Phaser.GameObjects.Graphics;
+  private enemyOverlay!: Phaser.GameObjects.Graphics;
+  /** Foreground above the enemies: selection ring, shots, effects, portal pulse, and the additive light of shots and effects. */
   private ink!: Phaser.GameObjects.Graphics;
   private glow!: Phaser.GameObjects.Graphics;
   private effects: Effect[] = [];
@@ -120,6 +127,10 @@ export class Battlefield extends Phaser.Scene {
     const glow = themeGlow(this.sim.map);
     this.towerInk = this.add.graphics();
     this.towerGlow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setAlpha(glow);
+    // Display order is creation order (only the income labels set a depth, to float above everything).
+    this.enemyUnderlay = this.add.graphics();
+    this.enemyBody = this.add.graphics();
+    this.enemyOverlay = this.add.graphics();
     this.ink = this.add.graphics();
     this.glow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setAlpha(glow);
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
@@ -274,7 +285,7 @@ export class Battlefield extends Phaser.Scene {
       { towers, enemies } = content,
       towerPen: Pen = { g: this.towerInk, glow: this.towerGlow },
       pen: Pen = { g: this.ink, glow: this.glow };
-    for (const layer of [this.towerInk, this.towerGlow, this.ink, this.glow]) layer.clear();
+    for (const layer of [this.towerInk, this.towerGlow, this.enemyUnderlay, this.enemyBody, this.enemyOverlay, this.ink, this.glow]) layer.clear();
     this.ambient.clear();
     drawAmbient(this.ambient, this.sim.map, this.clock);
     const selected = s.towers.find((t) => t.id === this.view.selected),
@@ -347,9 +358,13 @@ export class Battlefield extends Phaser.Scene {
         g.fillCircle(px(t.x) - CELL / 2 + 7, px(t.y) - CELL / 2 + 7, 3.5);
       }
     }
+    const units = s.enemies.map((e) =>
+      enemyContext(px(e.x), px(e.y), CELL, e, enemies[e.type], this.heading(e.distance), statusFlags(e, s.time), traitFlags(this.sim, e), this.clock),
+    );
+    for (const c of units) drawEnemyUnderlay(this.enemyUnderlay, c);
+    for (const c of units) drawEnemyBody(this.enemyBody, c);
+    for (const c of units) drawEnemyOverlay(this.enemyOverlay, c);
     const ink = this.ink;
-    for (const e of s.enemies)
-      drawEnemy(ink, px(e.x), px(e.y), CELL, e, enemies[e.type], this.heading(e.distance), statusFlags(e, s.time), traitFlags(this.sim, e), this.clock);
     const marked = s.enemies.find((e) => e.id === this.view.enemy);
     if (marked && !isHidden(this.sim, marked)) {
       const r = enemies[marked.type].size * CELL + 6 + Math.sin(this.clock * 6);
