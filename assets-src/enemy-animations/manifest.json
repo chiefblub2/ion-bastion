@@ -1,0 +1,234 @@
+{
+  "version": 1,
+  "description": "Game-ready Phase 5A+5C animation sheets: 6 enemy IDs, 4 states each. No original source sheets or individual frame duplicates.",
+  "enemies": {
+    "drone": {
+      "cellWidth": 222,
+      "cellHeight": 222,
+      "states": {
+        "idle": {
+          "sheet": "assets-src/enemy-animations/drone/idle.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 8,
+          "loop": true
+        },
+        "move": {
+          "sheet": "assets-src/enemy-animations/drone/move.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 10,
+          "loop": true
+        },
+        "hurt": {
+          "sheet": "assets-src/enemy-animations/drone/hurt.png",
+          "frameCount": 4,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 14,
+          "loop": false
+        },
+        "death": {
+          "sheet": "assets-src/enemy-animations/drone/death.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 12,
+          "loop": false
+        }
+      }
+    },
+    "runner": {
+      "cellWidth": 222,
+      "cellHeight": 222,
+      "states": {
+        "idle": {
+          "sheet": "assets-src/enemy-animations/runner/idle.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 8,
+          "loop": true
+        },
+        "move": {
+          "sheet": "assets-src/enemy-animations/runner/move.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 10,
+          "loop": true
+        },
+        "hurt": {
+          "sheet": "assets-src/enemy-animations/runner/hurt.png",
+          "frameCount": 4,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 14,
+          "loop": false
+        },
+        "death": {
+          "sheet": "assets-src/enemy-animations/runner/death.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 12,
+          "loop": false
+        }
+      }
+    },
+    "tank": {
+      "cellWidth": 222,
+      "cellHeight": 222,
+      "states": {
+        "idle": {
+          "sheet": "assets-src/enemy-animations/tank/idle.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 8,
+          "loop": true
+        },
+        "move": {
+          "sheet": "assets-src/enemy-animations/tank/move.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 10,
+          "loop": true
+        },
+        "hurt": {
+          "sheet": "assets-src/enemy-animations/tank/hurt.png",
+          "frameCount": 4,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 14,
+          "loop": false
+        },
+        "death": {
+          "sheet": "assets-src/enemy-animations/tank/death.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 12,
+          "loop": false
+        }
+      }
+    },
+    "boss": {
+      "cellWidth": 222,
+      "cellHeight": 222,
+      "states": {
+        "idle": {
+          "sheet": "assets-src/enemy-animations/boss/idle.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 8,
+          "loop": true
+        },
+        "move": {
+          "sheet": "assets-src/enemy-animations/boss/move.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 10,
+          "loop": true
+        },
+        "hurt": {
+          "sheet": "assets-src/enemy-animations/boss/hurt.png",
+          "frameCount": 4,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 14,
+          "loop": false
+        },
+        "death": {
+          "sheet": "assets-src/enemy-animations/boss/death.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 12,
+          "loop": false
+        }
+      }
+    },
+    "glider": {
+      "cellWidth": 222,
+      "cellHeight": 222,
+      "states": {
+        "idle": {
+          "sheet": "assets-src/enemy-animations/glider/idle.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 8,
+          "loop": true
+        },
+        "move": {
+          "sheet": "assets-src/enemy-animations/glider/move.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 10,
+          "loop": true
+        },
+        "hurt": {
+          "sheet": "assets-src/enemy-animations/glider/hurt.png",
+          "frameCount": 4,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 14,
+          "loop": false
+        },
+        "death": {
+          "sheet": "assets-src/enemy-animations/glider/death.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 12,
+          "loop": false
+        }
+      }
+    },
+    "aegis": {
+      "cellWidth": 222,
+      "cellHeight": 222,
+      "states": {
+        "idle": {
+          "sheet": "assets-src/enemy-animations/aegis/idle.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 8,
+          "loop": true
+        },
+        "move": {
+          "sheet": "assets-src/enemy-animations/aegis/move.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 10,
+          "loop": true
+        },
+        "hurt": {
+          "sheet": "assets-src/enemy-animations/aegis/hurt.png",
+          "frameCount": 4,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 14,
+          "loop": false
+        },
+        "death": {
+          "sheet": "assets-src/enemy-animations/aegis/death.png",
+          "frameCount": 8,
+          "frameWidth": 222,
+          "frameHeight": 222,
+          "fps": 12,
+          "loop": false
+        }
+      }
+    }
+  }
+}
