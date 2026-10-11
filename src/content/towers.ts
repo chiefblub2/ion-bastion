@@ -29,7 +29,7 @@ export const TOWER_CONTENT = {
     attack: { kind: "splash", radius: 1.25 },
     targets: ["ground"],
     projectile: { speed: 6 },
-    visual: { icon: "✦", turret: "heavy", projectile: "shell", impact: "burst" },
+    visual: { icon: "✦", turret: "heavy", projectile: "rocket", impact: "burst" },
   }),
   frost: attackTower({
     id: "frost",
@@ -293,7 +293,7 @@ export const TOWER_CONTENT = {
     attack: { kind: "mortar", radius: 1.3, minRange: 1.5 },
     targets: ["ground"],
     projectile: { speed: 4 },
-    visual: { icon: "⌓", turret: "mortar", projectile: "shell", impact: "burst" },
+    visual: { icon: "⌓", turret: "mortar", projectile: "lob", impact: "burst" },
   }, {
     4: {
       attack: { radius: 1.5 },
@@ -340,7 +340,7 @@ export const TOWER_CONTENT = {
     attack: { kind: "execute", threshold: 0.25, multiplier: 4 },
     targets: ["ground", "air"],
     projectile: { speed: 11 },
-    visual: { icon: "⚔\uFE0E", turret: "blade", projectile: "tracer", impact: "spark" },
+    visual: { icon: "⚔\uFE0E", turret: "blade", projectile: "glaive", impact: "spark" },
   }, {
     4: {
       attack: { threshold: 0.3 },
@@ -364,7 +364,7 @@ export const TOWER_CONTENT = {
     attack: { kind: "volley", targets: 3 },
     targets: ["ground", "air"],
     projectile: { speed: 11 },
-    visual: { icon: "⁂", turret: "scatter", projectile: "crystal", impact: "spark" },
+    visual: { icon: "⁂", turret: "scatter", projectile: "shard", impact: "spark" },
   }, {
     4: {
       attack: { targets: 4 },

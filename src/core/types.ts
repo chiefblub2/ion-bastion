@@ -207,7 +207,7 @@ export type TurretStyle =
   | "beacon"
   | "dock"
   | "tracker";
-export type ProjectileStyle = "tracer" | "shell" | "crystal" | "twin" | "ember" | "glob" | "orb" | "net";
+export type ProjectileStyle = "tracer" | "shell" | "crystal" | "twin" | "ember" | "glob" | "orb" | "net" | "rocket" | "lob" | "glaive" | "shard";
 export type PathMotif = "blades" | "vortex" | "rings";
 export interface PathVisual {
   color: number;

@@ -38,6 +38,9 @@ npx vite-node scripts/readme-images.ts [-- --only towers|enemies|screens]
                                           # gallery page `/gallery.html` (`src/gallery.ts`, not part of `vite build`, draws every tower and enemy
                                           # with the battlefield's own draw functions); screenshots skip to a wave with `&wave=<n>&credits=<n>`
                                           # (the list is `SCREENS` in the script). Shared browser helpers live in `scripts/browser.ts`
+                                          # Review sheets on the same page (`src/showcase.ts`, dev-only): `/gallery.html?showcase` draws every tower
+                                          # at L1, firing, L5 and L8 per path; `?showcase=shots` every projectile in flight, muzzle flash, impact,
+                                          # beam, chain and pulse (`&clock=<s>` picks another animation frame)
 ```
 
 Always run `npm run test:full` and `npm run build` before you finish. The chunk-size warning from `vite build` is expected.
@@ -57,7 +60,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 | `src/core/` | Pure simulation: no DOM, no Phaser. `game.ts` (`Game`, command `HANDLERS`, `tick`), `types.ts`, `economy.ts` (wallets), `upgrades.ts`, `validation.ts` (`ContentError` with paths like "Mission kernfestung › Wave 7 › Group 2"), `hash.ts` (`stateHash`, `fnv`), `modes.ts` (multiplayer mode registry), `match.ts` (versus engine), `strategies/` (test bots) |
 | `src/systems/` | Tick systems on `Sim` (`{ state, mission, content }`): spawn, status, movement, detection, combat, waves, traits, auras. `attacks/` has one module per attack kind, `damage.ts` the single damage pipeline |
 | `src/content/` | Towers, enemies, upgrades, maps, waves, missions; sectors II and later in `content/sectors/*.ts`. `content/index.ts` exports `DEFAULT_CONTENT` (`ContentPack`) |
-| `src/render/` | Phaser scene (`scene.ts`, `Battlefield`, `LocalDriver`) and draw registries (`towers.ts`, `enemies.ts`, `projectiles.ts`, `effects.ts`, `terrain.ts`) |
+| `src/render/` | Phaser scene (`scene.ts`, `Battlefield`, `LocalDriver`), draw registries (`towers.ts`, `enemies.ts`, `projectiles.ts`, `effects.ts`, `terrain.ts`), shared primitives (`shapes.ts`) and lighting helpers (`material.ts`), barrel geometry (`muzzles.ts`) and the projectile trail memory (`trails.ts`) |
 | `src/ui/` | DOM HUD (`interface.ts`, all markup is one template string), messages, tooltips, wave forecast, live units, multiplayer HUD (`players.ts`) |
 | `src/app/` | Input (`input.ts`), dialogs, multiplayer lobby/session (`coop.ts`), audio, fullscreen, WebMCP tools (`webmcp.ts`) |
 | `src/net/` | `protocol.ts` (messages, `MAX_PLAYERS`, `PLAYER_COLORS`), `client.ts` (`RelayClient`, `relayUrl`), `lockstep.ts` (`LockstepDriver`, `coopSim`) |
@@ -68,11 +71,33 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 
 - **All state changes go through `Game.command`** (or `Match.command` in versus). Each `HANDLERS` entry has an optional `allowedIn` status guard. Render and UI code only read state.
 - **The simulation is deterministic:** fixed step `FIXED_STEP = 1/30`, no `Math.random`, no wall-clock time, and stable iteration order. Multiplayer relies on it, as do the golden replays. The only randomness is `roomCode` on the server.
-- **Graphics never change the simulation.** Events (`GameEvent` union) are drained after each render frame.
+- **Graphics never change the simulation.** Events (`GameEvent` union) are drained after each render frame. Render-side memory (`render/trails.ts`) only reads the state.
 - **Golden replays** (`core/campaign-tests.ts`, run by the `core/replay-N.test.ts` shards, + `__snapshots__`) record every mission × strategy. If a snapshot changes, the simulation changed. Update with `-u` only when that is intended.
 - **Solo play is the baseline.** New optional fields on state, enemies or spawns must stay `undefined` in solo, so the snapshots stay unchanged (example: `sentBy`).
 - **Content is separate from runtime instances.** Upgrades never mutate definitions, and `Tower.upgrades: string[]` is the only source of upgrade progress.
 - `Game` accepts its own `ContentPack` (`new Game(mission, content)`). Pure queries (`resolveUpgrades`, `effectiveTowerStats`, …) take `content` as the last, optional parameter. `resolveUpgrades` is cached per content pack and upgrade list.
+
+## Rendering
+
+- **Layers** (`scene.ts`), bottom to top: terrain, `ambient`, `towerInk` + `towerGlow`, `ink` + `glow`. The glow layers blend additively and sit above their ink. Tower light lies below the enemies, so units and health bars are never lit. `themeGlow(map)` dims both glow layers on light ground. Draw functions take a `Pen { g, glow }`.
+- **Primitives:** in tower, projectile and effect code use `disc`, `ring`, `arcBand`, `wedge`, `oval`, `chamferRect` and `strip` from `shapes.ts`. Don't use Phaser's `fillCircle`, `strokeCircle`, `arc`, `slice`, `fillRoundedRect` or `fillEllipse`: Phaser splits every arc into about 100 segments.
+- **Jitter** comes from `hash01` over positions, ids and time steps, never `Math.random`, so frames and screenshots repeat.
+- **Lighting** (`material.ts`): light comes from the upper left (`LIGHT`, `facing`). Helpers: `plate` (bevelled plate with a sunken deck), `litBar` (metal bar), `dome`, `rivets`, `led`, `halo`, `glowLine`. Glow caps: one halo ≤ 0.3 alpha, white on glow ≤ 0.35; hot white cores are opaque fills on `g`.
+- **Tower levels:**
+  - L2 adds a collar and an LED.
+  - L4 adds chasing LEDs and an inlay ring.
+  - L5 echoes the r14 ring on glow and adds hot barrel tips.
+  - L6–8 put the path colour on the trims and echo the motif on glow.
+- **Barrels:** `MUZZLES` (`muzzles.ts`) holds the barrel length, recoil and parallel or fanned barrels per turret. Turret drawings, muzzle flashes (`muzzleTips`) and projectile starting points all read it.
+- **Projectiles:** `Trails` (`trails.ts`) keeps per projectile id:
+  - the start at the barrel tip;
+  - samples for the trail;
+  - the arc of point-aimed shells whose look sets `arc` (Mortar);
+  - landed shots, which fade out instead of popping.
+
+  The scene resets it when `game.state` is swapped (restart).
+- **Effects:** each effect captures an `EffectOrigin` when its event arrives: the firing tower's level and angle, the landed shot's heading and blast radius.
+- **Pulse, chain and beam looks** are picked by the source tower's `visual.turret`. It is found from the event colour, so base tower colours must stay unique; a shared colour falls back to the default look.
 
 ## Simulation details
 
@@ -80,7 +105,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 - Targeting follows `Tower.priority` (`TargetPriority`: first, last, strong, weak, close; set with `{ type: "target", id, priority }`). Absent means "first", the most path progress, and the handler deletes the field when "first" is chosen, so solo replays stay unchanged. `compareTargets` (`systems/combat.ts`) orders candidates; ties fall back to path progress, then the stable id. An attack module's `choose` (Lance) receives the candidates in that order.
 - Damage lands on impact. Projectiles are part of the state, fly at `projectile.speed` per tower, and still land after their tower is sold.
   - Homing shots (Pulse, Flak, Cryo) retarget within 1.5 cells when their target dies.
-  - Nova shells fly to a fixed point.
+  - Nova rockets fly to a fixed point.
   - Tesla, Lance, Focus, Quake, Gravitron and Jammer hit instantly (`Impact.from`, `Impact.reach`). Quake centres its wave on `Impact.from`, the tower itself.
   - Shrapnel: a module's `volley` hook makes `attackEnemies` fire at that many different candidates per salvo, the chosen target first, then in priority order. Executioner judges its threshold on impact.
   - Mortar shells fly to a fixed point like Nova; its module's `minRange` hook makes `attackEnemies` skip enemies inside the dead zone.
@@ -117,7 +142,10 @@ Whole mission packs (new sectors, themes, enemies) follow the project skill `.cl
 - **Waves:** use the helpers `g(type, count, interval, delay)` and `wave(bonus, ...groups)` from `content/waves.ts`. An optional per-wave `hpMultiplier` replaces the linear growth.
 - **Tower:** add it to `content/towers.ts`. Fields:
   - `attack`: kind plus values, e.g. `{ kind: "slow", factor: 0.55, duration: 1.9 }`
-  - `visual`: `icon`, `turret`, `projectile`, `muzzle`, `impact`
+  - `visual`: `icon`, `turret`, `projectile`, `muzzle`, `impact`.
+    - Projectile styles: tracer, shell, crystal, twin, ember, glob, orb, net, rocket, lob, glaive, shard.
+    - A new look is one entry in `PROJECTILES` (`render/projectiles.ts`: body, optional trail and impact).
+    - A new barrel is one entry in `MUZZLES`.
   - `targets`: the layers it can hit
 
   Menu, tooltips, detail values and validation are generated from the definition. The build menu has category tabs (Attack, Control, Traps, Support) once a mission offers `PAGED_FROM` towers; `pageOf` in `ui/tower-pages.ts` derives the tab from `placement` and the attack (traps, support towers, or `CONTROL_KINDS`). Menu order follows `towerOrder` (page by page). Hotkeys come from `hotkeyTowers(game, view.page)`: with tabs every tab numbers its towers from 1 (`TOWER_KEYS` in `ui/interface.ts`, 14 keys per tab; `t`, `f` and `n` are taken), and `Shift`+`1`–`4` (by `e.code`) opens a tab.

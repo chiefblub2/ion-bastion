@@ -1817,6 +1817,12 @@ export const THEMES: Record<MapTheme, Theme> = {
 const themeOf = (map: MapDefinition) => THEMES[map.theme ?? "outpost"];
 /** Reactor colour of the map's theme. */
 export const themeAccent = (map: MapDefinition) => themeOf(map).accent;
+/** Strength of additive light on a map: full on dark ground, dimmed on light stone and sand so glow never washes out. */
+export function themeGlow(map: MapDefinition) {
+  const c = themeOf(map).ground[0],
+    luma = (0.2126 * ((c >> 16) & 255) + 0.7152 * ((c >> 8) & 255) + 0.0722 * (c & 255)) / 255;
+  return Math.min(1, Math.max(0.55, 1.2 - 2.4 * luma));
+}
 const hex = (color: number) => `#${color.toString(16).padStart(6, "0")}`;
 /** Path in pixels; a ring repeats its first cell at the end so lines and markers close the loop. */
 const pixelPath = (map: MapDefinition) =>

@@ -247,7 +247,7 @@ Every enemy moves on the ground or in the air; every attack tower only hits cert
 | <img src="docs/images/towers/dock.png" width="36" height="36" alt=""> Repair Dock | 150 | Restores 1 reactor energy after every wave, up to the starting value; not in the Circuit | – |
 | <img src="docs/images/towers/tracker.png" width="36" height="36" alt=""> Tracker | 140 | Enemies within radius 2.2 take 15 % more damage, on top of Corrosion, no attack | – |
 
-Nova, Mortar, Flak, Cryo, Executioner, Shrapnel and Snare Net fire projectiles that take time; fast enemies can dodge Nova shells. Tesla, Lance, Focus, Quake, Gravitron and Jammer hit instantly.
+Nova, Mortar, Flak, Cryo, Executioner, Shrapnel and Snare Net fire projectiles that take time; fast enemies can dodge Nova rockets. Tesla, Lance, Focus, Quake, Gravitron and Jammer hit instantly.
 
 ### Traps
 
