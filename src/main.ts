@@ -12,6 +12,7 @@ import { registerTools } from "./app/webmcp";
 import { screenFromUrl } from "./app/screens";
 import { waveHpScale } from "./systems/spawn";
 import type { MissionDefinition } from "./core/types";
+import { ART_FILTERING } from "./render/enemy-art-scene";
 import "./style.css";
 // Dependencies flow top-down: state → view → UI → battlefield → input.
 /** The mission from wave `wave` on; every remaining wave keeps the HP factor it has in the full mission. */
@@ -71,6 +72,7 @@ new Phaser.Game({
   height: game.map.rows * CELL,
   backgroundColor: "#0d1820",
   antialias: true,
+  render: ART_FILTERING,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: battlefield,
   audio: { noAudio: true },

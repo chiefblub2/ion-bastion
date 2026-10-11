@@ -6,11 +6,11 @@ import type { EnemyId } from "../core/types";
 import { statusFlags, type StatusFlags } from "../systems/status";
 import { traitFlags, type TraitFlags } from "../systems/traits";
 import { DEPTH } from "./depths";
-import { ART_SCALE, artFor, ENEMY_ART } from "./enemy-art";
+import { artEdge, artFor, artScale, ENEMY_ART, type EnemyArt } from "./enemy-art";
 import { bodyMotion, TINTS } from "./enemy-appearance";
 import { EnemyFeedback } from "./enemy-feedback";
-import { drawEnemyLayers, EnemySprites, type EnemyLook, type SpriteImage } from "./enemy-sprites";
-import { enemyContext, type EnemyDrawContext } from "./enemies";
+import { drawEnemyLayers, EnemySprites, placeArt, type EnemyLook, type SpriteImage } from "./enemy-sprites";
+import { bodyLift, enemyContext, type EnemyDrawContext } from "./enemies";
 import type { Ink } from "./shapes";
 
 class StubImage {
@@ -64,6 +64,11 @@ class StubImage {
     this.tintCalls++;
     return this;
   }
+  flip = [false, false];
+  setFlip(x: boolean, y: boolean) {
+    this.flip = [x, y];
+    return this;
+  }
   setVisible(visible: boolean) {
     this.visible = visible;
     return this;
@@ -95,6 +100,18 @@ function unit(id: number, type: EnemyId, at: { x?: number; y?: number; heading?:
   const e = makeEnemy(id, type, 2, 3);
   return enemyContext(at.x ?? 100, at.y ?? 120, 56, e, DEFAULT_CONTENT.enemies[type], at.heading ?? 0, { ...statusFlags(e, 0), ...at.status }, { ...traitFlags(sim, e), ...at.traits }, 0.5);
 }
+/** World position of the centre of an image's visible art: the image centre plus the rotated bounds offset. */
+function visibleCentre(image: StubImage, art: EnemyArt) {
+  const raw = art.bounds ?? { x: 0, y: 0 },
+    b = { x: image.flip[0] ? -raw.x : raw.x, y: image.flip[1] ? -raw.y : raw.y },
+    cos = Math.cos(image.rotation),
+    sin = Math.sin(image.rotation);
+  return { x: image.x + (b.x * cos - b.y * sin) * image.width, y: image.y + (b.x * sin + b.y * cos) * image.width };
+}
+const near = (actual: { x: number; y: number }, x: number, y: number) => {
+  expect(actual.x).toBeCloseTo(x, 6);
+  expect(actual.y).toBeCloseTo(y, 6);
+};
 /** A Graphics stand-in that counts its calls and remembers the last one. */
 function counter() {
   let calls = 0,
@@ -122,32 +139,39 @@ describe("enemy sprites", () => {
     const { sprites, images } = host();
     sprites.sync([unit(1, "tank")]);
     expect(images).toHaveLength(1);
-    expect(images[0]).toMatchObject({ texture: "enemy:tank", origin: [0.5, 0.5], depth: DEPTH.enemySprites, x: 100, y: 120, rotation: 0, visible: true });
+    expect(images[0]).toMatchObject({ texture: "enemy:tank", origin: [0.5, 0.5], depth: DEPTH.enemySprites, rotation: 0, visible: true });
+    near(visibleCentre(images[0], artFor("tank")!), 100, 120);
     sprites.sync([unit(1, "tank", { x: 140, y: 90, heading: Math.PI / 2 })]);
     expect(images).toHaveLength(1);
-    expect(images[0]).toMatchObject({ x: 140, y: 90, rotation: Math.PI / 2 });
+    expect(images[0].rotation).toBe(Math.PI / 2);
+    near(visibleCentre(images[0], artFor("tank")!), 140, 90);
     expect(sprites.isRendering(1)).toBe(true);
   });
 
-  it("sizes the art from the body radius, never the file size", () => {
+  it("sizes the art from the body radius and its visible bounds, never the file size", () => {
     const { sprites, images } = host();
-    sprites.sync([unit(1, "drone"), unit(2, "tank")]);
-    const drone = DEFAULT_CONTENT.enemies.drone.size * 56 * 2 * ART_SCALE,
-      tank = DEFAULT_CONTENT.enemies.tank.size * 56 * 2 * artFor("tank")!.scale!;
-    expect(images[0].width).toBeCloseTo(drone);
-    expect(images[0].height).toBeCloseTo(drone);
-    expect(images[1].width).toBeCloseTo(tank);
+    sprites.sync([unit(1, "drone"), unit(2, "tank"), unit(3, "boss")]);
+    for (const [i, type] of (["drone", "tank", "boss"] as const).entries()) {
+      const art = artFor(type)!,
+        b = art.bounds!,
+        edge = DEFAULT_CONTENT.enemies[type].size * 56 * 2 * artEdge(art);
+      expect(images[i].width).toBeCloseTo(edge);
+      expect(images[i].height).toBeCloseTo(edge);
+      // The visible longest side, not the canvas, is `artScale` body diameters (the boss PNG is twice as large).
+      expect(edge * Math.max(b.w, b.h)).toBeCloseTo(DEFAULT_CONTENT.enemies[type].size * 56 * 2 * (art.scale ?? 1.1));
+    }
   });
 
   it("lifts a walker drawn as flying like the procedural body, and drops it back on landing", () => {
     const { sprites, images } = host();
+    const runner = artFor("runner")!;
     sprites.sync([unit(1, "runner", { traits: { leaping: true } })]);
-    expect(images[0].y).toBe(116);
+    near(visibleCentre(images[0], runner), 100, 116);
     sprites.sync([unit(1, "runner")]);
-    expect(images[0].y).toBe(120);
+    near(visibleCentre(images[0], runner), 100, 120);
     // Gliders are never lifted: their distant shadow shows the height.
     sprites.sync([unit(2, "glider")]);
-    expect(images[1].y).toBe(120);
+    near(visibleCentre(images[1], artFor("glider")!), 100, 120);
   });
 
   it("hides the sprite of an unrevealed stealth unit and shows the same image once revealed", () => {
@@ -161,7 +185,8 @@ describe("enemy sprites", () => {
     expect(sprites.isRendering(1)).toBe(false);
     sprites.sync([unit(1, "drone", { traits: { stealth: true, revealed: true }, x: 130 })]);
     expect(images).toHaveLength(1);
-    expect(images[0]).toMatchObject({ visible: true, x: 130 });
+    expect(images[0].visible).toBe(true);
+    near(visibleCentre(images[0], artFor("drone")!), 130, 120);
   });
 
   it("hands a burrowed unit back to its procedural body and the mound", () => {
@@ -281,15 +306,16 @@ describe("sprite tint and motion", () => {
     const { sprites, images } = host(),
       look = { now: 0, feedback: new EnemyFeedback() },
       c = unit(3, "glider", { heading: 1 }),
-      base = c.r * 2 * artFor("glider")!.scale!;
+      glider = artFor("glider")!,
+      base = c.r * 2 * artEdge(glider);
     for (const now of [0.3, 1.7, 0.3]) {
       look.now = now;
       sprites.sync([c], look);
       const m = bodyMotion(c, now);
       // Gliders keep their unlifted position plus the hover; the context itself is untouched.
-      expect(images[0]).toMatchObject({ x: 100, rotation: 1 });
-      expect(images[0].y).toBeCloseTo(120 + m.dy);
+      expect(images[0].rotation).toBe(1);
       expect(images[0].width).toBeCloseTo(base * m.scale);
+      near(visibleCentre(images[0], glider), 100, 120 + m.dy);
     }
     const first = { ...images[0] };
     sprites.sync([c], look);
@@ -299,15 +325,18 @@ describe("sprite tint and motion", () => {
     look.now = 0.8;
     const leap = unit(4, "runner", { traits: { leaping: true } });
     sprites.sync([leap], look);
-    expect(images[1].y).toBeCloseTo(116 + bodyMotion(leap, 0.8).dy);
+    expect(visibleCentre(images[1], artFor("runner")!).y).toBeCloseTo(116 + bodyMotion(leap, 0.8).dy);
   });
 
   it("sets worm art back along the heading so it covers the trailing chain", () => {
     const { sprites, images } = host(),
-      c = unit(1, "sparkworm", { heading: Math.PI / 2 });
+      c = unit(1, "sparkworm", { heading: Math.PI / 2 }),
+      worm = artFor("sparkworm")!;
     sprites.sync([c]);
-    expect(images[0].x).toBeCloseTo(100);
-    expect(images[0].y).toBeCloseTo(120 - artFor("sparkworm")!.shift! * c.r);
+    // Heading down: the art trails up the screen, behind the head.
+    near(visibleCentre(images[0], worm), 100, 120 - worm.shift! * c.r);
+    sprites.sync([unit(1, "sparkworm", { heading: Math.PI })]);
+    near(visibleCentre(images[0], worm), 100 + worm.shift! * c.r, 120);
   });
 
   it("drops the procedural tentacles under painted art and keeps markers and the HP bar on top of the accents", () => {
@@ -340,5 +369,100 @@ describe("sprite tint and motion", () => {
     look.feedback.reset();
     expect(live()).toHaveLength(0);
     expect(look.feedback.flash(1, 1, 1000)).toBe(0);
+  });
+});
+
+describe("art placement", () => {
+  const QUARTERS = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+  /** Visible centre of a placement, from its image centre and the mirrored, rotated bounds offset. */
+  const centreOf = (at: ReturnType<typeof placeArt>, art: EnemyArt) => {
+    const b = art.bounds!,
+      bx = at.flipX ? -b.x : b.x,
+      by = at.flipY ? -b.y : b.y;
+    return { x: at.x + (bx * Math.cos(at.rotation) - by * Math.sin(at.rotation)) * at.size, y: at.y + (bx * Math.sin(at.rotation) + by * Math.cos(at.rotation)) * at.size };
+  };
+
+  it("keeps off-centre art on its position at every heading, so it never orbits while turning", () => {
+    // Nautilus, warden and twin have visibly off-centre art in their canvases.
+    for (const type of ["nautilus", "warden", "twin", "moth"] as const) {
+      const art = artFor(type)!;
+      expect(Math.hypot(art.bounds!.x, art.bounds!.y), type).toBeGreaterThan(0.05);
+      for (const heading of QUARTERS) {
+        const c = unit(1, type, { heading });
+        // Flyers (moth) float `bodyLift` above their position, like the procedural body.
+        near(centreOf(placeArt(c, art), art), 100, 120 - bodyLift(c));
+      }
+    }
+  });
+
+  it("turns top-down art with the heading, and lets an angleOffset correct art that does not face right", () => {
+    for (const heading of QUARTERS) {
+      const tank = placeArt(unit(1, "tank", { heading }), artFor("tank")!);
+      expect([tank.rotation, tank.flipX, tank.flipY]).toEqual([heading, false, false]);
+      expect(placeArt(unit(1, "monolith", { heading }), artFor("monolith")!).rotation).toBeCloseTo(heading + Math.PI / 2);
+    }
+  });
+
+  it("mirrors a profile instead of turning it upside down while it moves left", () => {
+    const art = artFor("salamander")!;
+    for (const heading of QUARTERS) {
+      const at = placeArt(unit(1, "salamander", { heading }), art);
+      expect(at.rotation).toBe(heading);
+      expect(at.flipY).toBe(heading === Math.PI);
+      expect(at.flipX).toBe(false);
+    }
+  });
+
+  it("keeps an upright pose standing, facing its last horizontal direction while it moves up or down", () => {
+    const { sprites, images } = host(),
+      art = artFor("warlord")!,
+      step = (heading: number) => {
+        sprites.sync([unit(1, "warlord", { heading })]);
+        return { rotation: images[0].rotation, left: images[0].flip[0], y: images[0].flip[1] };
+      };
+    expect(step(0)).toEqual({ rotation: 0, left: false, y: false });
+    // Down after moving right: still facing right.
+    expect(step(Math.PI / 2)).toEqual({ rotation: 0, left: false, y: false });
+    expect(step(Math.PI)).toEqual({ rotation: 0, left: true, y: false });
+    // Up after moving left: still facing left, and the visible art stays on the position.
+    expect(step(-Math.PI / 2)).toEqual({ rotation: 0, left: true, y: false });
+    near(visibleCentre(images[0], art), 100, 120);
+    expect(step(0).left).toBe(false);
+  });
+
+  it("is pure: the same context gives the same placement, and worm art trails along the heading", () => {
+    const c = unit(1, "mole", { heading: -Math.PI / 2 }),
+      art = artFor("mole")!;
+    expect(placeArt(c, art)).toEqual(placeArt(c, art));
+    // Moving up: the head at the position, the art's centre `shift` radii below it.
+    near(centreOf(placeArt(c, art), art), 100, 120 + art.shift! * c.r);
+    expect(placeArt(c, art).footprint).toMatchObject({ x: 100, heading: -Math.PI / 2 });
+    expect(placeArt(c, art).footprint.y).toBeCloseTo(120 + art.shift! * c.r);
+  });
+
+  it("measures the shadow footprint from the visible art, turned with the body and left on the ground", () => {
+    const { sprites } = host(),
+      look = { now: 0.4, feedback: new EnemyFeedback() },
+      tank = unit(1, "tank", { heading: Math.PI / 2 }),
+      flyer = unit(2, "stormbird", { heading: 0 });
+    sprites.sync([tank, flyer], look);
+    const f = sprites.footprint(1)!,
+      b = artFor("tank")!.bounds!;
+    expect(f.heading).toBe(Math.PI / 2);
+    expect(f.length / f.width).toBeCloseTo(b.w / b.h);
+    // The visible length is the art's: artScale body diameters.
+    expect(f.length).toBeCloseTo(tank.r * 2 * artScale(artFor("tank")!));
+    // A hovering flyer's footprint stays on its position; the lift and hover move only the image.
+    expect(sprites.footprint(2)).toMatchObject({ x: 100, y: 120 });
+    // Hidden and burrowed units have no sprite and so no painted shadow.
+    sprites.sync([unit(1, "tank", { traits: { burrowed: true } }), unit(2, "stormbird", { traits: { stealth: true } })], look);
+    expect([sprites.footprint(1), sprites.footprint(2)]).toEqual([undefined, undefined]);
+  });
+
+  it("casts the painted shadow instead of the shape's, and no shadow at all for a burrowed unit", () => {
+    const calls = (units: EnemyDrawContext[], loaded?: string[]) => frame(host(loaded).sprites, units).underlay;
+    // A painted worm casts one oval instead of five segment shadows.
+    expect(calls([unit(1, "sparkworm")])).toBeLessThan(calls([unit(1, "sparkworm")], []));
+    expect(calls([unit(1, "tank", { traits: { burrowed: true } })])).toBe(calls([unit(1, "tank", { traits: { burrowed: true } })], []));
   });
 });

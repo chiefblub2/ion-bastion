@@ -1,7 +1,7 @@
 import type { Enemy, EnemyDefinition, EnemyVisual } from "../core/types";
 import type { StatusFlags } from "../systems/status";
 import type { TraitFlags } from "../systems/traits";
-import { polygon, star, type Ink } from "./shapes";
+import { oval, polygon, star, type Ink } from "./shapes";
 /**
  * Everything the three enemy stages need, built once per enemy and frame by `enemyContext`.
  * Stages, bottom to top: `drawEnemyUnderlay` (fields, trails, rings, shadow), `drawEnemyBody` (the unit itself)
@@ -54,6 +54,29 @@ function dropShadow(g: Ink, { x, y, r }: EnemyDrawContext, air: boolean, alpha =
   g.fillStyle(0x030a0c, air ? 0.3 : alpha);
   if (air) g.fillEllipse(x, y + 14, r * 1.8, r * 0.9);
   else g.fillEllipse(x, y + 6, r * w, r * h);
+}
+/**
+ * The visible art of a painted body on the ground (`placeArt` in `enemy-sprites.ts`): its centre, heading and
+ * visible length (along the heading) and width (across), world pixels.
+ */
+export interface ArtFootprint {
+  x: number;
+  y: number;
+  heading: number;
+  length: number;
+  width: number;
+}
+/** Painted shadows: share of the art's visible length and width; `minWidth` (body radii) keeps slender art from casting a sliver. */
+export const PAINTED_SHADOW = { ground: { length: 1, width: 0.8, dy: 6, alpha: 0.5 }, air: { length: 0.78, width: 0.5, dy: 14, alpha: 0.3 }, minWidth: 0.7 } as const;
+/**
+ * Shadow of a painted body: an oval under its visible art, turned with the heading, so a long body moving up the
+ * screen casts a long shadow instead of the procedural body's wide one; the light still falls from above, so the
+ * offset stays straight down. Flyers (and everything drawn as flying) cast the faint, smaller, distant one.
+ */
+function paintedShadow(g: Ink, c: EnemyDrawContext, f: ArtFootprint) {
+  const s = c.air || c.definition.visual.shape === "glider" ? PAINTED_SHADOW.air : PAINTED_SHADOW.ground,
+    width = Math.max(f.width * s.width, c.r * PAINTED_SHADOW.minWidth * (s === PAINTED_SHADOW.air ? 0.6 : 1));
+  oval(g, f.x, f.y + s.dy, (f.length * s.length) / 2, width / 2, 0x030a0c, s.alpha, f.heading);
 }
 /**
  * How far the body floats above its position: 4 px for anything drawn as flying, except the glider shape, whose
@@ -325,7 +348,7 @@ function traitsBelow(g: Ink, c: EnemyDrawContext) {
   }
 }
 /** Markers on top of the body: shield bubble, crown, cross, scan brackets. */
-function traitsAbove(g: Ink, { x, y, r, traits: t, clock }: EnemyDrawContext) {
+function traitsAbove(g: Ink, { x, y, r, heading, traits: t, clock }: EnemyDrawContext) {
   if (t.shield > 0) {
     g.fillStyle(TRAIT_COLORS.shield, 0.1 * t.shield);
     g.fillCircle(x, y, r + 6);
@@ -452,10 +475,11 @@ function traitsAbove(g: Ink, { x, y, r, traits: t, clock }: EnemyDrawContext) {
       g.fillTriangle(x + Math.cos(a - 0.25) * (r + 1), y + Math.sin(a - 0.25) * (r + 1), x + Math.cos(a + 0.25) * (r + 1), y + Math.sin(a + 0.25) * (r + 1), x + Math.cos(a) * (r + 5), y + Math.sin(a) * (r + 5));
     }
   }
-  // Tunnel: drill chevrons in front of the body.
+  // Tunnel: drill chevrons in front of the body, along the heading.
   if (t.tunnel) {
+    const ahead = (d: number, side: number) => ({ x: x + Math.cos(heading) * d - Math.sin(heading) * side, y: y + Math.sin(heading) * d + Math.cos(heading) * side });
     g.lineStyle(1.5, TRAIT_COLORS.tunnel, 0.9);
-    g.strokePoints([{ x: x + r * 0.9, y: y - r * 0.5 }, { x: x + r * 1.4, y }, { x: x + r * 0.9, y: y + r * 0.5 }], false);
+    g.strokePoints([ahead(r * 0.9, -r * 0.5), ahead(r * 1.4, 0), ahead(r * 0.9, r * 0.5)], false);
   }
   // Phase: a ring that is dashed in the air and solid on the ground.
   if (t.phase) {
@@ -576,23 +600,27 @@ function statusAbove(g: Ink, { x, y, r, status, clock }: EnemyDrawContext) {
     g.fillStyle(STATUS_COLORS.charged, Math.sin(clock * 18) > 0 ? 1 : 0.25);
     g.fillCircle(x + r * 0.5, y - r * 0.5 - 2.5, 1.4);
   }
+  // Embers scale down on small bodies (r under 14 px), so three of them never cover a runner or an ant.
   if (status.burning) {
     g.fillStyle(STATUS_COLORS.burning, 0.9);
-    for (const [dx, dy] of [[-0.6, -0.2], [0.5, -0.5], [0.1, 0.4]]) g.fillCircle(x + dx * r, y + dy * r, 2.2);
+    for (const [dx, dy] of [[-0.6, -0.2], [0.5, -0.5], [0.1, 0.4]]) g.fillCircle(x + dx * r, y + dy * r, Math.min(2.2, r * 0.16));
   }
 }
 /**
- * Everything behind the body: trait fields and trails, status rings, tentacles and, last, the shape's shadow
- * (it used to open the body, so it still darkens the rings and tentacles drawn before it). `painted`: a sprite is the body.
+ * Everything behind the body: trait fields and trails, status rings, tentacles and, last, the shadow (it used to
+ * open the body, so it still darkens the rings and tentacles drawn before it). `painted`: a sprite is the body, and
+ * this is its visible footprint; it casts the shadow of the art instead of the shape's.
  */
-export function drawEnemyUnderlay(g: Ink, c: EnemyDrawContext, painted = false) {
+export function drawEnemyUnderlay(g: Ink, c: EnemyDrawContext, painted?: ArtFootprint) {
   if (c.hidden) return;
   traitsBelow(g, c);
   statusBelow(g, c);
   // Painted bodies (`enemy-sprites.ts`) show their tentacles in the art.
   if (!painted) tentacles(g, c);
   // Burrowed units cast no shadow: the mound stands in for it.
-  if (!c.traits.burrowed) shapeOf(c.definition.visual).shadow(g, c, c.definition.visual);
+  if (c.traits.burrowed) return;
+  if (painted) paintedShadow(g, c, painted);
+  else shapeOf(c.definition.visual).shadow(g, c, c.definition.visual);
 }
 /** The unit itself, without shadow or markers. Hidden stealth units have none; burrowed ones only a faint shape. */
 export function drawEnemyBody(g: Ink, c: EnemyDrawContext) {

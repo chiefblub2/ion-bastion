@@ -5,6 +5,8 @@ import { towerColor } from "./core/upgrades";
 import { CELL, type Pen } from "./render/shapes";
 import { drawTower } from "./render/towers";
 import { drawEnemy } from "./render/enemies";
+import { ArtReview, artReviewSize } from "./art-review";
+import { ART_FILTERING } from "./render/enemy-art-scene";
 import { Showcase, showcaseSize } from "./showcase";
 import { createEnemy } from "./systems/spawn";
 import { statusFlags } from "./systems/status";
@@ -93,14 +95,18 @@ class Gallery extends Phaser.Scene {
 }
 
 /** `?showcase`: levels, firing poses, shots and effects instead of the README tiles (see `showcase.ts`). */
-const showcase = new URLSearchParams(location.search).has("showcase");
+const query = new URLSearchParams(location.search),
+  showcase = query.has("showcase"),
+  /** `?art`: the painted enemy bodies through the battlefield's sprite path (see `art-review.ts`). */
+  art = query.has("art"),
+  pageSize = art ? artReviewSize : showcase ? showcaseSize : { width: width * ZOOM, height: height * ZOOM };
 new Phaser.Game({
   type: Phaser.AUTO,
   parent: "gallery",
-  width: showcase ? showcaseSize.width : width * ZOOM,
-  height: showcase ? showcaseSize.height : height * ZOOM,
+  ...pageSize,
   transparent: true,
   antialias: true,
-  scene: showcase ? Showcase : Gallery,
+  render: ART_FILTERING,
+  scene: art ? ArtReview : showcase ? Showcase : Gallery,
   audio: { noAudio: true },
 });

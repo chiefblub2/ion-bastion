@@ -11,7 +11,7 @@ import { PLAYER_COLORS } from "../net/protocol";
 import { drawEffect, effectLifetime, INCOME_LIFETIME, isVisual, type EffectOrigin, type VisualEvent } from "./effects";
 import { DEPTH } from "./depths";
 import { enemyContext } from "./enemies";
-import { artUrl, ENEMY_ART } from "./enemy-art";
+import { queueEnemyArt, sceneSpriteHost } from "./enemy-art-scene";
 import { EnemyFeedback } from "./enemy-feedback";
 import { drawEnemyLayers, EnemySprites } from "./enemy-sprites";
 import { CELL, px, type Pen } from "./shapes";
@@ -21,8 +21,6 @@ import { Trails } from "./trails";
 export { CELL } from "./shapes";
 /** Upper bound for the canvas's longer side in pixels, so a huge 4K full screen stays cheap to fill. */
 const MAX_CANVAS = 4096;
-/** Art textures that failed to load: never queued again (their enemies stay procedural) and warned about once. */
-const failedArt = new Set<string>();
 export interface ViewState {
   build: TowerId | null;
   selected: number | null;
@@ -94,11 +92,7 @@ export class Battlefield extends Phaser.Scene {
   private enemyBody!: Phaser.GameObjects.Graphics;
   private enemyOverlay!: Phaser.GameObjects.Graphics;
   /** Painted bodies (Images at `DEPTH.enemySprites`) for enemy types with art; they replace the procedural body. */
-  private enemySprites = new EnemySprites({
-    hasTexture: (key) => !failedArt.has(key) && this.textures.exists(key),
-    createImage: (key) => this.add.image(0, 0, key),
-    canTint: () => this.sys.game.renderer.type === Phaser.WEBGL,
-  });
+  private enemySprites = new EnemySprites(sceneSpriteHost(this));
   /** Render-only hit flashes and shield ripples per enemy id, on the effect clock. */
   private enemyFeedback = new EnemyFeedback();
   /** Clock and feedback for enemy tints, idle motion and accents; `now` follows `fxClock` every frame. */
@@ -129,17 +123,7 @@ export class Battlefield extends Phaser.Scene {
   }
   /** Queues the enemy art once per game; a scene restart finds it in the texture cache. */
   preload() {
-    const queued = Object.values(ENEMY_ART).filter((art) => !this.textures.exists(art.texture) && !failedArt.has(art.texture));
-    for (const art of queued) this.load.image(art.texture, artUrl(art));
-    // A missing file and an undecodable one both end without a texture (only the first raises FILE_LOAD_ERROR).
-    if (queued.length)
-      this.load.once(Phaser.Loader.Events.COMPLETE, () => {
-        for (const art of queued)
-          if (!this.textures.exists(art.texture)) {
-            failedArt.add(art.texture);
-            console.warn(`Enemy art '${art.texture}' (${artUrl(art)}) did not load; those enemies keep their procedural body.`);
-          }
-      });
+    queueEnemyArt(this);
   }
   create() {
     this.effects = [];
