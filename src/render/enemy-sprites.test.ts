@@ -9,7 +9,7 @@ import { DEPTH } from "./depths";
 import { artEdge, artFor, artScale, ENEMY_ART, type EnemyArt } from "./enemy-art";
 import { bodyMotion, TINTS } from "./enemy-appearance";
 import { EnemyFeedback } from "./enemy-feedback";
-import { allClips, animationArt, animationsFor, clipDuration, sheetKey, type EnemyAnimationState } from "./enemy-animations";
+import { allClips, animationArt, animationsFor, clipDuration, ENEMY_ANIMATIONS, sheetKey, type EnemyAnimationState } from "./enemy-animations";
 import { drawEnemyLayers, EnemySprites, MAX_DYING, placeArt, type EnemyLook, type SpriteImage } from "./enemy-sprites";
 import { bodyLift, enemyContext, type EnemyDrawContext } from "./enemies";
 import type { Ink } from "./shapes";
@@ -613,6 +613,42 @@ describe("animated bodies", () => {
     const staticOnly = host();
     staticOnly.sprites.sync([unit(1, "tank")], look(0));
     expect(staticOnly.sprites.retire(new Map([[1, { at: { x: 0, y: 0 }, color: red("tank") }]]), 0.1, red)).toEqual([]);
+  });
+
+  it("runs every type added after the starters through its own sheet: placement, move, hurt, death, fallback", () => {
+    const added = (Object.keys(ENEMY_ANIMATIONS) as EnemyId[]).filter((t) => !["drone", "runner", "tank", "boss", "glider", "aegis"].includes(t));
+    expect(added.length).toBeGreaterThan(0);
+    for (const type of added) {
+      const { sprites, images } = host(everything),
+        stat = host(everything.filter((t) => t !== sheetKey(type))),
+        feedback = new EnemyFeedback(),
+        c = unit(1, type, { heading: 0.6 });
+      sprites.sync([at(c, 1)], look(0, feedback));
+      stat.sprites.sync([at(c, 1)], look(0, feedback));
+      expect(images[0].texture, type).toBe(sheetKey(type));
+      expect(clipOf(images[0]), type).toBe("idle");
+      // Without its sheet the type shows its static art, and both sit on the same visible centre and heading.
+      expect(stat.images[0], type).toMatchObject({ texture: artFor(type)!.texture, frame: undefined });
+      const a = visibleCentre(images[0], animationArt(type)!),
+        s = visibleCentre(stat.images[0], artFor(type)!);
+      near(a, s.x, s.y);
+      expect(images[0].rotation).toBeCloseTo(stat.images[0].rotation);
+      for (let i = 1; i <= 20; i++) sprites.sync([at(c, 1 + i * 0.05)], look(i / 30, feedback));
+      expect(clipOf(images[0]), type).toBe("move");
+      feedback.recordDamage(1, 10, 0.7);
+      sprites.sync([at(c, 2)], look(0.7, feedback));
+      expect(clipOf(images[0]), type).toBe("hurt");
+      expect(sprites.retire(new Map([[1, { at: { x: 0, y: 0 }, color: red(type) }]]), 0.75, red), type).toEqual([1]);
+      sprites.sync([], look(0.75, feedback));
+      expect(clipOf(images[0]), type).toBe("death");
+      sprites.sync([], look(0.75 + clipDuration(animationsFor(type)!.death!) + 1e-6, feedback));
+      expect(images[0].destroyed, type).toBe(true);
+      // An id that comes back as another type never keeps the old sheet.
+      const other = added.find((t) => t !== type)!;
+      sprites.sync([unit(1, type)], look(1, feedback));
+      sprites.sync([unit(1, other)], look(1.1, feedback));
+      expect(images.filter((i) => !i.destroyed).map((i) => i.texture), type).toEqual([sheetKey(other)]);
+    }
   });
 
   it("bounds the death animations and clears them on reset", () => {

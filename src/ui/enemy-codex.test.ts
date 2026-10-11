@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
+import { ENEMY_ANIMATIONS } from "../render/enemy-animations";
 import { codexEnemies, codexTraits, renderEnemyCodex } from "./enemy-codex";
 
 describe("enemy codex", () => {
@@ -56,8 +57,11 @@ describe("codex artwork", () => {
   it("offers an animation preview, closed and empty, only on the animated types", () => {
     const { list } = renderEnemyCodex(DEFAULT_CONTENT, "enemies"),
       toggles = [...list.matchAll(/data-codex-anim="([a-z]+)" aria-expanded="false" aria-controls="codex-anim-\1"/g)].map((m) => m[1]);
-    expect(toggles.sort()).toEqual(["aegis", "boss", "drone", "glider", "runner", "tank"]);
-    expect(list.match(/class="codex-anim" id="codex-anim-[a-z]+" role="region" aria-label="[^"]+ animation" hidden><\/div>/g)).toHaveLength(6);
+    // Every registered type gains a preview by itself; the rest keep their static art only.
+    expect(toggles.sort()).toEqual(Object.keys(ENEMY_ANIMATIONS).sort());
+    expect(toggles).toEqual(expect.arrayContaining(["aegis", "boss", "drone", "glider", "runner", "tank", "wolf", "ember"]));
+    expect(list.match(/class="codex-anim" id="codex-anim-[a-z]+" role="region" aria-label="[^"]+ animation" hidden><\/div>/g)).toHaveLength(toggles.length);
+    expect(list).not.toContain('data-codex-anim="warpdrone"');
     expect(list).toContain('aria-label="Animation preview of Drone"');
   });
 });

@@ -12,6 +12,7 @@ import { drawEffect, effectLifetime, INCOME_LIFETIME, isVisual, type EffectOrigi
 import { DEPTH } from "./depths";
 import { enemyContext } from "./enemies";
 import { killedEnemies } from "./enemy-animator";
+import { missionAnimationTypes } from "./enemy-animations";
 import { queueEnemyAnimations, queueEnemyArt, sceneSpriteHost } from "./enemy-art-scene";
 import { EnemyFeedback } from "./enemy-feedback";
 import { drawEnemyLayers, EnemySprites } from "./enemy-sprites";
@@ -125,10 +126,13 @@ export class Battlefield extends Phaser.Scene {
     super("battlefield");
     this.driver = new LocalDriver(sim, view);
   }
-  /** Queues the enemy art and animation sheets once per game; a scene restart finds them in the texture cache. */
+  /**
+   * Queues the enemy art once per game (a scene restart finds it in the texture cache) and the animation sheets of
+   * the mission's enemy types; a mission change restarts the scene, which swaps the sheets.
+   */
   preload() {
     queueEnemyArt(this);
-    queueEnemyAnimations(this);
+    queueEnemyAnimations(this, missionAnimationTypes(this.sim.mission, this.sim.content));
   }
   create() {
     this.effects = [];

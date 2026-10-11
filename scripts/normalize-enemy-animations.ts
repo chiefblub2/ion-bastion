@@ -12,11 +12,13 @@
  * the aegis sheet carries faint grid lines along its cell boundaries (`eraseGridLines`).
  * Each row is cut at the empty columns between frames (a whole visible island stays with the frame its centre lies
  * in) and placed into a 256 px cell at its authored position relative to the pitch; every clip's opening frame is
- * aligned to the first idle frame, and loop frames are held on the resting body, so switching clips never jumps.
+ * aligned to the first idle frame, and loop frames are held on the resting body (unless that makes the loop less
+ * steady, as for a gallop whose outline changes), so switching clips never jumps.
  * Output: the same grid with 256 px cells (8 × 4 → 2048 × 1024, a power of two, which WebGL mipmaps).
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { decodePng, encodePng, VISIBLE_ALPHA, type Png } from "./png";
+import { ANIMATION_STATES, manifestClips, type AnimationManifest } from "../src/render/enemy-animations";
+import { decodePng, encodePng, measureArt, VISIBLE_ALPHA, type Png } from "./png";
 
 const ROOT = new URL("../", import.meta.url);
 const args = process.argv.slice(2),
@@ -29,22 +31,11 @@ const IN = dir(arg("--in", "assets-src/enemy-animations")),
   OUT = dir(arg("--out", "public/assets/enemy-animations"));
 /** Edge of a game cell. */
 export const CELL = 256;
-const STATES = ["idle", "move", "hurt", "death"] as const;
-type State = (typeof STATES)[number];
 /** How far (source pixels) a cut may move from its predicted boundary to find the gap between two frames. */
 const SEARCH = 40;
 
-/** The supplied pack (`manifest.json`, version 2). */
-export interface PackManifest {
-  version: 2;
-  frameWidth: number;
-  frameHeight: number;
-  columns: number;
-  rows: number;
-  animations: Record<State, { row: number; start: number; frames: number; fps: number; loop: boolean }>;
-  enemies: Record<string, { sheet: string }>;
-}
-const manifest = JSON.parse(readFileSync(new URL("manifest.json", IN), "utf8")) as PackManifest;
+/** The supplied pack (`manifest.json`, version 2; `AnimationManifest` describes it). */
+const manifest = JSON.parse(readFileSync(new URL("manifest.json", IN), "utf8")) as AnimationManifest;
 
 /** Number of visible pixels (alpha > `VISIBLE_ALPHA`) per column; fainter glow may be cut through. */
 function columns(png: Png) {
@@ -323,13 +314,25 @@ export function alignment(ref: Png, cell: Png) {
   return { dx: best.dx * 2, dy: best.dy * 2 };
 }
 /**
+ * Loop nudges are dropped when they leave a frame-to-frame drift above `STEADY` (the audit's warning level, share of
+ * the cell) that is more than `STEADY_MARGIN` worse than the frames as drawn.
+ */
+const STEADY = 0.03,
+  STEADY_MARGIN = 0.01;
+/** Largest jump of the alpha-weighted centre between neighbouring frames of a loop, seam included (share of the cell). */
+function drift(frames: Png[]) {
+  const centres = frames.map((f) => measureArt(f).center);
+  return Math.max(...centres.map((a, i) => Math.hypot(a.x - centres[(i + 1) % centres.length].x, a.y - centres[(i + 1) % centres.length].y)));
+}
+/**
  * Faint grid lines left in a source sheet (aegis): single columns or rows of grey pixels at alpha ~8–40 along the
  * cell boundaries. A line is a column (row) whose pixels stay faintly opaque where the pixels `LINE_SPAN` to either
  * side are empty; its pixels at alpha ≤ `LINE_ALPHA` with faint sides are erased, so art crossing it is kept.
  * Returns the sheet without them and the lines found.
  */
 const LINE_SPAN = 4,
-  LINE_ALPHA = 40;
+  LINE_ALPHA = 40,
+  LINE_ERASE = 80;
 export function eraseGridLines(png: Png): { png: Png; lines: string[] } {
   const { width, height } = png,
     rgba = png.rgba.slice(),
@@ -351,7 +354,7 @@ export function eraseGridLines(png: Png): { png: Png; lines: string[] } {
       if (quiet < m / 4 || faint < quiet * 0.5) continue;
       let erased = 0;
       for (let j = 0; j < m; j++) {
-        if (at(i, j) > LINE_ALPHA || at(i - LINE_SPAN, j) > LINE_ALPHA || at(i + LINE_SPAN, j) > LINE_ALPHA) continue;
+        if (at(i, j) > LINE_ERASE || at(i - LINE_SPAN, j) > LINE_ALPHA || at(i + LINE_SPAN, j) > LINE_ALPHA) continue;
         const k = ((vertical ? j * width + i : i * width + j) * 4) + 3;
         if (rgba[k]) erased++;
         rgba[k] = 0;
@@ -380,15 +383,23 @@ function grid(clips: { row: number; frames: Png[] }[], columns: number, rows: nu
 
 if (manifest.version !== 2) throw new Error(`manifest version ${manifest.version}: expected 2 (one grid per enemy)`);
 mkdirSync(OUT, { recursive: true });
-for (const [id, { sheet }] of Object.entries(manifest.enemies)) {
+for (const [id, entry] of Object.entries(manifest.enemies)) {
+  // A disabled sheet stays in the pack for the record but gets no game sheet (the audit flags a leftover one).
+  if (entry.disabled) {
+    console.log(`${id}: disabled (${entry.disabled}), skipped`);
+    continue;
+  }
+  const { sheet } = entry,
+    declared = manifestClips(entry, manifest);
+  if (!declared.idle) throw new Error(`${id}: the idle clip is the reference of every other clip and cannot be dropped`);
   const cleaned = eraseGridLines(decodePng(readFileSync(new URL(sheet, ROOT)))),
     source = cleaned.png,
     { frameWidth: pitch, frameHeight, columns, rows } = manifest;
   if (source.width !== pitch * columns || source.height !== frameHeight * rows) throw new Error(`${sheet}: ${source.width}×${source.height} is not ${columns}×${rows} cells of ${pitch}×${frameHeight}`);
   if (cleaned.lines.length) console.log(`${id}: erased faint grid lines ${cleaned.lines.join(", ")}`);
-  const clips = STATES.map((state) => {
+  const clips = ANIMATION_STATES.filter((state) => declared[state]).map((state) => {
     const notes: string[] = [],
-      a = manifest.animations[state],
+      a = declared[state]!,
       { png, band } = unwrap(row(source, a.row, frameHeight));
     if (band > 0) notes.push(`unwrapped ${band} rows from the top back below the body`);
     if (band < 0) notes.push(`erased a ${-band} px sliver of cut debris at the top edge`);
@@ -409,8 +420,13 @@ for (const [id, { sheet }] of Object.entries(manifest.enemies)) {
       // Loops hold the body still (some supplied loops slide and snap back at the seam); hurt and death keep their
       // recoil and debris as drawn.
       loop = c.state === "idle" || c.state === "move",
-      nudge = loop ? held.map((f) => alignment(rest ?? held[0], f)) : [],
+      aligned = loop ? held.map((f) => alignment(rest ?? held[0], f)) : [],
+      // A body whose outline changes a lot (a gallop: legs and tail sweep) can fool the overlap alignment into
+      // shifting frames back and forth; when that makes the loop visibly less steady, the frames stay as drawn.
+      nudged = aligned.some((n) => n.dx || n.dy) ? drift(place(c.png, c.bounds, pitch, idle.offset - shift.dx, padY + shift.dy, [], aligned)) : 0,
+      nudge = nudged > STEADY && nudged > drift(held) + STEADY_MARGIN ? [] : aligned,
       frames = place(c.png, c.bounds, pitch, idle.offset - shift.dx, padY + shift.dy, c.notes, nudge);
+    if (aligned.some((n) => n.dx || n.dy) && !nudge.length) c.notes.push("loop kept as drawn: nudging would make its pivot drift more");
     rest ??= frames[0];
     if (nudge.some((n) => n.dx || n.dy)) c.notes.push(`loop frames nudged ${nudge.map((n) => `${n.dx},${n.dy}`).join(" ")}`);
     console.log(`${id}/${c.state}: ${c.frames} frames, offset ${idle.offset}, pad ${padY}${shift.dx || shift.dy ? `, aligned ${shift.dx}, ${shift.dy} px onto idle` : ""}`);

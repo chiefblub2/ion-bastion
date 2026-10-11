@@ -1,13 +1,14 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import type { EnemyId } from "../core/types";
-import { decodePng, measureArt, VISIBLE_ALPHA, type Png } from "../../scripts/png";
+import { artSignature, decodePng, identify, measureArt, VISIBLE_ALPHA, type Png } from "../../scripts/png";
 import { ANIMATION_BOUNDS } from "./enemy-animation-bounds";
 import {
   allClips,
   allSheets,
   ANIMATION_CELL,
+  ANIMATION_MANIFEST,
   ANIMATION_COLUMNS,
   ANIMATION_ROWS,
   ANIMATION_STATES,
@@ -18,13 +19,21 @@ import {
   clipFrame,
   clipUrl,
   ENEMY_ANIMATIONS,
+  manifestClips,
+  manifestTypes,
+  missionAnimationTypes,
   sheetFrame,
   sheetKey,
+  sheetPlan,
   type AnimationClip,
+  type AnimationManifest,
 } from "./enemy-animations";
-import { artFor } from "./enemy-art";
+import { artFor, artUrl } from "./enemy-art";
 
+/** The Phase 5A types, which must keep working as more are added. */
 const STARTERS = ["drone", "runner", "tank", "boss", "glider", "aegis"];
+/** Every registered type: the manifest's enabled entries. */
+const ANIMATED = Object.keys(ENEMY_ANIMATIONS) as EnemyId[];
 const ROOT = new URL("../../", import.meta.url);
 const sheet = (clip: Pick<AnimationClip, "path">) => decodePng(readFileSync(new URL(`public/${clip.path}`, ROOT)));
 /** Sheet frame `f` (row by row) as an image of its own. */
@@ -37,9 +46,10 @@ function cell(png: Png, f: number, w: number): Png {
 }
 
 describe("animation registry", () => {
-  it("registers exactly the six starter types with all four states", () => {
-    expect(Object.keys(ENEMY_ANIMATIONS).sort()).toEqual([...STARTERS].sort());
-    for (const id of STARTERS as EnemyId[]) {
+  it("registers exactly the manifest's enabled types, the starters among them, each with static art and all four states", () => {
+    expect(ANIMATED).toEqual(manifestTypes());
+    expect(ANIMATED).toEqual(expect.arrayContaining(STARTERS));
+    for (const id of ANIMATED) {
       expect(DEFAULT_CONTENT.enemies[id], id).toBeDefined();
       expect(artFor(id), `${id} needs static art as its fallback`).toBeDefined();
       for (const state of ANIMATION_STATES)
@@ -48,10 +58,43 @@ describe("animation registry", () => {
     expect(animationsFor("warpdrone")).toBeUndefined();
   });
 
+  it("reads clips from the manifest: defaults, per-enemy overrides, dropped states and disabled entries", () => {
+    const pack: AnimationManifest = {
+      ...ANIMATION_MANIFEST,
+      enemies: { drone: { sheet: "a.png", animations: { hurt: { fps: 20 }, death: null } }, tank: { sheet: "b.png", disabled: "wrong artwork" } },
+    };
+    const clips = manifestClips(pack.enemies.drone, pack);
+    expect(clips.hurt).toEqual({ row: 2, frames: 4, fps: 20, loop: false });
+    expect(clips.idle).toEqual({ row: 0, frames: 8, fps: 8, loop: true });
+    expect(clips.death).toBeUndefined();
+    expect(manifestTypes(pack)).toEqual(["drone"]);
+  });
+
+  it("loads only the sheets a mission can field, its split and brood offspring included, and releases the rest", () => {
+    const content = {
+        enemies: {
+          ...DEFAULT_CONTENT.enemies,
+          mother: { ...DEFAULT_CONTENT.enemies.drone, id: "mother", traits: [{ kind: "brood", type: "egg", every: 2 }] },
+          egg: { ...DEFAULT_CONTENT.enemies.drone, id: "egg", traits: [{ kind: "splitOnDeath", type: "wolf", count: 2 }] },
+        },
+      } as unknown as typeof DEFAULT_CONTENT,
+      mission = { waves: [{ bonus: 0, groups: [{ type: "mother" as EnemyId, count: 1, interval: 1, delay: 0 }, { type: "tank" as EnemyId, count: 1, interval: 1, delay: 0 }] }] };
+    expect([...missionAnimationTypes(mission, content)].sort()).toEqual(["tank", "wolf"]);
+    // Every mission fields at least one animated type and never the whole roster.
+    for (const m of DEFAULT_CONTENT.missions) expect(missionAnimationTypes(m, DEFAULT_CONTENT).size, m.id).toBeLessThan(ANIMATED.length);
+    const loaded = new Set([sheetKey("tank"), sheetKey("drone")]),
+      plan = sheetPlan(new Set<EnemyId>(["tank", "wolf"]), (key) => loaded.has(key));
+    expect(plan.load.map((s) => s.texture)).toEqual([sheetKey("wolf")]);
+    expect(plan.release).toEqual([sheetKey("drone")]);
+    expect(sheetPlan(undefined, (key) => loaded.has(key)).load).toHaveLength(ANIMATED.length - 2);
+    expect(sheetPlan(undefined, (key) => loaded.has(key)).release).toEqual([]);
+  });
+
   it("keeps one sheet per type, apart from the static art keys, and every clip valid on one row", () => {
     const keys = allSheets().map((s) => s.texture);
-    expect(keys.sort()).toEqual(STARTERS.map((id) => sheetKey(id as EnemyId)).sort());
-    for (const id of STARTERS as EnemyId[]) expect(keys).not.toContain(artFor(id)!.texture);
+    expect(keys.sort()).toEqual(ANIMATED.map(sheetKey).sort());
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const id of ANIMATED) expect(keys).not.toContain(artFor(id)!.texture);
     for (const clip of allClips()) {
       expect(clipError(clip), clip.texture).toBeUndefined();
       expect(clip).toMatchObject({ frameWidth: ANIMATION_CELL, frameHeight: ANIMATION_CELL });
@@ -74,7 +117,7 @@ describe("animation registry", () => {
   });
 
   it("places animated bodies with the static tuning and the cells' own bounds", () => {
-    for (const id of STARTERS as EnemyId[]) {
+    for (const id of ANIMATED) {
       const art = animationArt(id)!,
         stat = artFor(id)!;
       expect({ ...art, bounds: stat.bounds }).toEqual(stat);
@@ -85,8 +128,13 @@ describe("animation registry", () => {
 });
 
 describe("animation sheets", () => {
+  it("are exactly the registered types' files", () => {
+    const files = readdirSync(new URL("public/assets/enemy-animations/", ROOT)).sort();
+    expect(files).toEqual(ANIMATED.map((id) => `${id}.png`).sort());
+  });
+
   it("are grids of their declared cells, a power of two, never blank or cut, unused cells empty", () => {
-    for (const id of STARTERS as EnemyId[]) {
+    for (const id of ANIMATED) {
       const set = animationsFor(id)!,
         png = sheet(set.idle!),
         used = new Set(ANIMATION_STATES.flatMap((s) => Array.from({ length: set[s]!.frames }, (_, i) => sheetFrame(set[s]!, i))));
@@ -101,8 +149,10 @@ describe("animation sheets", () => {
           expect(m.coverage, `${id} unused cell ${f}`).toBe(0);
           continue;
         }
-        // A death clip may end almost empty; every other frame draws its body.
-        if (f !== sheetFrame(set.death!, set.death!.frames - 1)) expect(m.coverage, `${id} frame ${f}`).toBeGreaterThan(0.1);
+        // A death clip breaks apart over its second half and may end empty; every other frame draws its body.
+        const death = f - sheetFrame(set.death!, 0);
+        if (death < set.death!.frames / 2) expect(m.coverage, `${id} frame ${f}`).toBeGreaterThan(0.1);
+        else if (death < set.death!.frames - 1) expect(m.coverage, `${id} frame ${f}`).toBeGreaterThan(0.002);
         let edge = 0;
         for (let k = 0; k < w; k++) for (const [x, y] of [[k, 0], [k, w - 1], [0, k], [w - 1, k]]) if (c.rgba[(y * w + x) * 4 + 3] > VISIBLE_ALPHA) edge++;
         // Soft glow fades out over alpha 1–16, so the background is what is not visibly drawn.
@@ -114,7 +164,7 @@ describe("animation sheets", () => {
   });
 
   it("keep the measured idle bounds current (scripts/audit-enemy-animations.ts -- --write)", () => {
-    for (const id of STARTERS as EnemyId[]) {
+    for (const id of ANIMATED) {
       const clip = animationsFor(id)!.idle!,
         png = sheet(clip),
         u = { x0: Infinity, y0: Infinity, x1: 0, y1: 0 };
@@ -131,7 +181,7 @@ describe("animation sheets", () => {
   });
 
   it("hold the body still across loop frames (no pivot drift)", () => {
-    for (const id of STARTERS as EnemyId[])
+    for (const id of ANIMATED)
       for (const state of ["idle", "move"] as const) {
         const clip = animationsFor(id)![state]!,
           png = sheet(clip),
@@ -139,30 +189,60 @@ describe("animation sheets", () => {
         for (let i = 0; i < centres.length; i++) {
           const a = centres[i],
             b = centres[(i + 1) % centres.length];
-          // Authored banking moves the alpha centre up to 0.05 (drone move); a sliding body (the raw sheets) moved 0.08–0.12.
-          expect(Math.hypot(a.x - b.x, a.y - b.y), `${id}/${state} frame ${i + 1}`).toBeLessThan(0.06);
+          // Authored banking moves the alpha centre up to 0.05 (drone move) and a gallop up to 0.065 (wolf move: legs and
+          // tail sweep); a sliding body (the raw sheets) moved 0.08–0.12.
+          expect(Math.hypot(a.x - b.x, a.y - b.y), `${id}/${state} frame ${i + 1}`).toBeLessThan(0.07);
         }
       }
   });
 
   it("match the supplied pack (manifest version 2): one grid per type, the registry's rows and timing", () => {
-    const manifest = JSON.parse(readFileSync(new URL("assets-src/enemy-animations/manifest.json", ROOT), "utf8")) as {
-      version: number;
-      frameWidth: number;
-      frameHeight: number;
-      columns: number;
-      rows: number;
-      animations: Record<string, { row: number; start: number; frames: number; fps: number; loop: boolean }>;
-      enemies: Record<string, { sheet: string }>;
-    };
+    const manifest = ANIMATION_MANIFEST;
     expect(manifest.version).toBe(2);
     expect([manifest.columns, manifest.rows]).toEqual([ANIMATION_COLUMNS, ANIMATION_ROWS]);
-    expect(Object.keys(manifest.enemies).sort()).toEqual([...STARTERS].sort());
-    for (const [id, { sheet: file }] of Object.entries(manifest.enemies)) {
-      const png = decodePng(readFileSync(new URL(file, ROOT)));
+    expect(JSON.parse(readFileSync(new URL("assets-src/enemy-animations/manifest.json", ROOT), "utf8"))).toEqual(manifest);
+    for (const [id, entry] of Object.entries(manifest.enemies)) {
+      expect(DEFAULT_CONTENT.enemies[id as EnemyId], `${id} is an enemy type`).toBeDefined();
+      expect(entry.sheet, id).toBe(`assets-src/enemy-animations/${id}.png`);
+      const png = decodePng(readFileSync(new URL(entry.sheet, ROOT)));
       expect([png.width, png.height], id).toEqual([manifest.frameWidth * manifest.columns, manifest.frameHeight * manifest.rows]);
-      for (const [state, a] of Object.entries(manifest.animations))
+      if (entry.disabled) {
+        expect(animationsFor(id as EnemyId), `${id} is disabled`).toBeUndefined();
+        continue;
+      }
+      for (const [state, a] of Object.entries(manifestClips(entry)))
         expect(animationsFor(id as EnemyId)![state as "idle"], `${id}/${state}`).toMatchObject({ start: a.row * manifest.columns, frames: a.frames, fps: a.fps, loop: a.loop });
     }
+  });
+
+  it("show their own enemy: the idle frames look most like its static art of the whole roster", () => {
+    // The first pack shipped ten sheets under each other's names (ant held the wolf, cog the pebble, …).
+    const statics = new Map(
+      Object.keys(DEFAULT_CONTENT.enemies).flatMap((id) => {
+        const art = artFor(id as EnemyId);
+        return art ? [[id, artSignature(decodePng(readFileSync(new URL(`public/${artUrl(art, "")}`, ROOT))))] as const] : [];
+      }),
+    );
+    for (const id of ANIMATED) {
+      const clip = animationsFor(id)!.idle!,
+        png = sheet(clip);
+      expect(identify([0, 2, 4, 6].map((i) => cell(png, sheetFrame(clip, i), clip.frameWidth)), statics)[0].id, id).toBe(id);
+    }
+  });
+
+  it("carry no stray specks around the body (grid-line remnants would inflate the measured bounds)", () => {
+    for (const id of ANIMATED)
+      for (const state of ["idle", "move"] as const) {
+        const clip = animationsFor(id)![state]!,
+          png = sheet(clip);
+        for (let i = 0; i < clip.frames; i++) {
+          const c = cell(png, sheetFrame(clip, i), clip.frameWidth),
+            solid = measureArt({ ...c, rgba: c.rgba.map((v, k) => (k % 4 === 3 && v < 128 ? 0 : v)) }).bounds,
+            visible = measureArt(c).bounds;
+          // Thrust and flame tails reach up to 44 px past the solid body; a speck far off reaches further.
+          const reach = Math.max(solid.x0 - visible.x0, visible.x1 - solid.x1, solid.y0 - visible.y0, visible.y1 - solid.y1);
+          expect(reach, `${id}/${state} frame ${i + 1}`).toBeLessThan(clip.frameWidth / 4);
+        }
+      }
   });
 });

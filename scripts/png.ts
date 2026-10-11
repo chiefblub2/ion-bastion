@@ -217,6 +217,77 @@ export function islands({ width, height, rgba }: Png): Island[] {
 export const RESIDUE_SHARE = 0.03;
 export const residue = (png: Png) => islands(png).filter((island, i, all) => i > 0 && island.area < all[0].area * RESIDUE_SHARE);
 
+/** Grid edge of `artSignature`. */
+const SIGNATURE_GRID = 8;
+/**
+ * Coarse look of a sprite, for checking that an animation sheet shows the enemy its file name claims: the bounding
+ * square of the solid pixels (alpha ≥ 128), centred, split into `SIGNATURE_GRID`² cells, each with its solid
+ * coverage and mean colour. Independent of resolution and placement; tolerant of small pose changes.
+ */
+export function artSignature({ width, height, rgba }: Png): Float64Array {
+  let x0 = width,
+    y0 = height,
+    x1 = 0,
+    y1 = 0;
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++)
+      if (rgba[(y * width + x) * 4 + 3] >= 128) {
+        x0 = Math.min(x0, x);
+        x1 = Math.max(x1, x);
+        y0 = Math.min(y0, y);
+        y1 = Math.max(y1, y);
+      }
+  const n = SIGNATURE_GRID,
+    side = Math.max(x1 - x0, y1 - y0) + 1,
+    cx = (x0 + x1) / 2,
+    cy = (y0 + y1) / 2,
+    sig = new Float64Array(n * n * 4),
+    count = new Float64Array(n * n);
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      const k = (y * width + x) * 4;
+      if (rgba[k + 3] < 128) continue;
+      const gx = Math.floor(((x - cx) / side + 0.5) * n),
+        gy = Math.floor(((y - cy) / side + 0.5) * n);
+      if (gx < 0 || gy < 0 || gx >= n || gy >= n) continue;
+      const c = gy * n + gx;
+      count[c]++;
+      for (let j = 0; j < 3; j++) sig[c * 4 + j] += rgba[k + j];
+    }
+  const area = (side * side) / (n * n);
+  for (let c = 0; c < n * n; c++) {
+    for (let j = 0; j < 3; j++) sig[c * 4 + j] = count[c] ? sig[c * 4 + j] / count[c] / 255 : 0;
+    sig[c * 4 + 3] = count[c] / area;
+  }
+  return sig;
+}
+/**
+ * Difference of two `artSignature`s (0 alike, about 1 unrelated): coverage difference per cell, plus the colour
+ * difference where both cells are solid, or a flat penalty where only one is.
+ */
+export function signatureDistance(a: Float64Array, b: Float64Array) {
+  const cells = a.length / 4;
+  let d = 0;
+  for (let c = 0; c < cells; c++) {
+    const ca = a[c * 4 + 3],
+      cb = b[c * 4 + 3];
+    d += Math.abs(ca - cb);
+    if (ca > 0.2 && cb > 0.2) for (let j = 0; j < 3; j++) d += Math.abs(a[c * 4 + j] - b[c * 4 + j]);
+    else if (ca > 0.2 || cb > 0.2) d += 0.5;
+  }
+  return d / cells;
+}
+/**
+ * Which static art some animation frames (an idle clip) look like: every candidate with its mean signature distance
+ * over the frames, closest first.
+ */
+export function identify(frames: Png[], statics: ReadonlyMap<string, Float64Array>): { id: string; distance: number }[] {
+  const sigs = frames.map(artSignature);
+  return [...statics].map(([id, s]) => ({ id, distance: sigs.reduce((t, f) => t + signatureDistance(f, s), 0) / sigs.length })).sort((a, b) => a.distance - b.distance);
+}
+/** An identity is ambiguous (worth a look by eye) when the runner-up is within this ratio of the best distance. */
+export const IDENTITY_MARGIN = 0.85;
+
 const CRC = Array.from({ length: 256 }, (_, n) => {
   let c = n;
   for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;

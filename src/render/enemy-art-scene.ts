@@ -1,5 +1,6 @@
 import Phaser from "phaser";
-import { allClips, allSheets, ANIMATION_COLUMNS, ANIMATION_ROWS, clipError, clipUrl } from "./enemy-animations";
+import type { EnemyId } from "../core/types";
+import { allClips, ANIMATION_COLUMNS, ANIMATION_ROWS, clipError, clipUrl, sheetPlan } from "./enemy-animations";
 import { artUrl, ENEMY_ART } from "./enemy-art";
 import type { SpriteHost } from "./enemy-sprites";
 /**
@@ -25,19 +26,26 @@ export function queueEnemyArt(scene: Phaser.Scene) {
 }
 /**
  * Queues the enemy animation sheets in a scene's `preload` (one grid spritesheet per animated type, its clips on the
- * rows), once per game like the art. A sheet that fails to load, or holds an invalid clip, is warned about once and
- * never queued again; its enemies keep their static art. Frames are picked per Image from the effect clock
- * (`EnemySprites`), so no Phaser animation definitions are needed: Phaser's own playback runs on the game loop and
- * would not freeze with a paused game (`AnimationManager.pauseAll` does not stop sprites in Phaser 3.90).
+ * rows). With `types` (the battlefield passes `missionAnimationTypes`), only those sheets are queued and loaded sheets
+ * of other types are released: each decodes to 8 MiB (2048 × 1024 RGBA, more with mipmaps), so the whole roster
+ * would not fit a mission's budget. Preload runs again on every mission change (`scene.restart`) after the old
+ * Images are destroyed, so nothing still shows a released sheet; a sheet kept from the last mission is reused.
+ * Without `types` (review pages) every sheet loads. A sheet that fails to load, or holds an invalid clip, is warned
+ * about once and never queued again; its enemies keep their static art, as do types whose sheet is not loaded.
+ * Frames are picked per Image from the effect clock (`EnemySprites`), so no Phaser animation definitions are needed:
+ * Phaser's own playback runs on the game loop and would not freeze with a paused game (`AnimationManager.pauseAll`
+ * does not stop sprites in Phaser 3.90).
  */
-export function queueEnemyAnimations(scene: Phaser.Scene) {
+export function queueEnemyAnimations(scene: Phaser.Scene, types?: ReadonlySet<EnemyId>) {
   for (const clip of allClips()) {
     const problem = clipError(clip);
     if (!problem || failedArt.has(clip.texture)) continue;
     failedArt.add(clip.texture);
     console.warn(`Enemy animation sheet '${clip.texture}' has an invalid clip (${problem}); those enemies keep their static art.`);
   }
-  const queued = allSheets().filter((sheet) => !scene.textures.exists(sheet.texture) && !failedArt.has(sheet.texture));
+  const plan = sheetPlan(types, (key) => scene.textures.exists(key));
+  for (const key of plan.release) scene.textures.remove(key);
+  const queued = plan.load.filter((sheet) => !failedArt.has(sheet.texture));
   for (const sheet of queued)
     scene.load.spritesheet(sheet.texture, clipUrl(sheet), { frameWidth: sheet.frameWidth, frameHeight: sheet.frameHeight, endFrame: ANIMATION_COLUMNS * ANIMATION_ROWS - 1 });
   if (queued.length)

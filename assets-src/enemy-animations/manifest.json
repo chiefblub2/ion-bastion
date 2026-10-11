@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "description": "Replacement standardized animation pack for the original six animated enemies.",
+  "description": "Standardized enemy animation sources: one 8×4 grid per enemy, a clip per row. Identity of every sheet verified against public/assets/enemies/<id>.png.",
   "frameWidth": 222,
   "frameHeight": 222,
   "columns": 8,
@@ -57,6 +57,36 @@
     },
     "aegis": {
       "sheet": "assets-src/enemy-animations/aegis.png"
+    },
+    "ant": {
+      "sheet": "assets-src/enemy-animations/ant.png"
+    },
+    "cog": {
+      "sheet": "assets-src/enemy-animations/cog.png"
+    },
+    "drafter": {
+      "sheet": "assets-src/enemy-animations/drafter.png"
+    },
+    "ember": {
+      "sheet": "assets-src/enemy-animations/ember.png"
+    },
+    "gale": {
+      "sheet": "assets-src/enemy-animations/gale.png"
+    },
+    "pebble": {
+      "sheet": "assets-src/enemy-animations/pebble.png"
+    },
+    "scarab": {
+      "sheet": "assets-src/enemy-animations/scarab.png"
+    },
+    "skater": {
+      "sheet": "assets-src/enemy-animations/skater.png"
+    },
+    "twin": {
+      "sheet": "assets-src/enemy-animations/twin.png"
+    },
+    "wolf": {
+      "sheet": "assets-src/enemy-animations/wolf.png"
     }
   }
 }

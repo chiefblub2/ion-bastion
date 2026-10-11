@@ -17,25 +17,26 @@
  * frame, no alpha, a cut body, a pivot jump in a loop, a drawn unused cell. Warnings are for review by eye
  * (`/gallery.html?anim`).
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { DEFAULT_CONTENT } from "../src/content";
 import type { EnemyId } from "../src/core/types";
-import { ANIMATION_COLUMNS, ANIMATION_ROWS, ANIMATION_STATES, clipError, ENEMY_ANIMATIONS, sheetFrame } from "../src/render/enemy-animations";
-import { decodePng, measureArt, VISIBLE_ALPHA, type ArtMetrics, type Png } from "./png";
+import {
+  ANIMATION_COLUMNS,
+  ANIMATION_MANIFEST as manifest,
+  ANIMATION_ROWS,
+  ANIMATION_STATES,
+  clipError,
+  ENEMY_ANIMATIONS,
+  manifestClips,
+  missionAnimationTypes,
+  sheetFrame,
+} from "../src/render/enemy-animations";
+import { artFor, artUrl } from "../src/render/enemy-art";
+import { artSignature, decodePng, identify, IDENTITY_MARGIN, measureArt, VISIBLE_ALPHA, type ArtMetrics, type Png } from "./png";
 
 const ROOT = new URL("../", import.meta.url),
   BOUNDS_FILE = new URL("../src/render/enemy-animation-bounds.ts", import.meta.url);
 const args = process.argv.slice(2);
-
-interface Manifest {
-  version: number;
-  frameWidth: number;
-  frameHeight: number;
-  columns: number;
-  rows: number;
-  animations: Record<string, { row: number; start: number; frames: number; fps: number; loop: boolean }>;
-  enemies: Record<string, { sheet: string }>;
-}
-const manifest = JSON.parse(readFileSync(new URL("assets-src/enemy-animations/manifest.json", ROOT), "utf8")) as Manifest;
 
 /** Pivot drift between neighbouring loop frames (share of the cell) worth a look; above `DRIFT_ERROR` it jumps. */
 const DRIFT_WARN = 0.03,
@@ -46,7 +47,8 @@ const SIZE_WARN = 0.12;
 const EDGE_ERROR = 0.08;
 
 const errors: string[] = [],
-  warnings: string[] = [];
+  warnings: string[] = [],
+  identities: string[] = [];
 const f2 = (v: number) => (v >= 0 ? " " : "") + v.toFixed(2);
 
 /** Cell `f` (row by row) of a grid with `columns` cells per row, as an image of its own. */
@@ -79,21 +81,47 @@ const load = (path: URL, what: string) => {
   }
 };
 
-// The supplied pack: version, grid, and nothing drawn after each clip's frames.
+// The supplied pack: version, grid, nothing drawn after each clip's frames, and the identity of every sheet: its idle
+// frames must look most like its own enemy's static art of all the roster's (the first pack shipped ten sheets
+// under each other's names). A disabled entry is checked as well, so the reason it stays out remains visible.
 if (manifest.version !== 2) errors.push(`manifest version ${manifest.version}: expected 2 (one grid per enemy)`);
-for (const [id, { sheet }] of Object.entries(manifest.enemies)) {
-  const png = load(new URL(sheet, ROOT), `source ${id}`);
+const statics = new Map(
+  Object.keys(DEFAULT_CONTENT.enemies).flatMap((id) => {
+    const art = artFor(id as EnemyId);
+    return art ? [[id, artSignature(decodePng(readFileSync(new URL(`public/${artUrl(art, "")}`, ROOT))))] as const] : [];
+  }),
+);
+for (const [id, entry] of Object.entries(manifest.enemies)) {
+  if (!DEFAULT_CONTENT.enemies[id]) errors.push(`${id}: in the manifest but not an enemy type`);
+  if (!artFor(id as EnemyId)) errors.push(`${id}: no static art to fall back to`);
+  if (entry.disabled) warnings.push(`${id}: disabled in the manifest (${entry.disabled}); it shows its static art`);
+  const png = load(new URL(entry.sheet, ROOT), `source ${id}`);
   if (!png) continue;
-  if (png.width !== manifest.frameWidth * manifest.columns || png.height !== manifest.frameHeight * manifest.rows)
+  if (png.width !== manifest.frameWidth * manifest.columns || png.height !== manifest.frameHeight * manifest.rows) {
     errors.push(`source ${id}: ${png.width}×${png.height} is not ${manifest.columns}×${manifest.rows} cells of ${manifest.frameWidth}×${manifest.frameHeight}`);
-  for (const [state, a] of Object.entries(manifest.animations))
+    continue;
+  }
+  const clips = manifestClips(entry);
+  for (const [state, a] of Object.entries(clips))
     for (let i = a.frames; i < manifest.columns; i++)
       if (measureArt(cell(png, a.row * manifest.columns + i, manifest.frameWidth, manifest.frameHeight, manifest.columns)).coverage > 0) warnings.push(`source ${id}/${state}: unused cell ${i + 1} is drawn`);
+  const idle = clips.idle ?? Object.values(clips)[0];
+  if (!idle) continue;
+  const ranked = identify(
+      Array.from({ length: Math.ceil(idle.frames / 2) }, (_, i) => cell(png, idle.row * manifest.columns + i * 2, manifest.frameWidth, manifest.frameHeight, manifest.columns)),
+      statics,
+    ),
+    [best, second] = ranked,
+    own = ranked.find((r) => r.id === id);
+  identities.push(`${id.padEnd(12)} ${best.id === id ? "ok  " : "BAD "} closest ${best.id} ${best.distance.toFixed(3)}, next ${second.id} ${second.distance.toFixed(3)}${best.id === id ? "" : `, own ${own?.distance.toFixed(3)} (rank ${ranked.indexOf(own!) + 1})`}`);
+  if (best.id !== id) errors.push(`${id}: ${entry.sheet} looks like ${best.id} (${best.distance.toFixed(3)}), not ${id} (rank ${ranked.indexOf(own!) + 1}); verify by eye and rename or disable it`);
+  else if (best.distance / second.distance > IDENTITY_MARGIN) warnings.push(`${id}: identity is close to ${second.id} (${best.distance.toFixed(3)} vs ${second.distance.toFixed(3)}); confirm by eye`);
 }
-// Coverage: manifest ↔ registry.
+// Coverage: every enabled manifest entry is registered (the registry reads the manifest), and every game sheet in
+// public/ belongs to a registered type (a leftover or unnormalized sheet there would be shipped but never shown).
 const registered = Object.keys(ENEMY_ANIMATIONS) as EnemyId[];
-for (const id of Object.keys(manifest.enemies)) if (!registered.includes(id as EnemyId)) errors.push(`${id}: in the manifest but not registered`);
-for (const id of registered) if (!manifest.enemies[id]) errors.push(`${id}: registered but not in the manifest`);
+for (const file of readdirSync(new URL("public/assets/enemy-animations/", ROOT)))
+  if (!registered.includes(file.replace(/\.png$/, "") as EnemyId)) errors.push(`public/assets/enemy-animations/${file}: not a registered sheet (unnormalized, disabled or stray)`);
 
 const union: Partial<Record<EnemyId, { x0: number; y0: number; x1: number; y1: number; size: number }>> = {};
 let decoded = 0,
@@ -114,7 +142,7 @@ for (const id of registered) {
   const used = new Set<number>();
   for (const state of ANIMATION_STATES) {
     const clip = set[state],
-      declared = manifest.animations[state],
+      declared = manifestClips(manifest.enemies[id])[state],
       name = `${id}/${state}`.padEnd(16);
     if (!clip) continue;
     if (!declared) errors.push(`${id}/${state}: registered but not in the manifest`);
@@ -175,7 +203,16 @@ for (const id of registered) {
   for (let f = 0; f < ANIMATION_COLUMNS * ANIMATION_ROWS; f++)
     if (!used.has(f) && measureArt(cell(png, f, first.frameWidth, first.frameHeight, ANIMATION_COLUMNS)).coverage > 0) errors.push(`${id}: unused cell ${f} is not empty`);
 }
+console.log(`\nIdentity (idle frames vs the static art of all ${statics.size} types, signature distance):`);
+for (const line of identities) console.log(`  ${line}`);
 console.log(`\nGame sheets: ${(stored / 1e6).toFixed(1)} MB on disk, ${(decoded / 1e6).toFixed(1)} MB decoded RGBA (GPU textures, ${((decoded * 4) / 3 / 1e6).toFixed(1)} MB with mipmaps).`);
+// The battlefield loads only the sheets of the mission's types (`missionAnimationTypes`).
+const perSheet = registered.length ? decoded / registered.length : 0,
+  missions = DEFAULT_CONTENT.missions.map((m) => ({ id: m.id, n: missionAnimationTypes(m, DEFAULT_CONTENT).size })),
+  most = missions.reduce((a, b) => (b.n > a.n ? b : a), { id: "-", n: 0 });
+console.log(
+  `Per mission: up to ${most.n} sheets (${most.id}), ${((most.n * perSheet) / 1e6).toFixed(1)} MB decoded; mean ${(missions.reduce((t, m) => t + m.n, 0) / Math.max(1, missions.length)).toFixed(1)} sheets; ${missions.filter((m) => !m.n).length} of ${missions.length} missions load none.`,
+);
 
 if (args.includes("--write")) {
   const lines = (Object.entries(union) as [EnemyId, NonNullable<(typeof union)[EnemyId]>][]).map(([id, u]) => {
