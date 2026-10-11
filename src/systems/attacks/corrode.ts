@@ -19,6 +19,8 @@ export const corrode: AttackModule<CorrodeAttack> = {
       if (target.hp > 0 && canTarget(sim, src.type, target) && dist(target, at) <= spec.radius) {
         // Weakened first, so the acid hit itself already counts.
         applyStatus(sim, target, { kind: "vulnerable", amount: spec.amount, until });
+        // Armor Dissolver: weaker armor against every tower for as long as the acid lasts.
+        if (src.special?.kind === "armor-dissolver") applyStatus(sim, target, { kind: "armorDissolved", fraction: src.special.fraction, until });
         applyDamage(sim, src, target, damage, false, hitOf("corrode", src));
       }
   },

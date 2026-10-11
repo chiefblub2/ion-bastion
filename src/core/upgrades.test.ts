@@ -35,7 +35,11 @@ describe("unified upgrade purchases", () => {
       let { game, tower } = setup(type);
       for (const upgrade of TOWERS[type].upgrades) {
         // Paths exclude each other; the catalog is sorted by path, so start a fresh tower per path.
-        if (upgradeOption(tower, upgrade.id, Infinity).status === "excluded") ({ game, tower } = setup(type));
+        // Specialization paths branch off level 5, so the fresh tower gets the shared levels first.
+        if (upgradeOption(tower, upgrade.id, Infinity).status === "excluded") {
+          ({ game, tower } = setup(type));
+          tower.upgrades.push(...TOWERS[type].upgrades.filter((u) => !u.path).map((u) => u.id));
+        }
         game.state.wallets[0] = upgrade.cost - 1;
         const before = JSON.stringify(game.state);
         const preview = previewUpgrade(tower, upgrade.id)!;
@@ -136,11 +140,16 @@ describe("late levels 4 and 5", () => {
     const spent = TOWERS[type].cost + levels(n).reduce((sum, id) => sum + TOWERS[type].upgrades.find((u) => u.id === id)!.cost, 0);
     return stats.damage / stats.interval / spent;
   };
-  it("every attack tower reaches level 5, each level costs more than the previous one", () => {
+  it("every attack tower reaches level 5 (8 with a specialization), each step costs more than the one it requires", () => {
     for (const type of attackTowers) {
-      expect(maxTowerLevel(type)).toBe(5);
-      const costs = TOWERS[type].upgrades.map((u) => u.cost);
-      for (let i = 1; i < costs.length; i++) expect(costs[i]).toBeGreaterThan(costs[i - 1]);
+      const upgrades = TOWERS[type].upgrades;
+      expect(maxTowerLevel(type)).toBe(upgrades.some((u) => u.path) ? 8 : 5);
+      for (const upgrade of upgrades)
+        for (const id of upgrade.requires) {
+          const parent = upgrades.find((u) => u.id === id)!;
+          // A specialization starts its own price ladder at 2.5× the build cost, below level 5.
+          if (parent.path === upgrade.path) expect(upgrade.cost).toBeGreaterThan(parent.cost);
+        }
     }
   });
   it("one high-level tower beats several base towers per credit", () => {

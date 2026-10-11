@@ -25,6 +25,7 @@ export function settleWave(sim: Sim) {
   if (!s.enemies.length && !s.queue.length) {
     const bonus = waves[s.wave - 1].bonus;
     s.projectiles = [];
+    delete s.pending;
     earn(s, bonus);
     payIncome(sim);
     repairReactor(sim);

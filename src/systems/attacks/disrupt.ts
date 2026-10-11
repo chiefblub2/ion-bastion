@@ -18,7 +18,9 @@ export const disrupt: AttackModule<DisruptAttack> = {
     // A copy: enemies released on death must not catch the same pulse.
     for (const target of [...sim.state.enemies])
       if (target.hp > 0 && canTarget(sim, src.type, target) && dist(target, at) <= spec.radius) {
-        applyStatus(sim, target, { kind: "disrupted", until });
+        // Weak Signal: set with the disruption and before the pulse's own damage.
+        if (applyStatus(sim, target, { kind: "disrupted", until }) && src.special?.kind === "weak-signal")
+          applyStatus(sim, target, { kind: "vulnerable", amount: src.special.bonus, until });
         // The shield breaks and only recharges its usual delay after the disruption ends.
         if (target.shield !== undefined) {
           target.shield = 0;

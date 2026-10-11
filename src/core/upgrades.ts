@@ -1,6 +1,8 @@
 import { DEFAULT_CONTENT } from "../content";
 import { attackError, attackOverrideError } from "../systems/attacks";
 import { ContentError } from "./errors";
+import { specializationError } from "./specialization-types";
+import type { SpecializationSpec } from "./specialization-types";
 import type {
   AttackSpec,
   AuraBonuses,
@@ -28,6 +30,8 @@ export interface ResolvedTower {
   /** Bonuses this tower emits; zero for attack towers. */
   readonly aura: Readonly<AuraBonuses>;
   readonly attack: Readonly<AttackSpec>;
+  /** Ability of the highest owned specialization tier, if any. */
+  readonly specialization?: Readonly<SpecializationSpec>;
 }
 const STATUS_CODES: Record<Exclude<UpgradeStatus, "available">, MessageCode> = {
   unknown: "upgrade-unknown",
@@ -64,6 +68,9 @@ export function upgradeOptions(
     upgradeOption(tower, definition.id, credits, content),
   );
 }
+
+/** A specialization tier: a level on a path (levels 6 to 8 of attack towers); Aura paths carry no level. */
+export const isSpecialization = (upgrade: UpgradeDefinition) => upgrade.path !== undefined && upgrade.effects.level !== undefined;
 
 /** The path fixed by the first purchased path upgrade, if any. */
 export function towerPath(tower: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT): string | undefined {
@@ -111,6 +118,7 @@ function computeUpgrades(definition: TowerDefinition, upgrades: readonly string[
   const aura: AuraBonuses =
     definition.attack.kind === "aura" ? { ...definition.attack.base } : { damage: 0, speed: 0, range: 0 };
   const attack = { ...definition.attack } as AttackSpec;
+  let specialization: SpecializationSpec | undefined;
   const owned = new Set(upgrades);
   const applied = new Set<string>();
   const apply = (upgrade: UpgradeDefinition) => {
@@ -123,6 +131,8 @@ function computeUpgrades(definition: TowerDefinition, upgrades: readonly string[
     Object.assign(aura, upgrade.effects.aura);
     Object.assign(attack, upgrade.effects.attack);
     if (upgrade.effects.level !== undefined) level = upgrade.effects.level;
+    // A tier carries the complete ability, so it replaces the previous tier's values.
+    if (upgrade.effects.specialization) specialization = upgrade.effects.specialization;
     applied.add(upgrade.id);
   };
   for (const upgrade of definition.upgrades) apply(upgrade);
@@ -131,6 +141,7 @@ function computeUpgrades(definition: TowerDefinition, upgrades: readonly string[
     stats: Object.freeze(stats),
     aura: Object.freeze(aura),
     attack: Object.freeze(attack),
+    ...(specialization ? { specialization: Object.freeze({ ...specialization }) } : {}),
   });
 }
 
@@ -187,12 +198,15 @@ export function validateUpgradeDefinitions(tower: TowerDefinition, path = tower.
         Object.keys(effects.stats ?? {}).length ||
         Object.keys(effects.aura ?? {}).length ||
         Object.keys(effects.attack ?? {}).length ||
-        effects.level !== undefined
+        effects.level !== undefined ||
+        effects.specialization !== undefined
       )
     )
       fail("Upgrade without effect.");
     const attackProblem = effects.attack && attackOverrideError(tower.attack, effects.attack);
     if (attackProblem) fail(attackProblem);
+    const specializationProblem = effects.specialization && specializationError(effects.specialization);
+    if (specializationProblem) fail(specializationProblem);
     if (effects.level !== undefined && (!Number.isInteger(effects.level) || effects.level < 2))
       fail("Invalid upgrade level.");
     for (const [key, value] of Object.entries(effects.stats ?? {}))
@@ -218,7 +232,9 @@ export function validateUpgradeDefinitions(tower: TowerDefinition, path = tower.
     active.add(id);
     for (const prerequisite of upgrade.requires) {
       visit(prerequisite, id);
-      if (definitions.get(prerequisite)!.path !== upgrade.path)
+      // A path may start from an upgrade without a path (level 5), but never leave its path.
+      const parentPath = definitions.get(prerequisite)!.path;
+      if (parentPath && parentPath !== upgrade.path)
         throw new ContentError(`${path} › Upgrade ${id}`, "Requirement from another path.");
     }
     active.delete(id);

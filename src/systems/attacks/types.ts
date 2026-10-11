@@ -15,6 +15,10 @@ export interface Impact {
   /** Instant attacks only: the firing tower's position and current range. */
   from?: Point;
   reach?: number;
+  /** Fire-time proc of a specialization: 1 for a Ricochet or Twin Arc shot, the unused shards for Concentrated Volley. */
+  proc?: number;
+  /** Instant attacks only: every enemy the tower could aim at, in its priority order (Twin Arc). */
+  candidates?: readonly Enemy[];
 }
 export interface AttackModule<S extends AttackSpec = AttackSpec> {
   /** `point`: shells fly to the fire-time position; `none`: support tower. */

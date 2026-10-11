@@ -3,7 +3,7 @@ import { isSupport } from "./attacks";
 import type { Hit } from "./damage";
 import { dist } from "./path";
 import { createEnemy } from "./spawn";
-import { hasStatus } from "./status";
+import { armorDissolved, hasStatus } from "./status";
 /** Spacing in cells between enemies released by `splitOnDeath`. */
 const SPLIT_SPACING = 0.15;
 interface TraitModule<T extends Trait> {
@@ -32,7 +32,11 @@ const first = (...errors: (string | undefined)[]) => errors.find(Boolean);
 const TRAITS: Registry = {
   armor: {
     validate: (t) => (t.reduction >= 0 && t.reduction < 1 ? undefined : "reduction must be in [0, 1)."),
-    onDamage: (t, amount) => amount * (1 - t.reduction),
+    // Armor Pierce (on the hit) and Armor Dissolver (on the enemy) each remove a share of the reduction; they multiply, never add.
+    onDamage: (t, amount, e, sim, _dot, hit) => {
+      const pierce = hit?.special?.kind === "armor-pierce" ? hit.special.fraction : 0;
+      return amount * (1 - t.reduction * (1 - pierce) * (1 - armorDissolved(e, sim.state.time)));
+    },
   },
   regen: {
     validate: (t) =>

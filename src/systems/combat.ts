@@ -1,5 +1,5 @@
 import { resolveUpgrades } from "../core/upgrades";
-import type { Enemy, Point, Sim, TargetPriority } from "../core/types";
+import type { DamageSource, Enemy, Point, Sim, SpecializationSpec, TargetPriority, Tower } from "../core/types";
 import { attackModule, canAcquire, canTarget, isSupport } from "./attacks";
 import { effectiveTowerStats, isAuraSource } from "./auras";
 import { dist } from "./path";
@@ -34,7 +34,7 @@ export function attackEnemies(sim: Sim, dt: number) {
     // A rate change preserves progress instead of resetting or granting a free shot.
     t.cooldown = Math.max(0, t.cooldown - dt / stats.interval);
     if (t.cooldown > 0) continue;
-    const attack = resolveUpgrades(t, sim.content).attack,
+    const { attack, specialization: special } = resolveUpgrades(t, sim.content),
       module = attackModule(attack)!,
       min = module.minRange?.(attack) ?? 0;
     // Traps go off under anything that steps on them, stealthed or not.
@@ -57,7 +57,19 @@ export function attackEnemies(sim: Sim, dt: number) {
       targets = extra > 0 ? [target, ...candidates.filter((c) => c !== target).slice(0, extra)] : [target];
     t.angle = Math.atan2(target.y - t.y, target.x - t.x);
     t.cooldown = 1;
-    for (const e of targets) {
+    const src: DamageSource = special ? { tower: t.id, type: t.type, special } : { tower: t.id, type: t.type },
+      proc = fireProc(t, special, extra + 1 - targets.length),
+      // Overload: a lone enemy in range at fire time strengthens the whole salvo.
+      damage = special?.kind === "conditional-damage" && special.predicate === "isolated" && candidates.length === 1
+        ? stats.damage * (1 + special.bonus)
+        : stats.damage,
+      // Flak Curtain: further air targets in priority order, each its own weaker shot.
+      curtain = special?.kind === "extra-air-targets"
+        ? candidates.filter((c) => !targets.includes(c)).slice(0, special.count)
+        : [];
+    for (const e of [...targets, ...curtain]) {
+      const primary = e === target,
+        hit = curtain.includes(e) ? damage * (special as Extract<SpecializationSpec, { kind: "extra-air-targets" }>).factor : damage;
       s.events.push({
         type: "shot",
         tower: t.type,
@@ -70,9 +82,16 @@ export function attackEnemies(sim: Sim, dt: number) {
         if (d.placement === "path" && d.visual.impact) s.events.push({ type: "impact", tower: t.type, at: { x: e.x, y: e.y }, color: d.color });
         module.apply(
           sim,
-          { tower: t.id, type: t.type },
-          { enemy: e, at: { x: e.x, y: e.y }, from: { x: t.x, y: t.y }, reach: stats.range },
-          stats.damage,
+          src,
+          {
+            enemy: e,
+            at: { x: e.x, y: e.y },
+            from: { x: t.x, y: t.y },
+            reach: stats.range,
+            ...(primary && proc ? { proc } : {}),
+            ...(special?.kind === "twin-arc" ? { candidates } : {}),
+          },
+          hit,
           attack,
         );
         continue;
@@ -86,11 +105,25 @@ export function attackEnemies(sim: Sim, dt: number) {
         y: t.y,
         tx: e.x,
         ty: e.y,
-        damage: stats.damage,
+        damage: hit,
         attack,
+        ...(special ? { special } : {}),
+        ...(primary && proc ? { proc } : {}),
       });
     }
   }
+}
+/**
+ * Fire-time proc of a salvo: counts Ricochet and Twin Arc shots (1 on every `every`th one), and for
+ * Concentrated Volley the base shards without a target of their own.
+ */
+function fireProc(t: Tower, special: SpecializationSpec | undefined, unused: number): number | undefined {
+  if (special?.kind === "unused-volley") return unused > 0 ? unused : undefined;
+  if (special?.kind !== "ricochet" && special?.kind !== "twin-arc") return undefined;
+  t.specialShots = (t.specialShots ?? 0) + 1;
+  if (t.specialShots < special.every) return undefined;
+  t.specialShots = 0;
+  return 1;
 }
 /** Advances projectiles; damage is applied only when one arrives. */
 export function moveProjectiles(sim: Sim, dt: number) {
@@ -120,7 +153,13 @@ export function moveProjectiles(sim: Sim, dt: number) {
     p.x = p.tx;
     p.y = p.ty;
     const at = { x: p.x, y: p.y };
-    attackModule(p.attack)!.apply(sim, { tower: p.tower, type: p.type }, { enemy: target, at }, p.damage, p.attack);
+    attackModule(p.attack)!.apply(
+      sim,
+      p.special ? { tower: p.tower, type: p.type, special: p.special } : { tower: p.tower, type: p.type },
+      p.proc ? { enemy: target, at, proc: p.proc } : { enemy: target, at },
+      p.damage,
+      p.attack,
+    );
     s.events.push({ type: "impact", tower: p.type, at, color: d.color });
     return false;
   });

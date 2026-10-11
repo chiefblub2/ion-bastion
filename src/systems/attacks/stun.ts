@@ -25,6 +25,8 @@ export const stun: AttackModule<StunAttack> = {
             kind: "stun",
             release: time + spec.duration,
             until: time + spec.duration + spec.recovery,
+            // Temporal Exposure: stored with the stun, so a rejected or resisted stun never grants it.
+            ...(src.special?.kind === "temporal-exposure" ? { exposure: { amount: src.special.bonus, duration: src.special.duration } } : {}),
           });
       }
   },

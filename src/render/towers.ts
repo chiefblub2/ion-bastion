@@ -1,9 +1,11 @@
 import type { PathMotif, Tower, TowerDefinition, TurretStyle } from "../core/types";
-import { polygon, shade, type Ink } from "./shapes";
-const PLATE = 0x2e424d,
-  DARK = 0x172730;
+import { DARK, LIGHT, OUTLINE, PLATE, SHADOW, dome, facing, glowLine, halo, led, litBar, plate, rivets, sunken, type Shape } from "./material";
+import { MUZZLES } from "./muzzles";
+import { arcBand, chamferRect, disc, hash01, oval, polygon, ring, shade, star, strip, wedge, type Ink, type Pen } from "./shapes";
 interface TurretContext {
   g: Ink;
+  /** Additive light: energy cores, hot metal, glowing parts. */
+  glow: Ink;
   x: number;
   y: number;
   tower: Tower;
@@ -12,7 +14,7 @@ interface TurretContext {
   /** Level for attack towers, number of purchases for support towers. */
   level: number;
   maxed: boolean;
-  /** Display colour; the path colour once a support tower has chosen one. */
+  /** Display colour; the path colour once a path is chosen. Trim (collar, lamps, inlay) uses it, bodies keep `definition.color`. */
   color: number;
   /** Chosen upgrade path, if any. */
   path?: string;
@@ -20,596 +22,760 @@ interface TurretContext {
   kick: number;
   /** Progress of the attack cycle, 1 when ready to fire. */
   charge: number;
+  /** Colour of the muzzle's last 3 px: hot from level 5, the path colour once specialized. */
+  tip?: number;
+  /** Extra glow alpha of energy parts from level 5. */
+  energy: number;
+  /** Highest glow alpha of a light at the centre, so it stays within 0.6 on top of the maxed halo. */
+  peak: number;
 }
 type Drawing = (ctx: TurretContext) => void;
-/** Tapered bar along `a`, from distance `from` to `to` with half widths `w0` and `w1`; `side` shifts it sideways. */
-function bar(g: Ink, x: number, y: number, a: number, from: number, to: number, w0: number, w1: number, color: number, alpha = 1, side = 0) {
-  const c = Math.cos(a),
-    s = Math.sin(a),
-    p = (d: number, w: number) => ({ x: x + c * d - s * (w + side), y: y + s * d + c * (w + side) });
-  g.fillStyle(color, alpha);
-  g.fillPoints([p(from, -w0), p(to, -w1), p(to, w1), p(from, w0)], true);
+const TAU = Math.PI * 2,
+  CORNERS = [
+    [-1, -1],
+    [1, -1],
+    [1, 1],
+    [-1, 1],
+  ] as const,
+  OCTAGON = Array.from({ length: 8 }, (_, i) => [Math.cos((i * Math.PI) / 4), Math.sin((i * Math.PI) / 4)]);
+/** Scratch corners for the outlines and polylines below; Phaser copies them, so one buffer serves every call. */
+const PTS = Array.from({ length: 16 }, () => ({ x: 0, y: 0 }));
+function put(i: number, x: number, y: number) {
+  PTS[i].x = x;
+  PTS[i].y = y;
 }
 const at = (x: number, y: number, a: number, r: number) => ({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r });
-/** Centre pin; white-hot on a fully upgraded tower. */
-function hub({ g, x, y, color, maxed }: TurretContext, r = 3) {
-  g.fillStyle(maxed ? shade(color, 0.75) : DARK);
-  g.fillCircle(x, y, r);
+/** Point `d` along the direction (`ca`, `sa`) and `side` across it (positive at the angle + π/2). */
+const point = (x: number, y: number, ca: number, sa: number, d: number, side: number) => ({ x: x + ca * d - sa * side, y: y + sa * d + ca * side });
+// Batched parts: `quad` and `pip` add triangles in the current fill style, so a row of equal studs, ticks or vents
+// costs one style change and no polygon triangulation.
+/** Quad along (`ca`, `sa`) from `d0` to `d1`, with the offsets `a0`/`b0` across at the start and `a1`/`b1` at the end. */
+function quad(g: Ink, x: number, y: number, ca: number, sa: number, d0: number, d1: number, a0: number, b0: number, a1: number, b1: number) {
+  const x0 = x + ca * d0,
+    y0 = y + sa * d0,
+    x1 = x + ca * d1,
+    y1 = y + sa * d1;
+  g.fillTriangle(x0 - sa * a0, y0 + ca * a0, x1 - sa * a1, y1 + ca * a1, x1 - sa * b1, y1 + ca * b1);
+  g.fillTriangle(x0 - sa * a0, y0 + ca * a0, x1 - sa * b1, y1 + ca * b1, x0 - sa * b0, y0 + ca * b0);
 }
-/** Coloured glow at the barrel tip right after a shot; the white flash itself is an effect. */
-function muzzleGlow({ g, x, y, tower: t, definition: d, kick }: TurretContext, distance: number, size: number) {
+/** Radial tick from `r0` to `r1` at angle `a`, `w` wide. */
+const tick = (g: Ink, x: number, y: number, a: number, r0: number, r1: number, w: number) => quad(g, x, y, Math.cos(a), Math.sin(a), r0, r1, -w / 2, w / 2, -w / 2, w / 2);
+/** Small octagonal dot. */
+function pip(g: Ink, x: number, y: number, r: number) {
+  for (let i = 1; i < 7; i++) g.fillTriangle(x + r, y, x + OCTAGON[i][0] * r, y + OCTAGON[i][1] * r, x + OCTAGON[i + 1][0] * r, y + OCTAGON[i + 1][1] * r);
+}
+/** Flat tapered bar along `a` from distance `from` to `to` with half widths `w0` and `w1`, for energy strips and light. */
+function bar(g: Ink, x: number, y: number, a: number, from: number, to: number, w0: number, w1: number, color: number, alpha = 1, side = 0) {
+  strip(g, x, y, Math.cos(a), Math.sin(a), from, to, side - w0, side + w0, side - w1, side + w1, color, alpha);
+}
+/** Small parts lit from the upper left: every body in a shaded tone, then the halves that face the light. */
+function fins(g: Ink, x: number, y: number, angles: readonly number[], from: number, to: number, w0: number, w1: number, color: number) {
+  for (const lit of [false, true]) {
+    g.fillStyle(shade(color, lit ? 0.22 : -0.3));
+    for (const a of angles) {
+      const ca = Math.cos(a),
+        sa = Math.sin(a),
+        side = facing(a + Math.PI / 2) < 0 ? -1 : 1;
+      if (lit) quad(g, x, y, ca, sa, from, to, 0, side * w0, 0, side * w1);
+      else quad(g, x, y, ca, sa, from, to, -w0, w0, -w1, w1);
+    }
+  }
+}
+/** Ring of at least 16 segments for small radii, where `ring` turns visibly polygonal. */
+function loop(g: Ink, x: number, y: number, r: number, w: number, color: number, alpha = 1) {
+  if (alpha <= 0.01) return;
+  const n = Math.max(16, Math.ceil(r * 2)),
+    r0 = Math.max(0, r - w / 2),
+    r1 = r + w / 2;
+  g.fillStyle(color, alpha);
+  for (let i = 0; i < n; i++) {
+    const c0 = Math.cos((i * TAU) / n),
+      s0 = Math.sin((i * TAU) / n),
+      c1 = Math.cos(((i + 1) * TAU) / n),
+      s1 = Math.sin(((i + 1) * TAU) / n);
+    g.fillTriangle(x + c0 * r1, y + s0 * r1, x + c1 * r1, y + s1 * r1, x + c1 * r0, y + s1 * r0);
+    g.fillTriangle(x + c0 * r1, y + s0 * r1, x + c1 * r0, y + s1 * r0, x + c0 * r0, y + s0 * r0);
+  }
+}
+/** Box turned to angle `a`: half length `hl` along it, half width `hw` across, corners cut by `cut`. */
+function block(g: Ink, x: number, y: number, a: number, hl: number, hw: number, cut: number, color: number) {
+  const ca = Math.cos(a),
+    sa = Math.sin(a),
+    k = Math.min(cut, hl, hw),
+    u = [-hl + k, hl - k, hl, hl, hl - k, -hl + k, -hl, -hl],
+    v = [-hw, -hw, -hw + k, hw - k, hw, hw, hw - k, -hw + k];
+  for (let i = 0; i < 8; i++) put(i, x + ca * u[i] - sa * v[i], y + sa * u[i] + ca * v[i]);
+  g.fillStyle(color);
+  g.fillPoints(PTS, true, false, 8);
+}
+/** Regular polygon cut into one triangle per edge, each shaded by how much its edge faces the light. */
+function facets(g: Ink, x: number, y: number, r: number, n: number, rot: number, color: number, depth: number) {
+  for (let i = 0; i < n; i++) {
+    const a0 = rot + (i * TAU) / n,
+      a1 = a0 + TAU / n;
+    g.fillStyle(shade(color, depth * facing((a0 + a1) / 2)));
+    g.fillTriangle(x, y, x + Math.cos(a0) * r, y + Math.sin(a0) * r, x + Math.cos(a1) * r, y + Math.sin(a1) * r);
+  }
+}
+/** Round housing: a shaded rim, a face nudged towards the light and a lit upper-left edge. */
+function boss(g: Ink, x: number, y: number, r: number, color: number) {
+  disc(g, x, y, r, shade(color, -0.45));
+  disc(g, x - 0.4, y - 0.4, r - 1, color);
+  arcBand(g, x - 0.4, y - 0.4, r - 1.5, 0.9, LIGHT - 1, LIGHT + 1, shade(color, 0.3), 0.85);
+}
+/** Soft round light in two discs; the centre reaches `alpha`. */
+function glowDot(glow: Ink, x: number, y: number, r: number, color: number, alpha: number) {
+  disc(glow, x, y, r, color, alpha * 0.45);
+  disc(glow, x, y, r * 0.5, color, alpha * 0.55);
+}
+/** Engraved line just inside a plate outline. */
+function inlay(g: Ink, x: number, y: number, s: Shape, r: number, color: number, alpha = 1) {
+  if (s === "disc") return ring(g, x, y, r, 0.8, color, alpha);
+  let n = 8;
+  if ("cut" in s) {
+    const k = s.cut * r,
+      u = [-r + k, r - k, r, r, r - k, -r + k, -r, -r],
+      v = [-r, -r, -r + k, r - k, r, r, r - k, -r + k];
+    for (let i = 0; i < 8; i++) put(i, x + u[i], y + v[i]);
+  } else {
+    n = s.n;
+    for (let i = 0; i < n; i++) put(i, x + Math.cos((s.rot ?? 0) + (i * TAU) / n) * r, y + Math.sin((s.rot ?? 0) + (i * TAU) / n) * r);
+  }
+  g.lineStyle(0.8, color, alpha);
+  g.strokePoints(PTS, true, true, n);
+}
+/** Raised base plate with a sunken deck (`deckShape`, by default the plate's own); from level 4 an inlay follows the outline. */
+function base(ctx: TurretContext, s: Shape, r: number, deck: number, deckShape: Shape = s) {
+  const { g, x, y } = ctx;
+  plate(g, x, y, s, r, PLATE);
+  sunken(g, x, y, deckShape, deck, DARK);
+  if (ctx.level >= 4) inlay(g, x, y, s, r - 1.6, shade(ctx.color, -0.35));
+}
+/** Recoil and barrel end from the shared muzzle table, so the drawn tip meets the flash and the shot. */
+function reach({ kick, level }: TurretContext, turret: TurretStyle) {
+  const m = MUZZLES[turret]!,
+    back = -kick * m.recoil;
+  return { back, end: back + m.reach(level) };
+}
+/** Centre bolt: a dark head with a lit upper-left rim; white-hot with a small halo on a fully upgraded tower. */
+function bolt({ g, glow, x, y, color, maxed }: TurretContext, r = 2.6) {
+  disc(g, x, y, r, maxed ? shade(color, 0.8) : DARK);
+  arcBand(g, x, y, r - 0.6, 0.9, LIGHT - 1.1, LIGHT + 1.1, maxed ? 0xffffff : shade(PLATE, 0.45), 0.9);
+  if (maxed) disc(glow, x, y, r * 1.6, color, 0.2);
+}
+/** Light at the barrel tip right after a shot, around a small hot core; the flash itself is an effect. */
+function muzzleGlow({ g, glow, x, y, tower: t, definition: d, kick }: TurretContext, distance: number, size: number) {
   if (kick <= 0) return;
   const p = at(x, y, t.angle, distance);
-  g.fillStyle(shade(d.color, 0.5), kick * 0.7);
-  g.fillCircle(p.x, p.y, size * (0.6 + kick * 0.6));
+  halo(glow, p.x, p.y, size * (1.3 + kick), d.color, 0.3 * kick);
+  disc(g, p.x, p.y, size * 0.35 * (0.5 + kick), shade(d.color, 0.75));
 }
-/** Traps lie flat on the path: a thin frame instead of a raised plate. */
-function trapFrame({ g, x, y, definition: d }: TurretContext, size = 19) {
-  g.fillStyle(DARK, 0.75);
-  g.fillRoundedRect(x - size, y - size, size * 2, size * 2, 5);
-  g.lineStyle(1.5, shade(d.color, -0.35), 0.9);
-  g.strokeRoundedRect(x - size, y - size, size * 2, size * 2, 5);
+/** Half size of the frame of each framed trap; the ready light sits in its upper-right corner. */
+const FRAMES: Partial<Record<TurretStyle, number>> = { mine: 15, spikes: 19, snare: 18, grill: 19, spring: 16, limpet: 14 };
+/** Traps lie flat on the path: a sunken chamfered frame with screws in three corners and the ready light in the fourth. */
+function trapFrame({ g, x, y, definition: d, level }: TurretContext, size: number) {
+  const s = size - 3.4;
+  chamferRect(g, x, y, size + 1, size + 1, size * 0.28 + 0.4, OUTLINE, 0.6);
+  chamferRect(g, x, y, size, size, size * 0.28, shade(PLATE, -0.1));
+  sunken(g, x, y, { cut: 0.28 }, size - 2.4, DARK);
+  if (level >= 5) inlay(g, x, y, { cut: 0.28 }, size - 1.2, d.color, 0.5);
+  g.fillStyle(shade(d.color, -0.35));
+  for (const [sx, sy] of CORNERS) if (sx < 0 || sy > 0) pip(g, x + sx * s, y + sy * s, 1.6);
+  g.fillStyle(shade(PLATE, 0.45), 0.8);
+  for (const [sx, sy] of CORNERS) if (sx < 0 || sy > 0) pip(g, x + sx * s - 0.5, y + sy * s - 0.5, 0.6);
 }
-/** Ready light of a trap: lit once it has re-armed, dark while it reloads. */
-function armedLight({ g, x, y, definition: d, tower: t }: TurretContext) {
-  const armed = t.cooldown === 0;
-  g.fillStyle(armed ? d.color : DARK, armed ? 1 : 0.9);
-  g.fillCircle(x + 14, y - 14, 2.4);
+/** Ready light of a trap: lit once it has re-armed, dark while it reloads; dimmed so trap light stays faint. */
+function armedLed(ctx: TurretContext) {
+  const s = (FRAMES[ctx.definition.visual.turret] ?? 17.4) - 3.4;
+  led(ctx, ctx.x + s, ctx.y - s, ctx.definition.color, ctx.tower.cooldown === 0 ? 0.7 : 0);
 }
-/** Base plates by `visual.turret`: shadow, outer plate, trim and the dark inner deck. */
+/** Short jagged spark between two radii on the glow layer; `seed` picks its shape. */
+function crackle(glow: Ink, x: number, y: number, a: number, r0: number, r1: number, color: number, alpha: number, seed: number) {
+  for (let i = 0; i <= 3; i++) {
+    const r = r0 + ((r1 - r0) * i) / 3,
+      off = i === 0 || i === 3 ? 0 : (hash01(seed, i) - 0.5) * 3.2;
+    put(i, x + Math.cos(a) * r - Math.sin(a) * off, y + Math.sin(a) * r + Math.cos(a) * off);
+  }
+  glow.lineStyle(1.3, color, alpha);
+  glow.strokePoints(PTS, false, false, 4);
+}
+/** Hexagon outline with a corner at `rot`. */
+function hexLine(g: Ink, x: number, y: number, r: number, w: number, color: number, alpha: number, rot = 0) {
+  for (let i = 0; i < 6; i++) put(i, x + Math.cos(rot + (i * Math.PI) / 3) * r, y + Math.sin(rot + (i * Math.PI) / 3) * r);
+  g.lineStyle(w, color, alpha);
+  g.strokePoints(PTS, true, true, 6);
+}
+/** Base plates by `visual.turret`: the raised plate with its deck, studs and trim. */
 const BASES: Record<TurretStyle, Drawing> = {
-  barrel: ({ g, x, y, definition: d }) => {
-    polygon(g, x, y, 23, 6, PLATE, Math.PI / 6);
-    polygon(g, x, y, 19, 6, DARK, Math.PI / 6);
-    for (let i = 0; i < 3; i++) {
-      const p = at(x, y, Math.PI / 6 + (i * Math.PI * 2) / 3, 21);
-      g.fillStyle(shade(d.color, -0.35));
-      g.fillCircle(p.x, p.y, 1.8);
-    }
+  barrel: (ctx) => {
+    base(ctx, { n: 6, rot: Math.PI / 6 }, 23, 19);
+    rivets(ctx.g, ctx.x, ctx.y, 21, 3, Math.PI / 6, shade(ctx.definition.color, -0.45));
   },
-  heavy: ({ g, x, y }) => {
-    polygon(g, x, y, 24, 8, PLATE, Math.PI / 8);
-    polygon(g, x, y, 21, 8, shade(PLATE, -0.25), Math.PI / 8);
-    polygon(g, x, y, 18, 8, DARK, Math.PI / 8);
-    g.lineStyle(2, DARK);
-    for (let i = 0; i < 8; i++) {
-      const a = (i * Math.PI) / 4,
-        p = at(x, y, a, 20),
-        q = at(x, y, a, 24);
-      g.lineBetween(p.x, p.y, q.x, q.y);
-    }
+  heavy: (ctx) => {
+    const { g, x, y } = ctx;
+    base(ctx, { n: 8, rot: Math.PI / 8 }, 24, 18);
+    // Seams between the armour panels.
+    g.fillStyle(OUTLINE, 0.75);
+    for (let i = 0; i < 8; i++) tick(g, x, y, (i * Math.PI) / 4, 18.6, 23, 1.2);
   },
-  twin: ({ g, x, y, definition: d }) => {
-    g.lineStyle(3, shade(d.color, -0.55));
-    for (let i = 0; i < 4; i++) {
-      const a = Math.PI / 4 + (i * Math.PI) / 2,
-        p = at(x, y, a, 10),
-        q = at(x, y, a, 19);
-      g.lineBetween(p.x, p.y, q.x, q.y);
-    }
-    polygon(g, x, y, 23, 4, PLATE, 0);
-    polygon(g, x, y, 18, 4, DARK, 0);
+  twin: (ctx) => {
+    const { g, x, y, definition: d } = ctx;
+    // Outrigger legs under the plate.
+    g.fillStyle(shade(d.color, -0.6));
+    for (let i = 0; i < 4; i++) tick(g, x, y, Math.PI / 4 + (i * Math.PI) / 2, 12, 20, 3.2);
+    base(ctx, { n: 4 }, 23, 17);
   },
-  coil: ({ g, x, y, definition: d }) => {
-    g.fillStyle(PLATE);
-    g.fillCircle(x, y, 21);
-    g.fillStyle(DARK);
-    g.fillCircle(x, y, 17);
-    for (let i = 0; i < 6; i++) {
-      const p = at(x, y, (i * Math.PI) / 3, 20);
-      g.fillStyle(shade(d.color, -0.5));
-      g.fillCircle(p.x, p.y, 3);
-      g.fillStyle(d.color, 0.8);
-      g.fillCircle(p.x, p.y, 1.2);
-    }
-  },
-  crystal: ({ g, x, y }) => {
-    polygon(g, x, y, 23, 6, PLATE, 0);
-    // Lit upper-left facet.
-    const corner = (i: number) => at(x, y, (i * Math.PI) / 3, 23);
-    g.fillStyle(shade(PLATE, 0.18));
-    g.fillPoints([{ x, y }, corner(3), corner(4)], true);
-    polygon(g, x, y, 18, 6, DARK, 0);
-  },
-  rail: ({ g, x, y, definition: d }) => {
-    polygon(g, x, y, 23, 6, PLATE, 0);
-    polygon(g, x, y, 19, 6, DARK, 0);
-    for (const a of [0, Math.PI]) {
-      const p = at(x, y, a, 21);
-      g.fillStyle(shade(d.color, -0.45));
-      g.fillCircle(p.x, p.y, 2.2);
-    }
-  },
-  flame: ({ g, x, y, definition: d }) => {
-    polygon(g, x, y, 23, 8, PLATE, Math.PI / 8);
-    polygon(g, x, y, 19, 8, DARK, Math.PI / 8);
-    // Heat vents glowing faintly.
-    g.lineStyle(2, shade(d.color, -0.45), 0.9);
-    for (let i = 0; i < 4; i++) {
-      const a = Math.PI / 4 + (i * Math.PI) / 2,
-        p = at(x, y, a, 16),
-        q = at(x, y, a, 21);
-      g.lineBetween(p.x, p.y, q.x, q.y);
-    }
-  },
-  emitter: ({ g, x, y, definition: d }) => {
-    g.fillStyle(PLATE);
-    g.fillCircle(x, y, 22);
-    g.fillStyle(DARK);
-    g.fillCircle(x, y, 18);
-    for (let i = 0; i < 3; i++) {
-      const p = at(x, y, -Math.PI / 2 + (i * Math.PI * 2) / 3, 20);
-      g.fillStyle(shade(d.color, -0.5));
-      g.fillCircle(p.x, p.y, 3.2);
-      g.fillStyle(d.color, 0.8);
-      g.fillCircle(p.x, p.y, 1.3);
-    }
-  },
-  vat: ({ g, x, y, definition: d }) => {
-    g.fillStyle(PLATE);
-    g.fillRoundedRect(x - 21, y - 21, 42, 42, 9);
-    g.fillStyle(DARK);
-    g.fillRoundedRect(x - 17, y - 17, 34, 34, 7);
+  coil: (ctx) => {
+    const { g, glow, x, y, definition: d, charge } = ctx,
+      bells = [0, 1, 2, 3, 4, 5].map((i) => at(x, y, (i * Math.PI) / 3, 19.3));
+    base(ctx, "disc", 21, 17);
+    // Insulator bells on the rim; their glass glows with the stored charge.
     g.fillStyle(shade(d.color, -0.55));
-    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) g.fillCircle(x + sx * 19, y + sy * 19, 1.8);
+    for (const p of bells) pip(g, p.x, p.y, 2.7);
+    g.fillStyle(shade(d.color, -0.05));
+    for (const p of bells) pip(g, p.x - 0.5, p.y - 0.5, 1.4);
+    glow.fillStyle(d.color, 0.1 + 0.2 * charge);
+    for (const p of bells) pip(glow, p.x, p.y, 2.4);
   },
-  prism: ({ g, x, y, definition: d }) => {
-    polygon(g, x, y, 23, 12, PLATE, 0);
-    polygon(g, x, y, 19, 12, DARK, 0);
+  crystal: (ctx) => {
+    const { g, x, y, level, color } = ctx;
+    // Six facets, each shaded by where its edge faces.
+    polygon(g, x, y, 24.2, 6, OUTLINE, 0, 0.85);
+    facets(g, x, y, 23, 6, 0, PLATE, 0.32);
+    sunken(g, x, y, { n: 6 }, 18, DARK);
+    if (level >= 4) inlay(g, x, y, { n: 6 }, 21.4, shade(color, -0.35));
+  },
+  rail: (ctx) => {
+    base(ctx, { n: 6 }, 23, 19);
+    rivets(ctx.g, ctx.x, ctx.y, 21, 2, 0, shade(ctx.definition.color, -0.55));
+  },
+  flame: (ctx) => {
+    const { g, glow, x, y, tower: t, definition: d, clock, energy } = ctx,
+      heat = 0.75 + 0.25 * Math.sin(clock * 13 + t.id * 1.7),
+      vents = [0, 1, 2, 3].map((i) => Math.PI / 4 + (i * Math.PI) / 2);
+    base(ctx, { n: 8, rot: Math.PI / 8 }, 23, 19);
+    // Heat vents with the furnace glowing behind them.
+    g.fillStyle(OUTLINE);
+    for (const a of vents) tick(g, x, y, a, 16.5, 21, 2.8);
+    g.fillStyle(shade(d.color, -0.25), 0.45 + 0.35 * heat);
+    for (const a of vents) tick(g, x, y, a, 17.2, 20.3, 1.2);
+    glow.fillStyle(d.color, 0.1 + 0.1 * heat + energy);
+    for (const a of vents) tick(glow, x, y, a, 16.8, 20.7, 2.2);
+  },
+  emitter: (ctx) => {
+    const { g, x, y, definition: d } = ctx,
+      nodes = [0, 1, 2].map((i) => at(x, y, -Math.PI / 2 + (i * TAU) / 3, 20));
+    base(ctx, "disc", 22, 18);
+    g.fillStyle(shade(d.color, -0.55));
+    for (const p of nodes) pip(g, p.x, p.y, 3);
+    g.fillStyle(d.color, 0.9);
+    for (const p of nodes) pip(g, p.x - 0.3, p.y - 0.3, 1.4);
+  },
+  vat: (ctx) => {
+    base(ctx, { cut: 0.3 }, 21, 17);
+    rivets(ctx.g, ctx.x, ctx.y, 22.4, 4, Math.PI / 4, shade(ctx.definition.color, -0.55));
+  },
+  prism: (ctx) => {
+    const { g, x, y, definition: d } = ctx;
+    base(ctx, { n: 12 }, 23, 19);
     for (let i = 0; i < 3; i++) {
-      const p = at(x, y, Math.PI / 2 + (i * Math.PI * 2) / 3, 21);
-      polygon(g, p.x, p.y, 2.6, 3, shade(d.color, -0.35), Math.PI / 2 + (i * Math.PI * 2) / 3);
+      const a = Math.PI / 2 + (i * TAU) / 3,
+        p = at(x, y, a, 21);
+      polygon(g, p.x, p.y, 2.6, 3, shade(d.color, -0.35 + 0.2 * facing(a)), a);
     }
   },
-  refinery: ({ g, x, y, definition: d }) => {
-    g.fillStyle(PLATE);
-    g.fillRoundedRect(x - 22, y - 22, 44, 44, 5);
-    g.fillStyle(DARK);
-    g.fillRoundedRect(x - 18, y - 18, 36, 36, 4);
-    // Hazard corners.
-    g.fillStyle(shade(d.color, -0.3));
-    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]])
-      g.fillTriangle(x + sx * 22, y + sy * 22, x + sx * 14, y + sy * 22, x + sx * 22, y + sy * 14);
+  refinery: (ctx) => {
+    const { g, x, y, definition: d } = ctx;
+    base(ctx, { cut: 0.12 }, 22, 18, { cut: 0.35 });
+    // Hazard plates in the corners.
+    for (const [sx, sy] of CORNERS) {
+      put(0, x + sx * 19.4, y + sy * 11.8);
+      put(1, x + sx * 19.4, y + sy * 17.4);
+      put(2, x + sx * 17.4, y + sy * 19.4);
+      put(3, x + sx * 11.8, y + sy * 19.4);
+      g.fillStyle(shade(d.color, -0.3 + 0.16 * facing(Math.atan2(sy, sx))));
+      g.fillPoints(PTS, true, false, 4);
+    }
   },
   // Round plate with bearing ticks.
-  radar: ({ g, x, y, definition: d }) => {
-    g.fillStyle(PLATE);
-    g.fillCircle(x, y, 22);
-    g.fillStyle(DARK);
-    g.fillCircle(x, y, 18);
-    g.lineStyle(1.5, shade(d.color, -0.35));
-    for (let i = 0; i < 8; i++) {
-      const a = (i * Math.PI) / 4,
-        p = at(x, y, a, 19),
-        q = at(x, y, a, 22);
-      g.lineBetween(p.x, p.y, q.x, q.y);
-    }
+  radar: (ctx) => {
+    const { g, x, y, definition: d } = ctx;
+    base(ctx, "disc", 22, 18);
+    g.fillStyle(shade(d.color, -0.35));
+    for (let i = 0; i < 8; i++) tick(g, x, y, (i * Math.PI) / 4, 18.8, 21.5, 1.5);
   },
   // Octagon with four lens mounts.
-  lens: ({ g, x, y, definition: d }) => {
-    polygon(g, x, y, 23, 8, PLATE, 0);
-    polygon(g, x, y, 19, 8, DARK, 0);
-    for (let i = 0; i < 4; i++) {
-      const p = at(x, y, (i * Math.PI) / 2, 21);
-      g.fillStyle(shade(d.color, -0.45));
-      g.fillCircle(p.x, p.y, 2);
-    }
+  lens: (ctx) => {
+    base(ctx, { n: 8 }, 23, 19);
+    rivets(ctx.g, ctx.x, ctx.y, 21, 4, 0, shade(ctx.definition.color, -0.5));
   },
   // Round plate with an orbit track.
-  gravity: ({ g, x, y, definition: d }) => {
-    g.fillStyle(PLATE);
-    g.fillCircle(x, y, 22);
-    g.fillStyle(DARK);
-    g.fillCircle(x, y, 18);
-    g.lineStyle(1, shade(d.color, -0.4), 0.9);
-    g.strokeCircle(x, y, 20);
+  gravity: (ctx) => {
+    base(ctx, "disc", 22, 18);
+    ring(ctx.g, ctx.x, ctx.y, 20, 1, shade(ctx.definition.color, -0.4), 0.9);
   },
-  // Heavy square emplacement with sandbag corners.
-  mortar: ({ g, x, y, definition: d }) => {
-    g.fillStyle(PLATE);
-    g.fillRoundedRect(x - 22, y - 22, 44, 44, 7);
-    g.fillStyle(DARK);
-    g.fillCircle(x, y, 18);
-    g.fillStyle(shade(d.color, -0.4));
-    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) g.fillEllipse(x + sx * 18, y + sy * 18, 8, 5);
+  // Heavy square emplacement: a notched turntable and stacked sandbags in the corners.
+  mortar: (ctx) => {
+    const { g, x, y, definition: d } = ctx,
+      c = d.color;
+    base(ctx, { cut: 0.32 }, 22, 18, "disc");
+    g.fillStyle(OUTLINE, 0.8);
+    for (let i = 0; i < 8; i++) tick(g, x, y, (i * Math.PI) / 4 + Math.PI / 8, 14.8, 17.2, 1);
+    for (const [sx, sy] of CORNERS) {
+      const rot = (-sx * sy * Math.PI) / 4;
+      oval(g, x + sx * 17.6 + 0.6, y + sy * 17.6 + 1, 5.4, 3.3, shade(c, -0.6), 1, rot);
+      oval(g, x + sx * 17.2 - 0.4, y + sy * 17.2 - 0.6, 4.4, 2.5, shade(c, -0.2), 1, rot);
+    }
   },
   mine: (ctx) => trapFrame(ctx, 15),
-  spikes: (ctx) => trapFrame(ctx),
-  tar: ({ g, x, y, definition: d }) => {
-    g.fillStyle(shade(d.color, -0.6), 0.9);
-    g.fillEllipse(x, y, 40, 34);
+  spikes: (ctx) => trapFrame(ctx, 19),
+  tar: ({ g, x, y, definition: d, level }) => {
+    oval(g, x, y, 20, 17, shade(d.color, -0.6), 0.9);
+    if (level >= 5) ring(g, x, y, 20.5, 0.8, d.color, 0.5);
   },
-  snare: (ctx) => trapFrame(ctx, 17),
-  grill: (ctx) => trapFrame(ctx),
+  snare: (ctx) => trapFrame(ctx, 18),
+  grill: (ctx) => trapFrame(ctx, 19),
   spring: (ctx) => trapFrame(ctx, 16),
   limpet: (ctx) => trapFrame(ctx, 14),
-  // A dug hole with a stone rim.
-  pit: ({ g, x, y, definition: d }) => {
-    g.fillStyle(shade(d.color, -0.3), 0.9);
-    g.fillCircle(x, y, 19);
-    g.fillStyle(0x020506);
-    g.fillCircle(x, y, 15);
+  // A dug shaft in a rim of stones: its inner wall is shaded on the upper left and lit on the lower right.
+  pit: ({ g, x, y, definition: d, level }) => {
+    const c = d.color;
+    disc(g, x, y, 19.5, shade(c, -0.5), 0.9);
+    if (level >= 5) ring(g, x, y, 20.5, 0.8, c, 0.5);
+    for (let i = 0; i < 8; i++) {
+      const a = Math.PI / 8 + (i * Math.PI) / 4,
+        p = at(x, y, a, 17);
+      polygon(g, p.x, p.y, 3.7, 5, shade(c, -0.12 + 0.3 * facing(a)), a);
+    }
+    disc(g, x, y, 15, shade(c, -0.72));
+    arcBand(g, x, y, 13.6, 2.8, Math.PI / 4 - 1.3, Math.PI / 4 + 1.3, shade(c, -0.3));
+    disc(g, x - 1, y - 1, 11.6, 0x020506);
   },
   // Two posts on the path edge.
-  tripwire: ({ g, x, y, definition: d }) => {
+  tripwire: ({ g, x, y, definition: d, level }) => {
+    if (level >= 5) ring(g, x, y, 20.5, 0.8, d.color, 0.5);
+    g.fillStyle(SHADOW, 0.4);
+    for (const sx of [-1, 1]) g.fillRect(x + sx * 16 - 2, y - 2.5, 6, 8);
     g.fillStyle(shade(d.color, -0.55));
-    g.fillRect(x - 19, y - 4, 6, 8);
-    g.fillRect(x + 13, y - 4, 6, 8);
+    for (const sx of [-1, 1]) g.fillRect(x + sx * 16 - 3, y - 4, 6, 8);
+    g.fillStyle(shade(d.color, -0.3));
+    for (const sx of [-1, 1]) g.fillRect(x + sx * 16 - 3, y - 4, 6, 1.4);
   },
   // Cracked stone slab.
-  hammer: ({ g, x, y, definition: d }) => {
-    polygon(g, x, y, 24, 8, PLATE, Math.PI / 8);
-    polygon(g, x, y, 20, 8, DARK, Math.PI / 8);
-    g.lineStyle(1.5, shade(d.color, -0.4), 0.9);
-    for (let i = 0; i < 4; i++) {
-      const a = Math.PI / 4 + (i * Math.PI) / 2,
-        p = at(x, y, a, 13),
-        q = at(x, y + 2, a + 0.2, 20);
-      g.lineBetween(p.x, p.y, q.x, q.y);
+  hammer: (ctx) => {
+    const { g, x, y } = ctx;
+    base(ctx, { n: 8, rot: Math.PI / 8 }, 24, 20);
+    // Each crack is a dark split with a lit lip along its lower-right edge.
+    for (const lip of [0.7, 0]) {
+      g.lineStyle(lip ? 0.9 : 1.5, lip ? shade(DARK, 0.4) : OUTLINE, lip ? 0.85 : 0.9);
+      g.beginPath();
+      for (let i = 0; i < 4; i++) {
+        const a = Math.PI / 4 + (i * Math.PI) / 2;
+        g.moveTo(x + Math.cos(a) * 12.5 + lip, y + Math.sin(a) * 12.5 + lip);
+        g.lineTo(x + Math.cos(a + 0.16) * 16.2 + lip, y + Math.sin(a + 0.16) * 16.2 + lip);
+        g.lineTo(x + Math.cos(a + 0.05) * 19.8 + lip, y + Math.sin(a + 0.05) * 19.8 + lip);
+      }
+      g.strokePath();
     }
   },
   // Narrow diamond plate.
-  blade: ({ g, x, y, definition: d }) => {
-    polygon(g, x, y, 25, 4, PLATE, 0);
-    polygon(g, x, y, 20, 4, DARK, 0);
-    g.fillStyle(shade(d.color, -0.45));
-    for (const a of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
-      const p = at(x, y, a, 21);
-      g.fillCircle(p.x, p.y, 1.8);
-    }
+  blade: (ctx) => {
+    base(ctx, { n: 4 }, 25, 20);
+    rivets(ctx.g, ctx.x, ctx.y, 21.5, 4, 0, shade(ctx.definition.color, -0.45));
   },
-  // Round plate with vents for the fragments.
-  scatter: ({ g, x, y, definition: d }) => {
-    g.fillStyle(PLATE);
-    g.fillCircle(x, y, 22);
-    g.fillStyle(DARK);
-    g.fillCircle(x, y, 18);
-    g.fillStyle(shade(d.color, -0.5));
-    for (let i = 0; i < 5; i++) {
-      const p = at(x, y, -Math.PI / 2 + (i * Math.PI * 2) / 5, 20);
-      g.fillCircle(p.x, p.y, 1.8);
+  // Round plate with vents for the fragments; they glow after a shot.
+  scatter: (ctx) => {
+    const { g, glow, x, y, definition: d, kick } = ctx,
+      vents = [0, 1, 2, 3, 4].map((i) => at(x, y, -Math.PI / 2 + (i * TAU) / 5, 20));
+    base(ctx, "disc", 22, 18);
+    g.fillStyle(OUTLINE);
+    for (const p of vents) pip(g, p.x, p.y, 1.8);
+    if (kick > 0) {
+      glow.fillStyle(d.color, 0.3 * kick);
+      for (const p of vents) pip(glow, p.x, p.y, 3);
     }
   },
   // Triangle mast base.
-  antenna: ({ g, x, y, definition: d }) => {
-    polygon(g, x, y, 25, 3, PLATE, -Math.PI / 2);
-    polygon(g, x, y, 20, 3, DARK, -Math.PI / 2);
-    for (let i = 0; i < 3; i++) {
-      const p = at(x, y, -Math.PI / 2 + (i * Math.PI * 2) / 3, 19);
-      g.fillStyle(shade(d.color, -0.4));
-      g.fillCircle(p.x, p.y, 2.2);
-    }
+  antenna: (ctx) => {
+    base(ctx, { n: 3, rot: -Math.PI / 2 }, 25, 20);
+    rivets(ctx.g, ctx.x, ctx.y, 19, 3, -Math.PI / 2, shade(ctx.definition.color, -0.4));
   },
   // Square rack with crossed straps.
-  launcher: ({ g, x, y, definition: d }) => {
-    polygon(g, x, y, 25, 4, PLATE, Math.PI / 4);
-    polygon(g, x, y, 20, 4, DARK, Math.PI / 4);
-    g.lineStyle(1, shade(d.color, -0.45), 0.8);
-    g.lineBetween(x - 12, y - 12, x + 12, y + 12);
-    g.lineBetween(x - 12, y + 12, x + 12, y - 12);
+  launcher: (ctx) => {
+    const { g, x, y, definition: d } = ctx;
+    base(ctx, { n: 4, rot: Math.PI / 4 }, 25, 20);
+    g.fillStyle(shade(d.color, -0.45), 0.8);
+    for (const a of [Math.PI / 4, -Math.PI / 4]) quad(g, x, y, Math.cos(a), Math.sin(a), -17, 17, -0.5, 0.5, -0.5, 0.5);
   },
   // Round plate with a coin rim; the bounty radius shimmers faintly.
-  beacon: ({ g, x, y, definition: d, clock }) => {
-    g.fillStyle(PLATE);
-    g.fillCircle(x, y, 22);
-    g.fillStyle(DARK);
-    g.fillCircle(x, y, 18);
-    g.lineStyle(2, shade(d.color, -0.3), 0.6 + 0.3 * Math.sin(clock * 2));
-    g.strokeCircle(x, y, 20);
+  beacon: (ctx) => {
+    const { g, x, y, definition: d, clock } = ctx;
+    base(ctx, "disc", 22, 18);
+    ring(g, x, y, 20, 2, shade(d.color, -0.3), 0.6 + 0.3 * Math.sin(clock * 2));
   },
-  // Rounded dock with clamps.
-  dock: ({ g, x, y, definition: d }) => {
-    g.fillStyle(PLATE);
-    g.fillRoundedRect(x - 22, y - 22, 44, 44, 11);
-    g.fillStyle(DARK);
-    g.fillRoundedRect(x - 18, y - 18, 36, 36, 9);
-    g.fillStyle(shade(d.color, -0.45));
-    for (const a of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
-      const p = at(x, y, a, 20);
-      g.fillRect(p.x - 2.5, p.y - 2.5, 5, 5);
-    }
+  // Rounded dock with clamps, lit on top.
+  dock: (ctx) => {
+    const { g, x, y, definition: d } = ctx,
+      clamps = [0, 1, 2, 3].map((i) => at(x, y, (i * Math.PI) / 2, 20));
+    base(ctx, { cut: 0.42 }, 22, 18);
+    g.fillStyle(shade(d.color, -0.5));
+    for (const p of clamps) g.fillRect(p.x - 2.5, p.y - 2.5, 5, 5);
+    g.fillStyle(shade(d.color, -0.15));
+    for (const p of clamps) g.fillRect(p.x - 2.5, p.y - 2.5, 5, 1.2);
   },
   // Hexagon with a scale of bearing ticks.
-  tracker: ({ g, x, y, definition: d }) => {
-    polygon(g, x, y, 23, 6, PLATE, Math.PI / 6);
-    polygon(g, x, y, 19, 6, DARK, Math.PI / 6);
-    g.lineStyle(1.5, shade(d.color, -0.35));
-    for (let i = 0; i < 12; i++) {
-      const a = (i * Math.PI) / 6,
-        p = at(x, y, a, 16),
-        q = at(x, y, a, i % 3 ? 17.5 : 19);
-      g.lineBetween(p.x, p.y, q.x, q.y);
-    }
+  tracker: (ctx) => {
+    const { g, x, y, definition: d } = ctx;
+    base(ctx, { n: 6, rot: Math.PI / 6 }, 23, 19);
+    g.fillStyle(shade(d.color, -0.35));
+    for (let i = 0; i < 12; i++) tick(g, x, y, (i * Math.PI) / 6, 16, i % 3 ? 17.5 : 19, 1.5);
   },
-  aura: ({ g, x, y, color, path, level, clock }) => {
-    g.fillStyle(PLATE);
-    g.fillCircle(x, y, 22);
-    g.fillStyle(DARK);
-    g.fillCircle(x, y, 18);
+  aura: (ctx) => {
+    const { g, x, y, color: c, path, level, clock } = ctx;
+    base(ctx, "disc", 22, 18);
     // Dim until a path is chosen; the speed path spins faster with every tier.
-    g.lineStyle(2, color, path ? 0.45 : 0.2);
     const spin = path === "speed" ? 0.3 * (1 + level) : 0.3;
     for (let i = 0; i < 12; i++) {
       const a = clock * spin + (i * Math.PI) / 6;
-      g.beginPath();
-      g.arc(x, y, 24, a, a + 0.3);
-      g.strokePath();
+      arcBand(g, x, y, 24, 2, a, a + 0.3, c, path ? 0.45 : 0.2);
+    }
+    // Three pylons, lit one per purchase.
+    for (let i = 0; i < 3; i++) {
+      const p = at(x, y, -Math.PI / 6 + (i * TAU) / 3, 20);
+      led(ctx, p.x, p.y, c, i < level ? 1 : 0);
     }
   },
 };
 /** Turret drawings by `visual.turret`. A new look is one entry here. */
 const TURRETS: Record<TurretStyle, Drawing> = {
+  // A barrel with a muzzle brake on a domed mount; a slot in the dome glows as the next shot charges.
   barrel: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, kick } = ctx,
+    const { g, glow, x, y, tower: t, definition: d, level, charge, tip, energy } = ctx,
       a = t.angle,
       c = d.color,
-      back = -kick * 5,
-      length = 21 + level,
+      { back, end } = reach(ctx, "barrel"),
       w = level >= 3 ? 0.5 : 0;
-    bar(g, x, y, a, back + 3, back + length, 3.5 + w, 2.5 + w, c);
-    bar(g, x, y, a, back + length - 4, back + length, 4 + w, 4 + w, shade(c, -0.3));
-    g.fillStyle(shade(c, -0.3));
-    g.fillCircle(x, y, 9);
-    g.fillStyle(c);
-    g.fillCircle(x, y, 7);
-    g.fillStyle(shade(c, 0.5), 0.6);
-    g.fillCircle(x - 2, y - 2, 3);
-    hub(ctx);
-    muzzleGlow(ctx, back + length + 2, 4);
+    litBar(g, x, y, a, back + 3, end - 3.5, 3.5 + w, 2.7 + w, c, { bands: level >= 3 ? [0.45, 0.6] : undefined });
+    litBar(g, x, y, a, end - 4, end, 4 + w, 4 + w, shade(c, -0.3), { bands: [0.5], tip });
+    const bore = at(x, y, a, end - 1.2);
+    disc(g, bore.x, bore.y, 1.6, OUTLINE);
+    dome(g, x, y, 9, c);
+    bar(g, x, y, a, -7.4, -3.6, 1.4, 1.4, OUTLINE, 0.9);
+    bar(g, x, y, a, -7, -4, 0.6, 0.6, shade(c, 0.45), 0.3 + 0.6 * charge);
+    bar(glow, x, y, a, -7.4, -3.6, 1.3, 1.3, c, Math.min(0.6, 0.2 + 0.4 * charge + energy));
+    bolt(ctx);
+    muzzleGlow(ctx, end + 1, 4);
   },
+  // A wide launch tube: the next rocket's nose slides out as it loads, and the rear vents puff on a shot.
   heavy: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, kick } = ctx,
+    const { g, glow, x, y, tower: t, definition: d, level, kick, charge, tip } = ctx,
       a = t.angle,
       c = d.color,
-      back = -kick * 7,
-      length = 19 + level,
-      w = level >= 3 ? 0.8 : 0;
-    bar(g, x, y, a, back + 4, back + length, 5.5 + w, 5 + w, c);
-    bar(g, x, y, a, back + 9, back + 12, 5.6 + w, 5.6 + w, shade(c, -0.35));
-    bar(g, x, y, a, back + length - 3, back + length, 6.5 + w, 6.5 + w, shade(c, -0.25));
-    g.fillStyle(c);
-    g.fillCircle(x, y, 10);
-    g.fillStyle(shade(c, -0.25));
-    g.fillCircle(x, y, 7);
-    g.fillStyle(DARK);
-    for (const sign of [-1, 1]) {
-      const p = at(x, y, a + (sign * Math.PI) / 2, 8);
-      g.fillCircle(p.x, p.y, 1.5);
+      { back, end } = reach(ctx, "heavy"),
+      w = level >= 3 ? 0.8 : 0,
+      out = 5 * Math.min(1, Math.max(0, (charge - 0.3) / 0.7));
+    if (out > 0.3) {
+      const ca = Math.cos(a),
+        sa = Math.sin(a),
+        lit = facing(a + Math.PI / 2) < 0 ? -1 : 1;
+      strip(g, x, y, ca, sa, end - 2, end + out, -3.3, 3.3, -0.7, 0.7, shade(c, 0.35));
+      strip(g, x, y, ca, sa, end - 2, end + out, 0, lit * 3.3, 0, lit * 0.7, shade(c, 0.6));
     }
-    hub(ctx, 3.5);
-    muzzleGlow(ctx, back + length + 2, 6);
-  },
-  twin: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, kick } = ctx,
-      a = t.angle,
-      c = d.color,
-      back = -kick * 4,
-      length = 20 + level;
-    bar(g, x, y, a, -7, 7, 8, 8, shade(c, -0.45));
-    bar(g, x, y, a, -5, 5, 6, 6, shade(c, -0.2));
-    for (const side of [-4, 4]) {
-      bar(g, x, y, a, back + 2, back + length, 1.8, 1.5, c, 1, side);
-      bar(g, x, y, a, back + length - 3, back + length, 2.3, 2.3, shade(c, 0.35), 1, side);
-    }
-    g.fillStyle(c);
-    g.fillCircle(x, y, 5);
-    hub(ctx, 2.5);
-    muzzleGlow(ctx, back + length + 2, 4);
-  },
-  coil: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, clock, kick, charge } = ctx,
-      c = d.color;
-    // Insulator prongs turning slowly around the coil.
-    for (let i = 0; i < 4; i++)
-      bar(g, x, y, clock * 0.5 + t.id + (i * Math.PI) / 2, 8, 13, 1.6, 1.2, shade(c, -0.4));
-    const rings = level >= 3 ? [12, 9, 6] : [10, 7];
-    rings.forEach((r, i) => {
-      g.lineStyle(2, c, 0.35 + 0.6 * charge * (1 - i * 0.15));
-      g.strokeCircle(x, y, r);
-    });
-    g.fillStyle(c, 0.3 + 0.7 * charge);
-    g.fillCircle(x, y, 3 + charge * 1.5);
-    hub(ctx, 1.5);
-    // Fully charged: small arcs crackle around the coil.
-    if (charge > 0.9) {
-      g.lineStyle(1.2, shade(c, 0.6), 0.8);
-      for (let i = 0; i < 2; i++) {
-        const a = Math.floor(clock * 12 + t.id * 3) * 2.4 + i * Math.PI,
-          p = at(x, y, a, 9),
-          m = at(x, y, a + 0.25, 13),
-          q = at(x, y, a + 0.1, 16);
-        g.lineBetween(p.x, p.y, m.x, m.y);
-        g.lineBetween(m.x, m.y, q.x, q.y);
-      }
-    }
+    litBar(g, x, y, a, back + 4, end - 3, 5.5 + w, 5 + w, c, { bands: level >= 3 ? [0.25, 0.4, 0.75] : [0.3] });
+    litBar(g, x, y, a, end - 3, end, 6.5 + w, 6.5 + w, shade(c, -0.25), { tip });
+    boss(g, x, y, 10, shade(c, -0.05));
+    // Rear vents; they glow and puff smoke right after a shot.
+    const vents = [-1, 1].map((sign) => a + Math.PI + sign * 0.6);
+    g.fillStyle(shade(c, -0.7));
+    for (const va of vents) tick(g, x, y, va, 5.5, 8.5, 1.6);
     if (kick > 0) {
-      g.lineStyle(2, shade(c, 0.5), kick);
-      g.strokeCircle(x, y, 10 + (1 - kick) * 8);
+      glow.fillStyle(c, 0.3 * kick);
+      for (const va of vents) tick(glow, x, y, va, 5, 9, 3);
+      g.fillStyle(0x8f989e, 0.5 * kick);
+      for (const va of vents) pip(g, x + Math.cos(va) * (9 + 7 * (1 - kick)), y + Math.sin(va) * (9 + 7 * (1 - kick)), 1.5 + 3 * (1 - kick));
     }
+    bolt(ctx, 3.2);
+    muzzleGlow(ctx, end + 2, 6);
   },
+  // Twin guns on a chamfered yoke, fed from an ammo box on the left.
+  twin: (ctx) => {
+    const { g, x, y, tower: t, definition: d, level, tip } = ctx,
+      a = t.angle,
+      c = d.color,
+      ca = Math.cos(a),
+      sa = Math.sin(a),
+      { back, end } = reach(ctx, "twin"),
+      sides = MUZZLES.twin!.sides!;
+    block(g, x + 0.5, y + 0.8, a, 7.5, 8.5, 3, shade(c, -0.62));
+    block(g, x - 0.3, y - 0.3, a, 6.8, 7.8, 2.6, shade(c, -0.35));
+    strip(g, x, y, ca, sa, -4.5, 4.5, -12.2, -6.8, -12.2, -6.8, shade(c, -0.6));
+    strip(g, x, y, ca, sa, -4, 4, -11.7, -9.6, -11.7, -9.6, shade(c, -0.35));
+    g.fillStyle(shade(c, 0.2), 0.9);
+    for (const k of [-2.5, 0, 2.5]) quad(g, x, y, ca, sa, k - 0.5, k + 0.5, -11.3, -7.7, -11.3, -7.7);
+    for (const side of sides) {
+      litBar(g, x, y, a, back + 2, end - 3, 1.8, 1.5, c, { side, bands: level >= 3 ? [0.45, 0.6] : undefined });
+      bar(g, x, y, a, end - 3.5, end, 2.4, 2.4, tip ?? shade(c, -0.3), 1, side);
+    }
+    g.fillStyle(OUTLINE);
+    for (const side of sides) {
+      const v = point(x, y, ca, sa, end - 1.8, side);
+      pip(g, v.x, v.y, 0.75);
+    }
+    bolt(ctx);
+    muzzleGlow(ctx, end + 1.5, 4);
+  },
+  // A Tesla coil: metal toroids around a domed top ball that crackles when charged and flashes white on a discharge.
+  coil: (ctx) => {
+    const { g, glow, x, y, tower: t, definition: d, level, clock, kick, charge, energy, peak } = ctx,
+      c = d.color;
+    // Insulator spokes turning slowly under the rings.
+    g.fillStyle(shade(c, -0.45));
+    for (let i = 0; i < 4; i++) {
+      const b = clock * 0.5 + t.id + (i * Math.PI) / 2;
+      quad(g, x, y, Math.cos(b), Math.sin(b), 9, 15.5, -1.6, 1.6, -1.1, 1.1);
+    }
+    for (const r of level >= 3 ? [12, 9, 6] : [10, 7]) {
+      loop(g, x, y, r, 3, shade(c, -0.55));
+      loop(g, x - 0.3, y - 0.3, r, 1.2, c);
+    }
+    glowDot(glow, x, y, 10, c, Math.min(peak, 0.15 + 0.35 * charge + energy));
+    dome(g, x, y, 4.5, shade(c, 0.85 * kick));
+    // Sparks jump to the rings once charged: one past 60 %, two past 90 %, re-rolled 20 times a second.
+    const seed = Math.floor(clock * 20) + t.id * 7;
+    for (let i = 0; i < (charge > 0.9 ? 2 : charge > 0.6 ? 1 : 0); i++)
+      crackle(glow, x, y, hash01(seed, i) * TAU, 5, level >= 3 ? 13.5 : 11.5, shade(c, 0.5), 0.35, seed + i * 13);
+    if (kick > 0) ring(glow, x, y, 10 + (1 - kick) * 8, 2, shade(c, 0.5), 0.35 * kick);
+  },
+  // An ice crystal of four facets, re-lit as it spins so its highlight stays on the upper left; motes drift away.
   crystal: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, clock, kick, charge } = ctx,
+    const { g, glow, x, y, tower: t, definition: d, level, clock, kick, charge, maxed, energy } = ctx,
       c = d.color,
       spin = clock * 0.8 + t.id;
-    g.fillStyle(c, 0.1 + 0.15 * charge);
-    g.fillCircle(x, y, 13 + charge * 2);
-    polygon(g, x, y, 11, 4, shade(c, -0.3), spin);
-    polygon(g, x, y, 9, 4, c, spin);
-    const p = at(x, y, spin, 9),
-      q = at(x, y, spin + Math.PI, 9);
-    g.lineStyle(1, shade(c, 0.6), 0.8);
-    g.lineBetween(p.x, p.y, q.x, q.y);
-    polygon(g, x, y, 4, 4, ctx.maxed ? shade(c, 0.75) : 0x222e47, spin);
-    // Orbiting shards from level 3.
-    if (level >= 3)
-      for (let i = 0; i < 2; i++) {
-        const s = at(x, y, -spin * 1.5 + i * Math.PI, 15);
-        polygon(g, s.x, s.y, 2.5, 4, shade(c, 0.2), spin);
-      }
-    if (kick > 0) {
-      g.lineStyle(1.5, 0xffffff, kick);
-      g.strokeCircle(x, y, 12 + (1 - kick) * 6);
+    disc(glow, x, y, 13 + 2 * charge, c, 0.05 + 0.07 * charge + energy * 0.5);
+    polygon(g, x, y, 11.5, 4, shade(c, -0.6), spin);
+    facets(g, x, y, 10, 4, spin, c, 0.5);
+    polygon(g, x, y, 3.6, 4, maxed ? 0xffffff : shade(c, 0.45), spin);
+    disc(glow, x, y, 5, c, Math.min(0.45, 0.12 + 0.13 * charge + energy));
+    for (let i = 0; i < 3; i++) {
+      const phase = (clock * 0.45 + i / 3 + t.id * 0.13) % 1,
+        p = at(x, y, t.id + i * 2.1 + phase * 0.5, 9 + phase * 11);
+      polygon(g, p.x, p.y, 1.4, 4, shade(c, 0.6), spin * 2, 1 - phase);
     }
-  },
-  rail: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, kick, charge } = ctx,
-      a = t.angle,
-      c = d.color,
-      back = -kick * 6,
-      length = 25 + level;
-    bar(g, x, y, a, -9, 8, 7, 6, shade(c, -0.65));
-    for (const side of [-3.5, 3.5]) bar(g, x, y, a, back, back + length, 1.7, 1.3, shade(c, -0.2), 1, side);
-    // The charge runs along the rails until the next shot.
-    bar(g, x, y, a, back + 2, back + 2 + (length - 4) * charge, 0.9, 0.9, c, 0.3 + 0.7 * charge);
-    g.fillStyle(shade(c, -0.45));
-    g.fillCircle(x, y, 6);
-    hub(ctx, 2.5);
-    muzzleGlow(ctx, back + length + 2, 4);
-  },
-  flame: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, kick, clock } = ctx,
-      a = t.angle,
-      c = d.color,
-      back = -kick * 3,
-      length = 15 + level,
-      flicker = 0.75 + 0.25 * Math.sin(clock * 13 + t.id * 1.7);
-    bar(g, x, y, a, back + 2, back + length, 4, 6, shade(c, -0.4));
-    bar(g, x, y, a, back + length - 3, back + length, 6.5, 6.5, shade(c, -0.15));
-    g.fillStyle(shade(c, -0.5));
-    g.fillCircle(x, y, 10);
-    g.fillStyle(c, 0.9);
-    g.fillCircle(x, y, 6.5 * flicker);
-    g.fillStyle(shade(c, 0.6), 0.9);
-    g.fillCircle(x, y, 3 * flicker);
-    // Embers circling the core from level 3.
-    if (level >= 3)
-      for (let i = 0; i < 3; i++) {
-        const p = at(x, y, clock * 2 + t.id + (i * Math.PI * 2) / 3, 12);
-        g.fillStyle(c, 0.5 + 0.5 * flicker);
-        g.fillCircle(p.x, p.y, 1.4);
+    // Orbiting shards from level 3.
+    if (level >= 3) {
+      g.fillStyle(shade(c, 0.2));
+      for (let i = 0; i < 2; i++) {
+        const s = at(x, y, -spin * 1.5 + i * Math.PI, 15),
+          ca = Math.cos(spin),
+          sa = Math.sin(spin);
+        g.fillTriangle(s.x - ca * 2.5, s.y - sa * 2.5, s.x - sa * 2.5, s.y + ca * 2.5, s.x + ca * 2.5, s.y + sa * 2.5);
+        g.fillTriangle(s.x - ca * 2.5, s.y - sa * 2.5, s.x + sa * 2.5, s.y - ca * 2.5, s.x + ca * 2.5, s.y + sa * 2.5);
       }
-    muzzleGlow(ctx, back + length + 2, 5);
+    }
+    if (kick > 0) ring(glow, x, y, 12 + (1 - kick) * 6, 1.5, 0xffffff, 0.35 * kick);
   },
-  // A stubby tube that recoils hard; the dead zone is drawn with the range preview.
-  mortar: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, kick, charge } = ctx,
+  // Twin rails on a capacitor block: three lamps per side fill with the charge, and the rails' fronts flare on a shot.
+  rail: (ctx) => {
+    const { g, glow, x, y, tower: t, definition: d, level, kick, charge, tip, energy } = ctx,
       a = t.angle,
       c = d.color,
-      back = -kick * 7;
-    g.fillStyle(shade(c, -0.55));
-    g.fillCircle(x, y, 11);
-    bar(g, x, y, a, back - 2, back + 12 + level, 6.5, 7, shade(c, -0.2));
-    g.fillStyle(DARK);
-    const mouth = at(x, y, a, back + 12 + level);
-    g.fillCircle(mouth.x, mouth.y, 4.5);
-    g.fillStyle(c, 0.3 + 0.6 * charge);
-    g.fillCircle(x, y, 3);
-    hub(ctx, 1.5);
-    muzzleGlow(ctx, back + 14 + level, 6);
+      ca = Math.cos(a),
+      sa = Math.sin(a),
+      { back, end } = reach(ctx, "rail"),
+      length = end - back;
+    litBar(g, x, y, a, -9, 8, 7, 6, shade(c, -0.65));
+    for (let i = 0; i < 3; i++) {
+      const on = Math.min(1, Math.max(0, charge * 3 - i));
+      g.fillStyle(on > 0 ? shade(c, -0.75 * (1 - on)) : OUTLINE);
+      for (const side of [-5.6, 5.6]) {
+        const p = point(x, y, ca, sa, -8.2 + i * 2.8, side);
+        pip(g, p.x, p.y, 1.1);
+      }
+    }
+    for (const side of [-3.5, 3.5]) {
+      litBar(g, x, y, a, back, end, 1.7, 1.3, shade(c, -0.2), { side, tip, bands: level >= 3 ? [0.45, 0.6] : undefined });
+      if (kick > 0) bar(g, x, y, a, end - 0.3 * length, end, 1.7, 1.3, shade(c, 0.6), kick, side);
+    }
+    if (kick > 0) bar(glow, x, y, a, end - 0.3 * length, Math.min(end, 26), 5.5, 5, c, 0.5 * kick);
+    // The charge runs along the rails until the next shot.
+    const run = back + 2 + (length - 4) * charge;
+    bar(g, x, y, a, back + 2, run, 0.9, 0.9, c, 0.3 + 0.7 * charge);
+    bar(glow, x, y, a, back + 2, Math.min(run, 26), 1.8, 1.8, c, Math.min(0.5, 0.12 + 0.25 * charge + energy));
+    boss(g, x, y, 5, shade(c, -0.45));
+    bolt(ctx, 2.2);
+    muzzleGlow(ctx, end + 2, 4);
   },
-  // A domed mine with a blinking fuse.
+  // A flamethrower: a scorched nozzle with a pilot flame over a furnace whose window flickers.
+  flame: (ctx) => {
+    const { g, glow, x, y, tower: t, definition: d, level, clock, tip, energy, peak } = ctx,
+      a = t.angle,
+      c = d.color,
+      { back, end } = reach(ctx, "flame"),
+      flicker = 0.75 + 0.25 * Math.sin(clock * 13 + t.id * 1.7);
+    litBar(g, x, y, a, back + 2, end - 3, 4, 5.6, shade(c, -0.45), { bands: level >= 3 ? [0.45, 0.62] : undefined });
+    litBar(g, x, y, a, end - 3, end, 6.5, 6.5, shade(c, -0.72), { tip });
+    const mouth = at(x, y, a, end + 1.2);
+    bar(g, x, y, a, end - 0.5, end + 1 + 4 * flicker, 1.7, 0, shade(c, 0.3));
+    disc(glow, mouth.x, mouth.y, 3.2, c, 0.25);
+    boss(g, x, y, 10, shade(c, -0.55));
+    disc(g, x, y, 7, OUTLINE);
+    disc(g, x, y, 5.6 * flicker, c);
+    disc(g, x, y, 2.8 * flicker, shade(c, 0.6));
+    glowDot(glow, x, y, 12, c, Math.min(peak, 0.18 + 0.12 * flicker + energy));
+    // Embers circling the core from level 3.
+    if (level >= 3) {
+      g.fillStyle(shade(c, 0.3), 0.5 + 0.5 * flicker);
+      for (let i = 0; i < 3; i++) {
+        const p = at(x, y, clock * 2 + t.id + (i * TAU) / 3, 12);
+        pip(g, p.x, p.y, 1.4);
+      }
+    }
+    muzzleGlow(ctx, end + 2, 5);
+  },
+  // A stubby tube that recoils hard, a shell nose in its bore once loaded; the dead zone is drawn with the range preview.
+  mortar: (ctx) => {
+    const { g, x, y, tower: t, definition: d, level, charge, tip } = ctx,
+      a = t.angle,
+      c = d.color,
+      { back, end } = reach(ctx, "mortar");
+    boss(g, x, y, 11, shade(c, -0.55));
+    litBar(g, x, y, a, back - 2, end, 6.5, 7, shade(c, -0.2), { bands: level >= 3 ? [0.3, 0.42] : [0.36], tip });
+    const mouth = at(x, y, a, end - 4.2);
+    disc(g, mouth.x, mouth.y, 4.4, OUTLINE);
+    if (charge > 0.85) dome(g, mouth.x, mouth.y, 2.5, shade(c, 0.1));
+    bolt(ctx, 2);
+    muzzleGlow(ctx, end + 1, 6);
+  },
+  // A domed mine: the reload arc closes into a ring once armed, and the fuse blinks.
   mine: (ctx) => {
-    const { g, x, y, definition: d, clock, charge } = ctx,
+    const { g, glow, x, y, definition: d, clock, charge } = ctx,
       c = d.color;
-    g.fillStyle(shade(c, -0.5));
-    g.fillCircle(x, y, 10);
-    g.fillStyle(shade(c, -0.15), 0.4 + 0.6 * charge);
-    g.fillCircle(x, y, 7);
+    boss(g, x, y, 10, shade(c, -0.5));
+    disc(g, x - 0.3, y - 0.3, 6.6, shade(c, -0.15), 0.4 + 0.6 * charge);
+    g.fillStyle(shade(c, -0.3));
     for (let i = 0; i < 4; i++) {
       const p = at(x, y, (i * Math.PI) / 2 + Math.PI / 4, 11);
-      g.fillStyle(shade(c, -0.3));
-      g.fillCircle(p.x, p.y, 2);
+      pip(g, p.x, p.y, 1.9);
     }
+    arcBand(g, x, y, 8.3, 1.3, -Math.PI / 2, -Math.PI / 2 + TAU * charge, c, 0.85);
     if (charge >= 1) {
-      g.fillStyle(0xffffff, 0.5 + 0.5 * Math.sin(clock * 6));
-      g.fillCircle(x, y, 2);
+      ring(glow, x, y, 8.3, 2.6, c, 0.18);
+      disc(g, x, y, 1.8, 0xffffff, 0.5 + 0.5 * Math.sin(clock * 6));
     }
-    armedLight(ctx);
+    armedLed(ctx);
   },
-  // Rows of spikes that shoot up on each strike.
+  // Rows of spikes that shoot up on each strike; each is lit on its left face.
   spikes: (ctx) => {
     const { g, x, y, definition: d, kick } = ctx,
       c = d.color,
       h = 3 + 5 * kick;
-    for (let i = -1; i <= 1; i++)
-      for (let j = -1; j <= 1; j++) {
-        const sx = x + i * 11,
-          sy = y + j * 11;
-        g.fillStyle(shade(c, -0.3 + 0.5 * kick));
-        g.fillTriangle(sx - 3, sy + 3, sx + 3, sy + 3, sx, sy + 3 - h);
-      }
-    armedLight(ctx);
+    for (const half of [-1, 1]) {
+      g.fillStyle(half < 0 ? shade(c, 0.1 + 0.4 * kick) : shade(c, -0.5 + 0.3 * kick));
+      for (let i = -1; i <= 1; i++)
+        for (let j = -1; j <= 1; j++) {
+          const sx = x + i * 11,
+            sy = y + j * 11 + 3;
+          g.fillTriangle(sx + half * 3, sy, sx, sy, sx, sy - h);
+        }
+    }
+    armedLed(ctx);
   },
-  // Bubbling tar.
+  // Bubbling tar with a glossy sheen.
   tar: (ctx) => {
     const { g, x, y, tower: t, definition: d, clock } = ctx,
       c = d.color;
-    g.fillStyle(shade(c, -0.35), 0.9);
-    g.fillEllipse(x, y, 30, 25);
+    oval(g, x, y, 15, 12.5, shade(c, -0.35), 0.9);
+    oval(g, x - 5.4, y - 6, 6.5, 1.8, shade(c, 0.5), 0.45, -0.55);
     for (let i = 0; i < 3; i++) {
       const phase = (clock * 0.7 + i / 3 + t.id * 0.2) % 1;
-      g.lineStyle(1.2, shade(c, 0.4), 1 - phase);
-      g.strokeCircle(x - 7 + i * 7, y - 2 + (i % 2) * 5, 1 + phase * 4);
+      loop(g, x - 7 + i * 7, y - 2 + (i % 2) * 5, 1 + phase * 4, 1.2, shade(c, 0.4), 1 - phase);
     }
   },
-  // Open jaws that snap shut and spring back open while re-arming.
+  // Open jaws with two-tone teeth that snap shut and spring back open while re-arming.
   snare: (ctx) => {
     const { g, x, y, definition: d, charge } = ctx,
       c = d.color,
       open = 3 + 9 * charge;
-    g.lineStyle(1.5, shade(c, -0.3));
-    g.strokeCircle(x, y, 5);
-    for (const side of [-1, 1]) {
-      g.fillStyle(c);
-      g.fillRect(x - 12, y + side * open - 1.5, 24, 3);
-      for (let i = 0; i < 5; i++) {
-        const tx = x - 10 + i * 5;
-        g.fillTriangle(tx - 1.8, y + side * open, tx + 1.8, y + side * open, tx, y + side * (open - 4));
+    // Hinge springs at both ends of the jaws.
+    g.lineStyle(1, shade(c, -0.2));
+    g.beginPath();
+    for (const sx of [-1, 1])
+      for (let k = 0; k <= 6; k++) {
+        const kx = x + sx * (13.2 + (k % 2 ? 1.2 : -1.2)),
+          ky = y - open + (k * open) / 3;
+        if (k) g.lineTo(kx, ky);
+        else g.moveTo(kx, ky);
       }
+    g.strokePath();
+    loop(g, x, y, 5, 1.5, shade(c, -0.3));
+    for (const side of [-1, 1]) {
+      const jy = y + side * open;
+      for (const half of [-1, 1]) {
+        g.fillStyle(half < 0 ? shade(c, 0.3) : shade(c, -0.35));
+        for (let i = 0; i < 5; i++) {
+          const tx = x - 10 + i * 5;
+          g.fillTriangle(tx + half * 1.8, jy, tx, jy, tx, jy - side * 4);
+        }
+      }
+      g.fillStyle(c);
+      g.fillRect(x - 12, jy - 1.5, 24, 3);
+      g.fillStyle(shade(c, 0.4));
+      g.fillRect(x - 12, jy - 1.5, 24, 1);
     }
-    armedLight(ctx);
+    armedLed(ctx);
   },
-  // A glowing grate.
+  // A grate: heat glows in the slots between the bars, and embers rise from it.
   grill: (ctx) => {
-    const { g, x, y, tower: t, definition: d, clock, kick } = ctx,
+    const { g, glow, x, y, tower: t, definition: d, clock, kick } = ctx,
       c = d.color,
-      glow = 0.55 + 0.25 * Math.sin(clock * 5 + t.id) + 0.2 * kick;
-    for (let i = -2; i <= 2; i++) {
-      g.fillStyle(shade(c, -0.6));
-      g.fillRect(x - 14, y + i * 6 - 1.5, 28, 3);
-      g.fillStyle(c, glow);
-      g.fillRect(x - 12, y + i * 6 - 0.8, 24, 1.6);
+      heat = 0.55 + 0.25 * Math.sin(clock * 5 + t.id) + 0.2 * kick;
+    g.fillStyle(c, 0.3 + 0.5 * heat);
+    for (let i = -2; i < 2; i++) g.fillRect(x - 13, y + i * 6 + 1.5, 26, 3);
+    glow.fillStyle(c, 0.1 + 0.12 * Math.min(1, heat));
+    for (let i = -2; i < 2; i++) glow.fillRect(x - 13, y + i * 6 + 1, 26, 4);
+    g.fillStyle(shade(c, -0.62));
+    for (let i = -2; i <= 2; i++) g.fillRect(x - 14, y + i * 6 - 1.5, 28, 3);
+    g.fillStyle(shade(c, -0.35));
+    for (let i = -2; i <= 2; i++) g.fillRect(x - 14, y + i * 6 - 1.5, 28, 1);
+    for (let i = 0; i < 2; i++) {
+      const phase = (clock * 0.8 + i * 0.5 + t.id * 0.27) % 1;
+      disc(g, x - 6 + i * 11 + Math.sin(clock * 3 + i) * 2, y + 4 - phase * 16, 0.9, shade(c, 0.5), 1 - phase);
     }
   },
-  // A coiled spring under a launch plate, compressed while it re-arms.
+  // A coil spring under a launch plate, compressed while it re-arms; the near strands catch the light.
   spring: (ctx) => {
     const { g, x, y, definition: d, charge, kick } = ctx,
       c = d.color,
-      h = 4 + 6 * charge + 6 * kick;
-    g.lineStyle(1.5, shade(c, -0.2));
-    for (let i = 0; i < 4; i++) {
-      const yy = y + 8 - (i * h) / 3;
-      g.lineBetween(x - 7, yy, x + 7, yy - h / 6);
+      h = 4 + 6 * charge + 6 * kick,
+      top = y + 6 - h;
+    for (const front of [false, true]) {
+      g.lineStyle(front ? 1.6 : 1.4, shade(c, front ? 0.3 : -0.4));
+      for (let i = 0; i < 4; i++) {
+        const y0 = y + 8 - (i * h) / 4;
+        if (front) g.lineBetween(x - 7, y0, x + 7, y0 - h / 8);
+        else g.lineBetween(x + 7, y0 - h / 8, x - 7, y0 - h / 4);
+      }
     }
-    g.fillStyle(c);
-    g.fillRoundedRect(x - 10, y + 6 - h - 4, 20, 4, 2);
-    armedLight(ctx);
+    chamferRect(g, x, top - 2, 10, 2.2, 1, shade(c, -0.1));
+    chamferRect(g, x - 0.3, top - 2.9, 9.4, 1, 0.6, shade(c, 0.35));
+    armedLed(ctx);
   },
-  // A magnetic disc carrying the next bomb; empty until it re-arms.
+  // A magnetic disc carrying the next bomb, with field lines turning around it; empty until it re-arms.
   limpet: (ctx) => {
-    const { g, x, y, definition: d, clock, charge } = ctx,
+    const { g, glow, x, y, definition: d, clock, charge } = ctx,
       c = d.color;
-    g.lineStyle(1.5, shade(c, -0.3));
-    g.strokeCircle(x, y, 11);
-    if (charge >= 1) {
-      g.fillStyle(shade(c, -0.35));
-      g.fillCircle(x, y, 7);
-      g.fillStyle(c, 0.5 + 0.5 * Math.sin(clock * 8));
-      g.fillCircle(x, y - 3, 2);
+    ring(g, x, y, 11, 1.5, shade(c, -0.3));
+    for (let i = 0; i < 3; i++) {
+      const b = clock * 0.8 + (i * TAU) / 3;
+      arcBand(glow, x, y, 12.6, 1, b, b + 0.9, c, 0.1 + 0.08 * charge);
     }
-    armedLight(ctx);
+    if (charge >= 1) {
+      boss(g, x, y, 7, shade(c, -0.4));
+      led(ctx, x, y - 3, c, 0.7 * (0.5 + 0.5 * Math.sin(clock * 8)));
+    }
+    armedLed(ctx);
   },
-  // Planks slide over the hole while it re-arms and open once it is ready.
+  // Planks slide over the shaft while it re-arms and open once it is ready.
   pit: (ctx) => {
     const { g, x, y, definition: d, charge } = ctx,
       c = d.color,
@@ -617,345 +783,423 @@ const TURRETS: Record<TurretStyle, Drawing> = {
     if (cover > 0) {
       g.fillStyle(shade(c, 0.1));
       for (let i = -1; i <= 1; i++) g.fillRect(x - 15, y + i * 9 - 3.5, 30 * cover, 7);
+      g.fillStyle(shade(c, 0.35));
+      for (let i = -1; i <= 1; i++) g.fillRect(x - 15, y + i * 9 - 3.5, 30 * cover, 1.2);
     }
-    armedLight(ctx);
+    armedLed(ctx);
   },
-  // The wire between the posts, taut and humming when armed.
+  // The wire between the posts: taut and glowing when armed, with a glint running along it.
   tripwire: (ctx) => {
-    const { g, x, y, definition: d, clock, charge, kick } = ctx,
+    const { g, glow, x, y, tower: t, definition: d, clock, charge, kick } = ctx,
       c = d.color,
       sag = (1 - charge) * 6 + kick * 4;
-    g.lineStyle(1.5, c, 0.4 + 0.6 * charge);
-    g.beginPath();
-    g.moveTo(x - 15, y);
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 0; i <= 6; i++) {
       const f = i / 6;
-      g.lineTo(x - 15 + 30 * f, y + Math.sin(f * Math.PI) * sag + (charge >= 1 ? Math.sin(clock * 30 + i) * 0.4 : 0));
+      put(i, x - 15 + 30 * f, y + Math.sin(f * Math.PI) * sag + (charge >= 1 ? Math.sin(clock * 30 + i) * 0.4 : 0));
     }
-    g.strokePath();
+    glow.lineStyle(3, c, 0.06 + 0.14 * charge);
+    glow.strokePoints(PTS, false, false, 7);
+    g.lineStyle(1.5, c, 0.4 + 0.6 * charge);
+    g.strokePoints(PTS, false, false, 7);
+    if (charge >= 1) {
+      const gx = x - 15 + 30 * ((clock * 0.8 + t.id * 0.37) % 1);
+      disc(glow, gx, y, 3, c, 0.2);
+      disc(g, gx, y, 1, 0xffffff, 0.9);
+    }
     g.fillStyle(c);
-    g.fillCircle(x - 16, y, 2.2);
-    g.fillCircle(x + 16, y, 2.2);
-    armedLight(ctx);
+    pip(g, x - 16, y, 2.2);
+    pip(g, x + 16, y, 2.2);
+    armedLed(ctx);
   },
-  // A piston that rises while charging and slams down on the shot.
+  // A piston plate that rises while charging and slams down on the shot; its shadow falls further the higher it is.
   hammer: (ctx) => {
-    const { g, x, y, definition: d, level, kick, charge } = ctx,
+    const { g, glow, x, y, definition: d, kick, charge, energy } = ctx,
       c = d.color,
       lift = charge * 4 * (1 - kick);
-    g.fillStyle(shade(c, -0.55));
-    g.fillCircle(x, y, 12);
-    g.fillStyle(shade(c, -0.15));
-    g.fillRoundedRect(x - 8, y - 8 - lift, 16, 16, 3);
+    boss(g, x, y, 12, shade(c, -0.55));
+    chamferRect(g, x + 1 + 0.6 * lift, y + 1.5 + 0.6 * lift, 8, 8, 3, SHADOW, 0.45);
+    plate(g, x, y - lift, { cut: 0.35 }, 8, shade(c, -0.15));
     g.fillStyle(c, 0.4 + 0.6 * charge);
     g.fillRect(x - 5, y - 2 - lift, 10, 4);
-    if (level >= 3) {
-      g.lineStyle(1, c, 0.5);
-      g.strokeCircle(x, y, 14);
-    }
+    glow.fillStyle(c, Math.min(0.5, 0.12 + 0.2 * charge + energy));
+    glow.fillRect(x - 6, y - 3 - lift, 12, 6);
     if (kick > 0) {
-      g.lineStyle(3, shade(c, 0.4), kick);
-      g.strokeCircle(x, y, 10 + (1 - kick) * 16);
+      g.fillStyle(shade(c, 0.25), 0.55 * kick);
+      for (let i = 0; i < 4; i++) {
+        const p = at(x, y, Math.PI / 4 + (i * Math.PI) / 2, 10 + 9 * (1 - kick));
+        pip(g, p.x, p.y, 1.8 + 2.4 * (1 - kick));
+      }
+      ring(g, x, y, 10 + (1 - kick) * 16, 1 + 2 * kick, shade(c, 0.4), 0.8 * kick);
     }
   },
-  // A long single blade-barrel.
+  // A long single blade with a dark fuller and a glowing edge; a glaive waits at the hilt once charged.
   blade: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, kick } = ctx,
+    const { g, glow, x, y, tower: t, definition: d, clock, charge, tip, energy } = ctx,
       a = t.angle,
       c = d.color,
-      back = -kick * 5,
-      length = 22 + level;
-    bar(g, x, y, a, back - 4, back + length, 3.5, 0.6, shade(c, -0.1));
-    bar(g, x, y, a, back, back + length - 6, 1, 0.3, 0xffffff, 0.5);
-    g.fillStyle(shade(c, -0.55));
-    g.fillCircle(x, y, 7);
-    hub(ctx, 2.5);
-    muzzleGlow(ctx, back + length, 4);
+      ca = Math.cos(a),
+      sa = Math.sin(a),
+      { back, end } = reach(ctx, "blade");
+    litBar(g, x, y, a, back - 4, end, 3.5, 0.6, shade(c, -0.1), { tip });
+    bar(g, x, y, a, back + 1, end - 8, 0.8, 0.35, shade(c, -0.6));
+    strip(glow, x, y, ca, sa, back - 2, end - 1, 3.4, 2.2, 0.7, 0.2, shade(c, 0.4), Math.min(0.5, 0.2 * charge + energy));
+    const guard = at(x, y, a, back + 7.4);
+    litBar(g, guard.x, guard.y, a + Math.PI / 2, -5, 5, 1.2, 1.2, shade(c, -0.35));
+    boss(g, x, y, 7, shade(c, -0.55));
+    if (charge >= 0.95) {
+      // A small glaive of three curved blades, ready to be thrown.
+      const spin = clock * 1.5 + t.id;
+      disc(glow, x, y, 6, c, 0.25);
+      g.fillStyle(shade(c, 0.25));
+      for (let k = 0; k < 3; k++) {
+        const b = spin + (k * TAU) / 3,
+          p0 = at(x, y, b, 1.2),
+          p1 = at(x, y, b + 0.35, 4.2),
+          p2 = at(x, y, b + 1.05, 6.2),
+          p3 = at(x, y, b + 0.7, 3.4);
+        g.fillTriangle(p0.x, p0.y, p1.x, p1.y, p3.x, p3.y);
+        g.fillTriangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+      }
+      disc(g, x, y, 1.6, shade(c, -0.4));
+    } else bolt(ctx, 2.4);
+    muzzleGlow(ctx, end, 4);
   },
-  // A fan of short barrels; more of them with each upgrade.
+  // A fan of short barrels, more of them with each upgrade, fed by a rear drum that turns one chamber per shot.
   scatter: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, kick } = ctx,
+    const { g, x, y, tower: t, definition: d, level, charge, tip } = ctx,
       a = t.angle,
       c = d.color,
-      back = -kick * 3,
-      barrels = level >= 4 ? 5 : 3;
-    for (let i = 0; i < barrels; i++) {
-      const o = (i - (barrels - 1) / 2) * 0.32;
-      bar(g, x, y, a + o, back + 4, back + 15 + level, 2, 1.6, shade(c, -0.2));
+      { back, end } = reach(ctx, "scatter"),
+      { count, step } = MUZZLES.scatter!.fan!(level);
+    for (let i = 0; i < count; i++) {
+      const o = (i - (count - 1) / 2) * step;
+      litBar(g, x, y, a + o, back + 4, end, 2, 1.6, shade(c, -0.2), { tip, shadow: i === 0 || i === count - 1, bands: level >= 3 ? [0.5] : undefined });
     }
-    g.fillStyle(shade(c, -0.55));
-    g.fillCircle(x, y, 8);
-    hub(ctx, 2.5);
-    muzzleGlow(ctx, back + 17 + level, 4);
+    const drum = at(x, y, a, -3);
+    disc(g, drum.x + 0.6, drum.y + 1, 7, SHADOW, 0.4);
+    disc(g, drum.x, drum.y, 6.5, shade(c, -0.55));
+    disc(g, drum.x - 0.4, drum.y - 0.4, 5.6, shade(c, -0.25));
+    g.fillStyle(OUTLINE);
+    for (let k = 0; k < 6; k++) {
+      const p = at(drum.x, drum.y, a + charge * (Math.PI / 3) + (k * Math.PI) / 3, 3.5);
+      pip(g, p.x, p.y, 1.2);
+    }
+    bolt({ ...ctx, x: drum.x, y: drum.y }, 1.6);
+    muzzleGlow(ctx, end + 2, 4);
   },
-  // A mast with rings radiating while it charges.
+  // A lattice mast with a glowing tip ball; signal rings radiate while it charges and glitch pixels flicker around it.
   antenna: (ctx) => {
-    const { g, x, y, definition: d, level, clock, kick, charge } = ctx,
+    const { g, glow, x, y, tower: t, definition: d, level, clock, kick, charge, energy } = ctx,
       c = d.color;
-    g.lineStyle(2, shade(c, -0.3));
-    g.lineBetween(x, y + 8, x, y - 12);
-    g.lineBetween(x - 6, y - 4, x + 6, y - 4);
+    g.lineStyle(1.3, shade(c, -0.35));
+    g.beginPath();
+    g.moveTo(x - 2.4, y + 8);
+    g.lineTo(x - 0.9, y - 12);
+    g.moveTo(x + 2.4, y + 8);
+    g.lineTo(x + 0.9, y - 12);
+    g.strokePath();
+    for (let k = 0; k <= 5; k++) put(k, x + (k % 2 ? 1.6 : -1.6) * (1 - k * 0.1), y + 8 - k * 4);
+    g.lineStyle(0.8, shade(c, -0.5));
+    g.strokePoints(PTS, false, false, 6);
+    litBar(g, x, y - 4, 0, -6.5, 6.5, 1, 1, shade(c, -0.3));
     for (let i = 0; i < (level >= 3 ? 3 : 2); i++) {
       const phase = (clock * (0.6 + charge) + i / 3) % 1;
-      g.lineStyle(1.5, c, (1 - phase) * (0.3 + 0.6 * charge));
-      g.beginPath();
-      g.arc(x, y - 12, 4 + phase * 12, -Math.PI * 0.85, -Math.PI * 0.15);
-      g.strokePath();
+      arcBand(glow, x, y - 12, 4 + phase * 9, 1.5, -Math.PI * 0.85, -Math.PI * 0.15, c, (1 - phase) * Math.min(0.5, 0.15 + 0.25 * charge + energy));
     }
-    g.fillStyle(c, 0.5 + 0.5 * charge);
-    g.fillCircle(x, y - 12, 2.5);
-    if (kick > 0) {
-      g.lineStyle(2, shade(c, 0.5), kick);
-      g.strokeCircle(x, y, 8 + (1 - kick) * 14);
+    glowDot(glow, x, y - 12, 6, c, Math.min(0.5, 0.2 + 0.25 * charge + energy));
+    disc(g, x, y - 12, 2.6, c);
+    disc(g, x - 0.8, y - 12.8, 0.9, 0xffffff, 0.8);
+    // Glitch pixels, re-rolled 20 times a second.
+    const seed = Math.floor(clock * 20) + t.id * 97;
+    for (let i = 0; i < 4; i++) {
+      g.fillStyle(hash01(seed, i, 3) < 0.3 ? 0xffffff : c, 0.85);
+      g.fillRect(x - 12 + hash01(seed, i, 1) * 24, y - 16 + hash01(seed, i, 2) * 24, 1.6, 1.6);
     }
+    if (kick > 0) ring(glow, x, y, 8 + (1 - kick) * 14, 2, shade(c, 0.5), 0.35 * kick);
   },
-  // Twin-tube net launcher.
+  // A twin-tube net launcher with a hatched net pack at the rear; weights wait in the mouth once loaded.
   launcher: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, kick } = ctx,
+    const { g, x, y, tower: t, definition: d, level, charge, tip } = ctx,
       a = t.angle,
       c = d.color,
-      back = -kick * 4,
-      length = 15 + level;
-    g.fillStyle(shade(c, -0.55));
-    g.fillCircle(x, y, 10);
-    for (const side of [-4, 4]) bar(g, x, y, a, back, back + length, 2.6, 3.2, shade(c, -0.15), 1, side);
-    g.lineStyle(1, c, 0.8);
-    const tip = at(x, y, a, back + length);
-    g.strokeCircle(tip.x, tip.y, 5);
-    hub(ctx, 2);
-    muzzleGlow(ctx, back + length + 2, 4);
+      ca = Math.cos(a),
+      sa = Math.sin(a),
+      { back, end } = reach(ctx, "launcher");
+    strip(g, x + 0.6, y + 1, ca, sa, -12.5, -3.5, -6.5, 6.5, -6.5, 6.5, SHADOW, 0.45);
+    strip(g, x, y, ca, sa, -12.5, -3.5, -6.5, 6.5, -6.5, 6.5, shade(c, -0.45));
+    g.lineStyle(0.8, shade(c, 0.05), 0.9);
+    g.beginPath();
+    for (const dir of [-1, 1])
+      for (let k = 0; k <= 4; k++) {
+        const p = point(x, y, ca, sa, -12 + k * 2, dir * (k % 2 ? 6 : -6));
+        if (k) g.lineTo(p.x, p.y);
+        else g.moveTo(p.x, p.y);
+      }
+    g.strokePath();
+    boss(g, x, y, 10, shade(c, -0.55));
+    for (const side of MUZZLES.launcher!.sides!) litBar(g, x, y, a, back, end, 2.6, 3.2, shade(c, -0.15), { side, tip, bands: level >= 3 ? [0.45, 0.6] : undefined });
+    const mouth = at(x, y, a, end);
+    ring(g, mouth.x, mouth.y, 5, 1.1, c, 0.8);
+    if (charge > 0.7) {
+      g.fillStyle(shade(c, -0.25));
+      for (let k = 0; k < 4; k++) {
+        const p = at(mouth.x, mouth.y, a + Math.PI / 4 + (k * Math.PI) / 2, 5);
+        pip(g, p.x, p.y, 1.3);
+      }
+    }
+    bolt(ctx, 2);
+    muzzleGlow(ctx, end + 2, 4);
   },
-  // A gold coin stack that spins slowly.
+  // A gold coin turning slowly: its rim shows as it turns, and its face glints towards the viewer.
   beacon: (ctx) => {
     const { g, x, y, definition: d, level, clock } = ctx,
       c = d.color,
-      w = Math.abs(Math.cos(clock * 1.6)) * 9 + 2;
-    g.fillStyle(shade(c, -0.5));
-    g.fillEllipse(x, y + 3, 20, 9);
-    g.fillStyle(c);
-    g.fillEllipse(x, y - 2, w * 2, 18);
-    g.fillStyle(shade(c, 0.5), 0.8);
-    g.fillEllipse(x, y - 2, w, 10);
+      face = Math.cos(clock * 1.6),
+      w = Math.abs(face) * 9 + 2;
+    oval(g, x, y + 3, 10, 4.5, shade(c, -0.5));
+    oval(g, x + Math.sin(clock * 1.6) * 2.2, y - 2, w + 0.3, 9, shade(c, -0.4));
+    oval(g, x, y - 2, w, 9, c);
+    oval(g, x, y - 2, w * 0.55, 5.5, shade(c, 0.45), 0.8);
+    const shine = Math.max(0, (Math.abs(face) - 0.85) / 0.15);
+    if (shine > 0) star(g, x - 3, y - 6, 3.4, 0.7, 4, 0xffffff, 0, shine);
+    g.fillStyle(c, 0.8);
     for (let i = 0; i < level; i++) {
-      const p = at(x, y, clock + (i * Math.PI * 2) / Math.max(1, level), 14);
-      g.fillStyle(c, 0.8);
-      g.fillCircle(p.x, p.y, 1.6);
+      const p = at(x, y, clock + (i * TAU) / Math.max(1, level), 14);
+      pip(g, p.x, p.y, 1.6);
     }
   },
-  // A repair cross with a welding spark that orbits it.
+  // A raised repair cross with a welding spark orbiting it.
   dock: (ctx) => {
-    const { g, x, y, definition: d, level, clock } = ctx,
+    const { g, glow, x, y, definition: d, level, clock } = ctx,
       c = d.color;
-    g.fillStyle(shade(c, -0.55));
-    g.fillCircle(x, y, 11);
-    g.fillStyle(c, 0.9);
+    boss(g, x, y, 11, shade(c, -0.55));
+    g.fillStyle(SHADOW, 0.45);
+    g.fillRect(x - 7, y - 1.5, 16, 5);
+    g.fillRect(x - 1.5, y - 7, 5, 16);
+    g.fillStyle(c, 0.95);
     g.fillRect(x - 8, y - 2.5, 16, 5);
     g.fillRect(x - 2.5, y - 8, 5, 16);
-    const p = at(x, y, clock * (1.5 + level * 0.3), 13);
-    g.fillStyle(0xffffff, 0.6 + 0.4 * Math.sin(clock * 20));
-    g.fillCircle(p.x, p.y, 1.8);
+    g.fillStyle(shade(c, 0.5));
+    g.fillRect(x - 8, y - 2.5, 16, 1.2);
+    g.fillRect(x - 2.5, y - 8, 1.2, 16);
+    const p = at(x, y, clock * (1.5 + level * 0.3), 13),
+      flick = 0.6 + 0.4 * Math.sin(clock * 20);
+    star(glow, p.x, p.y, 5, 1, 4, shade(c, 0.6), clock * 3, 0.3 * flick);
+    disc(glow, p.x, p.y, 3, c, 0.25 * flick);
+    disc(g, p.x, p.y, 1.2, 0xffffff, 0.8 + 0.2 * flick);
   },
   // A sweeping laser dish.
   tracker: (ctx) => {
-    const { g, x, y, definition: d, level, clock } = ctx,
+    const { g, glow, x, y, definition: d, level, clock } = ctx,
       c = d.color,
-      a = clock * 1.2;
-    g.lineStyle(1, c, 0.35);
-    g.strokeCircle(x, y, 11);
-    bar(g, x, y, a, 0, 13 + level, 1.2, 0.6, c, 0.85);
-    g.fillStyle(shade(c, -0.5));
-    g.fillCircle(x, y, 6);
-    g.fillStyle(c);
-    g.fillCircle(x, y, 2.5);
-    const tip = at(x, y, a, 13 + level);
-    g.fillStyle(c, 0.6);
-    g.fillCircle(tip.x, tip.y, 2);
+      tip = at(x, y, clock * 1.2, 13 + level);
+    ring(g, x, y, 11, 1, c, 0.35);
+    glowLine(glow, x, y, tip.x, tip.y, c, 1, 0.3);
+    g.lineStyle(0.8, shade(c, 0.6), 0.9);
+    g.lineBetween(x, y, tip.x, tip.y);
+    boss(g, x, y, 6, shade(c, -0.5));
+    disc(g, x, y, 2.5, c);
+    disc(glow, tip.x, tip.y, 2.6, c, 0.3);
+    disc(g, tip.x, tip.y, 1, shade(c, 0.7));
   },
-  // The lens glows brighter with every consecutive hit on the locked target.
+  // The lens glows brighter with every consecutive hit on the locked target; a gauge around the core shows the heat.
   lens: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, kick } = ctx,
+    const { g, glow, x, y, tower: t, definition: d, level, kick, tip, energy } = ctx,
       a = t.angle,
       c = d.color,
       heat = Math.min(1, (t.focus?.stacks ?? 0) / 10),
-      length = 16 + level;
-    bar(g, x, y, a, 2, length, 4.5, 2.2, shade(c, -0.45));
-    bar(g, x, y, a, 4, length, 1.4, 1, c, 0.4 + 0.6 * heat);
-    g.fillStyle(shade(c, -0.55));
-    g.fillCircle(x, y, 9);
-    g.fillStyle(c, 0.35 + 0.65 * heat);
-    g.fillCircle(x, y, 4 + 3 * heat);
-    hub(ctx, 1.5);
-    if (kick > 0 || heat > 0) muzzleGlow({ ...ctx, kick: Math.max(kick, heat) }, length + 1, 3 + 2 * heat);
+      { end } = reach(ctx, "lens");
+    ring(g, x, y, 11, 1.6, OUTLINE, 0.7);
+    if (heat > 0) arcBand(g, x, y, 11, 1.2, -Math.PI / 2, -Math.PI / 2 + TAU * heat, c);
+    litBar(g, x, y, a, 2, end, 4.5, 2.2, shade(c, -0.45), { bands: level >= 3 ? [0.45, 0.6] : undefined, tip });
+    bar(g, x, y, a, 4, end - 1.5, 1.4, 1, c, 0.4 + 0.6 * heat);
+    bar(glow, x, y, a, 4, end - 1.5, 1.6, 1.2, c, Math.min(0.5, 0.1 + 0.3 * heat + energy));
+    const lens = at(x, y, a, end - 0.5);
+    disc(g, lens.x, lens.y, 1.9, shade(c, 0.45));
+    glowDot(glow, lens.x, lens.y, 5, c, Math.min(0.6, 0.15 + 0.35 * Math.max(heat, kick) + energy));
+    boss(g, x, y, 9, shade(c, -0.55));
+    disc(g, x, y, 4 + 3 * heat, c, 0.35 + 0.65 * heat);
+    disc(glow, x, y, 5 + 3 * heat, c, 0.1 + 0.25 * heat);
+    bolt(ctx, 1.5);
   },
-  // Rings collapse towards the core while charging, then snap out on a pulse.
+  // Rings collapse towards a black core while charging, thickening as they shrink; masses orbit with light trails.
   gravity: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, clock, kick, charge } = ctx,
+    const { g, glow, x, y, tower: t, definition: d, level, clock, kick, charge, energy, peak } = ctx,
       c = d.color;
     for (let i = 0; i < 2 + (level >= 3 ? 1 : 0); i++) {
-      const r = 15 - ((charge * 10 + i * 4) % 11);
-      g.lineStyle(1.5, c, 0.25 + 0.6 * charge);
-      g.strokeCircle(x, y, Math.max(3, r));
+      const r = Math.max(4, 15 - ((charge * 10 + i * 4) % 11));
+      loop(g, x, y, r, 1 + (15 - r) * 0.16, c, 0.25 + 0.6 * charge);
     }
+    const spin = -clock * (0.8 + charge) + t.id;
     for (let i = 0; i < 3; i++) {
-      const p = at(x, y, -clock * (0.8 + charge) + t.id + (i * Math.PI * 2) / 3, 11);
-      g.fillStyle(shade(c, 0.3), 0.8);
-      g.fillCircle(p.x, p.y, 1.6);
+      const b = spin + (i * TAU) / 3;
+      arcBand(glow, x, y, 11, 1.4, b, b + 0.6, c, 0.22);
     }
-    g.fillStyle(shade(c, -0.6));
-    g.fillCircle(x, y, 5);
-    g.fillStyle(c, 0.4 + 0.6 * charge);
-    g.fillCircle(x, y, 3);
-    if (kick > 0) {
-      g.lineStyle(2, shade(c, 0.5), kick);
-      g.strokeCircle(x, y, 8 + (1 - kick) * 14);
+    g.fillStyle(shade(c, 0.35));
+    for (let i = 0; i < 3; i++) {
+      const p = at(x, y, spin + (i * TAU) / 3, 11);
+      pip(g, p.x, p.y, 1.8);
     }
+    disc(g, x, y, 5.5, 0x05070f);
+    loop(g, x, y, 5.6, 0.7, shade(c, 0.3), 0.5 + 0.4 * charge);
+    loop(glow, x, y, 6, 1.8, c, Math.min(peak, 0.2 + 0.25 * charge + energy));
+    if (kick > 0) ring(glow, x, y, 8 + (1 - kick) * 14, 2, shade(c, 0.5), 0.35 * kick);
   },
+  // Three turning arms with glowing tips around a hex core; a hex dial's hand sweeps round with the charge.
   emitter: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, clock, kick, charge } = ctx,
-      c = d.color;
-    for (let i = 0; i < 3; i++)
-      bar(g, x, y, clock * 0.4 + t.id + (i * Math.PI * 2) / 3, 6, 13, 2.4, 1, shade(c, -0.3));
-    g.lineStyle(2, c, 0.3 + 0.6 * charge);
-    g.strokeCircle(x, y, 5 + charge * 5);
-    if (level >= 3) {
-      g.lineStyle(1, c, 0.25 + 0.5 * charge);
-      g.strokeCircle(x, y, 12);
-    }
-    g.fillStyle(c, 0.4 + 0.6 * charge);
-    g.fillCircle(x, y, 4);
-    hub(ctx, 1.5);
-    if (kick > 0) {
-      g.lineStyle(2, shade(c, 0.5), kick);
-      g.strokeCircle(x, y, 8 + (1 - kick) * 12);
-    }
+    const { g, glow, x, y, tower: t, definition: d, level, clock, kick, charge, energy } = ctx,
+      c = d.color,
+      arms = [0, 1, 2].map((i) => clock * 0.4 + t.id + (i * TAU) / 3);
+    fins(g, x, y, arms, 6, 13, 2.4, 1, c);
+    glow.fillStyle(c, Math.min(0.5, 0.15 + 0.3 * charge + energy));
+    for (const b of arms) pip(glow, x + Math.cos(b) * 13, y + Math.sin(b) * 13, 2.6);
+    hexLine(g, x, y, 10, 1.5, c, 0.3 + 0.6 * charge, Math.PI / 6);
+    if (level >= 3) hexLine(g, x, y, 12.5, 1, c, 0.25 + 0.5 * charge, Math.PI / 6);
+    const hand = at(x, y, -Math.PI / 2 + TAU * charge, 9.5);
+    g.lineStyle(1.6, shade(c, 0.45), 0.95);
+    g.lineBetween(x, y, hand.x, hand.y);
+    polygon(g, x, y, 5.5, 6, shade(c, -0.5), Math.PI / 6);
+    polygon(g, x - 0.4, y - 0.4, 4.3, 6, c, Math.PI / 6, 0.45 + 0.55 * charge);
+    disc(glow, x, y, 6.5, c, Math.min(0.5, 0.12 + 0.2 * charge + energy));
+    if (kick > 0) hexLine(glow, x, y, 8 + (1 - kick) * 12, 2, shade(c, 0.5), 0.35 * kick, Math.PI / 6);
   },
+  // A glass tank of acid with rising bubbles; a drip at the nozzle grows with the charge and falls on a shot.
   vat: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, kick, clock } = ctx,
+    const { g, glow, x, y, tower: t, definition: d, level, kick, charge, clock, maxed, tip, energy } = ctx,
       a = t.angle,
       c = d.color,
-      back = -kick * 4,
-      length = 17 + level;
-    bar(g, x, y, a, back + 4, back + length, 2.6, 2.2, shade(c, -0.35));
-    bar(g, x, y, a, back + length - 3, back + length, 3.4, 3.4, shade(c, -0.1));
-    g.fillStyle(shade(c, -0.6));
-    g.fillCircle(x, y, 10);
-    g.fillStyle(c, 0.85);
-    g.fillCircle(x, y, 7.5);
-    // Bubbles rising in the tank.
+      { back, end } = reach(ctx, "vat");
+    litBar(g, x, y, a, back + 4, end - 3, 2.6, 2.2, shade(c, -0.35), { bands: level >= 3 ? [0.4, 0.6] : undefined });
+    litBar(g, x, y, a, end - 3, end, 3.4, 3.4, shade(c, -0.1), { tip });
+    const drip = at(x, y, a, end + 1);
+    disc(g, drip.x, drip.y, 0.8 + 1.2 * charge, c);
+    if (kick > 0) disc(g, drip.x, drip.y + (1 - kick) * 7, 2, c, kick);
+    boss(g, x, y, 10, shade(c, -0.6));
+    disc(g, x, y, 7.5, c, 0.85);
+    disc(glow, x, y, 8, c, 0.12 + energy);
     for (let i = 0; i < 2; i++) {
       const phase = (clock * 0.9 + i * 0.5 + t.id * 0.3) % 1;
-      g.fillStyle(shade(c, 0.6), 1 - phase);
-      g.fillCircle(x - 2 + i * 4, y + 3 - phase * 7, 1.3);
+      disc(g, x - 2 + i * 4, y + 3 - phase * 7, 1.3, shade(c, 0.6), 1 - phase);
     }
-    if (ctx.maxed) hub(ctx, 1.5);
-    muzzleGlow(ctx, back + length + 2, 4);
+    arcBand(g, x, y, 5.6, 1.6, LIGHT - 0.7, LIGHT + 0.7, 0xffffff, 0.35);
+    if (maxed) bolt(ctx, 1.5);
+    muzzleGlow(ctx, end + 2, 4);
   },
+  // A three-facet prism with a void core hovers over its shadow; motes spiral into it.
   prism: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, clock, kick, charge } = ctx,
+    const { g, glow, x, y, tower: t, definition: d, level, clock, kick, charge, maxed, energy } = ctx,
       c = d.color,
       spin = clock * 0.6 + t.id,
-      cy = y + Math.sin(clock * 2 + t.id) * 1.5;
-    g.fillStyle(c, 0.12 + 0.18 * charge);
-    g.fillCircle(x, y, 13);
-    polygon(g, x, cy, 11, 3, shade(c, -0.35), spin);
-    polygon(g, x, cy, 8, 3, c, spin);
-    polygon(g, x, cy, 3.5, 3, ctx.maxed ? shade(c, 0.75) : shade(c, -0.6), -spin);
-    // Orbiting shards from level 3.
-    if (level >= 3)
-      for (let i = 0; i < 3; i++) {
-        const s = at(x, cy, -spin * 1.4 + (i * Math.PI * 2) / 3, 15);
-        polygon(g, s.x, s.y, 2.2, 3, shade(c, 0.2), spin);
-      }
-    if (kick > 0) {
-      g.lineStyle(1.5, 0xffffff, kick);
-      g.strokeCircle(x, cy, 11 + (1 - kick) * 7);
+      lift = Math.sin(clock * 2 + t.id) * 1.5,
+      cy = y - lift;
+    polygon(g, x + 2, y + 4, 10.5 - 0.4 * lift, 3, SHADOW, spin, 0.35 - 0.04 * lift);
+    disc(glow, x, cy, 13, c, 0.05 + 0.1 * charge + energy * 0.5);
+    polygon(g, x, cy, 11.5, 3, shade(c, -0.55), spin);
+    facets(g, x, cy, 10.2, 3, spin, c, 0.45);
+    polygon(g, x, cy, 3.8, 3, maxed ? 0xffffff : shade(c, -0.6), -spin);
+    for (let i = 0; i < 3; i++) {
+      const phase = (clock * 0.5 + i / 3 + t.id * 0.11) % 1,
+        p = at(x, cy, -clock * 1.2 + t.id + (i * TAU) / 3 + phase * 2.4, 16 - phase * 12);
+      disc(glow, p.x, p.y, 1.6, shade(c, 0.4), 0.3 * Math.min(1, phase * 3));
     }
+    // Orbiting shards from level 3.
+    if (level >= 3) {
+      g.fillStyle(shade(c, 0.2));
+      for (let i = 0; i < 3; i++) {
+        const s = at(x, cy, -spin * 1.4 + (i * TAU) / 3, 15),
+          p0 = at(s.x, s.y, spin, 2.2),
+          p1 = at(s.x, s.y, spin + TAU / 3, 2.2),
+          p2 = at(s.x, s.y, spin - TAU / 3, 2.2);
+        g.fillTriangle(p0.x, p0.y, p1.x, p1.y, p2.x, p2.y);
+      }
+    }
+    if (kick > 0) ring(glow, x, cy, 11 + (1 - kick) * 7, 1.5, 0xffffff, 0.35 * kick);
   },
-  // A gear that turns faster with every level.
+  // A gear with lit teeth that turns faster with every level, and a chimney that puffs.
   refinery: (ctx) => {
     const { g, x, y, tower: t, definition: d, level, clock } = ctx,
       c = d.color,
-      spin = clock * (0.4 + 0.4 * level) + t.id;
-    for (let i = 0; i < 8; i++) bar(g, x, y, spin + (i * Math.PI) / 4, 7, 12.5, 2.3, 1.8, shade(c, -0.25));
-    g.fillStyle(shade(c, -0.25));
-    g.fillCircle(x, y, 9);
-    g.fillStyle(c);
-    g.fillCircle(x, y, 6.5);
-    hub(ctx, 2.5);
+      spin = clock * (0.4 + 0.4 * level) + t.id,
+      phase = (clock * 0.6 + t.id * 0.3) % 1;
+    chamferRect(g, x + 12, y - 12, 2.8, 2.8, 0.8, shade(PLATE, -0.15));
+    chamferRect(g, x + 12.3, y - 11.7, 1.8, 1.8, 0.5, OUTLINE);
+    disc(g, x + 12.5 + 2 * phase, y - 13 - 8 * phase, 1.6 + 2.6 * phase, 0x9aa3a8, 0.45 * (1 - phase));
+    const teeth = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => spin + (i * Math.PI) / 4);
+    fins(g, x, y, teeth, 7, 12.5, 2.3, 1.8, c);
+    boss(g, x, y, 9, shade(c, -0.2));
+    disc(g, x, y, 6, c);
+    bolt(ctx, 2.4);
   },
-  // A sweeping scan wedge and a dish that turns with it; faster with every level.
+  // A sweeping scan fan of light and a dish that turns with it; faster with every level.
   radar: (ctx) => {
-    const { g, x, y, tower: t, definition: d, level, clock } = ctx,
+    const { g, glow, x, y, tower: t, definition: d, level, clock } = ctx,
       c = d.color,
       a = clock * (1.2 + 0.4 * level) + t.id;
-    for (let i = 0; i < 6; i++) {
-      const from = a - (i + 1) * 0.12;
-      g.fillStyle(c, 0.22 - i * 0.035);
-      g.slice(x, y, 16, from, from + 0.12, false);
-      g.fillPath();
-    }
-    g.lineStyle(1, c, 0.35);
-    g.strokeCircle(x, y, 9);
-    bar(g, x, y, a, 0, 13, 1.5, 1, c);
-    bar(g, x, y, a, 8, 11, 6, 6, shade(c, -0.2));
-    g.fillStyle(c);
-    g.fillCircle(x, y, 4.5);
-    hub(ctx, 2);
+    wedge(glow, x, y, 17, a - 0.72, a, c, 0.1);
+    wedge(glow, x, y, 17, a - 0.26, a, c, 0.12);
+    ring(g, x, y, 9, 1, c, 0.35);
+    litBar(g, x, y, a, 0, 13, 1.5, 1, c);
+    litBar(g, x, y, a, 8, 11, 6, 6, shade(c, -0.2));
+    disc(g, x, y, 4.5, c);
+    bolt(ctx, 2);
   },
   aura: (ctx) => {
     const { g, x, y, tower: t, definition: d, clock, color: c, path, level } = ctx,
       motif = path ? d.visual.paths?.[path]?.motif : undefined;
-    g.lineStyle(2, c, motif ? 0.55 : 0.3);
-    g.strokeCircle(x, y, 19);
+    ring(g, x, y, 19, 2, c, motif ? 0.55 : 0.3);
     if (!motif) {
       // Undecided: one dimmed dot per path colour hints at the choice.
       Object.values(d.visual.paths ?? {}).forEach((option, i, all) => {
-        const p = at(x, y, clock * 0.4 + (i * Math.PI * 2) / all.length - Math.PI / 2, 13);
-        g.fillStyle(option.color, 0.55);
-        g.fillCircle(p.x, p.y, 2.5);
+        const p = at(x, y, clock * 0.4 + (i * TAU) / all.length - Math.PI / 2, 13);
+        disc(g, p.x, p.y, 2.5, option.color, 0.55);
       });
-      g.fillStyle(c, 0.5);
-      g.fillCircle(x, y, 4);
-      hub(ctx, 2);
+      disc(g, x, y, 4, c, 0.5);
+      bolt(ctx, 2);
       return;
     }
     MOTIFS[motif](ctx, Math.max(1, level), clock + t.id);
-    g.fillStyle(c);
-    g.fillCircle(x, y, 5);
-    hub(ctx, 2);
-    g.lineStyle(1.5, c, 0.75);
-    g.strokeCircle(x, y, 8 + Math.sin(clock * 2) * 2);
+    disc(g, x, y, 5, c);
+    bolt(ctx, 2);
+    loop(g, x, y, 8 + Math.sin(clock * 2) * 2, 1.5, c, 0.75);
   },
 };
-/** Path motifs of support towers; `tier` (1–3) adds detail. */
-const MOTIFS: Record<PathMotif, (ctx: TurretContext, tier: number, time: number) => void> = {
-  // Damage: pairs of blades turning slowly.
-  blades: ({ g, x, y, color: c }, tier, time) => {
-    const n = tier * 2;
-    for (let i = 0; i < n; i++) {
-      const a = time * 0.5 + (i * Math.PI * 2) / n;
-      bar(g, x, y, a, 9, 18, 3.5, 0, shade(c, -0.25));
-      bar(g, x, y, a, 9, 16.5, 2, 0, c);
-    }
+/** Path motifs of Aura towers and specialized attack towers; `tier` (1–3) adds detail, `echo` repeats them in light. */
+const MOTIFS: Record<PathMotif, (ctx: TurretContext, tier: number, time: number, echo?: number) => void> = {
+  // Damage: pairs of blades turning slowly, each lit on the side that faces the light.
+  blades: ({ g, glow, x, y, color: c }, tier, time, echo = 0) => {
+    const blades = Array.from({ length: tier * 2 }, (_, i) => time * 0.5 + (i * TAU) / (tier * 2));
+    fins(g, x, y, blades, 9, 18, 3.5, 0, c);
+    if (!echo) return;
+    glow.fillStyle(c, echo);
+    for (const a of blades) quad(glow, x, y, Math.cos(a), Math.sin(a), 9, 18.5, -3.8, 3.8, 0, 0);
   },
   // Speed: spiral arms whirling faster per tier.
-  vortex: ({ g, x, y, color: c }, tier, time) => {
-    const arms = tier + 1;
+  vortex: ({ g, glow, x, y, color: c }, tier, time, echo = 0) => {
+    const arms = tier + 1,
+      inks = echo ? [glow, g] : [g];
+    glow.lineStyle(4, c, echo);
     g.lineStyle(2, c, 0.85);
-    for (let i = 0; i < arms; i++) {
-      const start = time * (2 + tier) + (i * Math.PI * 2) / arms;
-      g.strokePoints(
-        Array.from({ length: 8 }, (_, k) => at(x, y, start + k * 0.17, 7 + k * 1.45)),
-        false,
-      );
+    for (const ink of inks) {
+      ink.beginPath();
+      for (let i = 0; i < arms; i++) {
+        const start = time * (2 + tier) + (i * TAU) / arms;
+        for (let k = 0; k < 8; k++) {
+          const a = start + k * 0.17,
+            r = 7 + k * 1.45;
+          if (k) ink.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+          else ink.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+        }
+      }
+      ink.strokePath();
     }
   },
   // Range: rings pulsing outwards, fading at the plate edge.
-  rings: ({ g, x, y, color: c }, tier, time) => {
+  rings: ({ g, glow, x, y, color: c }, tier, time, echo = 0) => {
     for (let i = 0; i < tier; i++) {
-      const phase = (time * 0.6 + i / tier) % 1;
-      g.lineStyle(1.5, c, (1 - phase) * 0.85);
-      g.strokeCircle(x, y, 9 + phase * 13);
+      const phase = (time * 0.6 + i / tier) % 1,
+        r = 9 + phase * 13;
+      ring(g, x, y, r, 1.5, c, (1 - phase) * 0.85);
+      if (echo) ring(glow, x, y, r, 3, c, echo * (1 - phase));
     }
   },
 };
@@ -969,11 +1213,16 @@ export interface TowerBadges {
   color: number;
   path?: string;
 }
-export function drawTower(g: Ink, x: number, y: number, tower: Tower, definition: Readonly<TowerDefinition>, clock: number, badges: TowerBadges) {
-  const c = badges.color,
+export function drawTower(pen: Pen, x: number, y: number, tower: Tower, definition: Readonly<TowerDefinition>, clock: number, badges: TowerBadges) {
+  const { g, glow } = pen,
+    p = badges.color,
     level = badges.markers,
+    // Traps lie flat on the path: no shadow, no collar and no turret rings.
+    trap = definition.placement === "path",
+    attack = !trap && definition.targets.length > 0,
     ctx: TurretContext = {
       g,
+      glow,
       x,
       y,
       tower,
@@ -981,46 +1230,62 @@ export function drawTower(g: Ink, x: number, y: number, tower: Tower, definition
       clock,
       level,
       maxed: badges.maxed,
-      color: c,
+      color: p,
       path: badges.path,
       kick: Math.max(0, (tower.cooldown - 0.7) / 0.3),
       charge: 1 - tower.cooldown,
+      tip: attack && level >= 6 ? p : attack && level >= 5 ? shade(definition.color, 0.35) : undefined,
+      energy: attack && level >= 5 ? 0.15 : 0,
+      peak: badges.maxed ? 0.42 : 0.6,
     };
-  if (badges.maxed) {
-    g.fillStyle(c, 0.08 + 0.05 * Math.sin(clock * 2 + tower.id));
-    g.fillCircle(x, y, 27);
-  }
-  // Traps lie flat on the path: no shadow and no turret rings.
-  const trap = definition.placement === "path";
+  if (badges.maxed) halo(glow, x, y, 26, p, 0.12 + 0.04 * Math.sin(clock * 2 + tower.id));
   if (!trap) {
-    g.fillStyle(0x050b10, 0.55);
-    g.fillEllipse(x, y + 8, 39, 27);
+    oval(g, x + 3, y + 6, 22, 15.5, SHADOW, 0.22);
+    oval(g, x + 3, y + 6, 18, 12, SHADOW, 0.3);
   }
   BASES[definition.visual.turret](ctx);
-  if (level >= 2 && !trap) {
-    g.lineStyle(1, shade(c, -0.2), 0.6);
-    g.strokeCircle(x, y, 17);
-  }
-  if (level >= 4 && !trap)
-    for (let i = 0; i < 4; i++) {
-      const p = at(x, y, Math.PI / 4 + (i * Math.PI) / 2, 15.5);
-      g.fillStyle(c, 0.6 + 0.4 * Math.sin(clock * 3 + i));
-      g.fillCircle(p.x, p.y, 1.6);
-    }
+  // Level language: a collar from level 2 (a glint sweeps it at level 8), the r14 ring echoed in light from level 5.
   if (!trap) {
-    g.lineStyle(1.5, c, 0.6);
-    g.strokeCircle(x, y, 14);
+    if (level >= 2) {
+      ring(g, x, y, 17, 2.2, DARK);
+      arcBand(g, x, y, 17.3, 0.9, LIGHT - 0.9, LIGHT + 0.9, shade(p, 0.25), 0.85);
+      if (level >= 8) arcBand(g, x, y, 17, 1.6, clock * 0.8 + tower.id, clock * 0.8 + tower.id + 0.5, shade(p, 0.8), 0.9);
+    }
+    ring(g, x, y, 14, 1.5, p, 0.6);
+    if (attack && level >= 5) ring(glow, x, y, 14, 2, p, 0.35);
+  }
+  // Specialized attack towers: the path motif turns under the turret, one tier per level above 5, echoed in light.
+  const motif = badges.path && definition.attack.kind !== "aura" ? definition.visual.paths?.[badges.path]?.motif : undefined;
+  if (motif) {
+    const tier = Math.min(3, Math.max(1, level - 5));
+    MOTIFS[motif](ctx, tier, clock + tower.id, 0.06 + 0.06 * tier);
+  }
+  // One lamp from level 2; from level 4 four of them chase round the collar.
+  if (!trap && level >= 4) {
+    const lamps = [0, 1, 2, 3].map((i) => at(x, y, 0.75 * Math.PI + (i * Math.PI) / 2, 19));
+    g.fillStyle(OUTLINE, 0.9);
+    for (const q of lamps) pip(g, q.x, q.y, 2.2);
+    lamps.forEach((q, i) => {
+      const on = 0.35 + 0.65 * Math.max(0, Math.sin(4 * clock - (i * Math.PI) / 2));
+      g.fillStyle(shade(p, -0.7 * (1 - on)));
+      pip(g, q.x, q.y, 1.4);
+      if (on <= 0.5) return;
+      glow.fillStyle(p, 0.3 * on);
+      pip(glow, q.x, q.y, 3.6);
+    });
+  } else if (!trap && level >= 2) {
+    const q = at(x, y, 0.75 * Math.PI, 19);
+    led(pen, q.x, q.y, p, 1);
   }
   TURRETS[definition.visual.turret](ctx);
-  for (let i = 0; i < badges.markers; i++) {
-    g.fillStyle(c);
-    g.fillRect(x - (badges.markers * 6 - 2) / 2 + i * 6, y + 20, 4, 3);
-  }
+  // Up to 8 levels: narrower steps keep the row inside the cell.
+  const step = level > 5 ? 5 : 6;
+  g.fillStyle(p);
+  for (let i = 0; i < level; i++) g.fillRect(x - (level * step - 2) / 2 + i * step, y + 20, step - 2, 3);
   if (badges.boosted) {
-    g.fillStyle(0x0c202a);
-    g.fillCircle(x + 19, y - 18, 6);
+    disc(g, x + 19, y - 18, 6, 0x0c202a);
+    loop(g, x + 19, y - 18, 5, 1.5, 0x78dfff);
     g.lineStyle(1.5, 0x78dfff);
-    g.strokeCircle(x + 19, y - 18, 5);
     g.lineBetween(x + 16, y - 18, x + 22, y - 18);
     g.lineBetween(x + 19, y - 21, x + 19, y - 15);
   }

@@ -194,7 +194,7 @@ describe("combat and interface integration", () => {
     expect(preview).toContain("37.5"); // next upgrades: ["level-2", "level-3"]0 * 1.25
     expect(towerDetails("pulse", target, towers)).toContain("18 + 4.5 Aura");
     expect(upgradeControl({ ...target, upgrades: ["level-2", "level-3"] }, towers)).toContain("Level 3 → 4");
-    expect(upgradeControl({ ...target, upgrades: ["level-2", "level-3", "level-4", "level-5"] }, towers)).toContain("Max level");
+    expect(upgradeControl({ ...target, upgrades: ["level-2", "level-3", "level-4", "level-5", "overclock-1", "overclock-2", "overclock-3"] }, towers)).toContain("Max level");
     const controls = upgradeControl(source, towers);
     expect((controls.match(/data-upgrade=/g) ?? [])).toHaveLength(1);
     expect(controls).toContain("+25% → +40%"); // tier I owned, tier II offered

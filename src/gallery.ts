@@ -2,9 +2,10 @@ import Phaser from "phaser";
 import { Game } from "./core/game";
 import { DEFAULT_CONTENT } from "./content";
 import { towerColor } from "./core/upgrades";
-import { CELL } from "./render/shapes";
+import { CELL, type Pen } from "./render/shapes";
 import { drawTower } from "./render/towers";
 import { drawEnemy } from "./render/enemies";
+import { Showcase, showcaseSize } from "./showcase";
 import { createEnemy } from "./systems/spawn";
 import { statusFlags } from "./systems/status";
 import { traitFlags, type TraitFlags } from "./systems/traits";
@@ -51,26 +52,29 @@ class Gallery extends Phaser.Scene {
     enemies.forEach((id, i) => this.tile("enemy", id, i, enemyTop, ENEMY_TILE, (g, x, y) => this.enemy(g, x, y, id)));
     (window as unknown as { __gallery: object }).__gallery = { ready: true, cells };
   }
-  private tile(kind: GalleryCell["kind"], id: string, i: number, top: number, size: number, draw: (g: Phaser.GameObjects.Graphics, x: number, y: number) => void) {
+  private tile(kind: GalleryCell["kind"], id: string, i: number, top: number, size: number, draw: (pen: Pen, x: number, y: number) => void) {
     const x = GAP + (i % COLUMNS) * (Math.max(TOWER_TILE, ENEMY_TILE) + GAP),
       y = top + Math.floor(i / COLUMNS) * (size + GAP),
       back = this.add.graphics(),
       shape = this.make.graphics({}, false),
-      g = this.add.graphics();
+      g = this.add.graphics(),
+      glow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
     back.fillStyle(0x0d1820);
     back.fillRoundedRect(x, y, size, size, 8);
     // Long bodies and trails must not spill onto the neighbouring tiles.
     shape.fillRoundedRect(x, y, size, size, 8);
-    g.setMask(shape.createGeometryMask());
-    draw(g, x + size / 2, y + size / 2);
+    const mask = shape.createGeometryMask();
+    g.setMask(mask);
+    glow.setMask(mask);
+    draw({ g, glow }, x + size / 2, y + size / 2);
     cells.push({ kind, id, x: x * ZOOM, y: y * ZOOM, w: size * ZOOM, h: size * ZOOM });
   }
-  private tower(g: Phaser.GameObjects.Graphics, x: number, y: number, type: TowerId) {
+  private tower(pen: Pen, x: number, y: number, type: TowerId) {
     const definition = DEFAULT_CONTENT.towers[type],
       tower = { id: 0, type, x: 0, y: 0, upgrades: [], cooldown: 0, spent: 0, angle: -Math.PI / 4, kills: 0, owner: 0 };
-    drawTower(g, x, y, tower, definition, CLOCK, { markers: 1, maxed: false, boosted: false, color: towerColor(tower) });
+    drawTower(pen, x, y, tower, definition, CLOCK, { markers: 1, maxed: false, boosted: false, color: towerColor(tower) });
   }
-  private enemy(g: Phaser.GameObjects.Graphics, x: number, y: number, type: EnemyId) {
+  private enemy({ g }: Pen, x: number, y: number, type: EnemyId) {
     // A real spawn in a throwaway game, so shields, plates and the like start as they do on the field.
     const sim = new Game(),
       e = createEnemy(sim, type, 0.5),
@@ -88,13 +92,15 @@ class Gallery extends Phaser.Scene {
   }
 }
 
+/** `?showcase`: levels, firing poses, shots and effects instead of the README tiles (see `showcase.ts`). */
+const showcase = new URLSearchParams(location.search).has("showcase");
 new Phaser.Game({
   type: Phaser.AUTO,
   parent: "gallery",
-  width: width * ZOOM,
-  height: height * ZOOM,
+  width: showcase ? showcaseSize.width : width * ZOOM,
+  height: showcase ? showcaseSize.height : height * ZOOM,
   transparent: true,
   antialias: true,
-  scene: Gallery,
+  scene: showcase ? Showcase : Gallery,
   audio: { noAudio: true },
 });

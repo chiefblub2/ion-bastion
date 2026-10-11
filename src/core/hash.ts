@@ -11,12 +11,14 @@ export function stateHash(s: GameState) {
     s.nextId,
     round(s.time),
     s.wallets.map(round).join(","),
-    s.towers.map((t) => `${t.id}:${t.owner}:${t.upgrades.join("+")}:${t.kills}${t.priority ? `:${t.priority}` : ""}${t.focus ? `:f${t.focus.target}/${t.focus.stacks}` : ""}`).join(";"),
+    s.towers.map((t) => `${t.id}:${t.owner}:${t.upgrades.join("+")}:${t.kills}${t.priority ? `:${t.priority}` : ""}${t.focus ? `:f${t.focus.target}/${t.focus.stacks}` : ""}${t.specialShots !== undefined ? `:s${t.specialShots}` : ""}`).join(";"),
     s.enemies.map((e) => `${e.id}:${round(e.hp)}:${round(e.distance)}${e.brood !== undefined ? `:b${e.brood}` : ""}`).join(";"),
     s.projectiles.length,
     // Circle missions only, so reactor missions keep their hashes.
     ...(s.circle ? [round(s.circle.next), s.queue.length] : []),
     ...(s.nextWave !== undefined ? [`n${round(s.nextWave)}`] : []),
+    // Aftershock waves still to come; absent without them, so older hashes stay unchanged.
+    ...(s.pending ? [s.pending.map((p) => `${round(p.due)}@${round(p.at.x)},${round(p.at.y)}r${round(p.radius)}d${round(p.damage)}t${p.source.tower}`).join(";")] : []),
   ].join("|");
   return fnv(parts);
 }

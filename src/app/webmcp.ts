@@ -1,4 +1,4 @@
-import { towerLevel } from "../core/upgrades";
+import { towerLevel, towerPath, upgradeOptions } from "../core/upgrades";
 import { describeResult } from "../ui/messages";
 import type { Game } from "../core/game";
 import type { Command, CommandResult, TargetPriority, TowerId } from "../core/types";
@@ -56,6 +56,10 @@ export function registerTools(
             y: tower.y,
             level: towerLevel(tower, game.content),
             upgrades: [...tower.upgrades],
+            path: towerPath(tower, game.content) ?? null,
+            nextUpgrades: upgradeOptions(tower, Infinity, game.content)
+              .filter(option => option.status === "available")
+              .map(option => ({ id: option.definition!.id, label: option.definition!.label, cost: option.definition!.cost })),
             priority: tower.priority ?? "first",
           })),
           remainingEnemies: s.enemies.length + s.queue.length,
@@ -116,6 +120,29 @@ export function registerTools(
         if (!v || !Number.isInteger(v.id) || !TARGET_PRIORITIES.includes(v.priority as TargetPriority))
           throw new Error("Invalid tower id or priority.");
         const r = execute({ type: "target", id: v.id as number, priority: v.priority as TargetPriority });
+        if (!r.ok) throw new Error(describeResult(r));
+        return r;
+      },
+    },
+    {
+      name: "upgrade_defense_tower",
+      description:
+        "Spend credits on one upgrade of a tower (ids from read_defense_state nextUpgrades, e.g. level-2 or a specialization like storm-network-1, which locks the tower's other paths).",
+      inputSchema: {
+        type: "object",
+        properties: {
+          id: { type: "integer", minimum: 1 },
+          upgrade: { type: "string" },
+        },
+        required: ["id", "upgrade"],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false },
+      execute: (input: unknown) => {
+        const v = input as { id?: unknown; upgrade?: unknown } | null;
+        if (!v || !Number.isInteger(v.id) || typeof v.upgrade !== "string")
+          throw new Error("Invalid tower id or upgrade.");
+        const r = execute({ type: "upgrade", id: v.id as number, upgrade: v.upgrade });
         if (!r.ok) throw new Error(describeResult(r));
         return r;
       },

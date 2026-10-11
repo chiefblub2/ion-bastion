@@ -40,7 +40,7 @@ export function towerDetails(
       ? path
         ? `PATH ${pathUpgrades[0].label.toUpperCase()} · ${tower.upgrades.length} / ${pathUpgrades.length}`
         : "CHOOSE PATH"
-      : `LEVEL ${towerLevel(tower, content)} / ${maxTowerLevel(type, content)}`
+      : `LEVEL ${towerLevel(tower, content)} / ${maxTowerLevel(type, content)}${path ? ` · ${(definition.visual.paths?.[path]?.name ?? path).toUpperCase()}` : ""}`
     : definition.name;
   let values: string;
   const resolved = resolveUpgrades(tower ?? { type, upgrades: [] }, content),
