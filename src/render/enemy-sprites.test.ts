@@ -9,7 +9,7 @@ import { DEPTH } from "./depths";
 import { artEdge, artFor, artScale, ENEMY_ART, type EnemyArt } from "./enemy-art";
 import { bodyMotion, TINTS } from "./enemy-appearance";
 import { EnemyFeedback } from "./enemy-feedback";
-import { allClips, animationArt, animationsFor, clipDuration, clipKey } from "./enemy-animations";
+import { allClips, animationArt, animationsFor, clipDuration, sheetKey, type EnemyAnimationState } from "./enemy-animations";
 import { drawEnemyLayers, EnemySprites, MAX_DYING, placeArt, type EnemyLook, type SpriteImage } from "./enemy-sprites";
 import { bodyLift, enemyContext, type EnemyDrawContext } from "./enemies";
 import type { Ink } from "./shapes";
@@ -488,6 +488,12 @@ describe("animated bodies", () => {
   const everything = [...Object.values(ENEMY_ART).map((a) => a!.texture), ...allClips().map((c) => c.texture)];
   const at = (c: EnemyDrawContext, distance: number): EnemyDrawContext => ({ ...c, enemy: { ...c.enemy, distance } });
   const look = (now: number, feedback = new EnemyFeedback()): EnemyLook => ({ now, feedback });
+  /** The clip an image shows: its sheet and a frame in the clip's row. */
+  const clipOf = (image: StubImage) => {
+    const set = animationsFor(image.texture.split(":")[1] as EnemyId);
+    if (!set || image.texture !== set.idle!.texture) return undefined;
+    return (Object.entries(set) as [EnemyAnimationState, { start: number; frames: number }][]).find(([, c]) => image.frame! >= c.start && image.frame! < c.start + c.frames)?.[0];
+  };
   const red = (type: EnemyId) => DEFAULT_CONTENT.enemies[type].color;
 
   it("creates one Image per animated unit and steps its frames without recreating it", () => {
@@ -495,7 +501,8 @@ describe("animated bodies", () => {
       l = look(0);
     sprites.sync([at(unit(1, "drone"), 1)], l);
     expect(images).toHaveLength(1);
-    expect(images[0].texture).toBe(clipKey("drone", "idle"));
+    expect(images[0].texture).toBe(sheetKey("drone"));
+    expect(clipOf(images[0])).toBe("idle");
     const switches: number[] = [];
     for (let i = 1; i <= 20; i++) {
       l.now = i / 30;
@@ -503,7 +510,7 @@ describe("animated bodies", () => {
       switches.push(images[0].switches);
     }
     expect(images).toHaveLength(1);
-    expect(images[0].texture).toBe(clipKey("drone", "move"));
+    expect(clipOf(images[0])).toBe("move");
     // A repeated frame at the same time changes nothing.
     const before = images[0].switches;
     sprites.sync([at(unit(1, "drone"), 2)], l);
@@ -525,12 +532,9 @@ describe("animated bodies", () => {
     near(visibleCentre(images[0], art), 100, 120);
   });
 
-  it("falls back clip by clip, then to the static art, then to the procedural body", () => {
-    const withoutMove = host(everything.filter((t) => t !== clipKey("runner", "move")));
-    withoutMove.sprites.sync([at(unit(1, "runner"), 0)], look(0));
-    withoutMove.sprites.sync([at(unit(1, "runner"), 1)], look(0.1));
-    expect(withoutMove.images[0].texture).toBe(clipKey("runner", "idle"));
-    const staticOnly = host(everything.filter((t) => !t.startsWith("enemy:runner:")));
+  it("falls back to the static art without the sheet, then to the procedural body", () => {
+    // Clip by clip fallbacks (move ↔ idle, no hurt) are `animate`'s (enemy-animator.test.ts).
+    const staticOnly = host(everything.filter((t) => t !== sheetKey("runner")));
     staticOnly.sprites.sync([unit(1, "runner")], look(0));
     expect(staticOnly.images[0]).toMatchObject({ texture: "enemy:runner", frame: undefined });
     const nothing = host(everything.filter((t) => !t.startsWith("enemy:runner")));
@@ -546,10 +550,10 @@ describe("animated bodies", () => {
     sprites.sync([c], look(0, feedback));
     feedback.recordDamage(1, 40, 0.5);
     sprites.sync([c], look(0.5, feedback));
-    expect(images[0].texture).toBe(clipKey("aegis", "hurt"));
+    expect(clipOf(images[0])).toBe("hurt");
     expect(images[0].tint).toEqual({ color: TINTS.slowed, fill: false });
     sprites.sync([c], look(0.5 + clipDuration(animationsFor("aegis")!.hurt!) + 0.01, feedback));
-    expect(images[0].texture).toBe(clipKey("aegis", "idle"));
+    expect(clipOf(images[0])).toBe("idle");
     expect(images[0].tint).toEqual({ color: TINTS.slowed, fill: false });
     // A static body still flashes.
     const plain = host();
@@ -570,7 +574,8 @@ describe("animated bodies", () => {
     // The hit taken while hidden plays no hurt clip later.
     sprites.sync([unit(1, "glider")], look(0.3, feedback));
     expect(images).toHaveLength(1);
-    expect(images[0]).toMatchObject({ visible: true, texture: clipKey("glider", "idle") });
+    expect(images[0].visible).toBe(true);
+    expect(clipOf(images[0])).toBe("idle");
   });
 
   it("plays one death clip at the last placement, then destroys it; paused frames hold", () => {
@@ -581,7 +586,7 @@ describe("animated bodies", () => {
     expect(sprites.retire(new Map([[7, { at: { x: 2, y: 3 }, color: red("boss") }]]), 1.02, red)).toEqual([7]);
     sprites.sync([], look(1.02));
     expect(images).toHaveLength(1);
-    expect(images[0]).toMatchObject({ texture: clipKey("boss", "death"), destroyed: false, tint: undefined, ...placed });
+    expect(images[0]).toMatchObject({ texture: sheetKey("boss"), frame: animationsFor("boss")!.death!.start, destroyed: false, tint: undefined, ...placed });
     expect(sprites.size).toBe(0);
     expect(sprites.isRendering(7)).toBe(false);
     sprites.sync([], look(1.3));

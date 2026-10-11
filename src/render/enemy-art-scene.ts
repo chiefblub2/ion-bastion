@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { allClips, clipError, clipUrl } from "./enemy-animations";
+import { allClips, allSheets, ANIMATION_COLUMNS, ANIMATION_ROWS, clipError, clipUrl } from "./enemy-animations";
 import { artUrl, ENEMY_ART } from "./enemy-art";
 import type { SpriteHost } from "./enemy-sprites";
 /**
@@ -24,29 +24,28 @@ export function queueEnemyArt(scene: Phaser.Scene) {
     });
 }
 /**
- * Queues the enemy animation sheets in a scene's `preload` (each a spritesheet of square cells), once per game like
- * the art. A clip that fails to load or is invalid is warned about once and never queued again; its enemies fall
- * back clip by clip (`animate`), then to the static art. Frames are picked per Image from the effect clock
+ * Queues the enemy animation sheets in a scene's `preload` (one grid spritesheet per animated type, its clips on the
+ * rows), once per game like the art. A sheet that fails to load, or holds an invalid clip, is warned about once and
+ * never queued again; its enemies keep their static art. Frames are picked per Image from the effect clock
  * (`EnemySprites`), so no Phaser animation definitions are needed: Phaser's own playback runs on the game loop and
  * would not freeze with a paused game (`AnimationManager.pauseAll` does not stop sprites in Phaser 3.90).
  */
 export function queueEnemyAnimations(scene: Phaser.Scene) {
-  const queued = allClips().filter((clip) => {
-    if (scene.textures.exists(clip.texture) || failedArt.has(clip.texture)) return false;
+  for (const clip of allClips()) {
     const problem = clipError(clip);
-    if (!problem) return true;
+    if (!problem || failedArt.has(clip.texture)) continue;
     failedArt.add(clip.texture);
-    console.warn(`Enemy animation '${clip.texture}' is invalid (${problem}); those enemies fall back to their other clips or static art.`);
-    return false;
-  });
-  // `endFrame` stops at the last drawn cell; the sheets are padded to a power-of-two width with empty cells.
-  for (const clip of queued) scene.load.spritesheet(clip.texture, clipUrl(clip), { frameWidth: clip.frameWidth, frameHeight: clip.frameHeight, endFrame: clip.frames - 1 });
+    console.warn(`Enemy animation sheet '${clip.texture}' has an invalid clip (${problem}); those enemies keep their static art.`);
+  }
+  const queued = allSheets().filter((sheet) => !scene.textures.exists(sheet.texture) && !failedArt.has(sheet.texture));
+  for (const sheet of queued)
+    scene.load.spritesheet(sheet.texture, clipUrl(sheet), { frameWidth: sheet.frameWidth, frameHeight: sheet.frameHeight, endFrame: ANIMATION_COLUMNS * ANIMATION_ROWS - 1 });
   if (queued.length)
     scene.load.once(Phaser.Loader.Events.COMPLETE, () => {
-      for (const clip of queued)
-        if (!scene.textures.exists(clip.texture)) {
-          failedArt.add(clip.texture);
-          console.warn(`Enemy animation '${clip.texture}' (${clipUrl(clip)}) did not load; those enemies fall back to their other clips or static art.`);
+      for (const sheet of queued)
+        if (!scene.textures.exists(sheet.texture)) {
+          failedArt.add(sheet.texture);
+          console.warn(`Enemy animation sheet '${sheet.texture}' (${clipUrl(sheet)}) did not load; those enemies keep their static art.`);
         }
     });
 }

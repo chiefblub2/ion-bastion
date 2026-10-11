@@ -1,5 +1,5 @@
 import type { EnemyId } from "../core/types";
-import { ANIMATION_STATES, animationsFor, clipDuration, clipFrame, clipUrl, type AnimationClip, type EnemyAnimationState } from "../render/enemy-animations";
+import { ANIMATION_STATES, animationsFor, clipDuration, clipFrame, clipUrl, sheetFrame, type AnimationClip, type EnemyAnimationState } from "../render/enemy-animations";
 import { artFor, artUrl } from "../render/enemy-art";
 import { escape } from "./format";
 /**
@@ -16,8 +16,9 @@ interface Player {
   sprite: HTMLElement;
   state: EnemyAnimationState;
   clip: AnimationClip;
-  /** Cells in the loaded sheet (padded to a power of two); 0 until it loaded, -1 when it failed. */
+  /** Columns and rows of cells in the loaded sheet; 0 until it loaded, -1 when it failed. */
   cells: number;
+  rows: number;
   playing: boolean;
   /** Seconds into the clip when paused, or the clock origin while playing. */
   elapsed: number;
@@ -81,7 +82,7 @@ function openPreview(toggle: HTMLElement) {
   panel.hidden = false;
   toggle.setAttribute("aria-expanded", "true");
   toggle.textContent = "■";
-  open = { id, name, panel, toggle, sprite: panel.querySelector(".codex-sprite")!, state: first, clip: set[first]!, cells: 0, playing: false, elapsed: 0, startedAt: 0, frame: 0, raf: 0 };
+  open = { id, name, panel, toggle, sprite: panel.querySelector(".codex-sprite")!, state: first, clip: set[first]!, cells: 0, rows: 0, playing: false, elapsed: 0, startedAt: 0, frame: 0, raf: 0 };
   showClip(open, set.idle ? "idle" : first, !reducedMotion());
   if (reducedMotion()) note(open, "Reduced motion is on: press Play to animate.");
 }
@@ -101,8 +102,10 @@ function showClip(p: Player, state: EnemyAnimationState, play = p.playing || !re
   probe.onload = () => {
     if (open !== p || p.clip !== clip) return;
     p.cells = Math.max(1, Math.round(probe.naturalWidth / clip.frameWidth));
+    p.rows = Math.max(1, Math.round(probe.naturalHeight / clip.frameHeight));
     p.sprite.style.backgroundImage = `url("${url}")`;
-    p.sprite.style.backgroundSize = `${p.cells * 100}% 100%`;
+    p.sprite.style.backgroundSize = `${p.cells * 100}% ${p.rows * 100}%`;
+    p.sprite.style.backgroundPositionX = "";
     note(p, reducedMotion() && !p.playing ? "Reduced motion is on: press Play to animate." : "");
     render(p);
   };
@@ -154,7 +157,14 @@ function stop(p: Player) {
 }
 function render(p: Player) {
   const frame = clipFrame(p.clip, p.elapsed);
-  if (p.cells > 1 && (frame !== p.frame || !p.sprite.style.backgroundPositionX)) p.sprite.style.backgroundPositionX = `${(frame / (p.cells - 1)) * 100}%`;
+  // The clip's row and column in the sheet's grid, as background percentages (0% first, 100% last cell).
+  if (p.cells > 1 && (frame !== p.frame || !p.sprite.style.backgroundPositionX)) {
+    const f = sheetFrame(p.clip, frame),
+      col = f % p.cells,
+      row = Math.floor(f / p.cells);
+    p.sprite.style.backgroundPositionX = `${(col / (p.cells - 1)) * 100}%`;
+    p.sprite.style.backgroundPositionY = p.rows > 1 ? `${(row / (p.rows - 1)) * 100}%` : "0%";
+  }
   p.frame = frame;
   p.sprite.setAttribute("aria-label", `${p.name}, ${LABEL[p.state].toLowerCase()} animation, frame ${frame + 1} of ${p.clip.frames}`);
 }

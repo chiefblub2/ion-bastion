@@ -1,16 +1,19 @@
 /**
- * Re-cuts the supplied enemy animation sheets (`assets-src/enemy-animations/`, described by its `manifest.json`)
- * into the game sheets in `public/assets/enemy-animations/`, losslessly: every pixel is copied, none is resampled.
+ * Re-cuts the supplied enemy animation sheets (`assets-src/enemy-animations/<id>.png`, described by its
+ * `manifest.json`, version 2) into the game sheets `public/assets/enemy-animations/<id>.png`, losslessly: every
+ * pixel is copied, none is resampled.
  *
  *   npx vite-node scripts/normalize-enemy-animations.ts [-- --in <dir> --out <dir>]
  *
- * Why: the supplied strips are declared as 222 px cells, but their frames are not on that grid. Most frames sit
- * 12–40 px right of their cell, so their noses, barrels and shields spill into the next cell (one frame's tip shows
- * at the left edge of the next one, and its own tip is missing); the drone's idle, move and hurt strips even hold
- * 7, 7 and 3 frames on a 250 px pitch. Each frame is cut at the empty columns between frames (the source pitch and
- * frame count, see `LAYOUT`) and placed into a 256 px square cell at its authored position relative to its pitch, so
- * the motion within a clip stays as drawn. The clip's resting body is then aligned to the idle clip's (`align`), so
- * switching clips never jumps. 256 px cells make power-of-two sheets, which WebGL mipmaps (`ART_FILTERING`).
+ * Source: one grid per enemy, `columns` × `rows` cells of `frameWidth` × `frameHeight` px, one animation per row
+ * (`animations.<state>.row`, `frames` cells from the left). Why re-cut: the frames do not sit exactly in their cells.
+ * Some reach past the right edge, so a nose, barrel or shield tip shows at the left edge of the next cell and is
+ * missing from its own; some loops slide a few pixels per frame and snap back at the seam (aegis idle, drone move);
+ * the aegis sheet carries faint grid lines along its cell boundaries (`eraseGridLines`).
+ * Each row is cut at the empty columns between frames (a whole visible island stays with the frame its centre lies
+ * in) and placed into a 256 px cell at its authored position relative to the pitch; every clip's opening frame is
+ * aligned to the first idle frame, and loop frames are held on the resting body, so switching clips never jumps.
+ * Output: the same grid with 256 px cells (8 × 4 → 2048 × 1024, a power of two, which WebGL mipmaps).
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { decodePng, encodePng, VISIBLE_ALPHA, type Png } from "./png";
@@ -28,24 +31,20 @@ const IN = dir(arg("--in", "assets-src/enemy-animations")),
 export const CELL = 256;
 const STATES = ["idle", "move", "hurt", "death"] as const;
 type State = (typeof STATES)[number];
-/**
- * Source layouts that differ from the manifest, reviewed by eye on the contact sheets: frame count and pitch in
- * source pixels. The drone strips were drawn wider than their cells; its hurt strip ends in a truncated fourth frame,
- * which is dropped.
- */
-const LAYOUT: Partial<Record<string, Partial<Record<State, { frames: number; pitch: number }>>>> = {
-  drone: { idle: { frames: 7, pitch: 250 }, move: { frames: 7, pitch: 250 }, hurt: { frames: 3, pitch: 250 } },
-};
 /** How far (source pixels) a cut may move from its predicted boundary to find the gap between two frames. */
 const SEARCH = 40;
 
-interface ManifestClip {
-  sheet: string;
-  frameCount: number;
+/** The supplied pack (`manifest.json`, version 2). */
+export interface PackManifest {
+  version: 2;
   frameWidth: number;
   frameHeight: number;
+  columns: number;
+  rows: number;
+  animations: Record<State, { row: number; start: number; frames: number; fps: number; loop: boolean }>;
+  enemies: Record<string, { sheet: string }>;
 }
-const manifest = JSON.parse(readFileSync(new URL("manifest.json", IN), "utf8")) as { enemies: Record<string, { states: Record<State, ManifestClip> }> };
+const manifest = JSON.parse(readFileSync(new URL("manifest.json", IN), "utf8")) as PackManifest;
 
 /** Number of visible pixels (alpha > `VISIBLE_ALPHA`) per column; fainter glow may be cut through. */
 function columns(png: Png) {
@@ -133,8 +132,11 @@ function cuts(png: Png, frames: number, pitch: number, notes: string[]) {
 const windowOffset = (bounds: number[], pitch: number) => Math.round(bounds.slice(0, -1).reduce((t, from, i) => t + (from + bounds[i + 1]) / 2 - (i + 0.5) * pitch, 0) / (bounds.length - 1));
 /**
  * Which frame each pixel belongs to. A visible island (4-connected, alpha > `VISIBLE_ALPHA`) goes whole to the frame
- * its centre lies in, so a barrel or nose that reaches past a cut stays with its body; faint glow and islands wider
- * than a frame (smoke joining two frames) follow the column cuts. -1: transparent, or part of a dropped frame.
+ * its centre lies in, so a barrel, nose or shield that reaches past a cut stays with its body; a small island goes to
+ * the frame of the nearest owned pixels, so a flame tip broken off at a boundary stays with its flame; faint glow
+ * an island wider than a frame (two frames' art touching) is split from its solid cores outward
+ * (`splitWide`); faint glow outside every island follows the column cuts. -1: transparent, or part of a
+ * dropped frame.
  */
 function owners(png: Png, bounds: number[], pitch: number, offset: number) {
   const { width, height, rgba } = png,
@@ -143,36 +145,126 @@ function owners(png: Png, bounds: number[], pitch: number, offset: number) {
     byColumn = new Int8Array(width).fill(-1);
   for (let f = 0; f < bounds.length - 1; f++) byColumn.fill(f, bounds[f], bounds[f + 1]);
   const frames = bounds.length - 1,
-    stack: number[] = [];
+    stack: number[] = [],
+    islands: { members: number[]; cx: number; x0: number; x1: number; y0: number; y1: number }[] = [];
   for (let start = 0; start < width * height; start++) {
     if (label[start] >= 0 || rgba[start * 4 + 3] <= VISIBLE_ALPHA) continue;
-    const members: number[] = [];
-    let sx = 0,
-      x0 = width,
-      x1 = 0;
+    const island = { members: [] as number[], cx: 0, x0: width, x1: 0, y0: height, y1: 0 };
     label[start] = start;
     stack.push(start);
     while (stack.length) {
       const p = stack.pop()!,
-        x = p % width;
-      members.push(p);
-      sx += x;
-      x0 = Math.min(x0, x);
-      x1 = Math.max(x1, x);
+        x = p % width,
+        y = (p - x) / width;
+      island.members.push(p);
+      island.cx += x;
+      island.x0 = Math.min(island.x0, x);
+      island.x1 = Math.max(island.x1, x);
+      island.y0 = Math.min(island.y0, y);
+      island.y1 = Math.max(island.y1, y);
       for (const q of [x > 0 ? p - 1 : -1, x < width - 1 ? p + 1 : -1, p - width, p + width])
         if (q >= 0 && q < width * height && label[q] < 0 && rgba[q * 4 + 3] > VISIBLE_ALPHA) {
           label[q] = start;
           stack.push(q);
         }
     }
+    island.cx /= island.members.length;
+    islands.push(island);
+  }
+  /**
+   * An island wider than a frame: two frames' art touching (a shield rim on the next frame's thrust flame) or smoke.
+   * Its solid cores (alpha > `CORE_ALPHA`) go to the frame of their centre (one still wider than a frame follows the
+   * column cuts); the rest of the island then grows outward from the cores through its own connected pixels
+   * (breadth first, all cores at once), so each glow pixel joins the core it is joined to most directly.
+   */
+  const splitWide = (members: number[]) => {
+    const inIsland = new Set(members),
+      seen = new Set<number>(),
+      queue: number[] = [];
+    for (const start of members) {
+      if (seen.has(start) || rgba[start * 4 + 3] <= CORE_ALPHA) continue;
+      const core: number[] = [start];
+      seen.add(start);
+      for (let k = 0; k < core.length; k++) {
+        const p = core[k],
+          x = p % width;
+        for (const q of [x > 0 ? p - 1 : -1, x < width - 1 ? p + 1 : -1, p - width, p + width])
+          if (inIsland.has(q) && !seen.has(q) && rgba[q * 4 + 3] > CORE_ALPHA) {
+            seen.add(q);
+            core.push(q);
+          }
+      }
+      let cx = 0,
+        x0 = width,
+        x1 = 0;
+      for (const p of core) {
+        const x = p % width;
+        cx += x;
+        x0 = Math.min(x0, x);
+        x1 = Math.max(x1, x);
+      }
+      const f = Math.max(0, Math.floor((cx / core.length - offset) / pitch));
+      for (const p of core) owner[p] = x1 - x0 > pitch * 1.1 ? byColumn[p % width] : f < frames ? f : -1;
+      queue.push(...core);
+    }
+    for (let k = 0; k < queue.length; k++) {
+      const p = queue[k],
+        x = p % width;
+      for (const q of [x > 0 ? p - 1 : -1, x < width - 1 ? p + 1 : -1, p - width, p + width])
+        if (inIsland.has(q) && !seen.has(q)) {
+          seen.add(q);
+          owner[q] = owner[p];
+          queue.push(q);
+        }
+    }
+    for (const m of members) if (!seen.has(m)) owner[m] = byColumn[m % width];
+  };
+  // Largest first: bodies decide by their centre, slivers then follow the bodies around them.
+  islands.sort((a, b) => b.members.length - a.members.length);
+  for (const island of islands) {
+    let own: number;
+    if (island.x1 - island.x0 > pitch * 1.1) {
+      splitWide(island.members);
+      continue;
+    }
     // An island centred past the last frame belongs to a truncated frame that is dropped.
-    const f = Math.max(0, Math.floor((sx / members.length - offset) / pitch)),
-      own = f < frames ? f : -1;
-    for (const m of members) owner[m] = x1 - x0 > pitch * 1.1 ? byColumn[m % width] : own;
+    const f = Math.max(0, Math.floor((island.cx - offset) / pitch));
+    own = f < frames ? f : -1;
+    if (island.members.length < SLIVER_AREA) {
+      // A sliver (a glow tip, a spark, an anti-aliased fringe) joins the frame of the nearest owned pixels: the
+      // ring at the smallest distance (up to `NEAR`) that holds any, by majority. A flame tip broken off its flame
+      // finds the flame a pixel or two away before a neighbouring frame's shield further off.
+      for (let r = 1; r <= NEAR; r++) {
+        const votes = new Map<number, number>();
+        for (const m of island.members) {
+          const mx = m % width,
+            my = (m - mx) / width;
+          for (let dy = -r; dy <= r; dy++)
+            for (let dx = -r; dx <= r; dx++) {
+              if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+              const x = mx + dx,
+                y = my + dy;
+              if (x < 0 || y < 0 || x >= width || y >= height) continue;
+              const o = owner[y * width + x];
+              if (o >= 0) votes.set(o, (votes.get(o) ?? 0) + 1);
+            }
+        }
+        if (!votes.size) continue;
+        let best = 0;
+        for (const [frame, n] of votes) if (n > best) [own, best] = [frame, n];
+        break;
+      }
+    }
+    for (const m of island.members) owner[m] = own;
   }
   for (let p = 0; p < width * height; p++) if (owner[p] < 0 && rgba[p * 4 + 3] > 0) owner[p] = byColumn[p % width];
   return owner;
 }
+/** Islands smaller than this (pixels) are slivers that follow their nearest neighbour; `NEAR` is how far they look. */
+const SLIVER_AREA = 200,
+  NEAR = 8;
+/** Alpha of the solid cores that split an island wider than a frame (`splitWide`). */
+const CORE_ALPHA = 160;
 /**
  * Copies each frame into a game cell: source x minus its pitch origin and `offset`, centred; y moved down by `padY`.
  * `nudge` moves single frames further (loop alignment).
@@ -230,49 +322,100 @@ export function alignment(ref: Png, cell: Png) {
     }
   return { dx: best.dx * 2, dy: best.dy * 2 };
 }
-/** The frames side by side; the strip is padded with empty cells to a power-of-two width, so WebGL mipmaps it. */
-function strip(frames: Png[]): Png {
-  const width = 2 ** Math.ceil(Math.log2(CELL * frames.length)),
-    rgba = new Uint8Array(width * CELL * 4);
-  frames.forEach((f, i) => {
-    for (let y = 0; y < CELL; y++) rgba.set(f.rgba.subarray(y * CELL * 4, (y + 1) * CELL * 4), (y * width + i * CELL) * 4);
-  });
-  return { ...frames[0], width, height: CELL, rgba };
+/**
+ * Faint grid lines left in a source sheet (aegis): single columns or rows of grey pixels at alpha ~8–40 along the
+ * cell boundaries. A line is a column (row) whose pixels stay faintly opaque where the pixels `LINE_SPAN` to either
+ * side are empty; its pixels at alpha ≤ `LINE_ALPHA` with faint sides are erased, so art crossing it is kept.
+ * Returns the sheet without them and the lines found.
+ */
+const LINE_SPAN = 4,
+  LINE_ALPHA = 40;
+export function eraseGridLines(png: Png): { png: Png; lines: string[] } {
+  const { width, height } = png,
+    rgba = png.rgba.slice(),
+    lines: string[] = [],
+    alpha = (x: number, y: number) => rgba[(y * width + x) * 4 + 3];
+  const scan = (vertical: boolean) => {
+    const n = vertical ? width : height,
+      m = vertical ? height : width,
+      at = (i: number, j: number) => (vertical ? alpha(i, j) : alpha(j, i));
+    for (let i = LINE_SPAN; i < n - LINE_SPAN; i++) {
+      let quiet = 0,
+        faint = 0;
+      for (let j = 0; j < m; j++)
+        if (at(i - LINE_SPAN, j) < 6 && at(i + LINE_SPAN, j) < 6) {
+          quiet++;
+          if (at(i, j) >= 6 && at(i, j) <= LINE_ALPHA) faint++;
+        }
+      // Most of its empty stretch is faintly drawn: a line, not the edge of some art.
+      if (quiet < m / 4 || faint < quiet * 0.5) continue;
+      let erased = 0;
+      for (let j = 0; j < m; j++) {
+        if (at(i, j) > LINE_ALPHA || at(i - LINE_SPAN, j) > LINE_ALPHA || at(i + LINE_SPAN, j) > LINE_ALPHA) continue;
+        const k = ((vertical ? j * width + i : i * width + j) * 4) + 3;
+        if (rgba[k]) erased++;
+        rgba[k] = 0;
+      }
+      lines.push(`${vertical ? "x" : "y"}=${i} (${erased} px)`);
+    }
+  };
+  scan(true);
+  scan(false);
+  return { png: { ...png, rgba }, lines };
+}
+/** One row of a source grid as a strip of its own. */
+function row(png: Png, r: number, height: number): Png {
+  return { ...png, height, rgba: png.rgba.slice(r * height * png.width * 4, (r + 1) * height * png.width * 4) };
+}
+/** The game grid: each clip's frames on its row, left-aligned, in 256 px cells; unused cells stay empty. */
+function grid(clips: { row: number; frames: Png[] }[], columns: number, rows: number): Png {
+  const width = CELL * columns,
+    rgba = new Uint8Array(width * CELL * rows * 4);
+  for (const c of clips)
+    c.frames.forEach((f, i) => {
+      for (let y = 0; y < CELL; y++) rgba.set(f.rgba.subarray(y * CELL * 4, (y + 1) * CELL * 4), ((c.row * CELL + y) * width + i * CELL) * 4);
+    });
+  return { ...clips[0].frames[0], width, height: CELL * rows, rgba };
 }
 
-for (const [id, set] of Object.entries(manifest.enemies)) {
-  mkdirSync(new URL(`${id}/`, OUT), { recursive: true });
+if (manifest.version !== 2) throw new Error(`manifest version ${manifest.version}: expected 2 (one grid per enemy)`);
+mkdirSync(OUT, { recursive: true });
+for (const [id, { sheet }] of Object.entries(manifest.enemies)) {
+  const cleaned = eraseGridLines(decodePng(readFileSync(new URL(sheet, ROOT)))),
+    source = cleaned.png,
+    { frameWidth: pitch, frameHeight, columns, rows } = manifest;
+  if (source.width !== pitch * columns || source.height !== frameHeight * rows) throw new Error(`${sheet}: ${source.width}×${source.height} is not ${columns}×${rows} cells of ${pitch}×${frameHeight}`);
+  if (cleaned.lines.length) console.log(`${id}: erased faint grid lines ${cleaned.lines.join(", ")}`);
   const clips = STATES.map((state) => {
     const notes: string[] = [],
-      { png, band } = unwrap(decodePng(readFileSync(new URL(`${id}/${state}.png`, IN)))),
-      { frames, pitch } = LAYOUT[id]?.[state] ?? { frames: set.states[state].frameCount, pitch: set.states[state].frameWidth };
+      a = manifest.animations[state],
+      { png, band } = unwrap(row(source, a.row, frameHeight));
     if (band > 0) notes.push(`unwrapped ${band} rows from the top back below the body`);
     if (band < 0) notes.push(`erased a ${-band} px sliver of cut debris at the top edge`);
-    const bounds = cuts(png, frames, pitch, notes);
-    return { state, png, frames, pitch, bounds, notes, offset: windowOffset(bounds, pitch), rows: rowRange(png) };
+    const bounds = cuts(png, a.frames, pitch, notes);
+    return { state, row: a.row, png, frames: a.frames, bounds, notes, offset: windowOffset(bounds, pitch), rows: rowRange(png) };
   });
-  // One offset per pitch (the idle clip's, else the clip's own) and one vertical pad per enemy, so every clip keeps
-  // the authored position of the body and switching clips never jumps.
+  // One horizontal offset (the idle row's) and one vertical pad per enemy, so every clip keeps the authored position
+  // of the body; then each clip's opening frame is aligned to the first idle frame.
   const idle = clips[0],
     y0 = Math.min(...clips.map((c) => c.rows.y0)),
     y1 = Math.max(...clips.map((c) => c.rows.y1)),
-    padY = Math.max(-y0, Math.min(Math.round((CELL - set.states.idle.frameHeight) / 2), CELL - 1 - y1));
+    padY = Math.max(-y0, Math.min(Math.round((CELL - frameHeight) / 2), CELL - 1 - y1));
   let rest: Png | undefined;
-  for (const c of clips) {
-    const offset = c.pitch === idle.pitch ? idle.offset : c.offset,
-      first = place(c.png, c.bounds, c.pitch, offset, padY, []),
-      // Every clip's opening frame (for death the intact body) is laid onto the first idle frame.
+  const placed = clips.map((c) => {
+    const first = place(c.png, c.bounds, pitch, idle.offset, padY, []),
       shift = rest ? alignment(rest, first[0]) : { dx: 0, dy: 0 },
-      placed = place(c.png, c.bounds, c.pitch, offset - shift.dx, padY + shift.dy, []),
-      // Loops hold the body still: some supplied loops slide (aegis idle drifts 28 px and jumps back at the seam).
-      // Each frame is laid onto the resting body; hurt and death keep their recoil and debris as drawn.
+      held = place(c.png, c.bounds, pitch, idle.offset - shift.dx, padY + shift.dy, []),
+      // Loops hold the body still (some supplied loops slide and snap back at the seam); hurt and death keep their
+      // recoil and debris as drawn.
       loop = c.state === "idle" || c.state === "move",
-      nudge = loop ? placed.map((f) => alignment(rest ?? placed[0], f)) : [],
-      frames = place(c.png, c.bounds, c.pitch, offset - shift.dx, padY + shift.dy, c.notes, nudge);
+      nudge = loop ? held.map((f) => alignment(rest ?? held[0], f)) : [],
+      frames = place(c.png, c.bounds, pitch, idle.offset - shift.dx, padY + shift.dy, c.notes, nudge);
     rest ??= frames[0];
     if (nudge.some((n) => n.dx || n.dy)) c.notes.push(`loop frames nudged ${nudge.map((n) => `${n.dx},${n.dy}`).join(" ")}`);
-    writeFileSync(new URL(`${id}/${c.state}.png`, OUT), encodePng(strip(frames)));
-    console.log(`${id}/${c.state}: ${c.frames} frames from a ${c.pitch} px pitch, offset ${offset}, pad ${padY}${shift.dx || shift.dy ? `, aligned ${shift.dx}, ${shift.dy} px onto idle` : ""}`);
+    console.log(`${id}/${c.state}: ${c.frames} frames, offset ${idle.offset}, pad ${padY}${shift.dx || shift.dy ? `, aligned ${shift.dx}, ${shift.dy} px onto idle` : ""}`);
     for (const n of c.notes) console.log(`  ${n}`);
-  }
+    return { row: c.row, frames };
+  });
+  writeFileSync(new URL(`${id}.png`, OUT), encodePng(grid(placed, columns, rows)));
 }

@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { DEFAULT_CONTENT } from "./content";
 import { Game } from "./core/game";
 import type { EnemyId } from "./core/types";
-import { ANIMATION_STATES, animationArt, animationsFor, clipFrame, ENEMY_ANIMATIONS, type EnemyAnimationState } from "./render/enemy-animations";
+import { ANIMATION_STATES, animationArt, animationsFor, clipFrame, ENEMY_ANIMATIONS, sheetFrame, type EnemyAnimationState } from "./render/enemy-animations";
 import { artFor } from "./render/enemy-art";
 import { queueEnemyAnimations, queueEnemyArt } from "./render/enemy-art-scene";
 import { placeArt } from "./render/enemy-sprites";
@@ -95,7 +95,7 @@ export class AnimReview extends Phaser.Scene {
       const x = PAD + i * (BIG + PAD);
       g.fillStyle(ground).fillRect(x, PAD + 18, BIG, BIG);
       label(x, PAD, i ? "light ground, full cell" : "dark ground, full cell");
-      if (ok) this.images.push(this.add.image(x + BIG / 2, PAD + 18 + BIG / 2, clip.texture, 0).setDepth(1));
+      if (ok) this.images.push(this.add.image(x + BIG / 2, PAD + 18 + BIG / 2, clip.texture, sheetFrame(clip, 0)).setDepth(1));
     }
     // Game size: four headings and the static art.
     const gx = PAD * 3 + BIG * 2,
@@ -106,7 +106,7 @@ export class AnimReview extends Phaser.Scene {
       g.fillStyle(i % 2 ? 0x24333d : 0x1c2a33).fillRect(x, gy, TILE, TILE);
       g.fillStyle(0x31424d).fillRect(x, gy + TILE / 2 - 14, TILE, 28);
       const tex = i < 4 ? (ok ? clip.texture : undefined) : stat && this.textures.exists(stat.texture) ? stat.texture : undefined;
-      if (tex) this.images.push(this.add.image(0, 0, tex, i < 4 ? 0 : undefined).setDepth(1));
+      if (tex) this.images.push(this.add.image(0, 0, tex, i < 4 && clip ? sheetFrame(clip, 0) : undefined).setDepth(1));
       else label(x + 6, gy + TILE / 2 - 6, "unavailable", "#ff8b8b");
     }
     label(gx, gy + TILE + 6, "static", "#9fb4c0");
@@ -117,7 +117,7 @@ export class AnimReview extends Phaser.Scene {
       for (let f = 0; f < clip.frames; f++) {
         const x = PAD + f * (STRIP + 6);
         g.fillStyle(0x0d1820).fillRect(x, sy, STRIP, STRIP);
-        if (ok) this.images.push(this.add.image(x + STRIP / 2, sy + STRIP / 2, clip.texture, f).setDisplaySize(STRIP, STRIP).setDepth(1));
+        if (ok) this.images.push(this.add.image(x + STRIP / 2, sy + STRIP / 2, clip.texture, sheetFrame(clip, f)).setDisplaySize(STRIP, STRIP).setDepth(1));
         label(x + 3, sy + STRIP + 2, `${f + 1}`);
       }
     if (!ok) label(PAD + 8, PAD + 30, clip ? `${clip.texture}: not loaded (falls back to other clips or static art)` : `${sel.id} has no ${sel.clip} clip`, "#ff8b8b");
@@ -140,7 +140,7 @@ export class AnimReview extends Phaser.Scene {
     if (ok)
       for (let i = 0; i < 2; i++) {
         const img = this.images[n++];
-        img.setFrame(frame);
+        img.setFrame(sheetFrame(clip, frame));
         if (sel.bounds) {
           const x = PAD + i * (BIG + PAD),
             y = PAD + 18,
@@ -161,7 +161,7 @@ export class AnimReview extends Phaser.Scene {
         c = enemyContext(0, 0, CELL, e, definition, heading, statusFlags(e, 0), { ...traitFlags(sim, e), revealed: true }, 0),
         at = placeArt(c, animated ? art : stat!),
         img = this.images[n++];
-      if (animated) img.setFrame(frame);
+      if (animated) img.setFrame(sheetFrame(clip, frame));
       img.setPosition(cx + at.x * GAME_ZOOM, cy + at.y * GAME_ZOOM).setRotation(at.rotation).setDisplaySize(at.size * GAME_ZOOM, at.size * GAME_ZOOM).setFlip(at.flipX, at.flipY);
       if (sel.bounds) {
         m.lineStyle(1, 0xffffff, 0.7).strokeCircle(cx, cy, c.r * GAME_ZOOM);
@@ -183,7 +183,7 @@ export class AnimReview extends Phaser.Scene {
     const clip = animationsFor(sel.id)?.[sel.clip];
     if (!this.status) return;
     this.status.textContent = clip
-      ? `${sel.id}/${sel.clip} · frame ${frame + 1}/${clip.frames} · ${clip.fps} fps × ${sel.speed} · ${clip.frameWidth}×${clip.frameHeight} px cells · ${clip.loop ? "loop" : "once"} · ${this.textures.exists(clip.texture) ? "loaded" : "UNAVAILABLE"}`
+      ? `${sel.id}/${sel.clip} · frame ${frame + 1}/${clip.frames} · ${clip.fps} fps × ${sel.speed} · ${clip.frameWidth}×${clip.frameHeight} px cells · sheet frames ${clip.start}–${clip.start + clip.frames - 1} · ${clip.loop ? "loop" : "once"} · ${this.textures.exists(clip.texture) ? "loaded" : "UNAVAILABLE"}`
       : `${sel.id}: no ${sel.clip} clip`;
   }
   /** The DOM control bar above the canvas. */

@@ -2,7 +2,7 @@ import type Phaser from "phaser";
 import type { EnemyId } from "../core/types";
 import { DEPTH } from "./depths";
 import { bodyMotion, resolveEnemyTint, type BodyMotion } from "./enemy-appearance";
-import { animationArt, animationsFor, clipDuration, clipFrame, type AnimationClip } from "./enemy-animations";
+import { animationArt, animationsFor, clipDuration, clipFrame, sheetFrame, type AnimationClip } from "./enemy-animations";
 import { animate, freshTrack, type AnimationTrack, type Kill } from "./enemy-animator";
 import { ART_FILL, artEdge, artFor, type EnemyArt } from "./enemy-art";
 import { drawEnemyAccents, type EnemyFeedback } from "./enemy-feedback";
@@ -126,7 +126,8 @@ interface Look {
 }
 /**
  * Painted enemy bodies (render only): one Image per enemy id with art and a loaded texture, reused across frames.
- * Animated types (`ENEMY_ANIMATIONS`) show a frame of their idle, move or hurt sheet (`animate`) on the same Image;
+ * Animated types (`ENEMY_ANIMATIONS`) show a frame of their idle, move or hurt clip (`animate`) from their one sheet
+ * on the same Image, so changing clips is a frame change;
  * a missing clip falls back to the other loop, then to the static art, then to the procedural body
  * (`drawEnemyBody`), which every unit that is hidden or burrowed keeps as well. Killed units with a death clip
  * play it once as a bounded set of dying Images (`retire`).
@@ -163,7 +164,7 @@ export class EnemySprites {
         moving = pick && animationArt(type),
         art = artFor(type),
         shown: Look | undefined = moving
-          ? { texture: pick.clip.texture, frame: pick.frame, art: moving, hurt: pick.hurt }
+          ? { texture: pick.clip.texture, frame: sheetFrame(pick.clip, pick.frame), art: moving, hurt: pick.hurt }
           : art && this.host.hasTexture(art.texture)
             ? { texture: art.texture, art, hurt: false }
             : undefined;
@@ -208,7 +209,7 @@ export class EnemySprites {
       this.sprites.delete(id);
       this.shown.delete(id);
       // The same Image plays on: its last position, heading, mirroring and size stay; status tints end with the unit.
-      sprite.image.setTexture(death.texture, 0).setDisplaySize(sprite.placed.size, sprite.placed.size).clearTint();
+      sprite.image.setTexture(death.texture, sheetFrame(death, 0)).setDisplaySize(sprite.placed.size, sprite.placed.size).clearTint();
       this.dying.push({ image: sprite.image, clip: death, since: now, frame: 0 });
       started.push(id);
       this.deaths++;
@@ -251,7 +252,7 @@ export class EnemySprites {
         return false;
       }
       const frame = clipFrame(d.clip, elapsed);
-      if (frame !== d.frame) d.image.setFrame(frame);
+      if (frame !== d.frame) d.image.setFrame(sheetFrame(d.clip, frame));
       d.frame = frame;
       return true;
     });

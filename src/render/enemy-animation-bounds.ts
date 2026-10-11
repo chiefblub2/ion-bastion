@@ -3,10 +3,10 @@ import type { EnemyId } from "../core/types";
 import type { ArtBounds } from "./enemy-art";
 /** Visible bounds of the resting body (union of the idle frames) as a share of the animation cell. */
 export const ANIMATION_BOUNDS: Readonly<Partial<Record<EnemyId, ArtBounds>>> = {
-  drone: { w: 0.8945, h: 0.7227, x: 0.0098, y: 0.0762 },
-  runner: { w: 0.7734, h: 0.6445, x: 0.0469, y: 0.0918 },
-  tank: { w: 0.8164, h: 0.5586, x: 0.0215, y: 0.0801 },
-  boss: { w: 0.7813, h: 0.75, x: 0.0039, y: 0.0586 },
-  glider: { w: 0.7656, h: 0.7227, x: 0.0234, y: 0.0371 },
-  aegis: { w: 0.8164, h: 0.7305, x: 0.0566, y: 0.0605 },
+  drone: { w: 0.7852, h: 0.7109, x: 0.0098, y: 0.0508 },
+  runner: { w: 0.8086, h: 0.6172, x: 0.0098, y: 0.0391 },
+  tank: { w: 0.8516, h: 0.6172, x: 0.0195, y: 0.0859 },
+  boss: { w: 0.8047, h: 0.6875, x: 0.0039, y: 0.0469 },
+  glider: { w: 0.7344, h: 0.7227, x: 0.0039, y: 0.0449 },
+  aegis: { w: 0.9063, h: 0.8633, x: -0.0195, y: 0.002 },
 };
