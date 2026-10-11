@@ -55,8 +55,12 @@ function dropShadow(g: Ink, { x, y, r }: EnemyDrawContext, air: boolean, alpha =
   if (air) g.fillEllipse(x, y + 14, r * 1.8, r * 0.9);
   else g.fillEllipse(x, y + 6, r * w, r * h);
 }
-/** Flyers float a little above their position. */
-const lift = ({ y, air }: EnemyDrawContext) => y - (air ? 4 : 0);
+/**
+ * How far the body floats above its position: 4 px for anything drawn as flying, except the glider shape, whose
+ * distant shadow alone shows the height. Painted bodies (`enemy-sprites.ts`) use the same lift.
+ */
+export const bodyLift = ({ air, definition }: EnemyDrawContext) => (air && definition.visual.shape !== "glider" ? 4 : 0);
+const lift = (c: EnemyDrawContext) => c.y - bodyLift(c);
 /** One worm segment: a chain trailing behind the head with a gentle sway. */
 function wormSegment({ x, r, heading, clock }: EnemyDrawContext, cy: number, segments: number, i: number) {
   const back = { x: -Math.cos(heading), y: -Math.sin(heading) },

@@ -9,7 +9,10 @@ import { enemyAt } from "./pick";
 import type { GameEvent, GameState, Point, TowerId } from "../core/types";
 import { PLAYER_COLORS } from "../net/protocol";
 import { drawEffect, effectLifetime, INCOME_LIFETIME, isVisual, type EffectOrigin, type VisualEvent } from "./effects";
-import { drawEnemyBody, drawEnemyOverlay, drawEnemyUnderlay, enemyContext } from "./enemies";
+import { DEPTH } from "./depths";
+import { enemyContext } from "./enemies";
+import { artUrl, ENEMY_ART } from "./enemy-art";
+import { drawEnemyLayers, EnemySprites } from "./enemy-sprites";
 import { CELL, px, type Pen } from "./shapes";
 import { drawAmbient, drawTerrain, themeAccent, themeGlow } from "./terrain";
 import { drawTower } from "./towers";
@@ -17,6 +20,8 @@ import { Trails } from "./trails";
 export { CELL } from "./shapes";
 /** Upper bound for the canvas's longer side in pixels, so a huge 4K full screen stays cheap to fill. */
 const MAX_CANVAS = 4096;
+/** Art textures that failed to load: never queued again (their enemies stay procedural) and warned about once. */
+const failedArt = new Set<string>();
 export interface ViewState {
   build: TowerId | null;
   selected: number | null;
@@ -87,6 +92,11 @@ export class Battlefield extends Phaser.Scene {
   private enemyUnderlay!: Phaser.GameObjects.Graphics;
   private enemyBody!: Phaser.GameObjects.Graphics;
   private enemyOverlay!: Phaser.GameObjects.Graphics;
+  /** Painted bodies (Images at `DEPTH.enemySprites`) for enemy types with art; they replace the procedural body. */
+  private enemySprites = new EnemySprites({
+    hasTexture: (key) => !failedArt.has(key) && this.textures.exists(key),
+    createImage: (key) => this.add.image(0, 0, key),
+  });
   /** Foreground above the enemies: selection ring, shots, effects, portal pulse, and the additive light of shots and effects. */
   private ink!: Phaser.GameObjects.Graphics;
   private glow!: Phaser.GameObjects.Graphics;
@@ -111,8 +121,30 @@ export class Battlefield extends Phaser.Scene {
     super("battlefield");
     this.driver = new LocalDriver(sim, view);
   }
+  /** Queues the enemy art once per game; a scene restart finds it in the texture cache. */
+  preload() {
+    const queued = Object.values(ENEMY_ART).filter((art) => !this.textures.exists(art.texture) && !failedArt.has(art.texture));
+    for (const art of queued) this.load.image(art.texture, artUrl(art));
+    // A missing file and an undecodable one both end without a texture (only the first raises FILE_LOAD_ERROR).
+    if (queued.length)
+      this.load.once(Phaser.Loader.Events.COMPLETE, () => {
+        for (const art of queued)
+          if (!this.textures.exists(art.texture)) {
+            failedArt.add(art.texture);
+            console.warn(`Enemy art '${art.texture}' (${artUrl(art)}) did not load; those enemies keep their procedural body.`);
+          }
+      });
+  }
   create() {
     this.effects = [];
+    // Phaser destroys the scene's objects on shutdown; drop the sprite references with them.
+    const cleanup = () => {
+      this.enemySprites.reset();
+      this.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+      this.events.off(Phaser.Scenes.Events.DESTROY, cleanup);
+    };
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
+    this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
     this.trails.reset();
     this.driver.reset?.();
     this.resize();
@@ -122,17 +154,17 @@ export class Battlefield extends Phaser.Scene {
       this.observer.observe(this.scale.parent);
     }
     drawTerrain(this, this.sim.map, (x, y) => this.sim.isBlocked(x, y));
-    this.ambient = this.add.graphics();
+    // Explicit depths (`DEPTH`), so sprites created mid-game sort between the enemy layers; equal depths keep creation order.
+    this.ambient = this.add.graphics().setDepth(DEPTH.ambient);
     // Additive light is dimmed on light ground, so it never washes out.
     const glow = themeGlow(this.sim.map);
-    this.towerInk = this.add.graphics();
-    this.towerGlow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setAlpha(glow);
-    // Display order is creation order (only the income labels set a depth, to float above everything).
-    this.enemyUnderlay = this.add.graphics();
-    this.enemyBody = this.add.graphics();
-    this.enemyOverlay = this.add.graphics();
-    this.ink = this.add.graphics();
-    this.glow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setAlpha(glow);
+    this.towerInk = this.add.graphics().setDepth(DEPTH.towers);
+    this.towerGlow = this.add.graphics().setDepth(DEPTH.towers).setBlendMode(Phaser.BlendModes.ADD).setAlpha(glow);
+    this.enemyUnderlay = this.add.graphics().setDepth(DEPTH.enemyUnderlay);
+    this.enemyBody = this.add.graphics().setDepth(DEPTH.enemyBody);
+    this.enemyOverlay = this.add.graphics().setDepth(DEPTH.enemyOverlay);
+    this.ink = this.add.graphics().setDepth(DEPTH.foreground);
+    this.glow = this.add.graphics().setDepth(DEPTH.foreground).setBlendMode(Phaser.BlendModes.ADD).setAlpha(glow);
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
       const w = this.cameras.main.getWorldPoint(p.x, p.y);
       this.view.hover = { x: Math.floor(w.x / CELL), y: Math.floor(w.y / CELL) };
@@ -209,6 +241,8 @@ export class Battlefield extends Phaser.Scene {
     if (s !== this.tracked) {
       this.tracked = s;
       this.trails.reset();
+      // Enemy ids restart with the new state; no old image may stand in for a new unit.
+      this.enemySprites.reset();
       for (const f of this.effects) f.label?.destroy();
       this.effects = [];
     }
@@ -267,7 +301,7 @@ export class Battlefield extends Phaser.Scene {
         resolution: this.textResolution,
       })
       .setOrigin(0.5)
-      .setDepth(10);
+      .setDepth(DEPTH.labels);
   }
   /** Pops in above the refinery, rises and fades out over the effect's lifetime. */
   private placeLabel(label: Phaser.GameObjects.Text, at: Point, age: number) {
@@ -361,9 +395,7 @@ export class Battlefield extends Phaser.Scene {
     const units = s.enemies.map((e) =>
       enemyContext(px(e.x), px(e.y), CELL, e, enemies[e.type], this.heading(e.distance), statusFlags(e, s.time), traitFlags(this.sim, e), this.clock),
     );
-    for (const c of units) drawEnemyUnderlay(this.enemyUnderlay, c);
-    for (const c of units) drawEnemyBody(this.enemyBody, c);
-    for (const c of units) drawEnemyOverlay(this.enemyOverlay, c);
+    drawEnemyLayers({ underlay: this.enemyUnderlay, body: this.enemyBody, overlay: this.enemyOverlay }, this.enemySprites, units);
     const ink = this.ink;
     const marked = s.enemies.find((e) => e.id === this.view.enemy);
     if (marked && !isHidden(this.sim, marked)) {
