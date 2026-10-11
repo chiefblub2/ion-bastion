@@ -12,6 +12,7 @@ import { drawEffect, effectLifetime, INCOME_LIFETIME, isVisual, type EffectOrigi
 import { DEPTH } from "./depths";
 import { enemyContext } from "./enemies";
 import { artUrl, ENEMY_ART } from "./enemy-art";
+import { EnemyFeedback } from "./enemy-feedback";
 import { drawEnemyLayers, EnemySprites } from "./enemy-sprites";
 import { CELL, px, type Pen } from "./shapes";
 import { drawAmbient, drawTerrain, themeAccent, themeGlow } from "./terrain";
@@ -96,7 +97,12 @@ export class Battlefield extends Phaser.Scene {
   private enemySprites = new EnemySprites({
     hasTexture: (key) => !failedArt.has(key) && this.textures.exists(key),
     createImage: (key) => this.add.image(0, 0, key),
+    canTint: () => this.sys.game.renderer.type === Phaser.WEBGL,
   });
+  /** Render-only hit flashes and shield ripples per enemy id, on the effect clock. */
+  private enemyFeedback = new EnemyFeedback();
+  /** Clock and feedback for enemy tints, idle motion and accents; `now` follows `fxClock` every frame. */
+  private enemyLook = { now: 0, feedback: this.enemyFeedback };
   /** Foreground above the enemies: selection ring, shots, effects, portal pulse, and the additive light of shots and effects. */
   private ink!: Phaser.GameObjects.Graphics;
   private glow!: Phaser.GameObjects.Graphics;
@@ -140,6 +146,7 @@ export class Battlefield extends Phaser.Scene {
     // Phaser destroys the scene's objects on shutdown; drop the sprite references with them.
     const cleanup = () => {
       this.enemySprites.reset();
+      this.enemyFeedback.reset();
       this.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanup);
       this.events.off(Phaser.Scenes.Events.DESTROY, cleanup);
     };
@@ -243,6 +250,7 @@ export class Battlefield extends Phaser.Scene {
       this.trails.reset();
       // Enemy ids restart with the new state; no old image may stand in for a new unit.
       this.enemySprites.reset();
+      this.enemyFeedback.reset();
       for (const f of this.effects) f.label?.destroy();
       this.effects = [];
     }
@@ -251,6 +259,8 @@ export class Battlefield extends Phaser.Scene {
     const events = this.sim.drainEvents(),
       flashed = new Set<string>();
     this.hooks.events(events);
+    // Damage events drive the hit flashes; they are not effects (`isVisual`), and the batch stays as it is for them.
+    this.enemyFeedback.consume(events, this.fxClock);
     for (const event of events) if (isVisual(event)) this.addEffect(event, flashed);
     this.effects = this.effects.filter((f) => {
       if (f.age < effectLifetime(f.event, this.sim.content)) return true;
@@ -392,10 +402,11 @@ export class Battlefield extends Phaser.Scene {
         g.fillCircle(px(t.x) - CELL / 2 + 7, px(t.y) - CELL / 2 + 7, 3.5);
       }
     }
+    this.enemyLook.now = this.fxClock;
     const units = s.enemies.map((e) =>
       enemyContext(px(e.x), px(e.y), CELL, e, enemies[e.type], this.heading(e.distance), statusFlags(e, s.time), traitFlags(this.sim, e), this.clock),
     );
-    drawEnemyLayers({ underlay: this.enemyUnderlay, body: this.enemyBody, overlay: this.enemyOverlay }, this.enemySprites, units);
+    drawEnemyLayers({ underlay: this.enemyUnderlay, body: this.enemyBody, overlay: this.enemyOverlay }, this.enemySprites, units, this.enemyLook);
     const ink = this.ink;
     const marked = s.enemies.find((e) => e.id === this.view.enemy);
     if (marked && !isHidden(this.sim, marked)) {

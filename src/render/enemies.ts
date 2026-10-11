@@ -145,8 +145,8 @@ const SHAPES: { [K in EnemyVisual["shape"]]: Shape<Extract<EnemyVisual, { shape:
 /** The registry entry of a visual, with its union narrowed away (each entry only ever gets its own shape). */
 const shapeOf = (visual: EnemyVisual) => SHAPES[visual.shape] as Shape<EnemyVisual>;
 /** Status marker colours; they match the towers that cause the effect. */
-const STATUS_COLORS = { slowed: 0xa5a2ff, stunned: 0x5cf2d6, burning: 0xff6a3d, vulnerable: 0xb6f04a, pulled: 0x4d7cff, disrupted: 0xff3df2, netted: 0xe0c068, bleeding: 0xd7263d, charged: 0xff4d4d };
-const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff9e, scan: 0x6fd3ff, regen: 0x93f5b8, armor: 0xc9d1d9, immune: 0x9fe6ff, split: 0x442e36, sand: 0xc9a46a, plate: 0xff9a7a, gust: 0x9fd8ff, swarm: 0xb6ff6a, rage: 0xff5a1a, facet: 0x7ff4ea, leap: 0xbfe9ff, dampen: 0x8a7dff, brood: 0xe8d27a, overload: 0xffe14d, molt: 0xe6a0b4, momentum: 0xffb347, lap: 0xd9a441, refract: 0xe6f7ff, blastproof: 0xb59a7a, insulated: 0xf2d95c, heatshield: 0xff7a3d, mirror: 0xdfe8f2, link: 0x7ae0c8, taunt: 0xff6b8a, martyr: 0xf2e6c9, pack: 0xb8c4d0, cloak: 0x8e7cc3, blink: 0x6fe39a, tunnel: 0x9c7a54, phase: 0xc792ea, blind: 0xfff27a, jam: 0x90a4b8, defuse: 0xd4a373, suppress: 0x7a8899, retaliate: 0x8bb174 };
+export const STATUS_COLORS = { slowed: 0xa5a2ff, stunned: 0x5cf2d6, burning: 0xff6a3d, vulnerable: 0xb6f04a, pulled: 0x4d7cff, disrupted: 0xff3df2, netted: 0xe0c068, bleeding: 0xd7263d, charged: 0xff4d4d };
+export const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff9e, scan: 0x6fd3ff, regen: 0x93f5b8, armor: 0xc9d1d9, immune: 0x9fe6ff, split: 0x442e36, sand: 0xc9a46a, plate: 0xff9a7a, gust: 0x9fd8ff, swarm: 0xb6ff6a, rage: 0xff5a1a, facet: 0x7ff4ea, leap: 0xbfe9ff, dampen: 0x8a7dff, brood: 0xe8d27a, overload: 0xffe14d, molt: 0xe6a0b4, momentum: 0xffb347, lap: 0xd9a441, refract: 0xe6f7ff, blastproof: 0xb59a7a, insulated: 0xf2d95c, heatshield: 0xff7a3d, mirror: 0xdfe8f2, link: 0x7ae0c8, taunt: 0xff6b8a, martyr: 0xf2e6c9, pack: 0xb8c4d0, cloak: 0x8e7cc3, blink: 0x6fe39a, tunnel: 0x9c7a54, phase: 0xc792ea, blind: 0xfff27a, jam: 0x90a4b8, defuse: 0xd4a373, suppress: 0x7a8899, retaliate: 0x8bb174 };
 /** Faint filled field of an area trait with a dashed rim (`dashes` and `speed` tell the kinds apart). */
 function field(g: Ink, x: number, y: number, radius: number, cell: number, color: number, clock: number, dashes: number, speed: number) {
   const rad = radius * cell;
@@ -583,13 +583,14 @@ function statusAbove(g: Ink, { x, y, r, status, clock }: EnemyDrawContext) {
 }
 /**
  * Everything behind the body: trait fields and trails, status rings, tentacles and, last, the shape's shadow
- * (it used to open the body, so it still darkens the rings and tentacles drawn before it).
+ * (it used to open the body, so it still darkens the rings and tentacles drawn before it). `painted`: a sprite is the body.
  */
-export function drawEnemyUnderlay(g: Ink, c: EnemyDrawContext) {
+export function drawEnemyUnderlay(g: Ink, c: EnemyDrawContext, painted = false) {
   if (c.hidden) return;
   traitsBelow(g, c);
   statusBelow(g, c);
-  tentacles(g, c);
+  // Painted bodies (`enemy-sprites.ts`) show their tentacles in the art.
+  if (!painted) tentacles(g, c);
   // Burrowed units cast no shadow: the mound stands in for it.
   if (!c.traits.burrowed) shapeOf(c.definition.visual).shadow(g, c, c.definition.visual);
 }
