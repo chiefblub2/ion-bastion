@@ -5,6 +5,7 @@ import { pageOf, towerOrder } from "./ui/tower-pages";
 import { Battlefield, CELL, LocalDriver, type ViewState } from "./render/scene";
 import { mountUI, Interface, renderMission } from "./ui/interface";
 import { bindUpgradeTooltip } from "./ui/upgrade-tooltip";
+import { installEnemyArtFallback } from "./ui/enemy-art-icon";
 import { Audio } from "./app/audio";
 import { bindFullscreen } from "./app/fullscreen";
 import { createInput } from "./app/input";
@@ -34,6 +35,7 @@ if (linkedMission && credits > 0) linkedMission = { ...linkedMission, startingCr
 const game = new Game(linkedMission !== target ? linkedMission : undefined);
 if (target && game.mission.id !== target.id) game.command({ type: "mission", id: target.id });
 mountUI(game);
+installEnemyArtFallback();
 renderMission(game);
 bindUpgradeTooltip();
 const first = towerOrder(game)[0];

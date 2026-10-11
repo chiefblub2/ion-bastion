@@ -1,5 +1,6 @@
 import type { ContentPack, EnemyDefinition, EnemyId, MissionDefinition, TraitKind } from "../core/types";
 import { DISRUPTABLE, traitHpFactor } from "../systems/traits";
+import { animationsFor } from "../render/enemy-animations";
 import { escape, number } from "./format";
 import { enemyIcon, LAYER, traitTag, type ForecastTag } from "./wave-forecast";
 
@@ -130,6 +131,15 @@ export function codexTraits(content: ContentPack): CodexTrait[] {
 }
 
 export type CodexTab = "enemies" | "traits";
+/**
+ * The animation preview of a codex card (types with animation sheets only): a toggle in the header and an empty,
+ * hidden panel that `codex-preview.ts` fills while it is open. Nothing animates until the player opens it.
+ */
+const previewToggle = (d: EnemyDefinition) =>
+  animationsFor(d.id as EnemyId)
+    ? `<button type="button" class="codex-anim-toggle" data-codex-anim="${escape(d.id)}" aria-expanded="false" aria-controls="codex-anim-${escape(d.id)}" aria-label="Animation preview of ${escape(d.name)}" title="Animation preview">▶</button>`
+    : "";
+const previewPanel = (d: EnemyDefinition) => (animationsFor(d.id as EnemyId) ? `<div class="codex-anim" id="codex-anim-${escape(d.id)}" role="region" aria-label="${escape(d.name)} animation" hidden></div>` : "");
 const pad = (n: number) => String(n).padStart(2, "0");
 const tagHtml = (t: ForecastTag) => `<em class="unit-tag ${t.kind === "air" ? "air" : `trait ${t.kind}`}">${escape(t.label)}</em>`;
 
@@ -155,7 +165,7 @@ export function renderEnemyCodex(content: ContentPack, tab: CodexTab) {
             const d = e.definition,
               since = e.firstMission ? `from Mission ${pad(e.firstMission.number)} · ${escape(e.firstMission.name)}` : "in no mission";
             const traitRows = e.tags.map((t) => `<li>${tagHtml(t)}<span>${escape(t.title)}</span></li>`).join("");
-            return `<article class="codex-card ${d.layer}"><header>${enemyIcon(d.visual, d.color)}<span><strong>${escape(d.name)}</strong><small>${LAYER[d.layer]} · ${since}</small></span></header>
+            return `<article class="codex-card ${d.layer}"><header>${enemyIcon(d.visual, d.color, d.id as EnemyId)}<span><strong>${escape(d.name)}</strong><small>${LAYER[d.layer]} · ${since}</small></span>${previewToggle(d)}</header>${previewPanel(d)}
               <div class="codex-stats"><div><b>♡ ${number(e.hp)}</b><span>HP</span></div><div><b>${number(e.speed)}</b><span>Cells/s</span></div><div><b>◇ ${number(d.reward)}</b><span>Reward</span></div><div><b>${number(d.leak)}</b><span>Reactor damage</span></div></div>
               ${traitRows ? `<ul class="codex-traits">${traitRows}</ul>` : `<p class="codex-plain">No special traits.</p>`}</article>`;
           })
@@ -163,7 +173,7 @@ export function renderEnemyCodex(content: ContentPack, tab: CodexTab) {
       : traits
           .map(
             (t) => `<article class="codex-card"><header><span><strong>${escape(t.name)}</strong></span></header><p>${escape(t.text)}${t.disruptable ? " The Jammer switches the trait off." : ""}</p>
-              <ul class="codex-carriers">${t.enemies.map((e) => `<li title="${escape(e.tag.title)}">${enemyIcon(e.definition.visual, e.definition.color)}<span>${escape(e.definition.name)}</span>${tagHtml(e.tag)}</li>`).join("")}</ul></article>`,
+              <ul class="codex-carriers">${t.enemies.map((e) => `<li title="${escape(e.tag.title)}">${enemyIcon(e.definition.visual, e.definition.color, e.definition.id as EnemyId)}<span>${escape(e.definition.name)}</span>${tagHtml(e.tag)}</li>`).join("")}</ul></article>`,
           )
           .join("");
   return { tabs, list };

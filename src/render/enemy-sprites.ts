@@ -2,20 +2,23 @@ import type Phaser from "phaser";
 import type { EnemyId } from "../core/types";
 import { DEPTH } from "./depths";
 import { bodyMotion, resolveEnemyTint, type BodyMotion } from "./enemy-appearance";
+import { animationArt, animationsFor, clipDuration, clipFrame, type AnimationClip } from "./enemy-animations";
+import { animate, freshTrack, type AnimationTrack, type Kill } from "./enemy-animator";
 import { ART_FILL, artEdge, artFor, type EnemyArt } from "./enemy-art";
 import { drawEnemyAccents, type EnemyFeedback } from "./enemy-feedback";
 import { bodyLift, drawEnemyBody, drawEnemyOverlay, drawEnemyUnderlay, type ArtFootprint, type EnemyDrawContext } from "./enemies";
-import type { Ink } from "./shapes";
-/** The parts of a Phaser Image the manager uses. */
+import { hash01, type Ink } from "./shapes";
+/** The parts of a Phaser Image the manager uses; an animated body is an Image whose spritesheet frame changes. */
 export type SpriteImage = Pick<
   Phaser.GameObjects.Image,
-  "setOrigin" | "setDepth" | "setPosition" | "setRotation" | "setDisplaySize" | "setFlip" | "setVisible" | "setTint" | "setTintFill" | "clearTint" | "destroy"
+  "setOrigin" | "setDepth" | "setPosition" | "setRotation" | "setDisplaySize" | "setFlip" | "setVisible" | "setTint" | "setTintFill" | "clearTint" | "setTexture" | "setFrame" | "destroy"
 >;
 /** The scene side: texture lookups and image creation (Phaser in the game, a stub in tests). */
 export interface SpriteHost {
   /** True only for a texture that loaded; a failed or missing file never reaches the cache. */
   hasTexture(key: string): boolean;
-  createImage(key: string): SpriteImage;
+  /** An Image of a texture; `frame` picks a spritesheet frame (animations). */
+  createImage(key: string, frame?: number): SpriteImage;
   /** Whether image tints render (WebGL); Phaser's canvas renderer ignores them. Absent means they do. */
   canTint?(): boolean;
 }
@@ -93,51 +96,124 @@ interface Sprite {
   type: EnemyId;
   image: SpriteImage;
   tint: number;
+  /** Texture and spritesheet frame shown; `frame` is undefined for static art. */
+  texture: string;
+  frame?: number;
+  /** Animation memory of an animated type (render only). */
+  track?: AnimationTrack;
+  /** This frame's placement: where a death animation starts. */
+  placed?: ArtPlacement;
   /** This frame's visible footprint, for the painted shadow. */
   footprint?: ArtFootprint;
   /** An upright pose faces left (render-only memory, like the projectile trails). */
   left: boolean;
 }
+/** Most death animations playing at once; further kills keep only the kill effect. */
+export const MAX_DYING = 24;
+/** A body playing its death clip after its enemy left the state (render only). */
+interface Dying {
+  image: SpriteImage;
+  clip: AnimationClip;
+  since: number;
+  frame: number;
+}
+/** What a body shows this frame: a clip frame (animated) or the static art, and the art that places it. */
+interface Look {
+  texture: string;
+  frame?: number;
+  art: EnemyArt;
+  hurt: boolean;
+}
 /**
  * Painted enemy bodies (render only): one Image per enemy id with art and a loaded texture, reused across frames.
- * Everything else, and every unit that is hidden or burrowed, keeps its procedural body (`drawEnemyBody`).
+ * Animated types (`ENEMY_ANIMATIONS`) show a frame of their idle, move or hurt sheet (`animate`) on the same Image;
+ * a missing clip falls back to the other loop, then to the static art, then to the procedural body
+ * (`drawEnemyBody`), which every unit that is hidden or burrowed keeps as well. Killed units with a death clip
+ * play it once as a bounded set of dying Images (`retire`).
  */
 export class EnemySprites {
   private sprites = new Map<number, Sprite>();
+  private dying: Dying[] = [];
+  /** Death animations started since the manager was made (dev hooks and QA scripts). */
+  deaths = 0;
   /** Ids whose body is a visible sprite this frame. */
   private shown = new Set<number>();
   private alive = new Set<number>();
   constructor(private host: SpriteHost) {}
-  /** Matches the images to this frame's enemies: creates, moves, tints, hides and destroys them. */
+  /** Matches the images to this frame's enemies: creates, moves, animates, tints, hides and destroys them. */
   sync(units: readonly EnemyDrawContext[], look?: EnemyLook) {
+    const now = look?.now ?? 0;
     this.shown.clear();
     this.alive.clear();
+    this.advanceDying(now);
     for (const c of units) {
       const id = c.enemy.id,
-        art = artFor(c.enemy.type);
+        type = c.enemy.type,
+        hidden = c.hidden || c.traits.burrowed;
       this.alive.add(id);
       let sprite = this.sprites.get(id);
-      // An id that now belongs to another type (or lost its texture) must not keep the old image.
-      if (sprite && (sprite.type !== c.enemy.type || !art || !this.host.hasTexture(art.texture))) {
+      // An id that now belongs to another type must not keep the old image or animation.
+      if (sprite && sprite.type !== type) {
         this.drop(id, sprite);
         sprite = undefined;
       }
-      if (!art || !this.host.hasTexture(art.texture)) continue;
+      const set = animationsFor(type),
+        track = sprite?.track ?? (set && freshTrack(c.enemy.distance, now, hash01(id, 29) * 4)),
+        pick = set && track ? animate(track, set, (clip) => this.host.hasTexture(clip.texture), { distance: c.enemy.distance, now, struck: look?.feedback.struckAt(id) ?? -Infinity, visible: !hidden }) : undefined,
+        moving = pick && animationArt(type),
+        art = artFor(type),
+        shown: Look | undefined = moving
+          ? { texture: pick.clip.texture, frame: pick.frame, art: moving, hurt: pick.hurt }
+          : art && this.host.hasTexture(art.texture)
+            ? { texture: art.texture, art, hurt: false }
+            : undefined;
+      // Nothing loaded: the procedural body.
+      if (!shown) {
+        if (sprite) this.drop(id, sprite);
+        continue;
+      }
       // Hidden: only the overlay's shimmer. Burrowed: the faint procedural shape on its mound. A cached image waits hidden.
-      if (c.hidden || c.traits.burrowed) {
+      if (hidden) {
         sprite?.image.setVisible(false);
         continue;
       }
-      sprite ??= this.create(id, c.enemy.type, art);
+      sprite ??= this.create(id, type, shown, track);
+      this.show(sprite, shown);
       // Everything is derived anew from the context each frame, so no size, offset or tint carries over.
-      const at = placeArt(c, art, look ? bodyMotion(c, look.now) : undefined, sprite.left);
+      const at = placeArt(c, shown.art, look ? bodyMotion(c, look.now) : undefined, sprite.left);
       sprite.image.setPosition(at.x, at.y).setRotation(at.rotation).setDisplaySize(at.size, at.size).setFlip(at.flipX, at.flipY).setVisible(true);
       sprite.footprint = at.footprint;
+      sprite.placed = at;
       sprite.left = at.left;
-      this.tint(sprite, look ? resolveEnemyTint(c, look.feedback.flash(id, look.now, c.enemy.maxHp), look.now) : undefined);
+      // The hurt frames are the hit feedback; a white flash over them would hide them. Other hits still flash.
+      const flash = look && !shown.hurt ? look.feedback.flash(id, look.now, c.enemy.maxHp) : 0;
+      this.tint(sprite, look ? resolveEnemyTint(c, flash, look.now) : undefined);
       this.shown.add(id);
     }
     for (const [id, sprite] of this.sprites) if (!this.alive.has(id)) this.drop(id, sprite);
+  }
+  /**
+   * Starts death animations for killed enemies (`killedEnemies` of the frame's events), before the next `sync`
+   * drops their images. Only a unit that showed an animated body in the last frame, whose kill colour matches its
+   * type (`colorOf`) and that has a loaded death clip plays one, at its last placement, while fewer than `MAX_DYING`
+   * play; the others simply vanish under their kill effect. Returns the ids that play.
+   */
+  retire(killed: ReadonlyMap<number, Kill>, now: number, colorOf: (type: EnemyId) => number) {
+    const started: number[] = [];
+    for (const [id, kill] of killed) {
+      const sprite = this.sprites.get(id),
+        death = sprite && animationsFor(sprite.type)?.death;
+      if (!sprite || !death || !sprite.placed || sprite.frame === undefined || !this.shown.has(id)) continue;
+      if (colorOf(sprite.type) !== kill.color || !this.host.hasTexture(death.texture) || this.dying.length >= MAX_DYING) continue;
+      this.sprites.delete(id);
+      this.shown.delete(id);
+      // The same Image plays on: its last position, heading, mirroring and size stay; status tints end with the unit.
+      sprite.image.setTexture(death.texture, 0).setDisplaySize(sprite.placed.size, sprite.placed.size).clearTint();
+      this.dying.push({ image: sprite.image, clip: death, since: now, frame: 0 });
+      started.push(id);
+      this.deaths++;
+    }
+    return started;
   }
   /** Whether a visible sprite replaces this enemy's procedural body in the current frame. */
   isRendering(id: number) {
@@ -151,14 +227,41 @@ export class EnemySprites {
   get tints() {
     return this.host.canTint?.() ?? true;
   }
-  /** Number of managed images (visible or waiting hidden). */
+  /** Number of managed images of living enemies (visible or waiting hidden). */
   get size() {
     return this.sprites.size;
   }
-  /** Destroys every image: a new game state, a scene shutdown. */
+  /** Number of death animations playing. */
+  get dyingCount() {
+    return this.dying.length;
+  }
+  /** Destroys every image, dying ones included: a new game state, a scene shutdown. */
   reset() {
     for (const [id, sprite] of this.sprites) this.drop(id, sprite);
+    for (const d of this.dying) d.image.destroy();
+    this.dying = [];
     this.shown.clear();
+  }
+  /** Steps the death clips on the effect clock (frozen while paused) and destroys those that ended. */
+  private advanceDying(now: number) {
+    this.dying = this.dying.filter((d) => {
+      const elapsed = now - d.since;
+      if (elapsed >= clipDuration(d.clip)) {
+        d.image.destroy();
+        return false;
+      }
+      const frame = clipFrame(d.clip, elapsed);
+      if (frame !== d.frame) d.image.setFrame(frame);
+      d.frame = frame;
+      return true;
+    });
+  }
+  /** Switches the texture or frame only when it changed (a static texture has no frame). */
+  private show(sprite: Sprite, look: Look) {
+    if (sprite.texture !== look.texture) look.frame === undefined ? sprite.image.setTexture(look.texture) : sprite.image.setTexture(look.texture, look.frame);
+    else if (sprite.frame !== look.frame && look.frame !== undefined) sprite.image.setFrame(look.frame);
+    sprite.texture = look.texture;
+    sprite.frame = look.frame;
   }
   /** Applies a tint only when it changed; no tint clears it, so the art shows its own colours again. */
   private tint(sprite: Sprite, tint: { color: number; fill: boolean } | undefined) {
@@ -169,8 +272,9 @@ export class EnemySprites {
     else if (tint.fill) sprite.image.setTintFill(tint.color);
     else sprite.image.setTint(tint.color);
   }
-  private create(id: number, type: EnemyId, art: EnemyArt) {
-    const sprite = { type, image: this.host.createImage(art.texture).setOrigin(0.5, 0.5).setDepth(DEPTH.enemySprites), tint: NO_TINT, left: false };
+  private create(id: number, type: EnemyId, look: Look, track?: AnimationTrack) {
+    const image = this.host.createImage(look.texture, look.frame).setOrigin(0.5, 0.5).setDepth(DEPTH.enemySprites),
+      sprite: Sprite = { type, image, tint: NO_TINT, left: false, texture: look.texture, frame: look.frame, track };
     this.sprites.set(id, sprite);
     return sprite;
   }

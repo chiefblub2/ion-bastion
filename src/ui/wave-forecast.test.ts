@@ -5,7 +5,8 @@ import { missionById } from "../content/missions";
 import { Game } from "../core/game";
 import { finishWave } from "../core/test-helpers";
 import { waveHpScale } from "../systems/spawn";
-import { renderWaveForecast, waveForecast } from "./wave-forecast";
+import { enemyIcon, renderWaveForecast, waveForecast } from "./wave-forecast";
+import type { EnemyId } from "../core/types";
 
 const game = (id: string) => new Game(missionById(id)!);
 describe("wave forecast", () => {
@@ -130,6 +131,11 @@ describe("enemy icons and shape validation", () => {
     expect(enemyIcon({ shape: "star", points: 8, inner: 0.45 }, 0xff0000).match(/\d,-?\d/g)!.length).toBeGreaterThanOrEqual(16);
     expect(enemyIcon({ shape: "orb", moons: 3 }, 0x00ff00).match(/<circle/g)).toHaveLength(5);
     expect(enemyIcon({ shape: "worm", segments: 5 }, 0x0000ff).match(/<circle/g)).toHaveLength(5);
+    // With a type that has art: the painted image, scaled to its visible bounds, over the same SVG as fallback.
+    const painted = enemyIcon({ shape: "worm", segments: 5 }, 0x0000ff, "sparkworm");
+    expect(painted).toMatch(/^<span class="enemy-icon painted" style="--art-k:[\d.]+;--art-dx:-?[\d.]+%;--art-dy:-?[\d.]+%"><img src="\/assets\/enemies\/sparkworm\.png"/);
+    expect(painted.match(/<circle/g)).toHaveLength(5);
+    expect(enemyIcon({ shape: "orb", moons: 1 }, 0, "no-art" as EnemyId)).not.toContain("<img");
   });
   it("rejects invalid shape fields", async () => {
     const { validateEnemy } = await import("../core/validation");

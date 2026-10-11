@@ -11,7 +11,8 @@ import { PLAYER_COLORS } from "../net/protocol";
 import { drawEffect, effectLifetime, INCOME_LIFETIME, isVisual, type EffectOrigin, type VisualEvent } from "./effects";
 import { DEPTH } from "./depths";
 import { enemyContext } from "./enemies";
-import { queueEnemyArt, sceneSpriteHost } from "./enemy-art-scene";
+import { killedEnemies } from "./enemy-animator";
+import { queueEnemyAnimations, queueEnemyArt, sceneSpriteHost } from "./enemy-art-scene";
 import { EnemyFeedback } from "./enemy-feedback";
 import { drawEnemyLayers, EnemySprites } from "./enemy-sprites";
 import { CELL, px, type Pen } from "./shapes";
@@ -91,7 +92,10 @@ export class Battlefield extends Phaser.Scene {
   private enemyUnderlay!: Phaser.GameObjects.Graphics;
   private enemyBody!: Phaser.GameObjects.Graphics;
   private enemyOverlay!: Phaser.GameObjects.Graphics;
-  /** Painted bodies (Images at `DEPTH.enemySprites`) for enemy types with art; they replace the procedural body. */
+  /**
+   * Painted bodies (Images at `DEPTH.enemySprites`) for enemy types with art, animated where sheets exist; they
+   * replace the procedural body. Death animations outlive their unit for a moment, render only.
+   */
   private enemySprites = new EnemySprites(sceneSpriteHost(this));
   /** Render-only hit flashes and shield ripples per enemy id, on the effect clock. */
   private enemyFeedback = new EnemyFeedback();
@@ -121,9 +125,10 @@ export class Battlefield extends Phaser.Scene {
     super("battlefield");
     this.driver = new LocalDriver(sim, view);
   }
-  /** Queues the enemy art once per game; a scene restart finds it in the texture cache. */
+  /** Queues the enemy art and animation sheets once per game; a scene restart finds them in the texture cache. */
   preload() {
     queueEnemyArt(this);
+    queueEnemyAnimations(this);
   }
   create() {
     this.effects = [];
@@ -175,6 +180,8 @@ export class Battlefield extends Phaser.Scene {
     });
     this.sharpenText();
     this.hooks.refresh();
+    // Dev builds only: the sprite manager for QA scripts (live and dying counts); stripped from `vite build`.
+    if (import.meta.env.DEV) (window as unknown as { __enemySprites: EnemySprites }).__enemySprites = this.enemySprites;
   }
   /** Refits the canvas after its container changed size, e.g. entering full screen or leaving the start screen. */
   fit() {
@@ -243,8 +250,10 @@ export class Battlefield extends Phaser.Scene {
     const events = this.sim.drainEvents(),
       flashed = new Set<string>();
     this.hooks.events(events);
-    // Damage events drive the hit flashes; they are not effects (`isVisual`), and the batch stays as it is for them.
+    // Damage events drive the hit flashes and hurt clips; they are not effects (`isVisual`), and the batch stays as it is for them.
     this.enemyFeedback.consume(events, this.fxClock);
+    // Killed units with a death clip play it where they were last drawn; the kill effect plays as before.
+    this.enemySprites.retire(killedEnemies(events), this.fxClock, (type) => this.sim.content.enemies[type].color);
     for (const event of events) if (isVisual(event)) this.addEffect(event, flashed);
     this.effects = this.effects.filter((f) => {
       if (f.age < effectLifetime(f.event, this.sim.content)) return true;

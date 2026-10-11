@@ -4,7 +4,7 @@ import { DEFAULT_CONTENT } from "./content";
 import type { EnemyId, MapTheme } from "./core/types";
 import { DEPTH } from "./render/depths";
 import { artFor, artScale } from "./render/enemy-art";
-import { queueEnemyArt, sceneSpriteHost } from "./render/enemy-art-scene";
+import { queueEnemyAnimations, queueEnemyArt, sceneSpriteHost } from "./render/enemy-art-scene";
 import { EnemyFeedback } from "./render/enemy-feedback";
 import { drawEnemyLayers, EnemySprites } from "./render/enemy-sprites";
 import { drawEnemy, enemyContext, type EnemyDrawContext } from "./render/enemies";
@@ -20,7 +20,8 @@ import { traitFlags, type TraitFlags } from "./systems/traits";
 //   ?art              sheet per enemy: four headings and a diagonal, six terrains, overlays (shield, burning, slowed,
 //                     60% HP), a hidden stealth unit, a burrowed one and the procedural fallback; `&page=<n>` (from 0)
 //   ?art=lineup       every enemy at heading 0 side by side, ordered by body size (visual hierarchy)
-//   ?art=stress       `&n=<count>` (default 400) units turning every frame; `__artReview.stats` holds frame times
+//   ?art=stress       `&n=<count>` (default 400) units turning and moving every frame; `__artReview.stats` holds frame
+//                     times; `&ids=` picks the types, `&static=1` loads no animation sheets (static baseline)
 //   &zoom=<z>         canvas pixels per battlefield pixel (default 2, like a HiDPI screen); &marks=0 hides the marks
 //   &ids=a,b          only these enemies; &tiles=0,5 only these sheet columns (0-3 headings, 4 corner, 5-10
 //                     terrains, 11 overlays, 12 hidden, 13 burrowed, 14 procedural)
@@ -127,6 +128,8 @@ export class ArtReview extends Phaser.Scene {
   private marks!: Phaser.GameObjects.Graphics;
   preload() {
     queueEnemyArt(this);
+    // `&static=1`: static art only (the baseline for the animated bodies in `?art=stress`).
+    if (!params.has("static")) queueEnemyAnimations(this);
   }
   create() {
     this.cameras.main.setOrigin(0, 0).setZoom(ZOOM);
@@ -215,7 +218,7 @@ export class ArtReview extends Phaser.Scene {
    */
   private stress(review: { ready: boolean; stats: unknown }) {
     const columns = 25,
-      base = Array.from({ length: STRESS }, (_, i) => this.unit(all[i % all.length], 24 + (i % columns) * 46, 24 + Math.floor(i / columns) * 46, { heading: 0 })),
+      base = Array.from({ length: STRESS }, (_, i) => this.unit(chosen[i % chosen.length], 24 + (i % columns) * 46, 24 + Math.floor(i / columns) * 46, { heading: 0 })),
       frames: number[] = [],
       draws: number[] = [];
     this.add.text(GAP, size.height - 16, `${STRESS} units`, font(11));
@@ -227,7 +230,8 @@ export class ArtReview extends Phaser.Scene {
       frames.push(now - last);
       last = now;
       for (const l of Object.values(this.layers)) (l as Phaser.GameObjects.Graphics).clear();
-      const units = base.map((c, i) => ({ ...c, x: c.x + Math.sin(t * 2 + i) * 6, heading: t + i, clock: t }));
+      // Moving along the path too, so animated types play their move clip and step frames.
+      const units = base.map((c, i) => ({ ...c, x: c.x + Math.sin(t * 2 + i) * 6, heading: t + i, clock: t, enemy: { ...c.enemy, distance: t } }));
       const start = performance.now();
       drawEnemyLayers(this.layers, this.sprites, units, { now: t, feedback: this.feedback });
       draws.push(performance.now() - start);
@@ -239,6 +243,7 @@ export class ArtReview extends Phaser.Scene {
         review.stats = {
           units: STRESS,
           images: this.sprites.size,
+          animated: !params.has("static"),
           textures: all.filter((id) => this.textures.exists(artFor(id)!.texture)).length,
           renderer: this.sys.game.renderer.type === Phaser.WEBGL ? "webgl" : "canvas",
           frameMs: { mean: mean(f), p95: f[Math.floor(f.length * 0.95)] },

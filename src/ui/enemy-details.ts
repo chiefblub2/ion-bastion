@@ -48,7 +48,7 @@ export function enemyDetails(sim: Sim, e: Enemy): string {
     .join("");
   const shield = e.shield && e.shield > 0 ? ` · Shield <b>${number(Math.ceil(e.shield))}</b>` : "";
   const label = "Deselect (Esc)";
-  return `<div class="selection-heading"><span>ENEMY SELECTED</span><span class="selection-actions"><b>${enemyIcon(d.visual, d.color)} ${escape(d.name)}</b><button id="cancel-selection" class="cancel-selection" title="${label}" aria-label="${label}">✕</button></span></div>
+  return `<div class="selection-heading"><span>ENEMY SELECTED</span><span class="selection-actions"><b>${enemyIcon(d.visual, d.color, e.type)} ${escape(d.name)}</b><button id="cancel-selection" class="cancel-selection" title="${label}" aria-label="${label}">✕</button></span></div>
     <div class="enemy-hp" role="meter" aria-label="Hit points" aria-valuemin="0" aria-valuemax="${Math.ceil(e.maxHp)}" aria-valuenow="${hp}"><span style="width:${(share * 100).toFixed(1)}%"></span></div>
     <p class="enemy-hp-text">♡ <b>${number(hp)}</b> / ${number(Math.ceil(e.maxHp))} HP${shield}</p>
     <div class="tower-stats">

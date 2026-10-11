@@ -2,6 +2,7 @@ import type { Game } from "../core/game";
 import type { ContentPack, EnemyId, EnemyVisual, Trait, TraitKind, UnitLayer } from "../core/types";
 import { waveHpScale } from "../systems/spawn";
 import { traitHpFactor } from "../systems/traits";
+import { paintedIcon } from "./enemy-art-icon";
 import { escape, number } from "./format";
 
 export interface ForecastEnemy {
@@ -164,8 +165,15 @@ export function traitTag(t: Trait, content: ContentPack): ForecastTag {
 }
 
 const hex = (color: number) => `#${color.toString(16).padStart(6, "0")}`;
-/** Small SVG of an enemy, in the same shape as on the battlefield. */
-export function enemyIcon(visual: EnemyVisual, color: number): string {
+/**
+ * Small icon of an enemy: its painted art when `type` has some (`paintedIcon`, with this SVG as the fallback), else
+ * an SVG in the same shape as the procedural body on the battlefield.
+ */
+export function enemyIcon(visual: EnemyVisual, color: number, type?: EnemyId): string {
+  const shape = shapeIcon(visual, color);
+  return type ? paintedIcon(type, shape) : shape;
+}
+function shapeIcon(visual: EnemyVisual, color: number): string {
   const r = 7.5,
     n2 = (v: number) => v.toFixed(2),
     at = (angle: number, radius: number) => `${n2(Math.cos(angle) * radius)},${n2(Math.sin(angle) * radius)}`,
@@ -206,7 +214,7 @@ function badges(w: ForecastWave) {
       const tags = e.tags
         .map((t) => `<em class="unit-tag ${t.kind === "air" ? "air" : `trait ${t.kind}`}">${escape(t.label)}</em>`)
         .join("");
-      return `<li class="unit-badge ${e.layer}" title="${escape(title)}">${enemyIcon(e.visual, e.color)}<b>${e.count}×</b><span class="unit-name">${escape(e.name)}</span><span class="unit-hp">♡ ${number(e.hp)}</span>${tags}${e.isNew ? '<em class="unit-tag new">NEW</em>' : ""}</li>`;
+      return `<li class="unit-badge ${e.layer}" title="${escape(title)}">${enemyIcon(e.visual, e.color, e.type)}<b>${e.count}×</b><span class="unit-name">${escape(e.name)}</span><span class="unit-hp">♡ ${number(e.hp)}</span>${tags}${e.isNew ? '<em class="unit-tag new">NEW</em>' : ""}</li>`;
     })
     .join("");
 }

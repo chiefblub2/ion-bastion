@@ -9,7 +9,8 @@ import { DEPTH } from "./depths";
 import { artEdge, artFor, artScale, ENEMY_ART, type EnemyArt } from "./enemy-art";
 import { bodyMotion, TINTS } from "./enemy-appearance";
 import { EnemyFeedback } from "./enemy-feedback";
-import { drawEnemyLayers, EnemySprites, placeArt, type EnemyLook, type SpriteImage } from "./enemy-sprites";
+import { allClips, animationArt, animationsFor, clipDuration, clipKey } from "./enemy-animations";
+import { drawEnemyLayers, EnemySprites, MAX_DYING, placeArt, type EnemyLook, type SpriteImage } from "./enemy-sprites";
 import { bodyLift, enemyContext, type EnemyDrawContext } from "./enemies";
 import type { Ink } from "./shapes";
 
@@ -23,7 +24,23 @@ class StubImage {
   depth = 0;
   origin = [0, 0];
   destroyed = false;
-  constructor(readonly texture: string) {}
+  /** Texture and frame changes after creation. */
+  switches = 0;
+  constructor(
+    public texture: string,
+    public frame?: number,
+  ) {}
+  setTexture(key: string, frame?: number) {
+    this.texture = key;
+    this.frame = frame;
+    this.switches++;
+    return this;
+  }
+  setFrame(frame: number) {
+    this.frame = frame;
+    this.switches++;
+    return this;
+  }
   setOrigin(x: number, y: number) {
     this.origin = [x, y];
     return this;
@@ -84,13 +101,13 @@ function host(loaded = Object.values(ENEMY_ART).map((a) => a!.texture), canTint 
   const sprites = new EnemySprites({
     hasTexture: (key) => textures.has(key),
     canTint: () => canTint,
-    createImage: (key) => {
-      const image = new StubImage(key);
+    createImage: (key, frame) => {
+      const image = new StubImage(key, frame);
       images.push(image);
       return image as unknown as SpriteImage;
     },
   });
-  return { sprites, images, live: () => images.filter((i) => !i.destroyed) };
+  return { sprites, images, textures, live: () => images.filter((i) => !i.destroyed) };
 }
 const sim = new Game();
 /** A type id without art: every content enemy has art now, so this stands for any later one that has none. */
@@ -464,5 +481,145 @@ describe("art placement", () => {
     // A painted worm casts one oval instead of five segment shadows.
     expect(calls([unit(1, "sparkworm")])).toBeLessThan(calls([unit(1, "sparkworm")], []));
     expect(calls([unit(1, "tank", { traits: { burrowed: true } })])).toBe(calls([unit(1, "tank", { traits: { burrowed: true } })], []));
+  });
+});
+
+describe("animated bodies", () => {
+  const everything = [...Object.values(ENEMY_ART).map((a) => a!.texture), ...allClips().map((c) => c.texture)];
+  const at = (c: EnemyDrawContext, distance: number): EnemyDrawContext => ({ ...c, enemy: { ...c.enemy, distance } });
+  const look = (now: number, feedback = new EnemyFeedback()): EnemyLook => ({ now, feedback });
+  const red = (type: EnemyId) => DEFAULT_CONTENT.enemies[type].color;
+
+  it("creates one Image per animated unit and steps its frames without recreating it", () => {
+    const { sprites, images } = host(everything),
+      l = look(0);
+    sprites.sync([at(unit(1, "drone"), 1)], l);
+    expect(images).toHaveLength(1);
+    expect(images[0].texture).toBe(clipKey("drone", "idle"));
+    const switches: number[] = [];
+    for (let i = 1; i <= 20; i++) {
+      l.now = i / 30;
+      sprites.sync([at(unit(1, "drone"), 1 + i * 0.05)], l);
+      switches.push(images[0].switches);
+    }
+    expect(images).toHaveLength(1);
+    expect(images[0].texture).toBe(clipKey("drone", "move"));
+    // A repeated frame at the same time changes nothing.
+    const before = images[0].switches;
+    sprites.sync([at(unit(1, "drone"), 2)], l);
+    sprites.sync([at(unit(1, "drone"), 2)], l);
+    expect(images[0].switches).toBe(before);
+    expect(switches.at(-1)).toBeLessThan(20);
+  });
+
+  it("places the animated body with the static tuning, sized to the same visible length", () => {
+    const { sprites, images } = host(everything);
+    // Without a look there is no idle breathing, so the size is the bare placement.
+    sprites.sync([unit(1, "tank", { heading: 1 })]);
+    const art = animationArt("tank")!,
+      stat = artFor("tank")!;
+    expect(art).toMatchObject({ scale: stat.scale });
+    expect(images[0].width * Math.max(art.bounds!.w, art.bounds!.h)).toBeCloseTo(unit(1, "tank").r * 2 * artScale(stat), 1);
+    expect(images[0].rotation).toBeCloseTo(1);
+    // The visible centre sits on the unit, as for static art.
+    near(visibleCentre(images[0], art), 100, 120);
+  });
+
+  it("falls back clip by clip, then to the static art, then to the procedural body", () => {
+    const withoutMove = host(everything.filter((t) => t !== clipKey("runner", "move")));
+    withoutMove.sprites.sync([at(unit(1, "runner"), 0)], look(0));
+    withoutMove.sprites.sync([at(unit(1, "runner"), 1)], look(0.1));
+    expect(withoutMove.images[0].texture).toBe(clipKey("runner", "idle"));
+    const staticOnly = host(everything.filter((t) => !t.startsWith("enemy:runner:")));
+    staticOnly.sprites.sync([unit(1, "runner")], look(0));
+    expect(staticOnly.images[0]).toMatchObject({ texture: "enemy:runner", frame: undefined });
+    const nothing = host(everything.filter((t) => !t.startsWith("enemy:runner")));
+    const f = frame(nothing.sprites, [unit(1, "runner")], look(0));
+    expect(nothing.images).toHaveLength(0);
+    expect(f.body).toBeGreaterThan(0);
+  });
+
+  it("plays the hurt clip on a hit without the white flash, then returns to its loop with the status tint", () => {
+    const { sprites, images } = host(everything),
+      feedback = new EnemyFeedback(),
+      c = unit(1, "aegis", { status: { slowed: true } });
+    sprites.sync([c], look(0, feedback));
+    feedback.recordDamage(1, 40, 0.5);
+    sprites.sync([c], look(0.5, feedback));
+    expect(images[0].texture).toBe(clipKey("aegis", "hurt"));
+    expect(images[0].tint).toEqual({ color: TINTS.slowed, fill: false });
+    sprites.sync([c], look(0.5 + clipDuration(animationsFor("aegis")!.hurt!) + 0.01, feedback));
+    expect(images[0].texture).toBe(clipKey("aegis", "idle"));
+    expect(images[0].tint).toEqual({ color: TINTS.slowed, fill: false });
+    // A static body still flashes.
+    const plain = host();
+    plain.sprites.sync([c], look(0.5, feedback));
+    expect(plain.images[0].tint?.fill).toBe(true);
+  });
+
+  it("keeps hidden and burrowed animated units invisible, and shows the same Image on its loop afterwards", () => {
+    const { sprites, images } = host(everything),
+      feedback = new EnemyFeedback();
+    sprites.sync([unit(1, "glider")], look(0, feedback));
+    feedback.recordDamage(1, 10, 0.2);
+    sprites.sync([unit(1, "glider", { traits: { stealth: true } })], look(0.2, feedback));
+    expect(images[0].visible).toBe(false);
+    expect(sprites.isRendering(1)).toBe(false);
+    sprites.sync([unit(1, "glider", { traits: { burrowed: true } })], look(0.25, feedback));
+    expect(images[0].visible).toBe(false);
+    // The hit taken while hidden plays no hurt clip later.
+    sprites.sync([unit(1, "glider")], look(0.3, feedback));
+    expect(images).toHaveLength(1);
+    expect(images[0]).toMatchObject({ visible: true, texture: clipKey("glider", "idle") });
+  });
+
+  it("plays one death clip at the last placement, then destroys it; paused frames hold", () => {
+    const { sprites, images } = host(everything),
+      c = unit(7, "boss", { heading: 0.7 });
+    sprites.sync([c], look(1));
+    const placed = { x: images[0].x, y: images[0].y, rotation: images[0].rotation, width: images[0].width };
+    expect(sprites.retire(new Map([[7, { at: { x: 2, y: 3 }, color: red("boss") }]]), 1.02, red)).toEqual([7]);
+    sprites.sync([], look(1.02));
+    expect(images).toHaveLength(1);
+    expect(images[0]).toMatchObject({ texture: clipKey("boss", "death"), destroyed: false, tint: undefined, ...placed });
+    expect(sprites.size).toBe(0);
+    expect(sprites.isRendering(7)).toBe(false);
+    sprites.sync([], look(1.3));
+    const paused = images[0].frame;
+    sprites.sync([], look(1.3));
+    expect(images[0].frame).toBe(paused);
+    sprites.sync([], look(1.02 + clipDuration(animationsFor("boss")!.death!) + 1e-6));
+    expect(images[0].destroyed).toBe(true);
+    expect(sprites.dyingCount).toBe(0);
+  });
+
+  it("never plays a death for an escape, an unseen or hidden unit, a mismatched kill or a static body", () => {
+    const { sprites, images } = host(everything);
+    sprites.sync([unit(1, "tank"), unit(2, "drone", { traits: { stealth: true } }), unit(3, "runner")], look(0));
+    // Unit 1 leaked (no kill), 2 was hidden, 3's kill colour belongs to another type, 9 was never drawn.
+    const kills = new Map([
+      [2, { at: { x: 0, y: 0 }, color: red("drone") }],
+      [3, { at: { x: 0, y: 0 }, color: red("boss") }],
+      [9, { at: { x: 0, y: 0 }, color: red("tank") }],
+    ]);
+    expect(sprites.retire(kills, 0.1, red)).toEqual([]);
+    sprites.sync([], look(0.1));
+    expect(images.every((i) => i.destroyed)).toBe(true);
+    const staticOnly = host();
+    staticOnly.sprites.sync([unit(1, "tank")], look(0));
+    expect(staticOnly.sprites.retire(new Map([[1, { at: { x: 0, y: 0 }, color: red("tank") }]]), 0.1, red)).toEqual([]);
+  });
+
+  it("bounds the death animations and clears them on reset", () => {
+    const { sprites, live } = host(everything),
+      units = Array.from({ length: MAX_DYING + 6 }, (_, i) => unit(i + 1, "drone"));
+    sprites.sync(units, look(0));
+    const kills = new Map(units.map((u) => [u.enemy.id, { at: { x: 0, y: 0 }, color: red("drone") }]));
+    expect(sprites.retire(kills, 0.05, red)).toHaveLength(MAX_DYING);
+    sprites.sync([], look(0.05));
+    expect(live()).toHaveLength(MAX_DYING);
+    sprites.reset();
+    expect(live()).toHaveLength(0);
+    expect(sprites.dyingCount).toBe(0);
   });
 });

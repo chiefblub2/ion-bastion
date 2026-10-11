@@ -5,6 +5,7 @@ import { towerColor } from "./core/upgrades";
 import { CELL, type Pen } from "./render/shapes";
 import { drawTower } from "./render/towers";
 import { drawEnemy } from "./render/enemies";
+import { AnimReview, animReviewSize } from "./anim-review";
 import { ArtReview, artReviewSize } from "./art-review";
 import { ART_FILTERING } from "./render/enemy-art-scene";
 import { Showcase, showcaseSize } from "./showcase";
@@ -99,7 +100,9 @@ const query = new URLSearchParams(location.search),
   showcase = query.has("showcase"),
   /** `?art`: the painted enemy bodies through the battlefield's sprite path (see `art-review.ts`). */
   art = query.has("art"),
-  pageSize = art ? artReviewSize : showcase ? showcaseSize : { width: width * ZOOM, height: height * ZOOM };
+  /** `?anim`: frame-by-frame review of the enemy animations (see `anim-review.ts`). */
+  anim = query.has("anim"),
+  pageSize = anim ? animReviewSize : art ? artReviewSize : showcase ? showcaseSize : { width: width * ZOOM, height: height * ZOOM };
 new Phaser.Game({
   type: Phaser.AUTO,
   parent: "gallery",
@@ -107,6 +110,6 @@ new Phaser.Game({
   transparent: true,
   antialias: true,
   render: ART_FILTERING,
-  scene: art ? ArtReview : showcase ? Showcase : Gallery,
+  scene: anim ? AnimReview : art ? ArtReview : showcase ? Showcase : Gallery,
   audio: { noAudio: true },
 });

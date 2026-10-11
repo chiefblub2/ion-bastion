@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { allClips, clipError, clipUrl } from "./enemy-animations";
 import { artUrl, ENEMY_ART } from "./enemy-art";
 import type { SpriteHost } from "./enemy-sprites";
 /**
@@ -22,10 +23,37 @@ export function queueEnemyArt(scene: Phaser.Scene) {
         }
     });
 }
+/**
+ * Queues the enemy animation sheets in a scene's `preload` (each a spritesheet of square cells), once per game like
+ * the art. A clip that fails to load or is invalid is warned about once and never queued again; its enemies fall
+ * back clip by clip (`animate`), then to the static art. Frames are picked per Image from the effect clock
+ * (`EnemySprites`), so no Phaser animation definitions are needed: Phaser's own playback runs on the game loop and
+ * would not freeze with a paused game (`AnimationManager.pauseAll` does not stop sprites in Phaser 3.90).
+ */
+export function queueEnemyAnimations(scene: Phaser.Scene) {
+  const queued = allClips().filter((clip) => {
+    if (scene.textures.exists(clip.texture) || failedArt.has(clip.texture)) return false;
+    const problem = clipError(clip);
+    if (!problem) return true;
+    failedArt.add(clip.texture);
+    console.warn(`Enemy animation '${clip.texture}' is invalid (${problem}); those enemies fall back to their other clips or static art.`);
+    return false;
+  });
+  // `endFrame` stops at the last drawn cell; the sheets are padded to a power-of-two width with empty cells.
+  for (const clip of queued) scene.load.spritesheet(clip.texture, clipUrl(clip), { frameWidth: clip.frameWidth, frameHeight: clip.frameHeight, endFrame: clip.frames - 1 });
+  if (queued.length)
+    scene.load.once(Phaser.Loader.Events.COMPLETE, () => {
+      for (const clip of queued)
+        if (!scene.textures.exists(clip.texture)) {
+          failedArt.add(clip.texture);
+          console.warn(`Enemy animation '${clip.texture}' (${clipUrl(clip)}) did not load; those enemies fall back to their other clips or static art.`);
+        }
+    });
+}
 /** Texture lookups and Images of a scene, for `EnemySprites`. */
 export const sceneSpriteHost = (scene: Phaser.Scene): SpriteHost => ({
   hasTexture: (key) => !failedArt.has(key) && scene.textures.exists(key),
-  createImage: (key) => scene.add.image(0, 0, key),
+  createImage: (key, frame) => scene.add.image(0, 0, key, frame),
   canTint: () => scene.sys.game.renderer.type === Phaser.WEBGL,
 });
 /**

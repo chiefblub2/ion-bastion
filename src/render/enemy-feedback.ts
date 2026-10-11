@@ -29,11 +29,13 @@ interface Feedback {
   hit: number;
   /** The current flash followed another closely (sustained fire, damage over time). */
   repeat: boolean;
+  /** Time of the latest positive hit, every one (flashes skip some): starts hurt animations. */
+  struckAt: number;
   /** Shield share at the last draw; NaN until the first one. */
   shield: number;
   shieldAt: number;
 }
-const fresh = (): Feedback => ({ hitAt: -Infinity, hit: 0, repeat: false, shield: NaN, shieldAt: -Infinity });
+const fresh = (): Feedback => ({ hitAt: -Infinity, hit: 0, repeat: false, struckAt: -Infinity, shield: NaN, shieldAt: -Infinity });
 export class EnemyFeedback {
   private states = new Map<number, Feedback>();
   private alive = new Set<number>();
@@ -46,6 +48,7 @@ export class EnemyFeedback {
     if (!(amount > 0) || !Number.isFinite(amount)) return;
     let st = this.states.get(id);
     if (!st) this.states.set(id, (st = fresh()));
+    st.struckAt = now;
     if (now < st.hitAt + FLASH.max) st.hit += amount;
     else if (now >= st.hitAt + FLASH.max + FLASH.gap) {
       st.repeat = now < st.hitAt + FLASH.repeat;
@@ -88,6 +91,10 @@ export class EnemyFeedback {
       life = st.repeat ? FLASH.min : FLASH.min + (FLASH.max - FLASH.min) * k,
       age = now - st.hitAt;
     return age >= 0 && age < life ? Math.max(k, 0.01) : 0;
+  }
+  /** Time of an enemy's latest positive hit, or -Infinity. */
+  struckAt(id: number) {
+    return this.states.get(id)?.struckAt ?? -Infinity;
   }
   /** Progress of a running shield ripple, 0..1, or undefined. */
   shieldRipple(id: number, now: number) {

@@ -41,3 +41,23 @@ describe("enemy codex", () => {
     expect(traits).toContain("The Jammer switches the trait off.");
   });
 });
+
+describe("codex artwork", () => {
+  it("shows the painted art of every enemy, with its procedural SVG kept as the fallback", () => {
+    const { list } = renderEnemyCodex(DEFAULT_CONTENT, "enemies"),
+      cards = list.split("<article").slice(1);
+    expect(cards).toHaveLength(Object.keys(DEFAULT_CONTENT.enemies).length);
+    for (const card of cards) {
+      expect(card).toMatch(/<span class="enemy-icon painted"[^>]*><img src="[^"]*assets\/enemies\/[a-z]+\.png" alt="" width="64" height="64"/);
+      expect(card).toContain('<svg class="enemy-icon"');
+    }
+  });
+
+  it("offers an animation preview, closed and empty, only on the animated types", () => {
+    const { list } = renderEnemyCodex(DEFAULT_CONTENT, "enemies"),
+      toggles = [...list.matchAll(/data-codex-anim="([a-z]+)" aria-expanded="false" aria-controls="codex-anim-\1"/g)].map((m) => m[1]);
+    expect(toggles.sort()).toEqual(["aegis", "boss", "drone", "glider", "runner", "tank"]);
+    expect(list.match(/class="codex-anim" id="codex-anim-[a-z]+" role="region" aria-label="[^"]+ animation" hidden><\/div>/g)).toHaveLength(6);
+    expect(list).toContain('aria-label="Animation preview of Drone"');
+  });
+});

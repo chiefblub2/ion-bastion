@@ -16,6 +16,7 @@ import { createScreens, GAME, HOME, type MenuPage, type Screen } from "./screens
 import { lastMission, rememberMission } from "./progress";
 import { isCircleSector, missionById, sectorOf } from "../content/missions";
 import type { CodexTab } from "../ui/enemy-codex";
+import { bindCodexPreviews, closeCodexPreview } from "../ui/codex-preview";
 interface InputDeps {
   game: Game;
   view: ViewState;
@@ -115,6 +116,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     if (to.page !== "missions") forRoom = false;
     if (to.page === "missions") renderMissionList(game, missionSector, forRoom || coop.inLobby());
     if (to.page === "coop") coop.render();
+    // Any page change ends a codex animation preview; opening the codex renders it closed.
+    closeCodexPreview();
     if (to.page === "codex") renderCodex(game);
     missionSector = undefined;
     scrollTo(0, 0);
@@ -230,6 +233,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     renderCodex(game, tab);
     document.getElementById(`codex-tab-${tab}`)?.focus();
   }
+  bindCodexPreviews(document.getElementById("codex-list")!);
   document.getElementById("codex-tabs")!.addEventListener("keydown", (e) => {
     const current = (e.target as HTMLElement).closest<HTMLElement>("[data-codex-tab]")?.dataset.codexTab,
       other: CodexTab = current === "enemies" ? "traits" : "enemies";

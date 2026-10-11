@@ -7,10 +7,12 @@
     <style>
       body { margin: 0; padding: 16px; background: #1b2530; color: #cfe3ef; font: 13px system-ui, sans-serif; }
       #gallery canvas { display: block; }
+      .anim-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+      .anim-controls output { font: 12px monospace; color: #ffe9a8; }
     </style>
   </head>
   <body>
-    <p>All towers and enemies as the battlefield draws them; source for the README images (scripts/readme-images.ts).</p>
+    <p>All towers and enemies as the battlefield draws them; source for the README images (scripts/readme-images.ts). Review pages: <a href="?art" style="color:inherit">?art</a> (painted art), <a href="?anim" style="color:inherit">?anim</a> (enemy animations), <a href="?showcase" style="color:inherit">?showcase</a>.</p>
     <div id="gallery"></div>
     <script type="module" src="/src/gallery.ts"></script>
   </body>

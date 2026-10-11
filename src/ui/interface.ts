@@ -8,6 +8,7 @@ import { earlyBonus, wavesLeft } from "../systems/circle";
 import { WAVE_BREAK } from "../systems/waves";
 import { renderWaveForecast, waveForecast } from "./wave-forecast";
 import { liveUnits, renderLiveUnits } from "./live-units";
+import { closeCodexPreview } from "./codex-preview";
 import { renderEnemyCodex, type CodexTab } from "./enemy-codex";
 import { effectiveTowerStats, isInAura } from "../systems/auras";
 import type { MissionDefinition, MissionSector, TowerId } from "../core/types";
@@ -199,7 +200,7 @@ export function renderMissionBrief(game: Game, m: MissionDefinition | undefined,
       ...(m.circle ? [stat("RING LIMIT", String(m.circle.limit)), stat("INTERVAL", `${m.circle.interval} s`)] : [stat("REACTOR", `♡ ${m.reactorEnergy}`)]),
     ],
     foes = missionEnemies(m, game.content)
-      .map(({ id, isNew }) => `<li>${enemyIcon(enemies[id].visual, enemies[id].color)}<span>${enemies[id].name}</span>${isNew ? '<b class="new-tag">NEW</b>' : ""}</li>`)
+      .map(({ id, isNew }) => `<li>${enemyIcon(enemies[id].visual, enemies[id].color, id)}<span>${enemies[id].name}</span>${isNew ? '<b class="new-tag">NEW</b>' : ""}</li>`)
       .join("");
   brief.innerHTML = `<p class="eyebrow">MISSION ${pad(missionNumber(m, missions))}${sector ? ` · SECTOR ${roman(sectors.indexOf(sector))} · ${sector.name.toUpperCase()}` : ""}</p><h2>${m.name}</h2><p class="mission-brief-focus">${m.focus}</p>${mapPreviewSvg(m.map)}<div class="mission-brief-stats">${stats.join("")}</div><h3>Enemies</h3><ul class="mission-brief-enemies">${foes}</ul>${m.availableTowers ? `<h3>Towers</h3><p class="mission-brief-towers">${m.availableTowers.map((id) => towers[id].name).join(" · ")}</p>` : ""}<div class="mission-brief-actions">${reset ? '<p class="mission-warning">Your current defense and progress will be reset.</p>' : ""}<button class="primary" data-mission="${m.id}">${lobby ? "Choose for room" : "Start mission"} <span>▶</span></button></div>`;
 }
@@ -207,6 +208,7 @@ export function renderMissionBrief(game: Game, m: MissionDefinition | undefined,
 export function renderCodex(game: Game, tab: CodexTab = "enemies") {
   const { tabs, list } = renderEnemyCodex(game.content, tab),
     panel = document.getElementById("codex-list")!;
+  closeCodexPreview();
   document.getElementById("codex-tabs")!.innerHTML = tabs;
   panel.innerHTML = list;
   panel.setAttribute("aria-labelledby", `codex-tab-${tab}`);

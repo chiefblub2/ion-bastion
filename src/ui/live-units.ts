@@ -45,7 +45,7 @@ export function liveUnits(game: Game): LiveUnits | null {
 }
 
 const row = (u: LiveUnit) =>
-  `<li class="live-unit ${u.layer}${u.alive ? "" : " pending"}">${enemyIcon(u.visual, u.color)}<span class="unit-name">${escape(u.name)}</span><b class="live-count">${u.alive}</b><small class="live-queued">${u.queued ? `+${u.queued}` : ""}</small></li>`;
+  `<li class="live-unit ${u.layer}${u.alive ? "" : " pending"}">${enemyIcon(u.visual, u.color, u.type)}<span class="unit-name">${escape(u.name)}</span><b class="live-count">${u.alive}</b><small class="live-queued">${u.queued ? `+${u.queued}` : ""}</small></li>`;
 /** Sidebar panel while a wave runs. */
 export function renderLiveUnits(live: LiveUnits, wave: number): string {
   return `<div class="selection-heading"><span>ON FIELD · WAVE ${String(wave).padStart(2, "0")}</span><b>${live.alive} active${live.queued ? ` · ${live.queued} incoming` : ""}</b></div>
