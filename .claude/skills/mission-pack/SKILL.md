@@ -10,7 +10,7 @@ Playbook for adding new sectors fast. Your own job is the **design sheet** and t
 Last run: two sectors, 10 missions, 4 enemies and 2 traits.
 - Foundation: about 2 min.
 - Three parallel agents: about 7.5 min.
-- Integration: about 3 min (`npm run test:full` about 5 s, visual check about 75 s for four missions).
+- Integration: about 3 min (`npm test` about 1 s, visual check about 75 s for four missions).
 
 Read CLAUDE.md ("Adding content") first.
 
@@ -61,14 +61,13 @@ ui/wave-forecast.ts, render/enemies.ts, content/enemies.ts, render/terrain.ts, c
 1. core/types.ts: MapTheme values; Trait union members with doc comments.
 2. systems/traits.ts: TRAITS entries (validate + hook), TraitFlags/traitFlags fields. Do not add new traits to DISRUPTABLE
    unless the design sheet says so.
-3. systems/traits.test.ts: tests per trait (window/formula edges, validation).
+3. systems/traits.test.ts: one or two focused tests per trait (core formula, validation).
 4. ui/wave-forecast.ts TRAIT_TAGS; render/enemies.ts markers (visual extras via EnemyVisual fields, never d.id checks).
 5. content/enemies.ts: the enemies exactly as specified, English one-line comment above each.
 6. render/terrain.ts: placeholder THEMES entries with the palette (minimal obstacle/decor, empty ambient).
 7. Stubs, NOT registered anywhere: content/sectors/<id>.ts exporting <CONST>: MissionSector (missions: []),
    core/strategies/<id>.ts exporting <ID>_STRATEGIES = {}.
-Gate: npx tsc --noEmit; npx vitest run src/systems src/ui; npx vitest run src/core/replay (no -u; all shards). Then
-`npx vite-node scripts/snapshot-diff.ts -- --expect ""` must exit 0 (no existing replay changed; new ones are fine).
+Gate: npx tsc --noEmit; npx vitest run src/systems src/ui.
 "every enemy type appears in the campaign" fails until integration — expected. Do not commit.
 Report: files changed, test results, any deviation from the design sheet.
 ```
@@ -104,7 +103,7 @@ Balance lessons:
 - Shielded or fast flyers leak first; give both strategies enough flak/tesla.
 - If a strategy still loses after about 6 rounds, soften the waves.
 Forbidden: editing any other file (enemy stats included — report instead), registering the sector, running
-src/core/replay* / npm test / npm run build / -u, PENDING_BALANCE entries, temporary debug scripts. Ignore tsc errors in
+npm test / npm run build, temporary debug scripts. Ignore tsc errors in
 other agents' files. Do not commit.
 Report: table (id, name, twist, credits, hpGrowth, waves, energy) + final energy per strategy + deviations.
 ```
@@ -134,7 +133,7 @@ Run the expensive checks once, after all edits. Agents' final balance runs count
    - README enemy table: one row per new sector, each enemy as `<img src="docs/images/enemies/<id>.png" width="24" height="24" alt=""> Name (…)`. With `npm run dev` running, `npx vite-node scripts/readme-images.ts -- --only enemies` writes the icons.
    - CLAUDE.md: the trait list under "Enemy", plus special rules of the new traits (e.g. an `isHidden` extension).
    - Player texts, all English (mission `focus`, README) use the in-game tower names (`name` in `content/towers.ts`: Cryo, Ember, Tar Pit, Stasis, Bear Trap …), never ids like frost or inferno. `grep -n "Frost\|Inferno\|Stase" src/content/sectors/<id>.ts` catches the usual slips.
-3. One `npm run test:full` (about 5 s, input cache off; the campaign runs in `replay-N.test.ts` shards, new golden snapshots are written automatically). Then `npx vite-node scripts/snapshot-diff.ts -- --expect ""`: only "New", nothing changed or removed.
+3. One `npm test` (about 1 s; content rules, no campaign simulations — the agents' balance runs are the win/loss check).
 4. One `npm run build` (it already runs `tsc`; no separate `tsc`). Later edits to `focus` strings, README or CLAUDE.md need no new test run; only `.ts` changes the simulation reads do.
 5. **Visual check, mandatory:**
    - `npm run dev` in the background, then

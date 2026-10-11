@@ -5,7 +5,7 @@ import { Game } from "./game";
 import { hasStealth, RESERVE_ENEMIES } from "./mission-checks";
 import { STRATEGIES } from "./strategies";
 import { validateMission } from "./validation";
-/** Campaign-wide content rules; the per-mission simulations live in `campaign-tests.ts` (`replay-N.test.ts`). */
+/** Campaign-wide content rules; mission balance is checked with `scripts/balance.ts`. */
 describe("missions", () => {
   it("have unique ids and valid content", () => {
     expect(new Set(MISSIONS.map((m) => m.id)).size).toBe(MISSIONS.length);

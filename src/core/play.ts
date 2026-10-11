@@ -33,7 +33,7 @@ export function play(
     const options = g.state.towers
       .flatMap((t) =>
         upgradeOptions(t, g.state.wallets[0])
-          // Specializations stay out of the test strategies, so the golden replays keep their balance.
+          // Specializations stay out of the test strategies, so the balance script keeps measuring the base towers.
           .filter((o) => o.status === "available" && !isSpecialization(o.definition!))
           .map((o) => ({ id: t.id, upgrade: o.definition!.id, cost: o.definition!.cost })),
       )

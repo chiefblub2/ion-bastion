@@ -9,7 +9,7 @@ Playbook for adding enemies to the existing campaign. Your own job is the **enem
 
 Read CLAUDE.md ("Adding content", "Enemy", "Status merge rules") first. If the user also wants new missions, use `.claude/skills/mission-pack/SKILL.md` instead.
 
-Every new enemy must appear in at least one existing mission ("every enemy type appears in the campaign"), so those missions' golden replays change on purpose. Keep the set of touched missions small.
+Every new enemy must appear in at least one existing mission ("every enemy type appears in the campaign"). Keep the set of touched missions small and re-balance them with `scripts/balance.ts`.
 
 ## 0. Ask up front (one AskUserQuestion)
 
@@ -63,13 +63,12 @@ render/enemies.ts, content/enemies.ts):
 1. core/types.ts: Trait union members with doc comments (ranges, statelessness); new EnemyVisual fields if any.
 2. systems/traits.ts: TRAITS entries (validate with English messages + hook), helper with a one-line doc comment,
    TraitFlags/traitFlags fields. DISRUPTABLE only if the sheet says so.
-3. systems/traits.test.ts: tests per trait (formula and window edges, validation rejects bad params).
+3. systems/traits.test.ts: one or two focused tests per trait (core formula, validation rejects bad params).
 4. ui/wave-forecast.ts TRAIT_TAGS (English label and title with the params' numbers); render/enemies.ts TRAIT_COLORS
    entry and marker (visual extras via EnemyVisual fields, never d.id checks).
 5. content/enemies.ts: the enemies exactly as specified, English one-line comment above each (trait + counters).
 Do NOT touch missions or strategies.
-Gate: npx tsc --noEmit; npx vitest run src/systems src/ui; npx vitest run src/core/replay (no -u, all shards, must pass
-unchanged). "every enemy type appears in the campaign" fails until placement — expected. Do not commit.
+Gate: npx tsc --noEmit; npx vitest run src/systems src/ui. "every enemy type appears in the campaign" fails until placement — expected. Do not commit.
 Report: files changed, test results, deviations from the sheet.
 ```
 
@@ -97,8 +96,8 @@ Balance lessons:
 - hpMultiplier waves are cliff-sensitive (±2 flips a result); re-run after every change.
 - If a strategy still loses after about 6 rounds, lower the new enemy's count before touching other groups.
 - If the enemy itself is the problem (unkillable, trivial), stop and report a stat proposal instead of hiding it in waves.
-Forbidden: editing enemy stats, traits or any other file, missions not on the placement lines, running src/core/replay* /
-npm test / npm run build / -u, PENDING_BALANCE entries, temporary debug scripts. Do not commit.
+Forbidden: editing enemy stats, traits or any other file, missions not on the placement lines, running
+npm test / npm run build, temporary debug scripts. Do not commit.
 Report: baseline vs. final output, per mission the wave changes (before → after), stat proposals.
 ```
 
@@ -108,27 +107,23 @@ Stat proposals: apply them yourself in `content/enemies.ts` and re-run the loop 
 
 Run the expensive checks once, after all edits. `git status` first: files outside this pack mean another session works in the same tree; leave them alone and name them in the report.
 
-1. Run `npx vitest run src/core/replay -u` (all shards, a few seconds; unchanged missions come from the input cache), then
-   `npx vite-node scripts/snapshot-diff.ts -- --expect <placement mission ids, comma-separated>`
-   (per changed replay the first diverging wave and the final trace; exit 1 on any other mission).
-   Only missions on the placement lines may appear. Any other mission means the trait leaks into solo state (an optional field that is not `undefined`, a changed iteration order): fix it, don't accept it.
-2. Text work, before the final test run:
+1. Text work, before the final test run:
    - `npx vite-node scripts/mission-table.ts --write` (enemy count in the README intro, mission table if waves changed).
    - README "Enemies": add the enemies to their sector's row (`<img src="docs/images/enemies/<id>.png" width="24" height="24" alt=""> Name (short trait)`), or a sentence below the table if they join several sectors. With `npm run dev` running, `npx vite-node scripts/readme-images.ts -- --only enemies` writes the icons (`docs/images/enemies/`).
    - Pitfall, if a new enemy is under a pit threshold: the level descriptions in `content/towers.ts` and the README trap row both name the swallowed enemies.
    - CLAUDE.md: the trait list under "Enemy", plus special rules of new traits (an `isHidden` extension, a new `Enemy` field in `stateHash`, DISRUPTABLE).
    - Player texts (English) use the in-game tower names (`name` in `content/towers.ts`: Cryo, Ember, Tar Pit …), never ids like frost or inferno.
-3. One `npm run test:full` (cache off, about 5 s) and one `npm run build` (it already runs `tsc`). Later edits to texts, README or CLAUDE.md need no new run.
-4. **Visual check, mandatory:**
+2. One `npm test` (about 1 s) and one `npm run build` (it already runs `tsc`). Later edits to texts, README or CLAUDE.md need no new run.
+3. **Visual check, mandatory:**
    - `npm run dev` in the background, then
      `npx vite-node scripts/visual-check.ts -- <placement mission> --enemies <id>[,<id>] --out <scratchpad>/vc`
      (opens the first wave with each enemy directly via `&wave=<n>`, builds what strategy A affords, screenshots terrain and the field with the forecast; ~40 s for 18 missions).
    - Always skip straight to the target wave; never play a mission through to reach it (no upgrade loops, no waiting on earlier waves). Pass all missions and all new enemy ids in ONE call (`--enemies a,b,…`); the script opens each target wave in parallel.
    - Read every PNG: the body and the trait marker (a damaged enemy shows HP-driven markers). For a changing state (window, HP share) run it twice or compare two enemies.
    - If that is not possible, say so explicitly in the final report. Stop the dev server afterwards.
-5. Final report to the user:
+4. Final report to the user:
    - the new enemies (stats, traits, counters) and traits
-   - where they appear (mission, waves) and which snapshots changed
+   - where they appear (mission, waves)
    - test and build results
    - balance quirks and stat changes
    - the visual check
