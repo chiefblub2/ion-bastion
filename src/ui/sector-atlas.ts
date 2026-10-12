@@ -213,8 +213,6 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
   renderFeatured(game, picked, options);
   requestAnimationFrame(syncRailSteps);
 }
-/** Token of the latest featured mission; a picture that arrives after another pick is dropped. */
-let featured = 0;
 /** The large battlefield preview and the briefing beside it. */
 export function renderFeatured(game: Game, m: MissionDefinition | undefined, { lobby, image }: AtlasOptions) {
   const preview = $("atlas-preview"),
@@ -228,8 +226,7 @@ export function renderFeatured(game: Game, m: MissionDefinition | undefined, { l
     { missions, enemies, towers } = content,
     sectors = content.sectors ?? [],
     sector = sectorOf(m, sectors),
-    numeral = sector ? roman(sectors.indexOf(sector)) : "",
-    token = ++featured;
+    numeral = sector ? roman(sectors.indexOf(sector)) : "";
   // Preview: a new layer over the old one, crossfaded; the SVG shows at once and the terrain picture fades in.
   preview.style.setProperty("--accent", hex(themeAccent(m.map)));
   $("preview-sector").textContent = sector ? `SECTOR ${numeral}` : "OPERATION";
@@ -244,7 +241,7 @@ export function renderFeatured(game: Game, m: MissionDefinition | undefined, { l
     const layer = document.createElement("div");
     layer.className = "preview-layer is-loading";
     layer.dataset.map = m.map.id;
-    layer.innerHTML = `<div class="preview-backdrop" aria-hidden="true"></div>${mapPreviewSvg(m.map)}<img alt="Battlefield ${escape(m.map.name)}">`;
+    layer.innerHTML = `${mapPreviewSvg(m.map)}<img alt="Battlefield ${escape(m.map.name)}">`;
     stage.append(layer);
     // Older layers fade out under the new one and leave once it is in.
     for (const old of [...stage.children].slice(0, -1) as HTMLElement[]) {
@@ -256,7 +253,6 @@ export function renderFeatured(game: Game, m: MissionDefinition | undefined, { l
     const img = layer.querySelector("img")!;
     fillImage(img, m.map, image, () => {
       layer.classList.remove("is-loading");
-      if (img.src && token === featured) (layer.firstElementChild as HTMLElement).style.backgroundImage = `url("${img.src}")`;
       coverImages();
     });
   } else coverImages();
