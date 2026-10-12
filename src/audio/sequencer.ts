@@ -1,19 +1,27 @@
+import type { Levels } from "./activity";
 import { nextSlot, stepLength, type Clock } from "./clock";
+import { FAMILIES, type Family } from "./families";
 import { arpIndex, hitsAt, type Drum } from "./grooves";
 import { chordOf, padChord, type Color, type Extent, type ThemeMusic } from "./harmony";
+import { partNote } from "./parts";
 // Lookahead scheduling after Chris Wilson's "A Tale of Two Clocks": a coarse timer schedules everything due in the
 // next window on the precise audio clock.
 
 const TICK_MS = 25,
   AHEAD = 0.1;
-/** What the two parts of the music play right now. */
+/** What the music plays right now: the enemies' drums, the towers' parts and harmony, the mood. */
 export interface Parts {
   drums: readonly Drum[];
   arp: boolean;
   extent: Extent;
   color: Color;
+  activity: Readonly<Levels>;
 }
-export type Beat = { kind: "chord"; notes: number[]; at: number } | { kind: "hit"; drum: Drum; at: number } | { kind: "arp"; voice: number; at: number };
+export type Beat =
+  | { kind: "chord"; notes: number[]; at: number }
+  | { kind: "hit"; drum: Drum; at: number }
+  | { kind: "arp"; voice: number; at: number }
+  | { kind: "part"; family: Family; voice: number; velocity: number; at: number };
 
 /** The 1/16 steps with `from <= time < to`. */
 export function stepsIn(c: Clock, from: number, to: number) {
@@ -25,14 +33,18 @@ export function stepsIn(c: Clock, from: number, to: number) {
     out.push({ time, step });
   }
 }
-/** Pad chords on bar lines, drum hits and arpeggio notes in the window. */
+/** Pad chords on bar lines, drum hits, the families' parts and the 8th-note arpeggio in the window. */
 export function schedule(c: Clock, music: ThemeMusic, parts: Parts, from: number, to: number): Beat[] {
   const out: Beat[] = [];
   for (const { time, step } of stepsIn(c, from, to)) {
     if (((step % 16) + 16) % 16 === 0)
       out.push({ kind: "chord", notes: padChord(chordOf(music, Math.floor(step / 16), parts.extent), parts.color), at: time });
     for (const drum of hitsAt(music.groove, step, parts.drums)) out.push({ kind: "hit", drum, at: time });
-    if (parts.arp) out.push({ kind: "arp", voice: arpIndex(step, parts.color, parts.extent), at: time });
+    for (const family of FAMILIES) {
+      const note = partNote(family, step, parts.activity[family]);
+      if (note) out.push({ kind: "part", family, ...note, at: time });
+    }
+    if (parts.arp && step % 2 === 0) out.push({ kind: "arp", voice: arpIndex(step / 2, parts.color, parts.extent), at: time });
   }
   return out;
 }
