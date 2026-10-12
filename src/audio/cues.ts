@@ -1,13 +1,13 @@
-import { fnv } from "../core/hash";
 import type { AttackSpec, ContentPack, GameEvent, GameState } from "../core/types";
+import { voiceOf } from "./harmony";
 import { RECIPES, type CueId } from "./recipes";
 // Drained game events → sound cues. Every firing emits a `shot` with its tower id; chain, beam and pulse events only
-// accompany it and stay silent.
+// accompany it and stay silent. `Score.place` decides when and at which pitch a cue sounds.
 
 export interface Cue {
   id: CueId;
-  /** Playback rate before jitter. */
-  pitch: number;
+  /** Chord-tone index for pitched cues: the tower's own voice, or a fixed tone for flow cues. */
+  voice: number;
   gain: number;
 }
 export type View = "menu" | "game";
@@ -23,39 +23,39 @@ const PLAIN: Partial<Record<GameEvent["type"], CueId>> = {
   kill: "kill", evade: "evade", overload: "overload", leak: "leak", build: "build", sell: "sell", upgrade: "upgrade",
   income: "income", repair: "repair", waveStart: "waveStart", waveEnd: "waveEnd",
 };
-/** A stable pitch per tower id, so towers of one attack kind still sound apart (0.88–1.12). */
-export const towerPitch = (tower: string) => 0.88 + (fnv(tower) % 25) / 100;
+/** Building rises to the fifth, upgrading to the top of the chord; other flow cues sit on the root. */
+const FLOW_VOICE: Partial<Record<CueId, number>> = { build: 2, upgrade: 3 };
 export const burstGain = (n: number) => Math.min(1.5, 1 + 0.1 * (n - 1));
 
-function cueOf(e: GameEvent, content: ContentPack): { id: CueId; pitch: number } | null {
+function cueOf(e: GameEvent, content: ContentPack): { id: CueId; voice: number } | null {
   switch (e.type) {
     case "shot": {
       const d = content.towers[e.tower];
       const id = d.placement === "path" ? "trap" : FIRE[d.attack.kind];
-      return id && { id, pitch: towerPitch(e.tower) };
+      return id && { id, voice: voiceOf(e.tower) };
     }
     case "impact":
-      return { id: BLASTS.has(content.towers[e.tower].attack.kind) ? "blast" : "impact", pitch: towerPitch(e.tower) };
+      return { id: BLASTS.has(content.towers[e.tower].attack.kind) ? "blast" : "impact", voice: voiceOf(e.tower) };
     case "end":
-      return { id: e.result, pitch: 1 };
+      return { id: e.result, voice: 0 };
     default: {
       const id = PLAIN[e.type];
-      return id ? { id, pitch: 1 } : null;
+      return id ? { id, voice: FLOW_VOICE[id] ?? 0 } : null;
     }
   }
 }
-/** One cue per sound and pitch in this frame; in the menu only flow cues (a multiplayer wave runs on). */
+/** One cue per sound and voice in this frame; in the menu only flow cues (a multiplayer wave runs on). */
 export function cuesFor(events: readonly GameEvent[], content: ContentPack, view: View): Cue[] {
-  const merged = new Map<string, { id: CueId; pitch: number; n: number }>();
+  const merged = new Map<string, { id: CueId; voice: number; n: number }>();
   for (const e of events) {
     const c = cueOf(e, content);
     if (!c || (view === "menu" && RECIPES[c.id].pool === "combat")) continue;
-    const key = `${c.id}@${c.pitch}`,
+    const key = `${c.id}@${c.voice}`,
       m = merged.get(key);
     if (m) m.n++;
     else merged.set(key, { ...c, n: 1 });
   }
-  return [...merged.values()].map(({ id, pitch, n }) => ({ id, pitch, gain: burstGain(n) }));
+  return [...merged.values()].map(({ id, voice, n }) => ({ id, voice, gain: burstGain(n) }));
 }
 /** Reports the reactor falling to 30 % once per crossing; a new state (restart, mission change) starts fresh. */
 export class ReactorWatch {
