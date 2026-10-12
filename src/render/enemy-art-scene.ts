@@ -25,10 +25,10 @@ export function queueEnemyArt(scene: Phaser.Scene) {
     });
 }
 /**
- * Queues the enemy animation sheets in a scene's `preload` (one grid spritesheet per animated type, its clips on the
- * rows). With `types` (the battlefield passes `missionAnimationTypes`), only those sheets are queued and loaded sheets
+ * Queues the enemy animation sheets (one grid spritesheet per animated type, its clips on the rows): in `preload` on
+ * the review pages, in `create` plus `load.start()` on the battlefield, which runs while they load. With `types` (the battlefield passes `missionAnimationTypes`), only those sheets are queued and loaded sheets
  * of other types are released: each decodes to 8 MiB (2048 × 1024 RGBA, more with mipmaps), so the whole roster
- * would not fit a mission's budget. Preload runs again on every mission change (`scene.restart`) after the old
+ * would not fit a mission's budget. This runs again on every mission change (`scene.restart`) after the old
  * Images are destroyed, so nothing still shows a released sheet; a sheet kept from the last mission is reused.
  * Without `types` (review pages) every sheet loads. A sheet that fails to load, or holds an invalid clip, is warned
  * about once and never queued again; its enemies keep their static art, as do types whose sheet is not loaded.
@@ -55,6 +55,8 @@ export function queueEnemyAnimations(scene: Phaser.Scene, types?: ReadonlySet<En
           failedArt.add(sheet.texture);
           console.warn(`Enemy animation sheet '${sheet.texture}' (${clipUrl(sheet)}) did not load; those enemies keep their static art.`);
         }
+      // A sheet of the previous mission still in flight at the restart may have landed since; release it again.
+      if (types) for (const key of sheetPlan(types, (key) => scene.textures.exists(key)).release) scene.textures.remove(key);
     });
 }
 /** Texture lookups and Images of a scene, for `EnemySprites`. */

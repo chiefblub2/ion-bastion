@@ -143,15 +143,15 @@ export class Battlefield extends Phaser.Scene {
     super("battlefield");
     this.driver = new LocalDriver(sim, view);
   }
-  /**
-   * Queues the enemy art once per game (a scene restart finds it in the texture cache) and the animation sheets of
-   * the mission's enemy types; a mission change restarts the scene, which swaps the sheets.
-   */
+  /** Queues the enemy art once per game; a scene restart finds it in the texture cache. */
   preload() {
     queueEnemyArt(this);
-    queueEnemyAnimations(this, missionAnimationTypes(this.sim.mission, this.sim.content));
   }
   create() {
+    // The mission's animation sheets (about 2 MB each) load in the background: on a slow host, waiting for them in
+    // `preload` left the board blank after a mission change. Until a sheet arrives its enemies show their static art.
+    queueEnemyAnimations(this, missionAnimationTypes(this.sim.mission, this.sim.content));
+    this.load.start();
     this.effects = [];
     // Phaser destroys the scene's objects on shutdown; drop the sprite references with them.
     const cleanup = () => {
