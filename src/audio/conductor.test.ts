@@ -3,12 +3,14 @@ import { DEFAULT_CONTENT } from "../content";
 import type { GameEvent, TowerId } from "../core/types";
 import { stepLength } from "./clock";
 import { Conductor, type Voices } from "./conductor";
-import type { Instrument } from "./instruments";
+import { POLYPHONY } from "./engine";
+import { LENGTH, type Instrument } from "./instruments";
 
 const rapid = Object.values(DEFAULT_CONTENT.towers).find((d) => d.attack.kind === "direct" && !d.placement)!.id as TowerId;
+const electric = Object.values(DEFAULT_CONTENT.towers).find((d) => d.attack.kind === "chain" && !d.placement)!.id as TowerId;
 const at = { x: 0, y: 0 };
 class Recorder implements Voices {
-  notes: { name: Instrument; at: number }[] = [];
+  notes: { name: Instrument; at: number; bus?: string }[] = [];
   effects = 0;
   ducks = 0;
   ambience = { chord: () => {}, tone: () => {} };
@@ -16,8 +18,8 @@ class Recorder implements Voices {
     this.effects++;
     return true;
   }
-  instrument(name: Instrument, _hz: number, at: number) {
-    this.notes.push({ name, at });
+  instrument(name: Instrument, _hz: number, at: number, _velocity: number, _pan: number, bus?: string) {
+    this.notes.push({ name, at, bus });
     return true;
   }
   duck() {
@@ -25,7 +27,7 @@ class Recorder implements Voices {
   }
 }
 /** Drives a conductor through `bars` bars of rapid fire at `rate` shots per second, frame by frame like the game. */
-function run(rate: number, bars: number) {
+function run(rate: number, bars: number, tower = rapid, defense = 0) {
   const r = new Recorder(),
     c = new Conductor(r),
     frame = 1 / 30;
@@ -35,10 +37,10 @@ function run(rate: number, bars: number) {
     first = -1;
   for (let t = 0; t < end; t += frame) {
     const events: GameEvent[] = [];
-    for (owed += rate * frame; owed >= 1; owed--) events.push({ type: "shot", tower: rapid, from: at, to: at, color: 0 });
+    for (owed += rate * frame; owed >= 1; owed--) events.push({ type: "shot", tower, from: at, to: at, color: 0 });
     if (events.length && first < 0) first = t;
     c.shots(events, DEFAULT_CONTENT, t);
-    c.measure({ threat: 0, defense: 0, clear: 5, heavies: 0, drums: true, playing: true });
+    c.measure({ threat: 0, defense, clear: 5, heavies: 0, drums: true, playing: true });
     c.window(t, t + frame);
   }
   return { r, first, end, beat: stepLength(c.score.clock, 4) };
@@ -67,8 +69,16 @@ describe("Conductor", () => {
     c.cue("won", 0.1);
     expect(r.notes.length).toBeGreaterThan(1);
     expect(r.ducks).toBe(1);
+    expect(r.notes.every((n) => n.bus === "sfx")).toBe(true);
     expect(r.effects).toBe(0);
     c.cue("reject", 0.1);
     expect(r.effects).toBe(1);
+  });
+  it("leaves every instrument room at full defense, arpeggio and electric bells together", () => {
+    const { r } = run(20, 4, electric, 0.9);
+    for (const n of r.notes) {
+      const sounding = r.notes.filter((m) => m.name === n.name && m.at <= n.at && n.at < m.at + LENGTH[m.name]).length;
+      expect(sounding, `${n.name} at ${n.at.toFixed(2)}`).toBeLessThanOrEqual(POLYPHONY);
+    }
   });
 });

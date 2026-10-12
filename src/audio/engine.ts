@@ -12,9 +12,9 @@ import { buildSamples } from "./zzfx";
 /** Bus gain scale, so full sliders leave headroom. */
 const HEADROOM = 0.5,
   DUCK_LEVEL = 0.4,
-  DUCK_TIME = 0.6,
-  /** Notes one instrument may sound at once. */
-  POLYPHONY = 6;
+  DUCK_TIME = 0.6;
+/** Notes one instrument may sound at once. */
+export const POLYPHONY = 6;
 const BUS_OF = { combat: "sfx", flow: "sfx", ui: "ui" } as const;
 type Playing = Voice & { source: AudioBufferSourceNode };
 
@@ -95,15 +95,15 @@ export class AudioEngine {
     if (spec.duck) this.duck(at);
     return true;
   }
-  /** Plays a music note; false when the instrument already sounds too many notes at that time. */
-  instrument(name: Instrument, hz: number, at: number, velocity: number, pan: number) {
+  /** Plays a note on the music bus (ducked) or, for stingers, the effects bus; false when the instrument already sounds too many notes at that time. */
+  instrument(name: Instrument, hz: number, at: number, velocity: number, pan: number, bus: "music" | "sfx" = "music") {
     // Judged at the note's own time, so an offline render (currentTime stays 0 while scheduling) works the same.
     const start = Math.max(this.ctx.currentTime, at),
       sounding = (this.notes.get(name) ?? []).filter((end) => end > start);
     if (sounding.length >= POLYPHONY) return false;
     const panner = this.ctx.createStereoPanner();
     panner.pan.value = pan;
-    panner.connect(this.bus.music);
+    panner.connect(this.bus[bus]);
     sounding.push(INSTRUMENTS[name](this.ctx, panner, start, hz, velocity, this.noise));
     this.notes.set(name, sounding);
     return true;

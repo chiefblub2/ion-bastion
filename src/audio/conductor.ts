@@ -18,7 +18,7 @@ import { STINGERS } from "./stingers";
 /** What the conductor needs from the audio engine; tests pass a recorder. */
 export interface Voices {
   play(note: Note): boolean;
-  instrument(name: Instrument, hz: number, at: number, velocity: number, pan: number): boolean;
+  instrument(name: Instrument, hz: number, at: number, velocity: number, pan: number, bus?: "music" | "sfx"): boolean;
   duck(at: number): void;
   ambience: { chord(notes: readonly number[], at: number): void; tone(factor: number): void };
 }
@@ -53,7 +53,8 @@ const DRUMS: Record<Drum, Player> = {
   stomp: { instrument: "tom", pan: 0, gain: 0.8 },
   bass: { instrument: "bass", pan: 0, gain: 0.6 },
 };
-const ARP: Player = { instrument: "bell", pan: -0.15, gain: 0.25 };
+/** Its own short bell, so the 8th-note arpeggio never crowds out the electric part. */
+const ARP: Player = { instrument: "chime", pan: -0.15, gain: 0.25 };
 const SILENT = silent();
 
 export class Conductor {
@@ -93,7 +94,7 @@ export class Conductor {
     const at = nextSlot(this.score.clock, now, TIMING[id].grid),
       step = stepLength(this.score.clock, 16),
       chord = this.score.chordAt(at);
-    for (const [name, tone, offset, velocity] of stinger.notes) this.voices.instrument(name, pitch(name, chord, tone), at + offset * step, velocity * Math.min(1, gain), 0);
+    for (const [name, tone, offset, velocity] of stinger.notes) this.voices.instrument(name, pitch(name, chord, tone), at + offset * step, velocity * Math.min(1, gain), 0, "sfx");
     if (stinger.duck) this.voices.duck(at);
   }
   play(cues: readonly Cue[], now: number) {

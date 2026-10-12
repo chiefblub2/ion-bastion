@@ -1,9 +1,11 @@
 // Synthesized instruments for the music: plain Web Audio voices with filter and amplitude envelopes (parameters after
 // Tone.js's MonoSynth and FMSynth defaults). Each voice schedules one note and returns when it has died away.
 
-export type Instrument = "pluck" | "bell" | "bass" | "swell" | "tom" | "kick" | "snare" | "hat" | "shaker" | "click";
+export type Instrument = "pluck" | "bell" | "chime" | "bass" | "swell" | "tom" | "kick" | "snare" | "hat" | "shaker" | "click";
 /** Pitched instruments play their chord tone in the octave around this frequency (Hz); the others are unpitched. */
-export const REGISTER: Partial<Record<Instrument, number>> = { pluck: 520, bell: 1040, bass: 65, swell: 262 };
+export const REGISTER: Partial<Record<Instrument, number>> = { pluck: 520, bell: 1040, chime: 1040, bass: 65, swell: 262 };
+/** Seconds from a note's start until its voice stops (polyphony counts notes inside this span). */
+export const LENGTH: Record<Instrument, number> = { pluck: 0.5, bell: 1.7, chime: 0.7, bass: 0.7, swell: 2.6, tom: 0.45, kick: 0.4, snare: 0.18, hat: 0.07, shaker: 0.09, click: 0.07 };
 type Play = (ctx: BaseAudioContext, out: AudioNode, at: number, hz: number, velocity: number, noise: AudioBuffer) => number;
 
 /** Gain that rises to `peak` in `attack` s and fades out over about `decay` s. */
@@ -18,7 +20,7 @@ const pluck: Play = (ctx, out, at, hz, v) => {
   const o = ctx.createOscillator(),
     f = ctx.createBiquadFilter(),
     g = envelope(ctx, at, 0.35 * v, 0.004, 0.45),
-    end = at + 0.5;
+    end = at + LENGTH.pluck;
   o.type = "triangle";
   o.frequency.value = hz;
   f.type = "lowpass";
@@ -30,31 +32,34 @@ const pluck: Play = (ctx, out, at, hz, v) => {
   o.stop(end);
   return end;
 };
-const bell: Play = (ctx, out, at, hz, v) => {
-  const carrier = ctx.createOscillator(),
-    modulator = ctx.createOscillator(),
-    index = ctx.createGain(),
-    g = envelope(ctx, at, 0.22 * v, 0.002, 1.6),
-    end = at + 1.7;
-  carrier.frequency.value = hz;
-  modulator.frequency.value = hz * 3.5;
-  index.gain.setValueAtTime(hz * 2, at);
-  index.gain.setTargetAtTime(0, at, 0.3);
-  modulator.connect(index).connect(carrier.frequency);
-  carrier.connect(g).connect(out);
-  for (const o of [carrier, modulator]) {
-    o.start(at);
-    o.stop(end);
-  }
-  return end;
-};
+/** FM bell: a sine carrier modulated at 3.5× with a decaying index; `decay` sets how long it rings. */
+const fm =
+  (decay: number, length: number, peak: number): Play =>
+  (ctx, out, at, hz, v) => {
+    const carrier = ctx.createOscillator(),
+      modulator = ctx.createOscillator(),
+      index = ctx.createGain(),
+      g = envelope(ctx, at, peak * v, 0.002, decay),
+      end = at + length;
+    carrier.frequency.value = hz;
+    modulator.frequency.value = hz * 3.5;
+    index.gain.setValueAtTime(hz * 2, at);
+    index.gain.setTargetAtTime(0, at, 0.3);
+    modulator.connect(index).connect(carrier.frequency);
+    carrier.connect(g).connect(out);
+    for (const o of [carrier, modulator]) {
+      o.start(at);
+      o.stop(end);
+    }
+    return end;
+  };
 const bass: Play = (ctx, out, at, hz, v) => {
   const sine = ctx.createOscillator(),
     saw = ctx.createOscillator(),
     sawGain = ctx.createGain(),
     f = ctx.createBiquadFilter(),
     g = envelope(ctx, at, 0.45 * v, 0.008, 0.6),
-    end = at + 0.7;
+    end = at + LENGTH.bass;
   sine.frequency.value = hz;
   saw.type = "sawtooth";
   saw.frequency.value = hz;
@@ -73,7 +78,7 @@ const bass: Play = (ctx, out, at, hz, v) => {
 const swell: Play = (ctx, out, at, hz, v) => {
   const g = ctx.createGain(),
     f = ctx.createBiquadFilter(),
-    end = at + 2.6;
+    end = at + LENGTH.swell;
   g.gain.setValueAtTime(0, at);
   g.gain.linearRampToValueAtTime(0.12 * v, at + 0.45);
   g.gain.setTargetAtTime(0, at + 0.6, 0.5);
@@ -125,7 +130,7 @@ const noisy =
 const click: Play = (ctx, out, at, _hz, v) => {
   const o = ctx.createOscillator(),
     g = envelope(ctx, at, 0.25 * v, 0.001, 0.05),
-    end = at + 0.07;
+    end = at + LENGTH.click;
   o.frequency.value = 1700;
   o.connect(g).connect(out);
   o.start(at);
@@ -134,7 +139,8 @@ const click: Play = (ctx, out, at, _hz, v) => {
 };
 export const INSTRUMENTS: Record<Instrument, Play> = {
   pluck,
-  bell,
+  bell: fm(1.6, LENGTH.bell, 0.22),
+  chime: fm(0.6, LENGTH.chime, 0.2),
   bass,
   swell,
   tom: drum(140, 70, 0.2, 0.4, 0.45),

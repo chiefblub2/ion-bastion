@@ -50,8 +50,9 @@ npx vite-node scripts/enemy-anim-review.ts [-- --ids drone --clips idle,death --
 npx vite-node scripts/audit-enemy-art.ts [-- --write|--fix]
                                           # enemy PNG audit without a browser: coverage of content/registry/files, alpha, visible bounds and centre,
                                           # residue islands, edges; `--write` regenerates src/render/enemy-art-bounds.ts
-/gallery.html?sound                       # with `npm run dev` running: the sound board (`src/sound-board.ts`, dev-only): every cue, a burst test at 1×/2×,
-                                          # the theme drones and a review sheet copied out as a markdown table
+/gallery.html?sound                       # with `npm run dev` running: the sound board (`src/sound-board.ts`, dev-only): every effect, stinger and
+                                          # instrument, a live music test through the Conductor (tower mix, shots/s, threat, defense, clear time, heavy, boss)
+                                          # and a review sheet copied out as a markdown table
 npx vite-node scripts/render-music.ts [-- --theme <id>]
                                           # with `npm run dev` running: 8-bar music clips per tower mix and fire rate, rendered offline
                                           # (`/gallery.html?render`, `src/music-render.ts`) into visual-check/music/ with peak/RMS and an index.html
@@ -98,7 +99,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 
 ## Sound
 
-- Render side only: `app/audio.ts` reads the drained events once per frame (`Audio.frame`) and never changes state. Every firing emits a `shot` with its tower id, and `audio/cues.ts` maps the tower's attack kind to a cue (`FIRE`); chain, beam and pulse events stay silent. A new `GameEvent` type gets a cue there or stays silent on purpose.
+- Render side only: `app/audio.ts` reads the drained events once per frame (`Audio.frame`) and never changes state. `audio/cues.ts` turns the few events that are effects (heavy blasts, kills, flow and alerts) into cues; shots are not cues but feed the families' activity (see Music below). A new `GameEvent` type gets a cue there or stays silent on purpose.
 - Recipes are ZzFX parameter arrays (`audio/recipes.ts`), tuned in the ZzFX designer and on `/gallery.html?sound`. `zzfx.ts` is a port of ZzFX's `buildSamples` (the npm package creates an `AudioContext` on import); randomness is applied as playback-rate jitter.
 - A new `MapTheme` needs a drone in `audio/drones.ts` (`tsc` enforces it).
 - Music: shots never play notes; they raise their tower family's activity (`families.ts`, `activity.ts`), which unlocks steps of the family's composed part (`parts.ts`) played on synthesized instruments (`instruments.ts`; reverb, compressor and limiter in `engine.ts`). Enemies set the drums (threat), defense the harmony and arpeggio, the clear time the mood (`intensity.ts`, read-only, every 0.5 s); musical flow cues are instrument stingers (`stingers.ts`), the remaining effects ZzFX. `Conductor` (`conductor.ts`) ties it together and is driven by the game adapter, the sound board and the offline renderer alike; `sequencer.ts` schedules 100 ms ahead on the audio clock ("A Tale of Two Clocks"). A new attack kind needs a family in `families.ts`, a new theme an entry in `MUSIC` (`tsc` enforces both). Only sounds wait for the beat; the simulation never does.
