@@ -7,6 +7,8 @@ import { mountUI, Interface, renderMission } from "./ui/interface";
 import { bindUpgradeTooltip } from "./ui/upgrade-tooltip";
 import { installEnemyArtFallback } from "./ui/enemy-art-icon";
 import { Audio } from "./app/audio";
+import { bindUiSounds } from "./audio/ui-sounds";
+import { bindSoundPanel } from "./ui/sound-panel";
 import { bindFullscreen } from "./app/fullscreen";
 import { createInput } from "./app/input";
 import { registerTools } from "./app/webmcp";
@@ -69,6 +71,8 @@ const input = createInput({
   toggleFullscreen: fullscreen.toggle,
   isFullscreen: fullscreen.isActive,
 });
+bindSoundPanel(audio, (text) => ui.notice(text, true));
+bindUiSounds(audio);
 new Phaser.Game({
   type: Phaser.AUTO,
   parent: "board",

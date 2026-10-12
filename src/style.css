@@ -2005,3 +2005,44 @@ dialog::backdrop {
   margin-top: 8px;
 }
 
+
+.sound-panel {
+  position: fixed;
+  z-index: 120;
+  width: min(280px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--glow);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.sound-panel[hidden] {
+  display: none;
+}
+.sound-row {
+  display: grid;
+  grid-template-columns: 6.5em 1fr;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+.sound-switch {
+  color: var(--mint);
+}
+.sound-row input {
+  accent-color: var(--neon);
+  justify-self: start;
+}
+.sound-row input[type="range"] {
+  width: 100%;
+}
+.sound-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
