@@ -67,6 +67,11 @@ export class Audio {
     this.sound?.engine.volumes(this.settings);
     if (!this.on) await this.sound?.ctx.suspend();
   }
+  /** Seconds since each tower family's latest music note began; empty while sound is off. */
+  pulses() {
+    const s = this.live();
+    return s ? s.conductor.ages(s.ctx.currentTime) : {};
+  }
   cue(id: CueId) {
     const s = this.live();
     s?.conductor.cue(id, s.ctx.currentTime);

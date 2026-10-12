@@ -52,6 +52,7 @@ const battlefield = new Battlefield(game, view, {
   chooseEnemy: (id) => input.chooseEnemy(id),
   cancel: () => input.cancel(),
   refresh: () => ui.refresh(),
+  pulses: () => audio.pulses(),
   events: (e) => {
     audio.frame(e, game, input.match());
     if (e.some((event) => event.type === "income")) ui.flashCredits();

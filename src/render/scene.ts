@@ -16,6 +16,8 @@ import { missionAnimationTypes } from "./enemy-animations";
 import { queueEnemyAnimations, queueEnemyArt, sceneSpriteHost } from "./enemy-art-scene";
 import { EnemyFeedback } from "./enemy-feedback";
 import { drawEnemyLayers, EnemySprites } from "./enemy-sprites";
+import { familyOf, type Family } from "../audio/families";
+import { halo } from "./material";
 import { arcBand, CELL, disc, px, ring, type Pen } from "./shapes";
 import { pathCoverage, towerReach } from "./coverage";
 import { drawAmbient, drawTerrain, themeAccent, themeGlow } from "./terrain";
@@ -24,6 +26,8 @@ import { Trails } from "./trails";
 export { CELL } from "./shapes";
 /** Upper bound for the canvas's longer side in pixels, so a huge 4K full screen stays cheap to fill. */
 const MAX_CANVAS = 4096;
+/** Seconds a tower's pulse fades after its family's music note. */
+const PULSE = 0.25;
 export interface ViewState {
   build: TowerId | null;
   selected: number | null;
@@ -75,6 +79,8 @@ interface Hooks {
   cancel: () => void;
   refresh: () => void;
   events: (events: GameEvent[]) => void;
+  /** Seconds since each tower family's latest music note (sound on); towers pulse with it. */
+  pulses?: () => Partial<Record<Family, number>>;
 }
 interface Effect {
   event: VisualEvent;
@@ -510,6 +516,7 @@ export class Battlefield extends Phaser.Scene {
         g.strokeCircle(px(target.x), px(target.y), 27);
       }
     }
+    const pulses = this.hooks.pulses?.() ?? {};
     for (const t of s.towers) {
       const d = towers[t.type],
         aura = d.attack.kind === "aura";
@@ -520,6 +527,10 @@ export class Battlefield extends Phaser.Scene {
         path: towerPath(t, content),
         boosted: Object.values(effectiveTowerStats(t, s.towers, content).bonuses).some(Boolean),
       });
+      const family = familyOf(d),
+        age = family ? pulses[family] : undefined;
+      // The music visibly comes from the towers: a soft halo when their family's note sounds.
+      if (age !== undefined && age < PULSE) halo(this.towerGlow, px(t.x), px(t.y), CELL * 0.6, towerColor(t, content), 0.6 * (1 - age / PULSE));
       // Co-op: a corner mark in the owner's colour.
       if (this.sim.players > 1) {
         const color = PLAYER_COLORS[t.owner] ?? 0xffffff;
