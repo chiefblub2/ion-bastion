@@ -1,16 +1,16 @@
 import { Ambience } from "./ambience";
-import type { Cue } from "./cues";
 import { admit, type Voice } from "./mixer";
-import { RECIPES, type CueId } from "./recipes";
+import { RECIPES, TIMING, type CueId } from "./recipes";
+import type { Note } from "./score";
 import type { SoundSettings } from "./settings";
 import { buildSamples } from "./zzfx";
-// Buses: sfx and ui → master; music → duck → master; master → compressor → speakers.
+// Buses: sfx and ui → master; music (drone, drums, arpeggio) → duck → master; master → compressor → speakers.
 
 /** Bus gain scale, so full sliders leave headroom for bursts. */
 const HEADROOM = 0.5,
   DUCK_LEVEL = 0.4,
   DUCK_TIME = 0.6;
-const BUS_OF = { combat: "sfx", flow: "sfx", ui: "ui" } as const;
+const BUS_OF = { combat: "sfx", flow: "sfx", ui: "ui", drums: "music" } as const;
 type Playing = Voice & { source: AudioBufferSourceNode };
 
 export class AudioEngine {
@@ -40,30 +40,31 @@ export class AudioEngine {
     this.master.gain.setTargetAtTime(s.muted ? 0 : s.master, now, 0.05);
     for (const b of ["sfx", "ui", "music"] as const) this.bus[b].gain.setTargetAtTime(s[b] * HEADROOM, now, 0.05);
   }
-  /** False when the mixer refused the cue (gap, cap or a full pool). */
-  play(cue: Cue) {
-    const spec = RECIPES[cue.id],
-      now = this.ctx.currentTime;
+  /** Schedules a note at its time (never in the past); false when the mixer refused it. */
+  play(note: Note) {
+    const spec = RECIPES[note.id],
+      now = this.ctx.currentTime,
+      at = Math.max(now, note.at);
     this.voices = this.voices.filter((v) => v.end > now);
-    const a = admit(cue.id, spec, this.voices, this.last.get(cue.id), now);
+    const a = admit(note.id, spec, this.voices, this.last.get(note.id), at);
     if (!a.play) return false;
     if (a.steal) {
       a.steal.source.stop();
       this.voices = this.voices.filter((v) => v !== a.steal);
     }
-    const buffer = this.buffer(cue.id),
+    const buffer = this.buffer(note.id),
       source = this.ctx.createBufferSource(),
       gain = this.ctx.createGain(),
-      jitter = spec.params[1] ?? 0.05;
+      // Pitched notes stay in tune; unpitched ones vary a little. Render-side only.
+      jitter = TIMING[note.id].pitched ? 0 : (spec.params[1] ?? 0.05);
     source.buffer = buffer;
-    // Audio jitter is render-side only; the simulation never sees it.
-    source.playbackRate.value = cue.pitch * (1 + jitter * (Math.random() * 2 - 1));
-    gain.gain.value = cue.gain;
+    source.playbackRate.value = note.rate * (1 + jitter * (Math.random() * 2 - 1));
+    gain.gain.value = note.gain;
     source.connect(gain).connect(this.bus[BUS_OF[spec.pool]]);
-    source.start(now);
-    this.voices.push({ cue: cue.id, pool: spec.pool, priority: spec.priority, start: now, end: now + buffer.duration / source.playbackRate.value, source });
-    this.last.set(cue.id, now);
-    if (spec.duck) this.duck(now);
+    source.start(at);
+    this.voices.push({ cue: note.id, pool: spec.pool, priority: spec.priority, start: at, end: at + buffer.duration / source.playbackRate.value, source });
+    this.last.set(note.id, at);
+    if (spec.duck) this.duck(at);
     return true;
   }
   private buffer(id: CueId) {
@@ -76,12 +77,12 @@ export class AudioEngine {
     }
     return b;
   }
-  private duck(now: number) {
+  private duck(at: number) {
     const g = this.duckGain.gain;
-    g.cancelScheduledValues(now);
-    g.setValueAtTime(g.value, now);
-    g.linearRampToValueAtTime(DUCK_LEVEL, now + 0.05);
-    g.setTargetAtTime(1, now + DUCK_TIME, 0.3);
+    g.cancelScheduledValues(at);
+    g.setValueAtTime(g.value, at);
+    g.linearRampToValueAtTime(DUCK_LEVEL, at + 0.05);
+    g.setTargetAtTime(1, at + DUCK_TIME, 0.3);
   }
 }
 /** Two seconds of white noise from xorshift32, the same on every load. */
