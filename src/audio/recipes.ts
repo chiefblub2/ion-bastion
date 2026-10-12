@@ -5,9 +5,11 @@ import type { ZzfxParams } from "./zzfx";
 // /gallery.html?sound.
 
 export const COMBAT_CUES = ["blast", "kill", "evade", "overload", "income", "repair"] as const;
+/** One quiet transient per tower family, played the moment it fires. */
+export const SHOT_CUES = ["shotRapid", "shotHeavy", "shotElectric", "shotControl", "shotFire", "shotTrap"] as const;
 export const FLOW_CUES = ["build", "sell", "upgrade", "leak", "waveStart", "waveEnd", "won", "lost", "lowReactor", "reject", "incoming", "eliminated", "boss"] as const;
 export const UI_CUES = ["click", "hover"] as const;
-export type CueId = (typeof COMBAT_CUES)[number] | (typeof FLOW_CUES)[number] | (typeof UI_CUES)[number];
+export type CueId = (typeof COMBAT_CUES)[number] | (typeof SHOT_CUES)[number] | (typeof FLOW_CUES)[number] | (typeof UI_CUES)[number];
 export type Pool = "combat" | "flow" | "ui";
 export interface CueSpec {
   params: ZzfxParams;
@@ -24,6 +26,7 @@ export interface CueSpec {
 const combat = (params: ZzfxParams, cap: number, gap: number, priority = 1): CueSpec => ({ params, pool: "combat", cap, gap, priority });
 const flow = (params: ZzfxParams, priority: number, duck = false): CueSpec => ({ params, pool: "flow", cap: 2, gap: 0.08, priority, duck });
 const ui = (params: ZzfxParams, gap: number): CueSpec => ({ params, pool: "ui", cap: 2, gap, priority: 1 });
+const shot = (params: ZzfxParams): CueSpec => ({ params, pool: "combat", cap: 1, gap: 0.12, priority: 0 });
 
 export const RECIPES: Record<CueId, CueSpec> = {
   blast: combat([0.45, 0.05, 70, 0, 0.05, 0.35, 4, 2, -2, 0, 0, 0, 0, 0.6, 0, 0, 0, 0.5, 0.05, 0, -700], 1, 0.5, 2),
@@ -32,6 +35,12 @@ export const RECIPES: Record<CueId, CueSpec> = {
   overload: combat([0.3, 0, 440, 0, 0.1, 0.4, 0, 1, -8, 0, 0, 0, 0, 0, 0, 0, 0, 0.6, 0.05, 0, -1500], 1, 0.3, 3),
   income: combat([0.12, 0.05, 1760, 0, 0.01, 0.06, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, -6000], 1, 0.3, 0),
   repair: combat([0.15, 0, 660, 0.02, 0.05, 0.15, 0, 1, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0.7, 0, 0, -3000], 1, 0.3, 0),
+  shotRapid: shot([0.05, 0.1, 1800, 0, 0, 0.025, 0, 1, 0, 0, 0, 0, 0, 0.6, 0, 0, 0, 1, 0, 0, -6000]),
+  shotHeavy: shot([0.12, 0.1, 90, 0, 0.01, 0.08, 0, 1, -3, 0, 0, 0, 0, 0.4, 0, 0, 0, 1, 0.01, 0, -600]),
+  shotElectric: shot([0.05, 0.1, 2600, 0, 0, 0.03, 0, 1, -40, 0, 0, 0, 0, 0.9, 0, 0.05, 0, 1, 0, 0, 5000]),
+  shotControl: shot([0.05, 0.1, 600, 0.01, 0.01, 0.06, 4, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2000]),
+  shotFire: shot([0.05, 0.1, 400, 0.005, 0.02, 0.06, 4, 1, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 3000]),
+  shotTrap: shot([0.07, 0.05, 1400, 0, 0, 0.02, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, -4000]),
   build: flow([0.35, 0, 523, 0, 0.03, 0.12, 1, 1, 0, 0, 262, 0.04, 0, 0, 0, 0, 0, 0.7, 0.01, 0, -3000], 2),
   sell: flow([0.3, 0, 784, 0, 0.03, 0.12, 1, 1, 0, 0, -262, 0.04, 0, 0, 0, 0, 0, 0.7, 0.01, 0, -3000], 2),
   upgrade: flow([0.35, 0, 523, 0, 0.06, 0.2, 0, 1, 0, 0, 262, 0.05, 0.1, 0, 0, 0, 0, 0.7, 0.01, 0, -4000], 2),
@@ -56,6 +65,7 @@ export interface Timing {
 }
 const t = (grid: Grid, pitched: boolean): Timing => ({ grid, pitched });
 export const TIMING: Record<CueId, Timing> = {
+  shotRapid: t(0, false), shotHeavy: t(0, false), shotElectric: t(0, false), shotControl: t(0, false), shotFire: t(0, false), shotTrap: t(0, false),
   blast: t(4, false), kill: t(16, true), evade: t(16, false), overload: t(4, true), income: t(16, true), repair: t(8, true),
   build: t(16, true), sell: t(16, true), upgrade: t(16, true), leak: t(8, false),
   waveStart: t(1, true), waveEnd: t(1, true), won: t(1, true), lost: t(1, true), eliminated: t(1, true), boss: t(1, true),

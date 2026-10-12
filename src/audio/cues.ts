@@ -1,7 +1,8 @@
 import type { AttackSpec, ContentPack, GameEvent, GameState } from "../core/types";
+import { familyOf, type Family } from "./families";
 import { RECIPES, type CueId } from "./recipes";
-// Drained game events → effect cues. Shots are not cues: they raise their tower family's activity, which plays its
-// instrument part (`Conductor`). Only heavy impacts make an effect sound.
+// Drained game events → effect cues. A shot gets its family's quiet transient at once; its music is the family's
+// instrument part on the beat (`Conductor`). Only heavy impacts make an effect sound.
 
 export interface Cue {
   id: CueId;
@@ -10,6 +11,8 @@ export interface Cue {
   gain: number;
 }
 export type View = "menu" | "game";
+/** Each family's quiet transient, played the moment it fires. */
+const SHOT_CUE: Record<Family, CueId> = { rapid: "shotRapid", heavy: "shotHeavy", electric: "shotElectric", control: "shotControl", fire: "shotFire", traps: "shotTrap" };
 const BLASTS = new Set<AttackSpec["kind"]>(["splash", "mortar", "charge"]);
 const PLAIN: Partial<Record<GameEvent["type"], CueId>> = {
   kill: "kill", evade: "evade", overload: "overload", leak: "leak", build: "build", sell: "sell", upgrade: "upgrade",
@@ -21,6 +24,10 @@ export const burstGain = (n: number) => Math.min(1.5, 1 + 0.1 * (n - 1));
 
 function cueOf(e: GameEvent, content: ContentPack): { id: CueId; voice: number } | null {
   switch (e.type) {
+    case "shot": {
+      const family = familyOf(content.towers[e.tower]);
+      return family ? { id: SHOT_CUE[family], voice: 0 } : null;
+    }
     case "impact":
       return BLASTS.has(content.towers[e.tower].attack.kind) ? { id: "blast", voice: 0 } : null;
     case "end":

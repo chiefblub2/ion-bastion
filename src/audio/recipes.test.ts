@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSamples } from "./zzfx";
-import { COMBAT_CUES, FLOW_CUES, RECIPES, TIMING, UI_CUES } from "./recipes";
+import { COMBAT_CUES, FLOW_CUES, RECIPES, SHOT_CUES, TIMING, UI_CUES } from "./recipes";
 
 describe("cue recipes", () => {
   it("cover every cue with a short, non-empty sound in the right pool", () => {
@@ -19,5 +19,13 @@ describe("cue recipes", () => {
     for (const id of ["reject", "click", "hover"] as const) expect(TIMING[id].grid, id).toBe(0);
     expect(RECIPES.kill.gap).toBeGreaterThanOrEqual(0.5);
     expect(RECIPES.blast.gap).toBeGreaterThanOrEqual(0.5);
+  });
+  it("keeps per-shot transients instant, quiet and sparse", () => {
+    for (const id of SHOT_CUES) {
+      expect(TIMING[id].grid, id).toBe(0);
+      expect(RECIPES[id].gap, id).toBeGreaterThanOrEqual(0.12);
+      expect(RECIPES[id].cap, id).toBe(1);
+      expect(RECIPES[id].params[0], id).toBeLessThanOrEqual(0.12);
+    }
   });
 });

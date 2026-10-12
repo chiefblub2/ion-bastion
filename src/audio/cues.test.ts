@@ -11,8 +11,9 @@ const at = { x: 0, y: 0 };
 const kill: GameEvent = { type: "kill", at, color: 0, reward: 1 };
 
 describe("cuesFor", () => {
-  it("leaves shots to the instrument parts and voices only heavy impacts", () => {
-    expect(cuesFor([{ type: "shot", tower: direct, from: at, to: at, color: 0 }], DEFAULT_CONTENT, "game")).toEqual([]);
+  it("answers a shot with its family's quiet transient and voices only heavy impacts", () => {
+    const shot: GameEvent = { type: "shot", tower: direct, from: at, to: at, color: 0 };
+    expect(cuesFor([shot, shot], DEFAULT_CONTENT, "game")).toEqual([{ id: "shotRapid", voice: 0, gain: burstGain(2) }]);
     expect(cuesFor([{ type: "impact", tower: splash, at, color: 0 }], DEFAULT_CONTENT, "game")).toEqual([{ id: "blast", voice: 0, gain: 1 }]);
     expect(cuesFor([{ type: "impact", tower: direct, at, color: 0 }], DEFAULT_CONTENT, "game")).toEqual([]);
   });
