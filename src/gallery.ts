@@ -104,8 +104,14 @@ const query = new URLSearchParams(location.search),
   anim = query.has("anim"),
   /** `?sound`: the sound board (see `sound-board.ts`); no canvas. */
   sound = query.has("sound"),
+  /** `?render`: offline music renders for scripts/render-music.ts (see `music-render.ts`); no canvas. */
+  render = query.has("render"),
   pageSize = anim ? animReviewSize : art ? artReviewSize : showcase ? showcaseSize : { width: width * ZOOM, height: height * ZOOM };
-if (sound) void import("./sound-board").then((m) => m.mountSoundBoard(document.getElementById("gallery")!));
+if (render)
+  void import("./music-render").then((m) => {
+    (window as unknown as { __renderMusic: typeof m.renderMusic }).__renderMusic = m.renderMusic;
+  });
+else if (sound) void import("./sound-board").then((m) => m.mountSoundBoard(document.getElementById("gallery")!));
 else
   new Phaser.Game({
     type: Phaser.AUTO,
