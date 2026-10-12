@@ -1,21 +1,24 @@
 /*
- * Start screen and menu pages: the "tactical command terminal" look. Everything is scoped to `.start-screen`
+ * Start screen and menu pages: a neon holo-console look (cyan, magenta for Circuit, glass panels, cut corners). Everything is scoped to `.start-screen`
  * (or to elements that only exist there), so the game HUD in style.css is untouched.
  */
 :root {
-  --m-bg: #0b121a;
-  --m-surface: #131f29;
-  --m-surface-2: #16232d;
-  --m-accent: #a2f5be;
-  --m-accent-hover: #7edba2;
-  --m-text: #e5eeec;
-  --m-text-2: #aebec6;
-  --m-border: #30434d;
-  --m-warn: #ffbd76;
-  --m-danger: #ff8f86;
-  --m-ring: #a5a2ff;
+  --m-bg: #05070f;
+  --m-surface: #0b1224;
+  --m-surface-2: #101a33;
+  --m-accent: #3ef2ff;
+  --m-accent-hover: #8ff8ff;
+  --m-text: #e8f6ff;
+  --m-text-2: #9fb4cc;
+  --m-border: #1e3a5c;
+  --m-warn: #ffc94a;
+  --m-danger: #ff4d6d;
+  --m-ring: #ff3dcb;
   --m-radius: 4px;
   --m-speed: 180ms;
+  --m-glass: color-mix(in srgb, var(--m-surface) 72%, transparent);
+  --m-hover: #13214a;
+  --m-cut: 12px;
 }
 /* Shared pieces ---------------------------------------------------------------------------------------------- */
 .sr-only {
@@ -36,14 +39,45 @@ html.sheet-open {
 }
 .start-screen {
   --mode: var(--m-accent);
+  position: relative;
+  isolation: isolate;
   min-height: 100vh;
   min-height: 100dvh;
   padding: 40px 24px 64px;
   background:
-    radial-gradient(ellipse 70% 50% at 70% 0%, #a2f5be14, transparent 70%),
-    linear-gradient(#30434d33 1px, transparent 1px) 0 0 / 40px 40px,
-    linear-gradient(90deg, #30434d33 1px, transparent 1px) 0 0 / 40px 40px,
-    var(--m-bg);
+    radial-gradient(ellipse 60% 45% at 80% 0%, #3ef2ff1f, transparent 70%),
+    radial-gradient(ellipse 55% 45% at 5% 100%, #ff3dcb1a, transparent 70%),
+    radial-gradient(ellipse 120% 80% at 50% 50%, #0a1430, var(--m-bg) 75%);
+  background-attachment: fixed;
+}
+/* Behind the pages: a perspective floor grid at the bottom and CRT scanlines over everything, both inert. */
+.start-screen::before,
+.start-screen::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+}
+.start-screen::before {
+  inset: 55% -50% 0;
+  z-index: -1;
+  background:
+    linear-gradient(#3ef2ff2e 1px, transparent 1px) 0 0 / 60px 60px,
+    linear-gradient(90deg, #3ef2ff2e 1px, transparent 1px) 0 0 / 60px 60px;
+  transform: perspective(420px) rotateX(62deg);
+  transform-origin: 50% 0;
+  mask-image: linear-gradient(transparent, #000 45%);
+  animation: grid-drift 6s linear infinite;
+}
+.start-screen::after {
+  inset: 0;
+  z-index: 10;
+  background: repeating-linear-gradient(180deg, #ffffff06 0 1px, transparent 1px 3px);
+  mix-blend-mode: overlay;
+}
+@keyframes grid-drift {
+  to {
+    background-position: 0 60px, 0 60px;
+  }
 }
 .start-screen :is(button, input):focus-visible,
 .start-screen a:focus-visible,
@@ -66,20 +100,56 @@ html.sheet-open {
   border-color: var(--m-border);
   color: var(--m-text);
 }
+.start-screen .quiet {
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  font-family: "Rajdhani", sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 .start-screen .quiet:hover {
   border-color: var(--m-accent);
-  background: #1c2b34;
+  background: var(--m-hover);
+  color: #fff;
+  box-shadow: inset 0 0 18px #3ef2ff26;
+}
+.start-screen .quiet span {
+  color: var(--m-accent);
+}
+/* Cut corners clip an outer outline, so clipped controls get their focus ring inside. */
+.start-screen :is(.quiet, .home-mode, .choice-card, .mission-card, .sector-tab):focus-visible {
+  outline-offset: -4px;
 }
 .start-screen .primary,
 .mission-brief .primary {
-  border-radius: var(--m-radius);
+  border-radius: 0;
   background: var(--m-accent);
   border-color: var(--m-accent);
   min-height: 48px;
+  font: 700 18px "Rajdhani", sans-serif;
+  letter-spacing: 0.08em;
+  box-shadow: 0 0 18px #3ef2ff55;
 }
 .start-screen .primary:hover,
 .mission-brief .primary:hover {
   background: var(--m-accent-hover);
+  box-shadow: 0 0 12px #3ef2ff99, 0 0 36px #3ef2ff44;
+}
+/* The briefing's Start follows the mode: cyan for the campaign, magenta for Circuit. */
+.mission-brief .primary {
+  background: var(--mode);
+  border-color: var(--mode);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--mode) 35%, transparent);
+}
+.mission-brief .primary:hover {
+  background: color-mix(in srgb, var(--mode) 70%, #fff);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--mode) 60%, transparent), 0 0 36px color-mix(in srgb, var(--mode) 27%, transparent);
+}
+.start-screen .primary:focus-visible,
+.mission-brief .primary:focus-visible {
+  outline-color: var(--on-neon);
 }
 .menu-page {
   max-width: 1120px;
@@ -89,13 +159,26 @@ html.sheet-open {
   outline: none;
 }
 .menu-page > h1 {
-  font: 700 clamp(34px, 5vw, 52px) / 1.02 "Barlow Condensed", sans-serif;
-  letter-spacing: 0.5px;
+  font: 800 clamp(26px, 4vw, 42px) / 1.1 var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   margin-bottom: 18px;
+  text-shadow: 0 0 24px #3ef2ff40;
 }
 .menu-page .eyebrow {
   color: var(--m-accent);
   margin-bottom: 6px;
+  letter-spacing: 0.24em;
+}
+.menu-page .eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 22px;
+  height: 1px;
+  margin-right: 10px;
+  vertical-align: middle;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
 }
 .menu-page-head {
   display: flex;
@@ -105,9 +188,10 @@ html.sheet-open {
   margin-bottom: 32px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--m-border);
+  border-image: linear-gradient(90deg, var(--m-accent), var(--m-ring) 60%, transparent) 1;
 }
 .menu-page-head .brand {
-  font-size: 22px;
+  font-size: 18px;
 }
 .menu-page-head .brand-mark {
   width: 26px;
@@ -122,6 +206,7 @@ html.sheet-open {
   padding: 10px 14px;
   max-width: 720px;
   border-left: 3px solid var(--m-accent);
+  box-shadow: -4px 0 12px -6px var(--m-accent);
   background: color-mix(in srgb, var(--m-accent) 8%, var(--m-bg));
   color: var(--m-text);
   font-size: 14px;
@@ -139,7 +224,7 @@ html.sheet-open {
   padding: 10px 14px;
   margin: 0;
   font-size: 14px;
-  color: #f0dcc0;
+  color: #ffe9b8;
 }
 /* Home ------------------------------------------------------------------------------------------------------- */
 .menu-home {
@@ -160,8 +245,9 @@ html.sheet-open {
 .home-label {
   margin: 0 0 14px;
   font: 500 12px var(--mono);
-  letter-spacing: 0.22em;
+  letter-spacing: 0.32em;
   color: var(--m-accent);
+  text-shadow: 0 0 8px #3ef2ff88;
 }
 .home-label::before {
   content: "";
@@ -171,20 +257,48 @@ html.sheet-open {
   margin-right: 12px;
   vertical-align: middle;
   background: var(--m-accent);
+  box-shadow: 0 0 8px var(--m-accent);
 }
 .menu-home .menu-title {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin: 0 0 12px;
-  font: 700 clamp(44px, 6vw, 76px) / 1 "Barlow Condensed", sans-serif;
-  letter-spacing: 2px;
+  gap: 18px;
+  margin: 0 0 14px;
+  font: 900 clamp(34px, 4.6vw, 60px) / 1 var(--display);
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 18px #3ef2ff66, 0 0 48px #3ef2ff26;
+  animation: title-boot 1.4s steps(1) 1 both;
 }
 .menu-home .menu-title .brand-mark {
   width: 0.85em;
   height: 1em;
   font-size: 0.62em;
   flex-shrink: 0;
+  box-shadow: inset 0 0 14px #3ef2ff55;
+}
+.menu-home .menu-title .brand-light {
+  font-weight: 600;
+  filter: drop-shadow(0 0 14px #ff3dcb55);
+}
+/* A brief power-on flicker of the logo, once. */
+@keyframes title-boot {
+  0%,
+  12%,
+  24% {
+    opacity: 0.15;
+  }
+  6%,
+  18%,
+  30%,
+  100% {
+    opacity: 1;
+  }
+  20% {
+    transform: translateX(3px) skewX(-6deg);
+  }
+  22% {
+    transform: none;
+  }
 }
 .menu-page p.menu-tagline {
   margin: 0 0 32px;
@@ -200,20 +314,35 @@ html.sheet-open {
   min-height: 84px;
   padding: 16px 22px;
   text-align: left;
-  color: #0d2418;
-  background: var(--m-accent);
+  position: relative;
+  overflow: hidden;
+  color: var(--on-neon);
+  background: linear-gradient(100deg, var(--m-accent), #7ff6ff 55%, var(--m-accent));
   border: 1px solid var(--m-accent);
-  border-radius: var(--m-radius);
-  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
-  box-shadow: inset 0 -4px #0d241822;
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+  box-shadow: inset 0 -4px #02101822, inset 0 0 0 1px #ffffff55, inset 0 0 24px #ffffff33;
+}
+/* A light sweep across the button on hover. */
+.home-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, #ffffffaa 50%, transparent 70%);
+  transform: translateX(-120%);
+  pointer-events: none;
 }
 .home-primary:hover {
-  background: var(--m-accent-hover);
+  background: linear-gradient(100deg, var(--m-accent-hover), #c8fbff 55%, var(--m-accent-hover));
   border-color: var(--m-accent-hover);
+}
+.home-primary:hover::after {
+  transform: translateX(120%);
+  transition: transform 700ms ease-out;
 }
 .start-screen .home-primary:focus-visible {
   outline-offset: -6px;
-  outline-color: #0d2418;
+  outline-color: var(--on-neon);
 }
 .home-primary-copy {
   display: flex;
@@ -222,14 +351,14 @@ html.sheet-open {
   min-width: 0;
 }
 .home-primary strong {
-  font: 700 32px / 1 "Barlow Condensed", sans-serif;
-  letter-spacing: 0.04em;
+  font: 800 26px / 1 var(--display);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: inherit;
 }
 .home-primary small {
   font: 500 13px var(--mono);
-  color: #1d4430;
+  color: #0b3a4a;
   overflow-wrap: anywhere;
 }
 .home-primary-icon {
@@ -252,20 +381,23 @@ html.sheet-open {
   width: 100%;
   padding: 12px 16px;
   text-align: left;
-  background: var(--m-surface);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent), var(--m-glass) 40%);
   border: 1px solid var(--m-border);
   border-left: 3px solid var(--accent);
-  border-radius: var(--m-radius);
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+  backdrop-filter: blur(6px);
 }
 .home-mode[data-mode="circle"] {
   --accent: var(--m-ring);
 }
 .home-mode strong {
-  font: 600 22px / 1.1 "Barlow Condensed", sans-serif;
+  font: 600 22px / 1.1 "Rajdhani", sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--accent);
   white-space: nowrap;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 50%, transparent);
 }
 .home-mode span {
   font: 500 12px var(--mono);
@@ -273,8 +405,10 @@ html.sheet-open {
   text-align: right;
 }
 .home-mode:hover {
-  background: #1c2b34;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, transparent), var(--m-hover) 60%);
   border-color: var(--accent);
+  transform: translateX(4px);
+  box-shadow: inset 0 0 22px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 .home-utility {
   display: flex;
@@ -290,17 +424,22 @@ html.sheet-open {
   position: relative;
   min-width: 0;
   padding: 14px;
-  background: linear-gradient(180deg, var(--m-surface-2), var(--m-bg));
-  border: 1px solid var(--m-border);
-  border-radius: var(--m-radius);
+  background:
+    linear-gradient(180deg, #3ef2ff0d, transparent 30%),
+    var(--m-glass);
+  border: 1px solid color-mix(in srgb, var(--m-accent) 35%, var(--m-border));
+  border-radius: 0;
+  box-shadow: 0 0 40px #3ef2ff14, inset 0 0 40px #3ef2ff0a;
+  backdrop-filter: blur(8px);
 }
 .home-map::before,
 .home-map::after {
   content: "";
   position: absolute;
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   border: 2px solid var(--m-accent);
+  filter: drop-shadow(0 0 4px var(--m-accent));
   pointer-events: none;
 }
 .home-map::before {
@@ -326,12 +465,22 @@ html.sheet-open {
 }
 .home-map-head span:first-child {
   color: var(--m-accent);
+  text-shadow: 0 0 8px #3ef2ff88;
   overflow-wrap: anywhere;
 }
 .home-map-view {
   position: relative;
   overflow: hidden;
   border: 1px solid var(--m-border);
+  animation: holo-flicker 9s linear infinite;
+}
+/* A grid of holo pixels over the map preview. */
+.home-map-view::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(180deg, #05070f33 0 1px, transparent 1px 3px);
+  pointer-events: none;
 }
 .home-map-view .map-preview {
   border: 0;
@@ -342,8 +491,8 @@ html.sheet-open {
   position: absolute;
   inset: 0 0 auto;
   height: 40%;
-  background: linear-gradient(180deg, transparent, #a2f5be1f 90%, #a2f5be55);
-  border-bottom: 1px solid #a2f5be66;
+  background: linear-gradient(180deg, transparent, #3ef2ff1f 90%, #3ef2ff55);
+  border-bottom: 1px solid #3ef2ff66;
   transform: translateY(-100%);
   animation: map-scan 7s linear infinite;
   pointer-events: none;
@@ -364,6 +513,22 @@ html.sheet-open {
     transform: translateY(250%);
   }
 }
+@keyframes holo-flicker {
+  0%,
+  96%,
+  100% {
+    opacity: 1;
+  }
+  97% {
+    opacity: 0.75;
+  }
+  98% {
+    opacity: 1;
+  }
+  99% {
+    opacity: 0.85;
+  }
+}
 @keyframes reactor-pulse {
   50% {
     transform: scale(1.45);
@@ -374,7 +539,9 @@ html.sheet-open {
   margin-top: 14px;
 }
 .home-map-foot strong {
-  font: 600 26px / 1.1 "Barlow Condensed", sans-serif;
+  font: 700 22px / 1.2 var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .home-map-foot p {
   margin: 4px 0 12px;
@@ -389,7 +556,9 @@ html.sheet-open {
 }
 .home-map-stats strong,
 .mission-brief-stats strong {
-  font: 600 22px "Barlow Condensed", sans-serif;
+  font: 700 22px "Rajdhani", sans-serif;
+  color: var(--m-accent);
+  text-shadow: 0 0 10px #3ef2ff55;
 }
 .home-map-stats .stat-label,
 .mission-brief-stats .stat-label {
@@ -413,17 +582,20 @@ html.sheet-open {
   padding-bottom: 12px;
   margin-bottom: 14px;
   border-bottom: 1px solid var(--m-border);
+  border-image: linear-gradient(90deg, var(--m-accent), var(--m-ring) 60%, transparent) 1;
 }
 .ops-title .eyebrow {
   margin: 0 0 2px;
 }
 .ops-title h1 {
   margin: 0;
-  font: 700 30px / 1 "Barlow Condensed", sans-serif;
-  letter-spacing: 0.3px;
+  font: 800 24px / 1.1 var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow: 0 0 20px #3ef2ff40;
 }
 .ops-head .brand {
-  font-size: 20px;
+  font-size: 17px;
 }
 .ops-head .brand-mark {
   width: 24px;
@@ -458,7 +630,7 @@ html.sheet-open {
   --accent: var(--m-ring);
 }
 .mode-tab strong {
-  font: 600 20px / 1 "Barlow Condensed", sans-serif;
+  font: 600 20px / 1 "Rajdhani", sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--accent);
@@ -473,6 +645,10 @@ html.sheet-open {
   background: color-mix(in srgb, var(--accent) 16%, var(--m-surface));
   border-color: var(--accent);
   color: var(--m-text);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 -2px var(--accent);
+}
+.mode-tab[aria-selected="true"] strong {
+  text-shadow: 0 0 10px var(--accent);
 }
 .mode-tab[data-current="true"] strong::after {
   content: " ●";
@@ -486,7 +662,7 @@ html.sheet-open {
   background: color-mix(in srgb, var(--m-ring) 10%, var(--m-bg));
   font-size: 13px;
   line-height: 1.5;
-  color: #d6d5ff;
+  color: #ffd6f3;
 }
 .ops-body {
   display: grid;
@@ -512,23 +688,27 @@ html.sheet-open {
   min-height: 44px;
   padding: 8px 10px;
   text-align: left;
-  background: var(--m-surface);
+  background: var(--m-glass);
   border: 1px solid var(--m-border);
-  border-radius: var(--m-radius);
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
   color: var(--m-text-2);
 }
 .sector-tab:hover {
-  background: #1c2b34;
+  background: var(--m-hover);
   border-color: var(--mode);
 }
 .sector-tab[aria-selected="true"] {
   color: var(--m-text);
   border-color: var(--mode);
-  background: color-mix(in srgb, var(--mode) 14%, var(--m-bg));
-  box-shadow: inset 3px 0 var(--mode);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--mode) 22%, var(--m-bg)), color-mix(in srgb, var(--mode) 6%, var(--m-bg)));
+  box-shadow: inset 3px 0 var(--mode), 0 0 14px color-mix(in srgb, var(--mode) 25%, transparent);
+}
+.sector-tab[aria-selected="true"] .sector-index {
+  text-shadow: 0 0 10px var(--mode);
 }
 .sector-index {
-  font: 700 18px / 1 "Barlow Condensed", sans-serif;
+  font: 700 18px / 1 "Rajdhani", sans-serif;
   color: var(--mode);
 }
 .sector-name {
@@ -562,18 +742,23 @@ html.sheet-open {
   min-height: 60px;
   text-align: left;
   padding: 8px 14px;
-  background: var(--m-surface);
+  background: var(--m-glass);
   border: 1px solid var(--m-border);
-  border-radius: var(--m-radius);
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
 }
 .mission-card:hover {
-  background: #1c2b34;
+  background: var(--m-hover);
   border-color: var(--mode);
+  box-shadow: inset 0 0 20px color-mix(in srgb, var(--mode) 14%, transparent);
 }
 .mission-card[aria-pressed="true"] {
   border-color: var(--mode);
-  background: color-mix(in srgb, var(--mode) 12%, var(--m-bg));
-  box-shadow: inset 4px 0 var(--mode);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--mode) 20%, var(--m-bg)), color-mix(in srgb, var(--mode) 5%, var(--m-bg)));
+  box-shadow: inset 4px 0 var(--mode), inset 0 0 24px color-mix(in srgb, var(--mode) 16%, transparent);
+}
+.mission-card[aria-pressed="true"] .mission-index {
+  text-shadow: 0 0 12px var(--mode);
 }
 .mission-card[aria-pressed="true"] .mission-index::before {
   content: "▸";
@@ -583,7 +768,7 @@ html.sheet-open {
 }
 .mission-index {
   position: relative;
-  font: 700 24px "Barlow Condensed", sans-serif;
+  font: 700 24px "Rajdhani", sans-serif;
   color: var(--mode);
 }
 .mission-copy {
@@ -593,8 +778,9 @@ html.sheet-open {
   min-width: 0;
 }
 .mission-copy strong {
-  font: 600 20px / 1.1 "Barlow Condensed", sans-serif;
-  letter-spacing: 0.02em;
+  font: 700 20px / 1.1 "Rajdhani", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .mission-copy small {
   overflow: hidden;
@@ -608,8 +794,9 @@ html.sheet-open {
   padding: 1px 5px;
   font: 600 12px var(--mono);
   letter-spacing: 0.08em;
-  color: var(--m-bg);
-  background: var(--m-text-2);
+  color: var(--on-neon);
+  background: var(--mode);
+  box-shadow: 0 0 8px var(--mode);
   vertical-align: 2px;
 }
 .mission-stats {
@@ -655,10 +842,13 @@ html.sheet-open {
   margin: 0;
   padding: 0;
   color: var(--m-text);
-  background: linear-gradient(180deg, var(--m-surface-2), var(--m-bg));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--mode) 8%, transparent), transparent 35%),
+    color-mix(in srgb, var(--m-surface) 88%, transparent);
   border: 1px solid var(--mode);
-  border-radius: var(--m-radius);
-  box-shadow: none;
+  border-radius: 0;
+  box-shadow: 0 0 28px color-mix(in srgb, var(--mode) 22%, transparent), inset 0 0 30px color-mix(in srgb, var(--mode) 8%, transparent);
+  backdrop-filter: blur(10px);
 }
 .mission-brief:not([open]) {
   display: none;
@@ -685,7 +875,10 @@ html.sheet-open {
 }
 .mission-brief h2 {
   margin: 2px 0 4px;
-  font: 700 30px / 1.05 "Barlow Condensed", sans-serif;
+  font: 800 23px / 1.15 var(--display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--mode) 45%, transparent);
 }
 .mission-brief h3 {
   margin: 12px 0 6px;
@@ -713,7 +906,8 @@ html.sheet-open {
   padding: 2px 8px;
   font: 500 12px var(--mono);
   letter-spacing: 0.08em;
-  background: #0b121acc;
+  background: #05070fcc;
+  color: var(--mode);
   color: var(--m-text-2);
 }
 .map-preview {
@@ -899,17 +1093,20 @@ html.sheet-open {
   min-height: 150px;
   padding: 18px;
   text-align: left;
-  background: var(--m-surface);
+  background: linear-gradient(180deg, #3ef2ff12, transparent 50%), var(--m-glass);
   border: 1px solid var(--m-border);
   border-top: 3px solid var(--m-accent);
-  border-radius: var(--m-radius);
+  border-radius: 0;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%);
   color: var(--m-text-2);
   font-size: 14px;
   line-height: 1.5;
+  backdrop-filter: blur(6px);
 }
 .choice-card:hover:not(:disabled) {
-  background: #1c2b34;
+  background: linear-gradient(180deg, #3ef2ff26, transparent 60%), var(--m-hover);
   border-color: var(--m-accent);
+  box-shadow: inset 0 0 28px #3ef2ff1f;
 }
 .choice-index {
   font: 500 12px var(--mono);
@@ -917,16 +1114,17 @@ html.sheet-open {
   letter-spacing: 0.12em;
 }
 .choice-card strong {
-  font: 700 30px / 1 "Barlow Condensed", sans-serif;
-  letter-spacing: 0.03em;
+  font: 800 22px / 1.1 var(--display);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--m-text);
 }
 .coop-panel {
   padding: 18px;
-  background: var(--m-surface);
+  background: var(--m-glass);
   border: 1px solid var(--m-border);
-  border-radius: var(--m-radius);
+  border-radius: 0;
+  backdrop-filter: blur(6px);
 }
 .coop-panel > h2 {
   font-size: 30px;
@@ -995,6 +1193,7 @@ html.sheet-open {
 .room-code {
   font-size: 36px;
   color: var(--m-accent);
+  text-shadow: 0 0 12px #3ef2ff88;
   text-align: center;
   padding-inline: 8px 0;
 }
@@ -1003,7 +1202,7 @@ html.sheet-open {
   font-size: 14px;
 }
 .lobby-count strong {
-  font: 700 32px "Barlow Condensed", sans-serif;
+  font: 700 32px "Rajdhani", sans-serif;
   color: var(--m-accent);
   margin-right: 8px;
 }
@@ -1083,7 +1282,7 @@ html.sheet-open {
   gap: 6px;
   min-height: 44px;
   padding: 6px 12px;
-  font: 600 20px "Barlow Condensed", sans-serif;
+  font: 600 20px "Rajdhani", sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   background: var(--m-bg);
@@ -1094,7 +1293,7 @@ html.sheet-open {
   border-color: var(--m-accent);
   color: var(--m-accent);
   background: color-mix(in srgb, var(--m-accent) 10%, var(--m-bg));
-  box-shadow: inset 0 -3px var(--m-accent);
+  box-shadow: inset 0 -3px var(--m-accent), 0 0 14px #3ef2ff40;
 }
 .coop-modes input:checked + span::after {
   content: " ✓";
@@ -1123,7 +1322,7 @@ html.sheet-open {
 }
 .coop-mission strong {
   display: block;
-  font: 600 24px / 1.1 "Barlow Condensed", sans-serif;
+  font: 600 24px / 1.1 "Rajdhani", sans-serif;
 }
 .coop-wait {
   margin: 0 0 12px;
@@ -1148,22 +1347,33 @@ html.sheet-open {
 }
 .start-screen .codex-tab {
   min-height: 44px;
-  border-radius: var(--m-radius);
-  background: var(--m-surface);
+  border-radius: 0;
+  background: var(--m-glass);
+  font-family: "Rajdhani", sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   border-color: var(--m-border);
   color: var(--m-text-2);
 }
 .start-screen .codex-tab:hover {
-  background: #1c2b34;
+  background: var(--m-hover);
   border-color: var(--m-accent);
 }
 .start-screen .codex-tab[aria-selected="true"] {
   color: var(--m-text);
   border-color: var(--m-accent);
-  box-shadow: inset 0 -3px var(--m-accent);
+  box-shadow: inset 0 -3px var(--m-accent), 0 0 14px #3ef2ff33;
+  text-shadow: 0 0 8px #3ef2ff88;
 }
 .start-screen .codex-card {
-  border-radius: var(--m-radius);
+  border-radius: 0;
+  background: var(--m-glass);
+  backdrop-filter: blur(6px);
+}
+.start-screen .codex-card:hover {
+  border-color: color-mix(in srgb, var(--m-accent) 45%, var(--m-border));
+  box-shadow: 0 0 22px #3ef2ff1a;
 }
 /* Tower codex: wider cards than the enemy codex, they carry a level table. */
 .tower-codex-list {
@@ -1297,17 +1507,19 @@ html.sheet-open {
   position: relative;
   margin: 0;
   padding: 14px 16px 14px 60px;
-  background: var(--m-surface);
+  background: var(--m-glass);
   border: 1px solid var(--m-border);
-  border-radius: var(--m-radius);
+  border-left: 2px solid var(--m-accent);
+  border-radius: 0;
 }
 #help-page > ol > li::before {
   content: counter(step, decimal-leading-zero);
   position: absolute;
   left: 16px;
   top: 12px;
-  font: 700 26px "Barlow Condensed", sans-serif;
+  font: 800 22px var(--display);
   color: var(--m-accent);
+  text-shadow: 0 0 10px #3ef2ff88;
 }
 #help-page .tip {
   border-radius: 0 var(--m-radius) var(--m-radius) 0;
@@ -1345,7 +1557,7 @@ html.sheet-open {
     min-height: 76px;
   }
   .home-primary strong {
-    font-size: 28px;
+    font-size: 20px;
   }
   .home-mode {
     flex-direction: column;
@@ -1403,8 +1615,17 @@ html.sheet-open {
   .home-map-view .scan {
     display: none;
   }
-  .home-map .map-reactor {
+  .home-map .map-reactor,
+  .home-map-view,
+  .menu-home .menu-title,
+  .start-screen::before {
     animation: none;
+  }
+  .home-primary:hover::after {
+    transition: none;
+  }
+  .home-mode:hover {
+    transform: none;
   }
   .mission-brief[open] {
     animation: none;

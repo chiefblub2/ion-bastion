@@ -1,14 +1,20 @@
-@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
 :root {
   font-family: "DM Sans", sans-serif;
-  color: #e5eeec;
-  background: #0b121a;
+  color: #e8f6ff;
+  background: #05070f;
   font-synthesis: none;
-  --mint: #a2f5be;
-  --muted: #8b9da6;
-  --line: #27343e;
-  --panel: #121c25;
+  --mint: #3ef2ff;
+  --muted: #7f93b3;
+  --line: #1b2c4a;
+  --panel: #0a1122;
   --mono: "IBM Plex Mono", monospace;
+  --display: "Orbitron", "Rajdhani", sans-serif;
+  --neon: #3ef2ff;
+  --neon-2: #ff3dcb;
+  --on-neon: #021018;
+  --glow: 0 0 14px #3ef2ff55;
+  --glow-strong: 0 0 10px #3ef2ff88, 0 0 32px #3ef2ff33;
 }
 * {
   box-sizing: border-box;
@@ -48,23 +54,36 @@ button:active:not(:disabled) {
   display: none !important;
 }
 .topbar {
+  position: relative;
   min-height: 88px;
   border-bottom: 1px solid var(--line);
   padding: 18px 3.5%;
   display: flex;
   align-items: center;
   gap: 28px;
+  background: linear-gradient(180deg, #0a1430, transparent);
+}
+/* A neon seam under the top bar: cyan fading into magenta. */
+.topbar::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--neon) 20%, var(--neon-2) 80%, transparent);
+  box-shadow: 0 0 10px #3ef2ff88;
+  pointer-events: none;
 }
 .brand {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #ecf2ee;
+  color: #f0f9ff;
   text-decoration: none;
-  font-family: "Barlow Condensed", sans-serif;
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
+  font-family: var(--display);
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 18px #3ef2ff44;
 }
 .brand-mark {
   width: 34px;
@@ -75,15 +94,21 @@ button:active:not(:disabled) {
   place-items: center;
   font: 600 23px var(--mono);
   clip-path: polygon(0 0, 80% 0, 100% 20%, 100% 100%, 20% 100%, 0 80%);
+  background: color-mix(in srgb, var(--neon) 12%, transparent);
+  text-shadow: var(--glow);
 }
 .brand-light {
   font-weight: 500;
-  color: #aab8bd;
-  margin-left: 4px;
+  margin-left: 0.3em;
+  background: linear-gradient(90deg, var(--neon), var(--neon-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
 }
 .edition {
   font: 12px var(--mono);
-  color: #748590;
+  color: #6c80a3;
   letter-spacing: 1px;
   border-left: 1px solid var(--line);
   padding-left: 24px;
@@ -98,14 +123,25 @@ button:active:not(:disabled) {
   margin-left: auto;
 }
 .quiet {
-  background: #16212b;
-  border: 1px solid #32404b;
-  border-radius: 6px;
+  background: #0d1730;
+  border: 1px solid #24406a;
+  border-radius: 2px;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
   padding: 10px 14px;
   font-size: 14px;
 }
 .quiet:hover {
-  background: #24333f;
+  background: #13234a;
+  border-color: color-mix(in srgb, var(--neon) 60%, #24406a);
+  color: #fff;
+}
+/* Cut-corner buttons clip an outer outline, so their focus ring sits inside. */
+.quiet:focus-visible,
+.primary:focus-visible {
+  outline-offset: -4px;
+}
+.primary:focus-visible {
+  outline-color: var(--on-neon);
 }
 .quiet span {
   margin-left: 7px;
@@ -130,11 +166,11 @@ main {
 }
 .eyebrow span {
   margin: 0 8px;
-  color: #61767c;
+  color: #56688c;
 }
 h1 {
   font:
-    600 40px/1.05 "Barlow Condensed",
+    600 40px/1.05 "Rajdhani",
     sans-serif;
   letter-spacing: 0.2px;
   margin: 0;
@@ -199,7 +235,7 @@ p {
 }
 .resources small {
   font: 13px var(--mono);
-  color: #72848f;
+  color: #6c80a3;
   margin-top: 6px;
 }
 .credits {
@@ -223,7 +259,7 @@ p {
 }
 .player-chip b {
   font-weight: 600;
-  color: #e5eeec;
+  color: #e8f6ff;
 }
 .player-chip em {
   font-style: normal;
@@ -231,7 +267,7 @@ p {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 2px 6px;
-  border: 1px solid #3e5360;
+  border: 1px solid #2a4670;
   border-radius: 4px;
 }
 .player-chip.out {
@@ -282,29 +318,32 @@ p {
 .playback button {
   height: 38px;
   min-width: 40px;
-  border: 1px solid #3a4a55;
+  border: 1px solid #24406a;
   border-radius: 5px;
-  background: #1b2933;
+  background: #0d1730;
   font: 500 16px var(--mono);
 }
 .playback button:hover {
   border-color: var(--mint);
+  box-shadow: var(--glow);
 }
 .playback .toolbar-start {
   padding: 0 14px;
   background: var(--mint);
   border-color: var(--mint);
-  color: #112b20;
+  color: var(--on-neon);
   font: 700 14px "DM Sans", sans-serif;
   white-space: nowrap;
+  box-shadow: var(--glow);
 }
 .playback .toolbar-start:hover {
-  background: #c1ffd4;
+  background: #8ff8ff;
+  box-shadow: var(--glow-strong);
 }
 .playback .toolbar-start:disabled {
-  background: #273b35;
-  border-color: #365145;
-  color: #a4c1af;
+  background: #12303f;
+  border-color: #1f4c5e;
+  color: #8fb9c8;
   opacity: 0.8;
 }
 .toolbar-start b {
@@ -339,7 +378,7 @@ p {
   justify-content: center;
   flex-direction: column;
   text-align: center;
-  background: #08131dd9;
+  background: #050a18d9;
   backdrop-filter: blur(5px);
   padding: 32px;
   pointer-events: none;
@@ -356,13 +395,13 @@ p {
 }
 #overlay-title {
   font:
-    600 48px "Barlow Condensed",
+    600 48px "Rajdhani",
     sans-serif;
   margin: 4px 0 12px;
 }
 #overlay-copy {
   max-width: 380px;
-  color: #b6c7cd;
+  color: #b4c6de;
   font-size: 16px;
   line-height: 1.6;
 }
@@ -388,18 +427,18 @@ p {
 .legend-path {
   width: 12px;
   height: 6px;
-  background: #5c8a6c;
+  background: #2a8fb0;
   border-radius: 2px;
 }
 .legend-build {
   width: 10px;
   height: 10px;
-  border: 1px solid #638091;
+  border: 1px solid #3e6496;
 }
 .wave-timeline {
   padding: 20px 24px 16px;
   border-top: 1px solid var(--line);
-  background: #0f1922;
+  background: #08101f;
 }
 .timeline-label {
   display: flex;
@@ -426,12 +465,12 @@ p {
 #wave-segments i {
   display: block;
   height: 5px;
-  background: #293b46;
+  background: #16264a;
   border-radius: 2px;
 }
 #wave-segments small {
   font: 10px var(--mono);
-  color: #738791;
+  color: #6c80a3;
   display: block;
   margin-top: 7px;
 }
@@ -458,13 +497,13 @@ p {
 }
 .section-title h2 {
   font:
-    600 24px "Barlow Condensed",
+    600 24px "Rajdhani",
     sans-serif;
   margin: 0;
 }
 .section-title > span {
   font: 12px var(--mono);
-  color: #798d98;
+  color: #7286a8;
 }
 /* Category tabs above the cards; hidden when a mission offers only a few towers. */
 .tower-tabs {
@@ -480,23 +519,23 @@ p {
   font: 600 11px var(--mono);
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #a1b1ba;
-  background: #131f29;
-  border: 1px solid #2e3e49;
+  color: #9fb4cc;
+  background: #0b1224;
+  border: 1px solid #1e3a5c;
   border-radius: 6px;
 }
 .tower-tab small {
   font-size: 10px;
-  color: #6c808b;
+  color: #66799c;
 }
 .tower-tab:hover {
-  background: #1c2b34;
+  background: #13214a;
   border-color: var(--mint);
 }
 .tower-tab[aria-selected="true"] {
-  color: #e5eeec;
+  color: #e8f6ff;
   border-color: var(--mint);
-  background: color-mix(in srgb, var(--mint) 8%, #0d1920);
+  background: color-mix(in srgb, var(--mint) 8%, #070d1c);
   box-shadow: inset 0 -2px var(--mint);
 }
 /* The tower being built sits on another page. */
@@ -513,7 +552,7 @@ p {
   gap: 6px;
 }
 .tower-card {
-  --accent: #a2f5be;
+  --accent: #3ef2ff;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   justify-items: center;
@@ -523,23 +562,23 @@ p {
   min-width: 0;
   text-align: center;
   padding: 9px 7px 7px;
-  background: #131f29;
-  border: 1px solid #2e3e49;
+  background: #0b1224;
+  border: 1px solid #1e3a5c;
   border-radius: 8px;
 }
 .tower-card.blast {
   --accent: #ffbd76;
 }
 .tower-card.frost {
-  --accent: #a5a2ff;
+  --accent: #ff3dcb;
 }
 .tower-card:hover {
-  background: #1c2b34;
+  background: #13214a;
   border-color: var(--accent);
 }
 .tower-card.active {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, #0d1920);
+  background: color-mix(in srgb, var(--accent) 8%, #070d1c);
   box-shadow: inset 3px 0 var(--accent);
 }
 .tower-symbol {
@@ -550,7 +589,7 @@ p {
 }
 .tower-name {
   font:
-    600 18px/1.1 "Barlow Condensed",
+    600 18px/1.1 "Rajdhani",
     sans-serif;
   max-width: 100%;
   overflow: hidden;
@@ -573,12 +612,12 @@ p {
 }
 kbd {
   font: 11px var(--mono);
-  background: #1a2731;
-  border: 1px solid #3b4c56;
+  background: #0d1730;
+  border: 1px solid #2a4670;
   border-bottom-width: 2px;
   border-radius: 4px;
   padding: 2px 5px;
-  color: #9fb2bd;
+  color: #9fb4cc;
 }
 .selection {
   margin-top: 18px;
@@ -593,7 +632,7 @@ kbd {
   justify-content: space-between;
   font: 10px var(--mono);
   letter-spacing: 0.7px;
-  color: #91a8b2;
+  color: #8fa5c4;
   margin-bottom: 13px;
 }
 .selection-heading b {
@@ -614,7 +653,7 @@ kbd {
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 5px;
-  background: #16212b;
+  background: #0d1730;
   color: var(--muted);
   font: 13px/1 sans-serif;
 }
@@ -632,7 +671,7 @@ kbd {
 .selection > p {
   font-size: 14px;
   line-height: 1.55;
-  color: #a0b3bd;
+  color: #9fb4cc;
   margin: 0 0 16px;
 }
 .tower-stats {
@@ -655,28 +694,28 @@ kbd {
 .placement-note {
   font-size: 12px;
   line-height: 1.6;
-  color: #b5c5cb;
+  color: #b4c6de;
 }
 .placement-note span {
-  color: #7d949f;
+  color: #7286a8;
 }
 .upgrade {
   width: 100%;
-  border: 1px solid #48765b;
+  border: 1px solid #1f6f85;
   color: var(--mint);
-  background: #1b352b;
+  background: #0a2a3a;
   border-radius: 5px;
   padding: 10px;
   font-size: 14px;
 }
 .upgrade:hover {
-  background: #244b37;
+  background: #0e3d52;
 }
 .sell {
   width: 100%;
   background: none;
   border: 0;
-  color: #a3b0b7;
+  color: #9aabc6;
   font-size: 12px;
   margin-top: 9px;
   padding: 5px;
@@ -705,14 +744,14 @@ kbd {
   border: 1px solid var(--line);
   border-radius: 4px;
   background: none;
-  color: #a3b0b7;
+  color: #9aabc6;
   font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .target-priority button:hover:not(:disabled) {
-  color: #e5eeec;
+  color: #e8f6ff;
 }
 .target-priority button.active {
   border-color: var(--mint);
@@ -721,23 +760,26 @@ kbd {
 .primary {
   width: 100%;
   background: var(--mint);
-  color: #112b20;
+  color: var(--on-neon);
   border: 1px solid var(--mint);
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   padding: 14px 17px;
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 15px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 .primary:hover {
-  background: #c1ffd4;
+  background: #8ff8ff;
+  box-shadow: var(--glow-strong);
 }
 .primary:disabled {
-  background: #273b35;
-  border-color: #365145;
-  color: #a4c1af;
+  background: #12303f;
+  border-color: #1f4c5e;
+  color: #8fb9c8;
   opacity: 0.8;
 }
 .primary span {
@@ -752,7 +794,7 @@ kbd {
   margin-top: 16px;
   padding: 0 3px;
   font-size: 13px;
-  color: #91a6b1;
+  color: #8fa5c4;
 }
 #notice.error {
   color: #ff9ba9;
@@ -760,31 +802,31 @@ kbd {
 .text-button {
   background: none;
   border: 0;
-  color: #8296a2;
+  color: #7a8fb0;
   font-size: 12px;
   white-space: nowrap;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 .text-button:hover {
-  color: #d0dfdf;
+  color: #d4e6f7;
 }
 dialog {
-  color: #e5eeec;
-  background: #15212b;
-  border: 1px solid #3e5360;
+  color: #e8f6ff;
+  background: #0b1428;
+  border: 1px solid #2a4670;
   border-radius: 12px;
   width: min(540px, calc(100% - 32px));
   padding: 32px;
   box-shadow: 0 24px 100px #0008;
 }
 dialog::backdrop {
-  background: #040b12bb;
+  background: #02050ebb;
   backdrop-filter: blur(4px);
 }
 :where(dialog, .menu-page) h2 {
   font:
-    600 34px "Barlow Condensed",
+    600 34px "Rajdhani",
     sans-serif;
   margin-bottom: 15px;
 }
@@ -792,7 +834,7 @@ dialog::backdrop {
 :where(dialog, .menu-page) li {
   font-size: 15px;
   line-height: 1.65;
-  color: #aebec6;
+  color: #9fb4cc;
 }
 :where(dialog, .menu-page) ol {
   padding-left: 20px;
@@ -802,7 +844,7 @@ dialog::backdrop {
   margin-bottom: 15px;
 }
 :where(dialog, .menu-page) strong {
-  color: #e5eeec;
+  color: #e8f6ff;
 }
 .dialog-close {
   float: right;
@@ -813,11 +855,11 @@ dialog::backdrop {
 }
 .tip {
   border-left: 2px solid var(--mint);
-  background: #1d312c;
+  background: #0c1f33;
   padding: 14px 16px;
   font-size: 14px;
   line-height: 1.6;
-  color: #c0d6c9;
+  color: #c4dcec;
 }
 .keyboard-help {
   font-size: 12px;
@@ -1135,15 +1177,15 @@ dialog::backdrop {
 .upgrade-info {
   flex: 0 0 42px;
   min-height: 42px;
-  border: 1px solid #48765b;
+  border: 1px solid #1f6f85;
   border-radius: 5px;
   color: var(--mint);
-  background: #1b352b;
+  background: #0a2a3a;
   font-size: 20px;
 }
 .upgrade-info:hover,
 .upgrade-info[aria-expanded="true"] {
-  background: #244b37;
+  background: #0e3d52;
 }
 .upgrade-tooltip {
   position: absolute;
@@ -1152,11 +1194,11 @@ dialog::backdrop {
   z-index: 10;
   width: 100%;
   padding: 15px;
-  border: 1px solid #527663;
+  border: 1px solid #2a7a92;
   border-radius: 8px;
-  background: #14261f;
+  background: #0a1a2c;
   box-shadow: 0 12px 32px #0007;
-  color: #e5eeec;
+  color: #e8f6ff;
   font-size: 13px;
   line-height: 1.5;
 }
@@ -1181,7 +1223,7 @@ dialog::backdrop {
   margin: 7px 0;
 }
 .upgrade-before {
-  color: #acc0b4;
+  color: #a3b8cc;
 }
 .upgrade-change strong {
   color: var(--mint);
@@ -1190,16 +1232,16 @@ dialog::backdrop {
 .upgrade-tooltip p {
   margin: 12px 0 0;
   font-size: 12px;
-  color: #bdd4c6;
+  color: #bcd3e3;
 }
 .upgrade-tooltip .upgrade-unchanged {
   padding-top: 10px;
-  border-top: 1px solid #365345;
+  border-top: 1px solid #1f4c5e;
 }
 
 .aura-upgrades { display: flex; flex-direction: column; gap: 9px; }
 .aura-upgrade { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; border-left: 3px solid var(--path-color, transparent); }
-.aura-upgrade small { display: block; margin-top: 4px; font-size: 12px; color: #bad6ce; }
+.aura-upgrade small { display: block; margin-top: 4px; font-size: 12px; color: #bad3e6; }
 .aura-upgrade b { white-space: nowrap; font: 500 12px var(--mono); }
 .aura-summary { font-size: 13px; color: #b7eafa; line-height: 1.6; margin: 0 0 10px; }
 .aura-rule { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 0 0 15px; }
@@ -1240,24 +1282,24 @@ dialog::backdrop {
 }
 .codex-tab {
   padding: 8px 14px;
-  background: #131f29;
-  border: 1px solid #2e3e49;
+  background: #0b1224;
+  border: 1px solid #1e3a5c;
   border-radius: 8px;
-  color: #a1b1ba;
+  color: #9fb4cc;
   font-size: 13px;
 }
 .codex-tab small {
   font: 500 10px var(--mono);
-  color: #7d9099;
+  color: #7286a8;
 }
 .codex-tab:hover {
-  background: #1c2b34;
+  background: #13214a;
   border-color: var(--mint);
 }
 .codex-tab[aria-selected="true"] {
-  color: #e5eeec;
+  color: #e8f6ff;
   border-color: var(--mint);
-  background: color-mix(in srgb, var(--mint) 8%, #0d1920);
+  background: color-mix(in srgb, var(--mint) 8%, #070d1c);
   box-shadow: inset 0 -2px var(--mint);
 }
 .codex-list {
@@ -1270,12 +1312,12 @@ dialog::backdrop {
   flex-direction: column;
   gap: 10px;
   padding: 14px;
-  background: #131f29;
-  border: 1px solid #2e3e49;
+  background: #0b1224;
+  border: 1px solid #1e3a5c;
   border-radius: 8px;
 }
 .codex-card.air {
-  border-color: #2f5a68;
+  border-color: #2a6a8a;
 }
 .codex-card header {
   display: flex;
@@ -1293,20 +1335,20 @@ dialog::backdrop {
   min-width: 0;
 }
 .codex-card strong {
-  font: 600 21px/1.1 "Barlow Condensed", sans-serif;
+  font: 600 21px/1.1 "Rajdhani", sans-serif;
 }
 .codex-card header small {
   font-size: 12px;
-  color: #a1b1ba;
+  color: #9fb4cc;
 }
 .codex-anim-toggle {
   margin-left: auto;
   flex: none;
   width: 32px;
   height: 32px;
-  border: 1px solid #3a5260;
+  border: 1px solid #2a4670;
   border-radius: 6px;
-  background: #0f1922;
+  background: #08101f;
   color: var(--mint);
   font-size: 12px;
 }
@@ -1327,9 +1369,9 @@ dialog::backdrop {
   position: relative;
   width: 132px;
   height: 132px;
-  border: 1px solid #2e3e49;
+  border: 1px solid #1e3a5c;
   border-radius: 6px;
-  background: radial-gradient(circle, #1d2c37, #0b121a 75%);
+  background: radial-gradient(circle, #101d3c, #05070f 75%);
 }
 .codex-sprite,
 .codex-anim-still {
@@ -1353,9 +1395,9 @@ dialog::backdrop {
 }
 .codex-anim-controls button {
   padding: 4px 9px;
-  border: 1px solid #34505e;
+  border: 1px solid #2a4670;
   border-radius: 5px;
-  background: #0f1922;
+  background: #08101f;
   font-size: 12px;
 }
 .codex-anim-controls button[aria-pressed="true"] {
@@ -1396,7 +1438,7 @@ dialog::backdrop {
   flex-direction: column;
   gap: 2px;
   padding: 6px 8px;
-  background: #0f1921;
+  background: #08101f;
   border-radius: 5px;
 }
 .codex-stats b {
@@ -1433,7 +1475,7 @@ dialog::backdrop {
   align-items: center;
 }
 .codex-carriers li span {
-  color: #d0dfdf;
+  color: #d4e6f7;
 }
 :where(dialog, .menu-page) p.codex-plain {
   font-size: 12px;
@@ -1445,7 +1487,7 @@ dialog::backdrop {
   margin: -4px 0 12px;
 }
 .tower-targets b {
-  color: #d0dfdf;
+  color: #d4e6f7;
   font-weight: 600;
 }
 
@@ -1487,16 +1529,16 @@ dialog::backdrop {
   align-items: center;
   gap: 5px;
   padding: 3px 7px 3px 5px;
-  border: 1px solid #2e3e49;
+  border: 1px solid #1e3a5c;
   border-radius: 5px;
-  background: #0d161d;
+  background: #070d1c;
   font: 500 13px var(--mono);
   white-space: nowrap;
   cursor: help;
 }
 .unit-badge.air {
-  border-color: #3f7d91;
-  background: #0f2028;
+  border-color: #2a8fb0;
+  background: #082036;
 }
 .enemy-icon {
   width: 16px;
@@ -1532,7 +1574,7 @@ dialog::backdrop {
 }
 .unit-name {
   font: 12px "DM Sans", sans-serif;
-  color: #b5c3c9;
+  color: #b4c6de;
 }
 .unit-hp {
   font: 11px var(--mono);
@@ -1558,7 +1600,7 @@ dialog::backdrop {
   background: #c7b8ff;
 }
 .unit-tag.new {
-  color: #112b20;
+  color: #021018;
   background: var(--mint);
 }
 .next-wave-empty {
@@ -1668,18 +1710,18 @@ dialog::backdrop {
   gap: 6px;
   min-width: 0;
   padding: 8px 10px;
-  background: #131f29;
-  border: 1px solid #2e3e49;
+  background: #0b1224;
+  border: 1px solid #1e3a5c;
   border-left: 3px solid var(--accent);
   border-radius: 8px;
 }
 .send-card:not(:disabled):hover {
-  background: #1c2b34;
+  background: #13214a;
   border-color: var(--accent);
 }
 .send-card strong {
   font:
-    600 17px/1.1 "Barlow Condensed",
+    600 17px/1.1 "Rajdhani",
     sans-serif;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1706,13 +1748,13 @@ dialog::backdrop {
   align-items: center;
   gap: 7px;
   padding: 5px 7px;
-  border: 1px solid #2e3e49;
+  border: 1px solid #1e3a5c;
   border-radius: 5px;
-  background: #0d161d;
+  background: #070d1c;
 }
 .live-unit.air {
-  border-color: #3f7d91;
-  background: #0f2028;
+  border-color: #2a8fb0;
+  background: #082036;
 }
 .live-unit.pending {
   opacity: 0.5;
@@ -1751,7 +1793,7 @@ dialog::backdrop {
 .enemy-hp {
   height: 6px;
   border-radius: 3px;
-  background: #1c2a34;
+  background: #13214a;
   overflow: hidden;
 }
 .enemy-hp > span {
