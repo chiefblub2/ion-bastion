@@ -17,11 +17,13 @@ export interface Intensity {
   /** Seconds the towers need to clear the field at their combined damage per second. */
   clear: number;
   heavies: number;
+  bosses: number;
 }
 export function intensityOf(state: GameState, content: ContentPack, pathLength: number): Intensity {
   let threat = 0,
     hp = 0,
     heavies = 0,
+    bosses = 0,
     defense = 0,
     dps = 0;
   for (const e of state.enemies) {
@@ -30,6 +32,7 @@ export function intensityOf(state: GameState, content: ContentPack, pathLength: 
     threat += Math.min(4, Math.max(0.5, base / 100)) * (0.5 + 0.5 * progress);
     hp += e.hp;
     if (base >= HEAVY_HP) heavies++;
+    if (base >= BOSS_HP) bosses++;
   }
   for (const t of state.towers) {
     defense += 1 + t.upgrades.length;
@@ -37,7 +40,7 @@ export function intensityOf(state: GameState, content: ContentPack, pathLength: 
     const s = effectiveTowerStats(t, state.towers, content);
     if (s.interval > 0) dps += s.damage / s.interval;
   }
-  return { threat: Math.min(1, threat / FULL_THREAT), defense: Math.min(1, defense / FULL_DEFENSE), clear: hp / Math.max(1, dps), heavies };
+  return { threat: Math.min(1, threat / FULL_THREAT), defense: Math.min(1, defense / FULL_DEFENSE), clear: hp / Math.max(1, dps), heavies, bosses };
 }
 /** Bright under 3 s, dark over 10 s; each colour holds a little past its threshold so it does not flicker. */
 export function colorOf(clear: number, previous: Color): Color {
@@ -45,8 +48,8 @@ export function colorOf(clear: number, previous: Color): Color {
   if (clear > (previous === "dark" ? 8 : 10)) return "dark";
   return "drive";
 }
-/** Pad filter factor: brighter with a comfortable lead and with a stronger defense. */
-export const toneFor = (color: Color, defense: number) => (color === "bright" ? 1.5 : color === "dark" ? 0.6 : 1) * (1 + 0.5 * defense);
+/** Pad filter factor: brighter with a comfortable lead and with a stronger defense; losing stays open (tense, not muffled). */
+export const toneFor = (color: Color, defense: number) => (color === "bright" ? 1.5 : 1) * (1 + 0.5 * defense);
 export function bossSpawned(events: readonly GameEvent[], state: GameState, content: ContentPack) {
   return events.some((e) => {
     if (e.type !== "spawn") return false;

@@ -14,7 +14,7 @@ const state = (enemies: GameState["enemies"], towers: Tower[] = []) => ({ enemie
 
 describe("intensityOf", () => {
   it("is silent on an empty field", () => {
-    expect(intensityOf(state([]), DEFAULT_CONTENT, 40)).toEqual({ threat: 0, defense: 0, clear: 0, heavies: 0 });
+    expect(intensityOf(state([]), DEFAULT_CONTENT, 40)).toEqual({ threat: 0, defense: 0, clear: 0, heavies: 0, bosses: 0 });
   });
   it("weighs enemies by strength and by how close they are", () => {
     const far = intensityOf(state([makeEnemy(1, light, 0, 0, 0)]), DEFAULT_CONTENT, 40).threat,
@@ -23,6 +23,7 @@ describe("intensityOf", () => {
     expect(near).toBeCloseTo(far * 2);
     expect(boss.threat).toBeGreaterThan(far);
     expect(boss.heavies).toBe(1);
+    expect(boss.bosses).toBe(1);
   });
   it("counts towers and their upgrades as defense and divides HP by their damage per second", () => {
     // A support tower adds to the defense (upgrades count) but not to the damage per second.
@@ -45,7 +46,8 @@ describe("colorOf", () => {
   });
   it("opens the pad when bright and with defense", () => {
     expect(toneFor("bright", 0)).toBe(1.5);
-    expect(toneFor("dark", 1)).toBeCloseTo(0.9);
+    // Losing stays tense (tension note) but no longer muffled.
+    expect(toneFor("dark", 1)).toBeCloseTo(1.5);
   });
 });
 describe("bossSpawned", () => {

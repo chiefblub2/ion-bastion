@@ -71,7 +71,7 @@ export function mountSoundBoard(root: HTMLElement) {
   }
   /** The music's inputs from the sliders, as the game derives them from threat, defense and clear time. */
   function measure(playing: boolean) {
-    ready().conductor.measure({ threat: value("sb-threat") / 100, defense: value("sb-defense") / 100, clear: value("sb-clear"), heavies: $<HTMLInputElement>("sb-heavy").checked ? 1 : 0, drums: true, playing });
+    ready().conductor.measure({ threat: value("sb-threat") / 100, defense: value("sb-defense") / 100, clear: value("sb-clear"), heavies: $<HTMLInputElement>("sb-heavy").checked ? 1 : 0, bosses: 0, drums: true, playing });
   }
   function stop() {
     if (timer) clearInterval(timer);

@@ -23,6 +23,7 @@ export class AudioEngine {
   private master: GainNode;
   private bus: Record<"sfx" | "ui" | "music", GainNode>;
   private duckGain: GainNode;
+  private energyGain: GainNode;
   private noise: AudioBuffer;
   private buffers = new Map<CueId, AudioBuffer>();
   private voices: Playing[] = [];
@@ -52,7 +53,8 @@ export class AudioEngine {
     this.bus.sfx.connect(this.master);
     this.bus.ui.connect(this.master);
     this.duckGain = ctx.createGain();
-    this.bus.music.connect(this.duckGain).connect(this.master);
+    this.energyGain = ctx.createGain();
+    this.bus.music.connect(this.energyGain).connect(this.duckGain).connect(this.master);
     const send = (from: AudioNode, amount: number) => {
       const g = ctx.createGain();
       g.gain.value = amount;
@@ -107,6 +109,10 @@ export class AudioEngine {
     sounding.push(INSTRUMENTS[name](this.ctx, panner, start, hz, velocity, this.noise));
     this.notes.set(name, sounding);
     return true;
+  }
+  /** Music loudness from the fight's energy (0 calm … 1 climax): about −2 dB to +6 dB; the layers add the rest of the build-up. */
+  energy(level: number) {
+    this.energyGain.gain.setTargetAtTime(0.8 + 1.2 * Math.max(0, Math.min(1, level)), this.ctx.currentTime, 0.8);
   }
   /** Rewrites the duck automation from now on: the gain is only known now, never at a future `at`. */
   duck(at: number) {

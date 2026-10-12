@@ -18,4 +18,8 @@ describe("grooves", () => {
     expect([0, 1, 2, 3].map((s) => arpIndex(s, "dark", 3))).toEqual([2, 1, 0, 2]);
     expect([0, 1, 2, 3, 4].map((s) => arpIndex(s, "drive", 3))).toEqual([0, 1, 2, 1, 0]);
   });
+  it("escalates at the top with 16th hats and a straight 8th-note bass", () => {
+    expect(layersFor(0.9, 0)).toEqual(["kick", "snare", "hat", "hat16", "bass8"]);
+    expect(hitsAt("straight", 2, ["bass8"])).toEqual(["bass8"]);
+  });
 });

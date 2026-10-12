@@ -3,7 +3,7 @@ import { Activity, silent } from "./activity";
 import { nextSlot, stepLength } from "./clock";
 import type { Cue } from "./cues";
 import { shotsByFamily, type Family } from "./families";
-import { layersFor, type Drum } from "./grooves";
+import { ESCALATE, layersFor, type Drum } from "./grooves";
 import { climb, extentFor, type Color } from "./harmony";
 import { REGISTER, type Instrument } from "./instruments";
 import { colorOf, toneFor } from "./intensity";
@@ -20,6 +20,8 @@ export interface Voices {
   play(note: Note): boolean;
   instrument(name: Instrument, hz: number, at: number, velocity: number, pan: number, bus?: "music" | "sfx"): boolean;
   duck(at: number): void;
+  /** Music loudness from the fight's energy, 0–1. */
+  energy(level: number): void;
   ambience: { chord(notes: readonly number[], at: number): void; tone(factor: number): void };
 }
 export interface Measure {
@@ -27,6 +29,7 @@ export interface Measure {
   defense: number;
   clear: number;
   heavies: number;
+  bosses: number;
   /** A wave is running, so the enemies' drums may play. */
   drums: boolean;
   /** In the game view and not paused. */
@@ -52,6 +55,11 @@ const DRUMS: Record<Drum, Player> = {
   hat: { instrument: "hat", pan: 0.15, gain: 0.5 },
   stomp: { instrument: "tom", pan: 0, gain: 0.8 },
   bass: { instrument: "bass", pan: 0, gain: 0.6 },
+  hat16: { instrument: "hat", pan: -0.15, gain: 0.35 },
+  bass8: { instrument: "bass", pan: 0, gain: 0.65 },
+  crash: { instrument: "crash", pan: 0.1, gain: 0.7 },
+  riser: { instrument: "riser", pan: 0, gain: 0.8 },
+  fill: { instrument: "tom", pan: -0.1, gain: 0.6 },
 };
 /** Its own short bell, so the 8th-note arpeggio never crowds out the electric part. */
 const ARP: Player = { instrument: "chime", pan: -0.15, gain: 0.25 };
@@ -61,7 +69,7 @@ export class Conductor {
   readonly score = new Score();
   readonly activity = new Activity();
   private mood: Color = "drive";
-  private parts: Parts = { drums: [], arp: false, extent: 3, color: "drive", activity: SILENT };
+  private parts: Parts = { drums: [], arp: false, extent: 3, color: "drive", activity: SILENT, escalate: false };
   constructor(private voices: Voices) {}
   get color() {
     return this.mood;
@@ -75,13 +83,17 @@ export class Conductor {
   measure(m: Measure) {
     this.mood = colorOf(m.clear, this.mood);
     this.score.extent = extentFor(m.defense);
+    const fighting = m.playing && m.drums,
+      escalate = fighting && (m.threat >= ESCALATE || m.bosses > 0);
     this.parts = {
       drums: m.playing && m.drums ? layersFor(m.threat, m.heavies) : [],
       arp: m.playing && m.defense >= 0.75,
       extent: this.score.extent,
       color: this.mood,
       activity: m.playing ? this.activity.levels : SILENT,
+      escalate,
     };
+    this.voices.energy(fighting ? Math.min(1, m.threat + (escalate ? 0.3 : 0)) : 0);
     this.voices.ambience.tone(toneFor(this.mood, m.defense));
   }
   /** A cue: a stinger on instruments when it has one, else its effect. */
@@ -104,13 +116,17 @@ export class Conductor {
   window(from: number, to: number) {
     for (const b of schedule(this.score.clock, this.score.music, this.parts, from, to)) {
       if (b.kind === "chord") this.voices.ambience.chord(b.notes, b.at);
-      else if (b.kind === "part") this.note(PLAYERS[b.family], b.voice, b.velocity, b.at);
+      else if (b.kind === "part") {
+        this.note(PLAYERS[b.family], b.voice, b.velocity, b.at);
+        // Escalated, the rapid part doubles an octave up.
+        if (b.family === "rapid" && this.parts.escalate) this.note(PLAYERS.rapid, b.voice, b.velocity * 0.5, b.at, 2);
+      }
       else if (b.kind === "arp") this.note(ARP, b.voice, 1, b.at);
       else this.note(DRUMS[b.drum], 0, 1, b.at);
     }
   }
-  private note(player: Player, tone: number, velocity: number, at: number) {
-    this.voices.instrument(player.instrument, pitch(player.instrument, this.score.chordAt(at), tone), at, velocity * player.gain, player.pan);
+  private note(player: Player, tone: number, velocity: number, at: number, ratio = 1) {
+    this.voices.instrument(player.instrument, pitch(player.instrument, this.score.chordAt(at), tone) * ratio, at, velocity * player.gain, player.pan);
   }
 }
 /** A pitched instrument's chord tone around its register; unpitched instruments ignore it. */

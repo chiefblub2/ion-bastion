@@ -13,7 +13,11 @@ class Recorder implements Voices {
   notes: { name: Instrument; at: number; bus?: string }[] = [];
   effects = 0;
   ducks = 0;
+  energies: number[] = [];
   ambience = { chord: () => {}, tone: () => {} };
+  energy(level: number) {
+    this.energies.push(level);
+  }
   play() {
     this.effects++;
     return true;
@@ -27,7 +31,7 @@ class Recorder implements Voices {
   }
 }
 /** Drives a conductor through `bars` bars of rapid fire at `rate` shots per second, frame by frame like the game. */
-function run(rate: number, bars: number, tower = rapid, defense = 0) {
+function run(rate: number, bars: number, tower = rapid, defense = 0, threat = 0) {
   const r = new Recorder(),
     c = new Conductor(r),
     frame = 1 / 30;
@@ -40,7 +44,7 @@ function run(rate: number, bars: number, tower = rapid, defense = 0) {
     for (owed += rate * frame; owed >= 1; owed--) events.push({ type: "shot", tower, from: at, to: at, color: 0 });
     if (events.length && first < 0) first = t;
     c.shots(events, DEFAULT_CONTENT, t);
-    c.measure({ threat: 0, defense, clear: 5, heavies: 0, drums: true, playing: true });
+    c.measure({ threat, defense, clear: 5, heavies: 0, bosses: 0, drums: true, playing: true });
     c.window(t, t + frame);
   }
   return { r, first, end, beat: stepLength(c.score.clock, 4) };
@@ -80,5 +84,13 @@ describe("Conductor", () => {
       const sounding = r.notes.filter((m) => m.name === n.name && m.at <= n.at && n.at < m.at + LENGTH[m.name]).length;
       expect(sounding, `${n.name} at ${n.at.toFixed(2)}`).toBeLessThanOrEqual(POLYPHONY);
     }
+  });
+  it("escalates at the top: phrase marks, rapid part an octave up, more energy", () => {
+    const calm = run(20, 8, rapid, 0, 0.1),
+      top = run(20, 8, rapid, 0, 0.9);
+    const names = new Set(top.r.notes.map((n) => n.name));
+    for (const name of ["crash", "riser", "tom"] as const) expect(names.has(name), name).toBe(true);
+    expect(plucks(top)).toBeGreaterThan(plucks(calm) * 1.8);
+    expect(top.r.energies.at(-1)!).toBeGreaterThan(calm.r.energies.at(-1)! + 0.5);
   });
 });

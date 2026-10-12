@@ -1,11 +1,11 @@
 // Synthesized instruments for the music: plain Web Audio voices with filter and amplitude envelopes (parameters after
 // Tone.js's MonoSynth and FMSynth defaults). Each voice schedules one note and returns when it has died away.
 
-export type Instrument = "pluck" | "bell" | "chime" | "bass" | "swell" | "tom" | "kick" | "snare" | "hat" | "shaker" | "click";
+export type Instrument = "pluck" | "bell" | "chime" | "bass" | "swell" | "tom" | "kick" | "snare" | "hat" | "shaker" | "click" | "crash" | "riser";
 /** Pitched instruments play their chord tone in the octave around this frequency (Hz); the others are unpitched. */
 export const REGISTER: Partial<Record<Instrument, number>> = { pluck: 520, bell: 1040, chime: 1040, bass: 65, swell: 262 };
 /** Seconds from a note's start until its voice stops (polyphony counts notes inside this span). */
-export const LENGTH: Record<Instrument, number> = { pluck: 0.5, bell: 1.7, chime: 0.7, bass: 0.7, swell: 2.6, tom: 0.45, kick: 0.4, snare: 0.18, hat: 0.07, shaker: 0.09, click: 0.07 };
+export const LENGTH: Record<Instrument, number> = { pluck: 0.5, bell: 1.7, chime: 0.7, bass: 0.7, swell: 2.6, tom: 0.45, kick: 0.4, snare: 0.18, hat: 0.07, shaker: 0.09, click: 0.07, crash: 1.22, riser: 1.2 };
 type Play = (ctx: BaseAudioContext, out: AudioNode, at: number, hz: number, velocity: number, noise: AudioBuffer) => number;
 
 /** Gain that rises to `peak` in `attack` s and fades out over about `decay` s. */
@@ -137,6 +137,26 @@ const click: Play = (ctx, out, at, _hz, v) => {
   o.stop(end);
   return end;
 };
+/** Filtered noise sweeping up while it swells, into the next phrase. */
+const riser: Play = (ctx, out, at, _hz, v, noise) => {
+  const s = ctx.createBufferSource(),
+    f = ctx.createBiquadFilter(),
+    g = ctx.createGain(),
+    end = at + LENGTH.riser;
+  s.buffer = noise;
+  s.loop = true;
+  f.type = "bandpass";
+  f.Q.value = 2;
+  f.frequency.setValueAtTime(300, at);
+  f.frequency.exponentialRampToValueAtTime(6000, end);
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(0.15 * v, end - 0.02);
+  g.gain.linearRampToValueAtTime(0, end);
+  s.connect(f).connect(g).connect(out);
+  s.start(at);
+  s.stop(end);
+  return end;
+};
 export const INSTRUMENTS: Record<Instrument, Play> = {
   pluck,
   bell: fm(1.6, LENGTH.bell, 0.22),
@@ -149,6 +169,8 @@ export const INSTRUMENTS: Record<Instrument, Play> = {
   hat: noisy("highpass", 7000, 0.7, 0.05, 0.12),
   shaker: noisy("bandpass", 5200, 1.5, 0.07, 0.1),
   click,
+  crash: noisy("highpass", 5000, 0.5, 1.2, 0.18),
+  riser,
 };
 /** A stereo reverb impulse of decaying noise (the technique Tone.js's Reverb renders offline), from xorshift32. */
 export function impulse(ctx: BaseAudioContext, seconds = 2.4, decay = 3) {

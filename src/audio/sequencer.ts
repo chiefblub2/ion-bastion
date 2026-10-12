@@ -16,6 +16,8 @@ export interface Parts {
   extent: Extent;
   color: Color;
   activity: Readonly<Levels>;
+  /** The top of a fight: phrase marks every 4 bars (riser, fill, crash). */
+  escalate: boolean;
 }
 export type Beat =
   | { kind: "chord"; notes: number[]; at: number }
@@ -40,6 +42,13 @@ export function schedule(c: Clock, music: ThemeMusic, parts: Parts, from: number
     if (((step % 16) + 16) % 16 === 0)
       out.push({ kind: "chord", notes: padChord(chordOf(music, Math.floor(step / 16), parts.extent), parts.color), at: time });
     for (const drum of hitsAt(music.groove, step, parts.drums)) out.push({ kind: "hit", drum, at: time });
+    if (parts.escalate) {
+      const i = ((step % 16) + 16) % 16,
+        phrase = ((Math.floor(step / 16) % 4) + 4) % 4;
+      if (phrase === 0 && i === 0) out.push({ kind: "hit", drum: "crash", at: time });
+      if (phrase === 3 && i === 8) out.push({ kind: "hit", drum: "riser", at: time });
+      if (phrase === 3 && i >= 12) out.push({ kind: "hit", drum: "fill", at: time });
+    }
     for (const family of FAMILIES) {
       const note = partNote(family, step, parts.activity[family]);
       if (note) out.push({ kind: "part", family, ...note, at: time });

@@ -47,7 +47,7 @@ export async function renderMusic(s: Scenario) {
       if (next % 5 === 0) events.push({ type: "kill", at, color: d.color, reward: 5 });
     }
     conductor.shots(events, DEFAULT_CONTENT, t);
-    conductor.measure({ threat: s.threat, defense: s.defense, clear: s.clear, heavies: s.heavies, drums: true, playing: true });
+    conductor.measure({ threat: s.threat, defense: s.defense, clear: s.clear, heavies: s.heavies, bosses: 0, drums: true, playing: true });
     conductor.play(cuesFor(events, DEFAULT_CONTENT, "game"), t);
     conductor.window(t, t + 1 / 30);
   }

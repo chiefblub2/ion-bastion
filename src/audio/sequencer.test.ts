@@ -4,7 +4,7 @@ import { chordOf, MUSIC, padChord } from "./harmony";
 import { schedule, Sequencer, stepsIn, type Parts } from "./sequencer";
 
 const clock = { origin: 0, bpm: 120 }; // 1/16 = 0.125 s
-const parts: Parts = { drums: ["kick"], arp: false, extent: 3, color: "drive", activity: silent() };
+const parts: Parts = { drums: ["kick"], arp: false, extent: 3, color: "drive", activity: silent(), escalate: false };
 describe("stepsIn", () => {
   it("lists the 1/16 steps inside the half-open window", () => {
     expect(stepsIn(clock, 0.1, 0.375)).toEqual([
@@ -50,5 +50,14 @@ describe("Sequencer", () => {
       expect(windows[i][0]).toBeCloseTo(from);
       expect(windows[i][1]).toBeCloseTo(to);
     });
+  });
+  it("marks phrases when escalated: riser into the 4th bar's second half, tom fill, crash on the next phrase", () => {
+    const hits = (from: number, to: number) =>
+      schedule(clock, MUSIC.outpost, { ...parts, drums: [], escalate: true }, from, to).flatMap((b) => (b.kind === "hit" ? [b.drum] : []));
+    // At 120 BPM a bar is 2 s: bar 3 starts at 6 s, its step 8 at 7 s, step 12 at 7.5 s; bar 4 (a new phrase) at 8 s.
+    expect(hits(7, 7.1)).toEqual(["riser"]);
+    expect(hits(7.5, 8)).toEqual(["fill", "fill", "fill", "fill"]);
+    expect(hits(8, 8.1)).toEqual(["crash"]);
+    expect(hits(0.1, 6)).toEqual([]);
   });
 });
