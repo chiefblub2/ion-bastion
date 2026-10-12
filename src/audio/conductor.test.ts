@@ -3,6 +3,7 @@ import { DEFAULT_CONTENT } from "../content";
 import type { GameEvent, TowerId } from "../core/types";
 import { stepLength } from "./clock";
 import { Conductor, type Voices } from "./conductor";
+import { MUSIC } from "./harmony";
 import { POLYPHONY } from "./engine";
 import { LENGTH, type Instrument } from "./instruments";
 
@@ -10,7 +11,7 @@ const rapid = Object.values(DEFAULT_CONTENT.towers).find((d) => d.attack.kind ==
 const electric = Object.values(DEFAULT_CONTENT.towers).find((d) => d.attack.kind === "chain" && !d.placement)!.id as TowerId;
 const at = { x: 0, y: 0 };
 class Recorder implements Voices {
-  notes: { name: Instrument; at: number; bus?: string }[] = [];
+  notes: { name: Instrument; at: number; hz: number; bus?: string }[] = [];
   effects = 0;
   ducks = 0;
   energies: number[] = [];
@@ -22,8 +23,8 @@ class Recorder implements Voices {
     this.effects++;
     return true;
   }
-  instrument(name: Instrument, _hz: number, at: number, _velocity: number, _pan: number, bus?: string) {
-    this.notes.push({ name, at, bus });
+  instrument(name: Instrument, hz: number, at: number, _velocity: number, _pan: number, bus?: string) {
+    this.notes.push({ name, at, hz, bus });
     return true;
   }
   duck() {
@@ -89,8 +90,29 @@ describe("Conductor", () => {
     const calm = run(20, 8, rapid, 0, 0.1),
       top = run(20, 8, rapid, 0, 0.9);
     const names = new Set(top.r.notes.map((n) => n.name));
-    for (const name of ["crash", "riser", "tom"] as const) expect(names.has(name), name).toBe(true);
+    for (const name of ["metal", "riser", "slam"] as const) expect(names.has(name), name).toBe(true);
     expect(plucks(top)).toBeGreaterThan(plucks(calm) * 1.8);
     expect(top.r.energies.at(-1)!).toBeGreaterThan(calm.r.energies.at(-1)! + 0.5);
+  });
+  it("plays the enemies on the industrial kit with dissonance at high threat", () => {
+    const { r } = run(0, 2, rapid, 0, 0.9),
+      names = new Set(r.notes.map((n) => n.name));
+    for (const clean of ["kick", "snare", "hat", "tom", "bass"] as const) expect(names.has(clean), clean).toBe(false);
+    for (const machine of ["thud", "clank", "tick", "grit"] as const) expect(names.has(machine), machine).toBe(true);
+    const step = 60 / MUSIC.outpost.bpm / 4,
+      grit = r.notes.filter((n) => n.name === "grit" && n.at < 16 * step),
+      root = grit.find((n) => Math.abs(n.at) < 1e-6)!,
+      tritone = grit.find((n) => Math.abs(n.at - 6 * step) < 1e-6)!;
+    expect(12 * Math.log2(tritone.hz / root.hz)).toBeCloseTo(6);
+  });
+  it("reports how long ago each family's latest note began, ignoring notes still ahead", () => {
+    const r = new Recorder(),
+      c = new Conductor(r);
+    c.theme("outpost", 0);
+    c.shots([{ type: "shot", tower: rapid, from: at, to: at, color: 0 }], DEFAULT_CONTENT, 0);
+    c.measure({ threat: 0, defense: 0, clear: 5, heavies: 0, bosses: 0, drums: true, playing: true });
+    c.window(0, 0.1);
+    expect(c.ages(-0.01).rapid).toBeUndefined();
+    expect(c.ages(0.05).rapid).toBeCloseTo(0.05);
   });
 });

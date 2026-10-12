@@ -1,9 +1,9 @@
 import type { ContentPack, GameEvent } from "../core/types";
 import { Activity, silent } from "./activity";
-import { nextSlot, stepLength } from "./clock";
+import { nextSlot, stepAt, stepLength } from "./clock";
 import type { Cue } from "./cues";
 import { shotsByFamily, type Family } from "./families";
-import { ESCALATE, layersFor, type Drum } from "./grooves";
+import { ESCALATE, layersFor, tensionOffset, type Drum } from "./grooves";
 import { climb, extentFor, type Color } from "./harmony";
 import { REGISTER, type Instrument } from "./instruments";
 import { colorOf, toneFor } from "./intensity";
@@ -49,17 +49,18 @@ const PLAYERS: Record<Family, Player> = {
   fire: { instrument: "shaker", pan: 0.25, gain: 0.5 },
   traps: { instrument: "click", pan: -0.2, gain: 0.5 },
 };
+/** The enemies' kit: machines, not a drum set. */
 const DRUMS: Record<Drum, Player> = {
-  kick: { instrument: "kick", pan: 0, gain: 0.8 },
-  snare: { instrument: "snare", pan: 0.05, gain: 0.6 },
-  hat: { instrument: "hat", pan: 0.15, gain: 0.5 },
-  stomp: { instrument: "tom", pan: 0, gain: 0.8 },
-  bass: { instrument: "bass", pan: 0, gain: 0.6 },
-  hat16: { instrument: "hat", pan: -0.15, gain: 0.35 },
-  bass8: { instrument: "bass", pan: 0, gain: 0.65 },
-  crash: { instrument: "crash", pan: 0.1, gain: 0.7 },
+  kick: { instrument: "thud", pan: 0, gain: 0.8 },
+  snare: { instrument: "clank", pan: 0.05, gain: 0.6 },
+  hat: { instrument: "tick", pan: 0.15, gain: 0.5 },
+  hat16: { instrument: "tick", pan: -0.15, gain: 0.3 },
+  stomp: { instrument: "slam", pan: 0, gain: 0.8 },
+  fill: { instrument: "slam", pan: -0.1, gain: 0.6 },
+  bass: { instrument: "grit", pan: 0, gain: 0.6 },
+  bass8: { instrument: "grit", pan: 0, gain: 0.65 },
+  crash: { instrument: "metal", pan: 0.1, gain: 0.7 },
   riser: { instrument: "riser", pan: 0, gain: 0.8 },
-  fill: { instrument: "tom", pan: -0.1, gain: 0.6 },
 };
 /** Its own short bell, so the 8th-note arpeggio never crowds out the electric part. */
 const ARP: Player = { instrument: "chime", pan: -0.15, gain: 0.25 };
@@ -69,7 +70,9 @@ export class Conductor {
   readonly score = new Score();
   readonly activity = new Activity();
   private mood: Color = "drive";
-  private parts: Parts = { drums: [], arp: false, extent: 3, color: "drive", activity: SILENT, escalate: false };
+  private parts: Parts = { drums: [], arp: false, extent: 3, color: "drive", activity: SILENT, escalate: false, threat: 0 };
+  /** Start times of each family's part notes, for the towers' visual pulse. */
+  private started: Partial<Record<Family, number[]>> = {};
   constructor(private voices: Voices) {}
   get color() {
     return this.mood;
@@ -92,6 +95,7 @@ export class Conductor {
       color: this.mood,
       activity: m.playing ? this.activity.levels : SILENT,
       escalate,
+      threat: fighting ? m.threat : 0,
     };
     this.voices.energy(fighting ? Math.min(1, m.threat + (escalate ? 0.3 : 0)) : 0);
     this.voices.ambience.tone(toneFor(this.mood, m.defense));
@@ -109,6 +113,17 @@ export class Conductor {
     for (const [name, tone, offset, velocity] of stinger.notes) this.voices.instrument(name, pitch(name, chord, tone), at + offset * step, velocity * Math.min(1, gain), 0, "sfx");
     if (stinger.duck) this.voices.duck(at);
   }
+  /** Seconds since each family's latest part note began (notes scheduled ahead do not count yet). */
+  ages(now: number) {
+    const out: Partial<Record<Family, number>> = {};
+    for (const [family, times] of Object.entries(this.started) as [Family, number[]][]) {
+      const kept = times.filter((t) => t > now - 1),
+        begun = kept.filter((t) => t <= now);
+      this.started[family] = kept;
+      if (begun.length) out[family] = now - Math.max(...begun);
+    }
+    return out;
+  }
   play(cues: readonly Cue[], now: number) {
     for (const c of cues) this.cue(c.id, now, c.voice, c.gain);
   }
@@ -117,12 +132,17 @@ export class Conductor {
     for (const b of schedule(this.score.clock, this.score.music, this.parts, from, to)) {
       if (b.kind === "chord") this.voices.ambience.chord(b.notes, b.at);
       else if (b.kind === "part") {
+        (this.started[b.family] ??= []).push(b.at);
         this.note(PLAYERS[b.family], b.voice, b.velocity, b.at);
         // Escalated, the rapid part doubles an octave up.
         if (b.family === "rapid" && this.parts.escalate) this.note(PLAYERS.rapid, b.voice, b.velocity * 0.5, b.at, 2);
       }
       else if (b.kind === "arp") this.note(ARP, b.voice, 1, b.at);
-      else this.note(DRUMS[b.drum], 0, 1, b.at);
+      else {
+        // The enemies' bass grows dissonant with the threat: tritones, then minor seconds.
+        const offset = b.drum === "bass" || b.drum === "bass8" ? tensionOffset(stepAt(this.score.clock, b.at), this.parts.threat) : 0;
+        this.note(DRUMS[b.drum], 0, 1, b.at, 2 ** (offset / 12));
+      }
     }
   }
   private note(player: Player, tone: number, velocity: number, at: number, ratio = 1) {
