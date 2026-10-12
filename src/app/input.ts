@@ -4,7 +4,9 @@ import { TARGET_PRIORITIES } from "../systems/combat";
 import { hasPage, hotkeyTowers, isPaged, pageOf, towerOrder } from "../ui/tower-pages";
 import { isSupport } from "../systems/attacks";
 import type { MatchCommand } from "../core/match";
-import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderMission, renderMissionBrief, renderMissionList, renderTowerCodexPage, TOWER_KEYS } from "../ui/interface";
+import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderMission, renderTowerCodexPage, TOWER_KEYS } from "../ui/interface";
+import { type AtlasOptions, renderAtlas, selectMission as featureMission, selectSector, stepRail, syncRailSteps } from "../ui/sector-atlas";
+import { terrainImage } from "../render/terrain-snapshot";
 import { describeResult } from "../ui/messages";
 import { playerName } from "../ui/players";
 import type { Driver, ViewState } from "../render/scene";
@@ -95,34 +97,16 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     forRoom = false,
     /** What the home page's primary button does right now. */
     primary: HomeAction;
-  const brief = document.getElementById("mission-brief") as HTMLDialogElement,
-    /** Below this width the briefing is a bottom sheet over the list; above it a side panel. */
-    sheetQuery = matchMedia("(max-width: 899px)"),
-    isSheet = () => brief.open && brief.matches(":modal");
-  /** The briefing is always open as a side panel on wide screens and closed until a card is tapped on narrow ones. */
-  function syncBrief() {
-    // The sector tabs are a vertical rail beside the list on wide screens and a horizontal strip on narrow ones.
-    document.getElementById("sector-tabs")!.setAttribute("aria-orientation", sheetQuery.matches ? "horizontal" : "vertical");
-    if (sheetQuery.matches) {
-      if (brief.open && !isSheet()) brief.close();
-    } else {
-      if (isSheet()) brief.close();
-      if (!brief.open) brief.show();
-    }
-  }
-  sheetQuery.addEventListener("change", syncBrief);
-  // Closing the sheet (Esc, ✕, backdrop, leaving the page) returns the focus to its card through the dialog itself.
-  brief.addEventListener("close", () => document.documentElement.classList.remove("sheet-open"));
-  brief.addEventListener("click", (e) => {
-    if (e.target === brief && isSheet()) brief.close();
-  });
+  /** The Sector Atlas picks for a multiplayer room while the page was opened from there or from a lobby. */
+  const atlas = (): AtlasOptions => ({ lobby: forRoom || coop.inLobby(), image: terrainImage });
+  const sectorRail = document.getElementById("sector-tabs")!;
+  sectorRail.addEventListener("scroll", syncRailSteps, { passive: true });
+  new ResizeObserver(syncRailSteps).observe(sectorRail);
   const screens = createScreens(game.content.missions, () => game.mission.id, enter);
   /** A mission this session has played on, which "Resume Game" returns to instead of reloading it. */
   const inProgress = () => coop.active() || game.state.wave > 0 || game.state.towers.length > 0;
   /** Shows a screen: pauses or resumes the wave between game and menu and fills the menu page. */
   function enter(to: Screen, from: Screen | null) {
-    // A modal sheet stays in the top layer even inside a hidden page and would block the next screen.
-    if (isSheet()) brief.close();
     if (to.view === "game") {
       if (resumeAfterMenu && game.state.paused) execute({ type: "pause" });
       resumeAfterMenu = false;
@@ -153,8 +137,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     }
     if (to.page !== "missions") forRoom = false;
     if (to.page === "missions") {
-      renderMissionList(game, missionSector, forRoom || coop.inLobby(), missionPick);
-      syncBrief();
+      renderAtlas(game, atlas(), missionSector, missionPick);
     }
     if (to.page === "coop") coop.render();
     // Any page change ends a codex animation preview; opening the codex renders it closed.
@@ -242,20 +225,14 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     missionSector = sector ? sectors.indexOf(sector) : undefined;
     screens.show(page("missions"));
   }
-  /** Switches the mission page to another sector tab or game mode and keeps the focus on the clicked bar. */
+  /** Switches the atlas to another sector card or game mode and keeps the focus on the clicked bar. */
   function showSector(index: number, bar: string) {
-    renderMissionList(game, index, forRoom || coop.inLobby());
+    selectSector(game, index, atlas());
     document.querySelector<HTMLElement>(`#${bar} [data-sector="${index}"]`)?.focus({ preventScroll: true });
   }
-  /** Shows a mission's briefing without loading it; the briefing's button starts it. The page never scrolls: on narrow screens the briefing opens as a sheet. */
+  /** Features a mission in the atlas without loading it; the briefing's button starts it. */
   function pickMission(id: string) {
-    for (const card of document.querySelectorAll<HTMLElement>("#mission-list [data-pick]")) card.setAttribute("aria-pressed", String(card.dataset.pick === id));
-    renderMissionBrief(game, missionById(id, game.content.missions), forRoom || coop.inLobby());
-    document.getElementById("brief-body")!.scrollTop = 0;
-    if (sheetQuery.matches && !brief.open) {
-      document.documentElement.classList.add("sheet-open");
-      brief.showModal();
-    }
+    featureMission(game, id, atlas());
   }
   /** Opens another page of the build menu and keeps the focus on its tab. */
   function showTowerPage(page: number) {
@@ -299,7 +276,18 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     e.preventDefault();
     showCodexTab(next);
   });
-  // Arrow keys, Home and End move between the visible tabs of one bar (game modes or the sectors of a mode).
+  // Arrow keys, Home and End move between the missions of the sector and feature the one reached.
+  document.getElementById("mission-list")!.addEventListener("keydown", (e) => {
+    const nodes = [...document.querySelectorAll<HTMLElement>("#mission-list [data-pick]")],
+      current = nodes.indexOf((e.target as HTMLElement).closest<HTMLElement>("[data-pick]")!);
+    const next = { ArrowRight: current + 1, ArrowLeft: current - 1, Home: 0, End: nodes.length - 1 }[e.key];
+    if (next === undefined || !nodes.length) return;
+    e.preventDefault();
+    const node = nodes[(next + nodes.length) % nodes.length];
+    pickMission(node.dataset.pick!);
+    node.focus({ preventScroll: true });
+  });
+  // Arrow keys, Home and End move between the visible tabs of one bar (game modes or the sector cards of a mode).
   for (const bar of ["mission-modes", "sector-tabs"]) {
     const tabs = document.getElementById(bar)!;
     tabs.addEventListener("keydown", (e) => {
@@ -327,7 +315,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     const b = (event.target as HTMLElement).closest("button");
     if (!b) return;
     if (b.dataset.back !== undefined) return screens.back();
-    if (b.dataset.briefClose !== undefined) return brief.close();
+    if (b.dataset.railStep) return stepRail(Number(b.dataset.railStep));
     if (b.dataset.tower) return choose(b.dataset.tower as TowerId);
     if (b.dataset.mission) return selectMission(b.dataset.mission);
     if (b.dataset.pick) return pickMission(b.dataset.pick);
@@ -428,7 +416,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     }
   });
   document.addEventListener("keydown", (e) => {
-    if (dialogs.anyOpen() || isSheet() || e.altKey || e.metaKey || e.ctrlKey || e.repeat) return;
+    if (dialogs.anyOpen() || e.altKey || e.metaKey || e.ctrlKey || e.repeat) return;
     // The game's hotkeys belong to the game view; on the start screen Esc leads back from a page.
     const current = screens.current();
     if (current.view === "menu") {
