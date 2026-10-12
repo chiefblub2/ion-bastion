@@ -125,3 +125,26 @@ New cues: `stomp`, `bass` (pitched to the chord root), `arp` (pitched pluck) in 
 Deferred: a counter-melody at very high defense (clutter risk next to shots and arpeggio; revisit after the listening review).
 
 The sound board gets sliders for threat, defense and clear time, a heavy toggle and a boss button, so every stage can be heard directly.
+
+## Revision 2: instrument tracks (after the first listening)
+
+Listening result: bearable only up to about 10 shots/s, "too busy, too loud, noisy, not music — a stressful Mario soundtrack". Cause: one note per shot (note count grows with fire rate), raw ZzFX chiptune timbres, no space, 110–128 BPM. Agreed redesign:
+
+- **Towers are instrument tracks.** Shots no longer play notes. Each tower family has an instrument and a composed 16-step part; shots raise the family's activity (0–1, +0.06 per shot, half-life 1.5 s), which unlocks the part's steps by rank (1 = core steps, 4 = full figure) and sets its velocity. At most 8 notes per family per bar at any fire rate. The rapid part starts within a beat of its first shot (rank-1 steps on every beat); heavy, electric, control and trap parts within half a bar or a bar.
+
+| Family | Attack kinds | Instrument | Pan |
+| --- | --- | --- | --- |
+| rapid | direct, volley, pierce | pluck (triangle into a closing low-pass) | −0.35 |
+| heavy | splash, mortar, quake, execute | warm bass | 0 |
+| electric | chain, stun, disrupt, focus | FM bell | +0.4 |
+| control | slow, net, pull | glassy swell | 0 |
+| fire | burn, corrode, decay | filtered-noise shaker | +0.25 |
+| traps | every path tower | wood click | −0.2 |
+
+- **Effects that stay ZzFX:** heavy blasts on the beat (one per beat), a kill sparkle (one per ~beat), evade, overload, income, repair, alerts (leak, low reactor, incoming, eliminated, reject) and interface clicks. Shots of musical families and all other impacts are silent.
+- **Stingers on instruments:** build, sell, upgrade, wave start/end, win, loss and the boss motif are short instrument phrases on the grid (win, loss and boss duck the music).
+- **Calmer rhythm section:** no drums below threat 0.25; then kick on 1 and 3, a backbeat from 0.5, 8th hats and a bass pulse from 0.75; heavy enemies add a low tom stomp. Synthesized, soft kit.
+- **Calm, tense, spacious mood:** all themes 84–104 BPM, minor-leaning modes; the arpeggio (defense ≥ 0.75) is a quiet bell in 8ths.
+- **Professional sound:** plain Web Audio instruments with filter and amplitude envelopes (parameters after Tone.js's MonoSynth/FMSynth defaults, no dependency), a generated stereo reverb (decaying-noise impulse, as Tone.Reverb does) with sends from music and effects, fixed stereo places per family, a gentle compressor and a limiter. ZzFX remains for short effects only.
+- **Listening without effort:** `scripts/render-music.ts` renders 8-bar WAV clips offline (headless Chrome, `OfflineAudioContext`) for each tower mix at 5–80 shots/s plus calm and climax scenes, with peak and RMS in dBFS and an `index.html` to play them back to back. The engine accepts any `BaseAudioContext` for this.
+- **Architecture:** a `Conductor` (pure apart from the engine it is given) owns score, activity, parts and mood; the game adapter, the sound board and the renderer all drive it, so what is rendered is what is played.
