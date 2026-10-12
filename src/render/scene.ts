@@ -157,6 +157,9 @@ export class Battlefield extends Phaser.Scene {
     const cleanup = () => {
       this.enemySprites.reset();
       this.enemyFeedback.reset();
+      // A resize between shutdown and the next `create` must not bake the destroyed terrain of the old mission.
+      this.terrainParts = [];
+      this.terrain = undefined;
       this.events.off(Phaser.Scenes.Events.SHUTDOWN, cleanup);
       this.events.off(Phaser.Scenes.Events.DESTROY, cleanup);
     };
