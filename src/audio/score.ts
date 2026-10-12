@@ -1,6 +1,6 @@
 import { barAt, nextSlot, rebase, type Clock } from "./clock";
 import type { Cue } from "./cues";
-import { chordOf, MUSIC, snap, type Extent, type ThemeMusic } from "./harmony";
+import { chordOf, climb, MUSIC, snap, type Extent, type ThemeMusic } from "./harmony";
 import type { DroneId } from "./mood";
 import { RECIPES, TIMING, type CueId } from "./recipes";
 // Puts each cue on the theme's beat grid and pitches it to the chord playing when it lands.
@@ -34,8 +34,10 @@ export class Score {
   }
   noteAt(id: CueId, voice: number, gain: number, at: number): Note {
     if (!TIMING[id].pitched) return { id, rate: 1, gain, at };
-    const base = RECIPES[id].params[2] ?? 220;
-    return { id, rate: snap(base, this.chordAt(at), voice) / base, gain, at };
+    const base = RECIPES[id].params[2] ?? 220,
+      // Arpeggio and kills keep their direction through the chord; other cues take the nearest octave.
+      pitch = id === "arp" || id === "kill" ? climb(base, this.chordAt(at), voice) : snap(base, this.chordAt(at), voice);
+    return { id, rate: pitch / base, gain, at };
   }
   /** When and at which rate a cue sounds; kills climb the chord one tone per kill. */
   place(cue: Cue, now: number): Note {

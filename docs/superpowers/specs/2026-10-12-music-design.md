@@ -20,6 +20,7 @@ Make the game's sounds play together as music. Tower fire becomes the rhythm and
 ## Constraints
 
 - Everything from the base spec holds (render side only, no `AudioContext` before a gesture, files < 500 lines, pure modules tested in Node).
+- Pitched cues snap to the nearest octave (playback rate 0.7–1.42), except the arpeggio and kill plucks, which keep their direction through the chord in one octave around their pitch (rate 0.45–2.2), so a rising or falling line stays audible.
 - Lag between a muzzle flash and its sound is bounded by the cue's grid: ≤ 1 grid step (1/32 at 120 BPM = 62.5 ms, 1/16 = 125 ms, 1/8 = 250 ms).
 - Scheduling follows the lookahead pattern of Chris Wilson's "A Tale of Two Clocks": a 25 ms timer schedules everything due in the next 100 ms on the audio clock; nothing is timed with `setTimeout` alone.
 

@@ -23,8 +23,8 @@ describe("schedule", () => {
     const beats = schedule(clock, MUSIC.outpost, { drums: [], arp: true, extent: 4, color: "dark" }, 0, 0.25);
     expect(beats).toEqual([
       { kind: "chord", notes: padChord(chordOf(MUSIC.outpost, 0, 4), "dark"), at: 0 },
-      { kind: "arp", voice: 7, at: 0 },
-      { kind: "arp", voice: 6, at: 0.125 },
+      { kind: "arp", voice: 3, at: 0 },
+      { kind: "arp", voice: 2, at: 0.125 },
     ]);
   });
 });

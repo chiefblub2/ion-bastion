@@ -22,6 +22,12 @@ export function hitsAt(groove: Groove, step: number, layers: readonly Drum[]): D
   const i = ((step % 16) + 16) % 16;
   return layers.filter((d) => (d === "hat16" || d === "stomp" || d === "bass" ? SHARED[d] : GROOVES[groove][d])[i] === "x");
 }
-/** Chord-tone index per 1/16 step: rising when the defense is ahead, up and down when even, falling when behind. */
-const ARP: Record<Color, readonly number[]> = { bright: [0, 1, 2, 3, 4, 5, 6, 7], drive: [0, 1, 2, 3, 2, 1, 0, 1], dark: [7, 6, 5, 4, 3, 2, 1, 0] };
-export const arpIndex = (step: number, color: Color) => ARP[color][((step % 8) + 8) % 8];
+/** Chord-tone index per 1/16 step through a chord of `n` tones: rising when the defense is ahead, falling when it is behind, up and down when even. */
+export function arpIndex(step: number, color: Color, n: number) {
+  const s = Math.abs(step);
+  if (color === "bright") return s % n;
+  if (color === "dark") return n - 1 - (s % n);
+  const period = 2 * n - 2,
+    p = s % period;
+  return p < n ? p : period - p;
+}

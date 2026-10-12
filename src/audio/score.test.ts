@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { barAt, nextSlot } from "./clock";
-import { chordOf, MUSIC, snap, type Extent } from "./harmony";
+import { chordOf, climb, MUSIC, snap, type Extent } from "./harmony";
 import { RECIPES, TIMING, type CueId } from "./recipes";
 import { Score } from "./score";
 
@@ -34,7 +34,8 @@ describe("Score", () => {
     const base = RECIPES.kill.params[2]!,
       chord = chordOf(MUSIC.outpost, 0),
       rates = [0, 1, 2].map(() => s.place({ id: "kill", voice: 0, gain: 1 }, 0).rate);
-    expect(rates).toEqual([0, 1, 2].map((i) => snap(base, chord, i) / base));
+    expect(rates).toEqual([0, 1, 2].map((i) => climb(base, chord, i) / base));
+    expect(rates).toEqual([...rates].sort((a, b) => a - b));
   });
   it("keeps every pitched cue within half an octave of its recipe in every theme, bar and extent", () => {
     const pitched = (Object.keys(TIMING) as CueId[]).filter((id) => TIMING[id].pitched);

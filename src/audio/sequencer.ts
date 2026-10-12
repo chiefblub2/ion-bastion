@@ -32,7 +32,7 @@ export function schedule(c: Clock, music: ThemeMusic, parts: Parts, from: number
     if (((step % 16) + 16) % 16 === 0)
       out.push({ kind: "chord", notes: padChord(chordOf(music, Math.floor(step / 16), parts.extent), parts.color), at: time });
     for (const drum of hitsAt(music.groove, step, parts.drums)) out.push({ kind: "hit", drum, at: time });
-    if (parts.arp) out.push({ kind: "arp", voice: arpIndex(step, parts.color), at: time });
+    if (parts.arp) out.push({ kind: "arp", voice: arpIndex(step, parts.color, parts.extent), at: time });
   }
   return out;
 }

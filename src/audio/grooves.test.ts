@@ -15,8 +15,8 @@ describe("grooves", () => {
     expect(hitsAt("none", 0, ["kick"])).toEqual([]);
   });
   it("lets the arpeggio rise when bright and fall when dark", () => {
-    expect([0, 1, 2].map((s) => arpIndex(s, "bright"))).toEqual([0, 1, 2]);
-    expect([0, 1, 2].map((s) => arpIndex(s, "dark"))).toEqual([7, 6, 5]);
-    expect(arpIndex(9, "bright")).toBe(1);
+    expect([0, 1, 2, 3].map((s) => arpIndex(s, "bright", 3))).toEqual([0, 1, 2, 0]);
+    expect([0, 1, 2, 3].map((s) => arpIndex(s, "dark", 3))).toEqual([2, 1, 0, 2]);
+    expect([0, 1, 2, 3, 4].map((s) => arpIndex(s, "drive", 3))).toEqual([0, 1, 2, 1, 0]);
   });
 });

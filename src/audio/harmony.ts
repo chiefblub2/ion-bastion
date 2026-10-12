@@ -75,5 +75,15 @@ export function snap(targetHz: number, chord: readonly number[], index: number) 
     target = 69 + 12 * Math.log2(targetHz / 440);
   return hz(note + 12 * Math.round((target - note) / 12));
 }
+/**
+ * Chord tone `index` (wrapping) with the whole chord in the octave around `targetHz`, so stepping through the indices
+ * keeps its direction (arpeggio, kills); `snap` instead folds each tone to the nearest octave.
+ */
+export function climb(targetHz: number, chord: readonly number[], index: number) {
+  const n = chord.length,
+    centre = (chord[0] + chord[n - 1]) / 2,
+    target = 69 + 12 * Math.log2(targetHz / 440);
+  return hz(chord[((index % n) + n) % n] + 12 * Math.round((target - centre) / 12));
+}
 /** A stable chord-tone index per tower, so each tower keeps its own voice. */
 export const voiceOf = (tower: string) => fnv(`voice:${tower}`) % 4;

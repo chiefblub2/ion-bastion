@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chordOf, extentFor, hz, MUSIC, padChord, padVoicing, snap } from "./harmony";
+import { chordOf, climb, extentFor, hz, MUSIC, padChord, padVoicing, snap, type Extent } from "./harmony";
 
 describe("harmony", () => {
   it("builds the bar's chord from the theme's scale, as wide as the defense allows", () => {
@@ -27,5 +27,20 @@ describe("harmony", () => {
       expect(m.bpm, id).toBeGreaterThanOrEqual(80);
       expect(m.bpm, id).toBeLessThanOrEqual(130);
     }
+  });
+  it("walks an arpeggio through the chord in one direction, one octave around the target", () => {
+    for (const music of Object.values(MUSIC))
+      for (const extent of [3, 4, 5] as Extent[])
+        for (let bar = 0; bar < 4; bar++)
+          for (const base of [880, 1320]) {
+            const chord = chordOf(music, bar, extent),
+              up = chord.map((_, i) => climb(base, chord, i));
+            expect(up).toEqual([...up].sort((a, b) => a - b));
+            expect(climb(base, chord, chord.length)).toBe(up[0]);
+            for (const f of up) {
+              expect(f / base).toBeGreaterThanOrEqual(0.45);
+              expect(f / base).toBeLessThanOrEqual(2.2);
+            }
+          }
   });
 });
