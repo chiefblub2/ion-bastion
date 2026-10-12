@@ -54,6 +54,7 @@ Every sector has its own terrain. In the Circuit (bottom right) there is no reac
 | Click an enemy | Show hit points, shield, traits and active effects |
 | `T` | Cycle the target priority of the selected tower |
 | `U` | Buy the next upgrade of the selected tower (next level, or the next tier once a path is chosen; a path choice stays with the buttons) |
+| `M` | Sound on or off |
 | `C` | Show every tower's range and the path coverage (red: no tower reaches ground units there) |
 | Tabs Attack · Control · Traps · Support, `Shift`+`1`–`4` | Switch the tower page (from ten available towers; arrow keys also work on the tabs) |
 | `1`–`9`, `0`, `Q`, `W` | Pick a tower in the open tab; every tab starts at `1` again (the key is shown on the card). Without tabs the keys count across all towers. |
@@ -63,7 +64,7 @@ Every sector has its own terrain. In the Circuit (bottom right) there is no reac
 | `F` or ⛶ | Fullscreen. On phones it also works without browser support (iPhone) and fits board and towers side by side; phones play in landscape only, and a selected tower shows its upgrades in place of the tower list; "Add to Home Screen" launches the game without browser bars. |
 | Arrow keys + Enter | Keyboard control on the focused battlefield |
 
-Switching tabs pauses a solo game automatically. Audio is optional and off by default.
+Switching tabs pauses a solo game automatically. Sound is off by default: turn it on with the Sound button (top bar or home page), where four sliders set the volumes. The choice is remembered.
 
 ## Multiplayer (2–4 players)
 
