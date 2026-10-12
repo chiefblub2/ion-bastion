@@ -3,6 +3,7 @@ import type { CommandResult, EnemyId, TargetPriority, TowerId } from "../core/ty
 import { TARGET_PRIORITIES } from "../systems/combat";
 import { hasPage, hotkeyTowers, isPaged, pageOf, towerOrder } from "../ui/tower-pages";
 import { isSupport } from "../systems/attacks";
+import { openUpgrades } from "../core/upgrades";
 import type { MatchCommand } from "../core/match";
 import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderMission, renderTowerCodexPage, TOWER_KEYS } from "../ui/interface";
 import { type AtlasOptions, renderAtlas, selectMission as featureMission, selectSector, stepMission, stepRail, syncRailSteps } from "../ui/sector-atlas";
@@ -479,6 +480,15 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       if (!t || isSupport(game.content.towers[t.type].attack)) return;
       const next = TARGET_PRIORITIES[(TARGET_PRIORITIES.indexOf(t.priority ?? "first") + 1) % TARGET_PRIORITIES.length];
       execute({ type: "target", id: t.id, priority: next });
+      return;
+    }
+    if (e.key.toLowerCase() === "u") {
+      // Buys the selected tower's next upgrade; a choice between paths stays with the buttons.
+      const t = game.state.towers.find((t) => t.id === view.selected);
+      if (!t) return;
+      const open = openUpgrades(t, game.content);
+      if (open.length === 1) execute({ type: "upgrade", id: t.id, upgrade: open[0] });
+      else if (open.length > 1) ui.notice("Choose a path with the upgrade buttons.", true);
       return;
     }
     if (e.target === document.getElementById("board")) {

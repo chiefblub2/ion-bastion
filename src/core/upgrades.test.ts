@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { Game } from "./game";
 import { TOWERS } from "../content/towers";
-import { maxTowerLevel, purchaseUpgrade, previewUpgrade, resolveUpgrades, upgradeOption, validateUpgradeDefinitions } from "./upgrades";
+import { maxTowerLevel, openUpgrades, purchaseUpgrade, previewUpgrade, resolveUpgrades, upgradeOption, validateUpgradeDefinitions } from "./upgrades";
 import { effectiveTowerStats } from "../systems/auras";
 import { isSupport } from "../systems/attacks";
 import type { TowerDefinition, TowerId } from "./types";
@@ -151,6 +151,16 @@ describe("late levels 4 and 5", () => {
           if (parent.path === upgrade.path) expect(upgrade.cost).toBeGreaterThan(parent.cost);
         }
     }
+  });
+  it("the upgrade hotkey's open upgrades: one level at a time, a path choice at level 5, one tier per chosen path", () => {
+    expect(openUpgrades({ type: "pulse", upgrades: [] })).toEqual(["level-2"]);
+    const choice = openUpgrades({ type: "pulse", upgrades: levels(5) });
+    expect(choice.length).toBeGreaterThan(1);
+    const tier = TOWERS.pulse.upgrades.find((u) => u.id === choice[0])!;
+    const next = openUpgrades({ type: "pulse", upgrades: [...levels(5), tier.id] });
+    expect(next).toHaveLength(1);
+    expect(TOWERS.pulse.upgrades.find((u) => u.id === next[0])!.path).toBe(tier.path);
+    expect(openUpgrades({ type: "pulse", upgrades: [...levels(5), tier.id, ...next, ...openUpgrades({ type: "pulse", upgrades: [...levels(5), tier.id, ...next] })] })).toEqual([]);
   });
   it("one high-level tower beats several base towers per credit", () => {
     for (const type of attackTowers) {

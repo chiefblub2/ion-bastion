@@ -52,6 +52,7 @@ Every sector has its own terrain. In the Circuit (bottom right) there is no reac
 | Click a built tower | Upgrade, sell or choose the target priority |
 | Click an enemy | Show hit points, shield, traits and active effects |
 | `T` | Cycle the target priority of the selected tower |
+| `U` | Buy the next upgrade of the selected tower (next level, or the next tier once a path is chosen; a path choice stays with the buttons) |
 | `C` | Show every tower's range and the path coverage (red: no tower reaches ground units there) |
 | Tabs Attack · Control · Traps · Support, `Shift`+`1`–`4` | Switch the tower page (from ten available towers; arrow keys also work on the tabs) |
 | `1`–`9`, `0`, `Q`, `W` | Pick a tower in the open tab; every tab starts at `1` again (the key is shown on the card). Without tabs the keys count across all towers. |

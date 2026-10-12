@@ -69,6 +69,10 @@ export function upgradeOptions(
   );
 }
 
+/** Upgrades open to this tower regardless of credits; the `U` hotkey buys the only one. */
+export const openUpgrades = (tower: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT) =>
+  upgradeOptions(tower, Infinity, content).filter((option) => option.status === "available").map((option) => option.definition!.id);
+
 /** A specialization tier: a level on a path (levels 6 to 8 of attack towers); Aura paths carry no level. */
 export const isSpecialization = (upgrade: UpgradeDefinition) => upgrade.path !== undefined && upgrade.effects.level !== undefined;
 
