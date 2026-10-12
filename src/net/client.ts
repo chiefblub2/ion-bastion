@@ -1,8 +1,11 @@
+/// <reference types="vite/client" />
 import { DEFAULT_PORT, type ClientMessage, type ServerMessage } from "./protocol";
-/** Relay address: `?server=ws://…` or port 4174 on the host that served the page. */
+/** Relay address: `?server=ws://…`, else the build's `VITE_RELAY_URL`, else port 4174 on the host that served the page. */
 export function relayUrl(location: Location = window.location) {
   const custom = new URLSearchParams(location.search).get("server");
   if (custom) return custom;
+  const built: string | undefined = import.meta.env.VITE_RELAY_URL;
+  if (built) return built;
   return `${location.protocol === "https:" ? "wss" : "ws"}://${location.hostname}:${DEFAULT_PORT}`;
 }
 /** Typed WebSocket to the co-op relay. */
