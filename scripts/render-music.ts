@@ -16,6 +16,7 @@ const SCENES: [string, Scenario][] = [
   ...[5, 10, 20, 40, 80].map((rate): [string, Scenario] => [`mixed-${rate}`, { ...base, families: ALL, rate }]),
   ["heavy-20", { ...base, families: ["heavy"], rate: 20 }],
   ["calm", { ...base, families: ["rapid", "control"], rate: 6, threat: 0.1, defense: 0.2, clear: 2 }],
+  ["enemies", { ...base, families: [], rate: 0, threat: 0.95, heavies: 2 }],
   ["climax", { ...base, families: ALL, rate: 40, threat: 0.95, defense: 0.9, clear: 12, heavies: 2 }],
 ];
 
