@@ -8,9 +8,10 @@ The game runs entirely in the browser; only multiplayer needs a small relay serv
 
 ## Quick start
 
-Requirement: Node.js 22 or newer.
+Requirements: Node.js 22 or newer, [Git LFS](https://git-lfs.com) (art PNGs are stored in LFS).
 
 ```sh
+git lfs install  # once per machine, before cloning
 npm ci
 npm run dev      # game on http://localhost:4173
 npm test         # tests

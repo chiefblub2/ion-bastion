@@ -6,6 +6,8 @@ Notes for agents working on ION BASTION. The player-facing overview (rules, miss
 
 TypeScript (strict, ESM), Phaser 3.90, Vite 6, Vitest 3, `ws` for the relay. Node 22+.
 
+PNGs under `assets-src/` and `public/assets/` live in Git LFS (`.gitattributes`); new art there is picked up automatically. A checkout without `git lfs pull` has pointer files instead of images, which breaks the art audits and the game's sprites. The Pages workflow caches `.git/lfs/objects`.
+
 ```sh
 npm ci
 npm run dev        # game on :4173 (--host 0.0.0.0)
