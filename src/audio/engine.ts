@@ -1,6 +1,6 @@
 import { Ambience } from "./ambience";
 import { addDuck, type Span } from "./duck";
-import { impulse, INSTRUMENTS, type Instrument } from "./instruments";
+import { driveCurve, impulse, INSTRUMENTS, type Instrument, type Kit } from "./instruments";
 import { admit, type Voice } from "./mixer";
 import { RECIPES, TIMING, type CueId } from "./recipes";
 import type { Note } from "./score";
@@ -24,7 +24,7 @@ export class AudioEngine {
   private bus: Record<"sfx" | "ui" | "music", GainNode>;
   private duckGain: GainNode;
   private energyGain: GainNode;
-  private noise: AudioBuffer;
+  private kit: Kit;
   private buffers = new Map<CueId, AudioBuffer>();
   private voices: Playing[] = [];
   private last = new Map<CueId, number>();
@@ -62,8 +62,8 @@ export class AudioEngine {
     };
     send(this.duckGain, 0.35);
     send(this.bus.sfx, 0.12);
-    this.noise = noiseBuffer(ctx);
-    this.ambience = new Ambience(ctx, this.bus.music, this.noise);
+    this.kit = { noise: noiseBuffer(ctx), drive: driveCurve() };
+    this.ambience = new Ambience(ctx, this.bus.music, this.kit.noise);
   }
   volumes(s: SoundSettings) {
     const now = this.ctx.currentTime;
@@ -106,7 +106,7 @@ export class AudioEngine {
     const panner = this.ctx.createStereoPanner();
     panner.pan.value = pan;
     panner.connect(this.bus[bus]);
-    sounding.push(INSTRUMENTS[name](this.ctx, panner, start, hz, velocity, this.noise));
+    sounding.push(INSTRUMENTS[name](this.ctx, panner, start, hz, velocity, this.kit));
     this.notes.set(name, sounding);
     return true;
   }
