@@ -79,7 +79,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 | `src/render/` | Phaser scene (`scene.ts`, `Battlefield`, `LocalDriver`), draw registries (`towers.ts`, `enemies.ts`, `projectiles.ts`, `effects.ts`, `terrain.ts`), shared primitives (`shapes.ts`) and lighting helpers (`material.ts`), barrel geometry (`muzzles.ts`) and the projectile trail memory (`trails.ts`) |
 | `src/ui/` | DOM HUD (`interface.ts`, all markup is one template string), messages, tooltips, wave forecast, live units, multiplayer HUD (`players.ts`) |
 | `src/app/` | Input (`input.ts`), dialogs, multiplayer lobby/session (`coop.ts`), audio adapter (`audio.ts`), fullscreen, WebMCP tools (`webmcp.ts`) |
-| `src/audio/` | Sound, render side only: pure `cues` (events → cues), `mixer` (voice admission), `mood`/`drones` (ambience), `recipes` (ZzFX arrays), `settings`; Web Audio in `engine` and `ambience`; the vendored ZzFX generator in `zzfx.ts`; click/hover sounds in `ui-sounds.ts` |
+| `src/audio/` | Sound, render side only: pure `cues` (events → cues), `mixer` (voice admission), `mood`/`drones` (ambience), `recipes` (ZzFX arrays), `settings`; music: `clock` (beat grid), `harmony` (`MUSIC` per theme, chords, voicing), `intensity` (threat, defense, clear time), `grooves`, `sequencer` (lookahead), `score` (places cues on the grid at chord tones); Web Audio in `engine` and `ambience`; the vendored ZzFX generator in `zzfx.ts`; click/hover sounds in `ui-sounds.ts` |
 | `src/net/` | `protocol.ts` (messages, `MAX_PLAYERS`, `PLAYER_COLORS`), `client.ts` (`RelayClient`, `relayUrl`), `lockstep.ts` (`LockstepDriver`, `coopSim`) |
 | `server/` | `room.ts` (socket-free lockstep room, tested) and `relay.ts` (WebSocket server) |
 | `src/main.ts` | Wiring: state → view → UI → battlefield → input |
@@ -98,6 +98,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 - Render side only: `app/audio.ts` reads the drained events once per frame (`Audio.frame`) and never changes state. Every firing emits a `shot` with its tower id, and `audio/cues.ts` maps the tower's attack kind to a cue (`FIRE`); chain, beam and pulse events stay silent. A new `GameEvent` type gets a cue there or stays silent on purpose.
 - Recipes are ZzFX parameter arrays (`audio/recipes.ts`), tuned in the ZzFX designer and on `/gallery.html?sound`. `zzfx.ts` is a port of ZzFX's `buildSamples` (the npm package creates an `AudioContext` on import); randomness is applied as playback-rate jitter.
 - A new `MapTheme` needs a drone in `audio/drones.ts` (`tsc` enforces it).
+- Music: every cue waits for its grid step (`TIMING` in `recipes.ts`) and pitched cues snap to the current chord (`Score`). Enemies play the rhythm (threat → drum parts, heavy enemies stomp, a boss gets a motif), towers the harmony (defense → 7ths, 9ths, arpeggio, brighter pad), and the clear time (enemy HP ÷ tower DPS) colours the mood (`intensity.ts`, refreshed every 0.5 s, read-only). `sequencer.ts` schedules drums, arpeggio and chord changes 100 ms ahead on the audio clock ("A Tale of Two Clocks"). A new theme needs an entry in `MUSIC` (`tsc` enforces it). Only sounds wait for the beat; the simulation never does.
 - No `AudioContext` before a gesture: a saved "on" starts on the first pointer or key press (`armAutoStart`); a hidden tab suspends the context.
 
 ## Rendering

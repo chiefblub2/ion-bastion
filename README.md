@@ -64,7 +64,7 @@ Every sector has its own terrain. In the Circuit (bottom right) there is no reac
 | `F` or ⛶ | Fullscreen. On phones it also works without browser support (iPhone) and fits board and towers side by side; phones play in landscape only, and a selected tower shows its upgrades in place of the tower list; "Add to Home Screen" launches the game without browser bars. |
 | Arrow keys + Enter | Keyboard control on the focused battlefield |
 
-Switching tabs pauses a solo game automatically. Sound is off by default: turn it on with the Sound button (top bar or home page), where four sliders set the volumes. The choice is remembered.
+Switching tabs pauses a solo game automatically. Sound is off by default: turn it on with the Sound button (top bar or home page), where four sliders set the volumes. The choice is remembered. The sounds play as music: shots land on the beat in the sector's key, the enemies drive the drums, and a stronger defense makes the harmony richer.
 
 ## Multiplayer (2–4 players)
 
