@@ -450,7 +450,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       else if (isFullscreen()) fullscreen();
       return;
     }
-    if (e.code === "Space" && !(e.target instanceof HTMLButtonElement)) {
+    if (e.code === "Space" && !(e.target instanceof HTMLButtonElement) && !(e.target instanceof HTMLInputElement)) {
       e.preventDefault();
       pauseIfRunning();
       return;

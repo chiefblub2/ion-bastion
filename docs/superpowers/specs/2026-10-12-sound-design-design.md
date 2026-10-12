@@ -64,7 +64,7 @@ Exact recipes are tuned on the sound board; the list above is the coverage contr
 
 ## Mixing rules
 
-- Per-cue `cap` (simultaneous voices) and `gap` (minimum seconds between starts); global cap 24 voices; a cue over cap drops the quietest/oldest same-cue voice only if its priority is higher, else is skipped.
+- Per-cue `cap` (simultaneous voices) and `gap` (minimum seconds between starts); pool caps combat 24, flow 8, ui 4. A cue that finds its pool full steals the oldest voice of the lowest lower priority in that pool, else is skipped.
 - Burst merge: n identical cues in one frame become one voice with gain `min(1.5, 1 + 0.1·(n − 1))`.
 - Speed: events per real second double at 2×; caps and gaps are in real time, so density stays bounded and pitch is untouched.
 - Ducking: music bus dips to 40 % for 0.6 s on leak, end and low-reactor cues.

@@ -3,6 +3,7 @@ import { AudioEngine } from "../audio/engine";
 import { moodOf } from "../audio/mood";
 import type { CueId } from "../audio/recipes";
 import { loadSettings, saveSettings, type SoundSettings } from "../audio/settings";
+import { unlockOnGesture } from "../audio/unlock";
 import type { Game } from "../core/game";
 import type { Match } from "../core/match";
 import type { GameEvent } from "../core/types";
@@ -20,7 +21,7 @@ export class Audio {
   onChange(f: () => void) {
     this.listeners.add(f);
   }
-  /** Creates or resumes the context; the first call must come from a user gesture. Throws without Web Audio. */
+  /** Creates or resumes the context; true once it runs. The first call must come from a user gesture. Throws without Web Audio. */
   async start() {
     if (!this.engine) {
       this.engine = new AudioEngine(new AudioContext());
@@ -31,17 +32,16 @@ export class Audio {
       });
     }
     await this.engine.ctx.resume();
+    return this.engine.ctx.state === "running";
   }
   /** A saved "on" waits for the visit's first gesture, because browsers keep a context silent until then. */
   armAutoStart() {
-    if (!this.on) return;
-    const go = () => {
-      removeEventListener("pointerdown", go, true);
-      removeEventListener("keydown", go, true);
-      this.start().catch(() => undefined);
-    };
-    addEventListener("pointerdown", go, true);
-    addEventListener("keydown", go, true);
+    // Turned off in the meantime: nothing to start, stop listening.
+    if (this.on) unlockOnGesture(window, () => (this.on ? this.start() : Promise.resolve(true)));
+  }
+  /** Before the context runs, scheduled sounds would pile up at time 0 and all fire on resume. */
+  private live() {
+    return this.on && this.engine?.ctx.state === "running" ? this.engine : null;
   }
   async update(next: Partial<SoundSettings>) {
     this.settings = { ...this.settings, ...next };
@@ -52,11 +52,11 @@ export class Audio {
     if (!this.on) await this.engine?.ctx.suspend();
   }
   cue(id: CueId) {
-    if (this.on) this.engine?.play({ id, pitch: 1, gain: 1 });
+    this.live()?.play({ id, pitch: 1, gain: 1 });
   }
   frame(events: readonly GameEvent[], game: Game, match: Match | null) {
-    const engine = this.engine;
-    if (!engine || !this.on) return;
+    const engine = this.live();
+    if (!engine) return;
     const view = document.documentElement.dataset.view === "menu" ? "menu" : "game",
       s = game.state;
     for (const c of cuesFor(events, game.content, view)) engine.play(c);
