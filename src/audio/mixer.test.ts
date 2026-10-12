@@ -17,4 +17,8 @@ describe("admit", () => {
     expect(admit("kill", { ...spec, priority: 2 }, alive, undefined, 30)).toEqual({ play: true, steal: alive[0] });
     expect(admit("impact", { ...spec, priority: 0, cap: 99 }, alive, undefined, 30)).toEqual({ play: false });
   });
+  it("keeps the drums playing when the combat pool is full", () => {
+    const busy = Array.from({ length: POOL_CAP.combat }, (_, i) => voice("bolt", 3, i, 99));
+    expect(admit("kick", { pool: "drums", cap: 2, gap: 0.03, priority: 1 }, busy, undefined, 30)).toEqual({ play: true });
+  });
 });

@@ -8,7 +8,7 @@ export interface Voice {
   start: number;
   end: number;
 }
-export const POOL_CAP: Record<Pool, number> = { combat: 24, flow: 8, ui: 4 };
+export const POOL_CAP: Record<Pool, number> = { combat: 24, flow: 8, ui: 4, drums: 10 };
 
 export function admit<V extends Voice>(
   id: CueId,
