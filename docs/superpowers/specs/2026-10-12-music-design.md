@@ -165,3 +165,17 @@ Listening result: "climax does not sound very climax-like". Agreed: an escalatio
 - **Escalation** is entered at threat 0.85 or while a boss is on the field, and left only below 0.75 (hysteresis). It plays the full groove whatever the measured threat: 16th ticks, a straight 8th-note grit bass, a crash on each 4-bar phrase, a riser in the second half of the 4th bar and a tom-like slam fill on its last beat, and the rapid part doubled an octave up.
 - **Losing** keeps its tension note but the pad's filter stays open (supersedes "Dark: pad × 0.6" above).
 - **Energy gain** on the music bus follows the fight: about −2 dB calm to +6 dB at the climax (threat, +0.3 while escalated); measured calm −33 vs climax −19 dBFS RMS.
+
+## Revision 4: mix and arrangement (after the music-concept review)
+
+The concept review (`/Volumes/T7 Shield/Temp/ion-bastion-sound/music-concept-review.md`) measured why it still sounded pretty and flat. Applied in two rounds, with the review's harness as acceptance check (`round-a/`, `round-b/` beside it):
+
+- **Space:** the convolver normalises its impulse, so the reverb return was −27 dB under dry. Wet 1.4 behind a 250 Hz high-pass; sends from towers 0.2, pad 0.08, enemies 0.15 (their subs are filtered out), effects 0.12. Measured return: calm −9 dB, climax −16 dB, < 5 % below 150 Hz.
+- **Enemy midrange:** clank 0.7 (noise 0.5), metal 0.45, tick 0.2, grit low-pass 2400 → 600 Hz, thud 0.6; slam keeps its clank layer at 0.25. Enemies now sit +3 dB (threat 0.6) to +6 dB (climax) over the towers in 1–5 kHz (were −6 dB).
+- **Low end:** bass and grit centre on the chord root around 82 Hz (no octave flips), tension notes an octave up; the stomp answers the kick on steps 6 and 14.
+- **Shot ticks:** −9 dB, low-passed, gap 0.2 s.
+- **Pad:** at least four voices per drone, voiced root, 3rd, 7th or 5th, 9th; the b9 replaces the 9th (or 5th) and appears only when losing or escalated; chord glide 7 ms.
+- **Rhythm:** fire on the offbeat 16ths, the arpeggio in dotted 8ths, no octave doubling of the rapid part; before an escalated phrase's crash, kick and stomp drop out from the 4th bar's step 8; the riser lasts exactly half a bar (to the downbeat) and is louder.
+- **Tug of war:** towers and enemies have their own sub-mixes; the energy gain acts on the enemies only, and the towers' level is `1 − 0.35 · max(0, threat − defense)`, their tone closing to 4 kHz while losing.
+- **Audible families:** shaker 0.35 at 3.5 kHz, fire gain 0.8, the traps' click a two-partial wood block, chime 0.3; pans rapid −0.6, electric +0.6, arpeggio +0.35.
+- **Loudness held:** calm −31.1, mixed −22.6, climax −18.6 LUFS (12.5 LU range; within about 1 LU of before).

@@ -42,11 +42,13 @@ export function schedule(c: Clock, music: ThemeMusic, parts: Parts, from: number
   const out: Beat[] = [];
   for (const { time, step } of stepsIn(c, from, to)) {
     if (((step % 16) + 16) % 16 === 0)
-      out.push({ kind: "chord", notes: padChord(chordOf(music, Math.floor(step / 16), parts.extent), parts.color === "dark" || parts.threat >= 0.6), at: time });
-    for (const drum of hitsAt(music.groove, step, parts.drums)) out.push({ kind: "hit", drum, at: time });
+      out.push({ kind: "chord", notes: padChord(chordOf(music, Math.floor(step / 16), parts.extent), parts.color === "dark" || parts.escalate), at: time });
+    const i = ((step % 16) + 16) % 16,
+      phrase = ((Math.floor(step / 16) % 4) + 4) % 4,
+      // Before an escalated phrase's crash, kick and stomp drop out so riser and fill play into a hole.
+      cleared = parts.escalate && phrase === 3 && i >= 8;
+    for (const drum of hitsAt(music.groove, step, parts.drums)) if (!(cleared && (drum === "kick" || drum === "stomp"))) out.push({ kind: "hit", drum, at: time });
     if (parts.escalate) {
-      const i = ((step % 16) + 16) % 16,
-        phrase = ((Math.floor(step / 16) % 4) + 4) % 4;
       if (phrase === 0 && i === 0) out.push({ kind: "hit", drum: "crash", at: time });
       if (phrase === 3 && i === 8) out.push({ kind: "hit", drum: "riser", at: time });
       if (phrase === 3 && i >= 12) out.push({ kind: "hit", drum: "fill", at: time });
@@ -55,7 +57,8 @@ export function schedule(c: Clock, music: ThemeMusic, parts: Parts, from: number
       const note = partNote(family, step, parts.activity[family]);
       if (note) out.push({ kind: "part", family, ...note, at: time });
     }
-    if (parts.arp && step % 2 === 0) out.push({ kind: "arp", voice: arpIndex(step / 2, parts.color, parts.extent), at: time });
+    // Dotted 8ths: a 3-against-4 cycle gives motion without fusing with the 8th-note layers.
+    if (parts.arp && i % 3 === 0) out.push({ kind: "arp", voice: arpIndex(Math.floor(step / 16) * 6 + i / 3, parts.color, parts.extent), at: time });
   }
   return out;
 }

@@ -61,12 +61,17 @@ export function chordOf(music: ThemeMusic, bar: number, extent: Extent = 3): num
 }
 /** The defense builds the harmony: triads, then 7ths from a quarter, 9ths from half. */
 export const extentFor = (defense: number): Extent => (defense >= 0.5 ? 5 : defense >= 0.25 ? 4 : 3);
-/** The pad's chord; under tension (high threat or a losing defense) it adds the minor ninth above the root. */
-export const padChord = (chord: readonly number[], tense: boolean) => (tense ? [...chord, chord[0] + 13] : [...chord]);
-/** MIDI note per drone voice: the bass on the root, the other voices from the top of the chord down, an octave up. */
+/** The pad's chord; under tension the minor ninth replaces the 9th (or, without one, the 5th), never clustering next to it. */
+export function padChord(chord: readonly number[], tense: boolean) {
+  if (!tense) return [...chord];
+  const out = [...chord];
+  out[chord.length >= 5 ? 4 : 2] = chord[0] + 13;
+  return out;
+}
+/** MIDI note per drone voice: the bass on the root, then the chord's colour first (3rd, 7th or 5th, 9th, 5th), an octave up. */
 export function padVoicing(chord: readonly number[], voices: number) {
-  const n = chord.length;
-  return Array.from({ length: voices }, (_, k) => (k === 0 ? chord[0] : chord[(((n - k) % n) + n) % n] + 12));
+  const upper = [1, 3, 4, 2].filter((i) => i < chord.length);
+  return Array.from({ length: voices }, (_, k) => (k === 0 ? chord[0] : chord[upper[(k - 1) % upper.length]] + 12));
 }
 export const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
 /** Chord tone `index` (wrapping) in the octave whose pitch lies nearest `targetHz`. */

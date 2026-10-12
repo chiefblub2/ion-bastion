@@ -7,7 +7,7 @@ import type { DroneId, Mood } from "./mood";
 const FADE = 3,
   GLIDE = 1.5,
   /** Time constant of the glide to a new chord (settles in about 80 ms). */
-  RETUNE = 0.08 / 3,
+  RETUNE = 0.007,
   /** Time constant of a tone change. */
   TONE = 0.5;
 interface Layer {

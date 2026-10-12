@@ -5,13 +5,14 @@ export type Instrument = "pluck" | "bell" | "chime" | "bass" | "swell" | "tom" |
 /** Pitched instruments play their chord tone in the octave around this frequency (Hz); the others are unpitched. */
 export const REGISTER: Partial<Record<Instrument, number>> = { pluck: 520, bell: 1040, chime: 1040, bass: 82, swell: 262, grit: 82 };
 /** Seconds from a note's start until its voice stops (polyphony counts notes inside this span). */
-export const LENGTH: Record<Instrument, number> = { pluck: 0.5, bell: 1.7, chime: 0.7, bass: 0.7, swell: 2.6, tom: 0.45, kick: 0.4, snare: 0.18, hat: 0.07, shaker: 0.09, click: 0.07, crash: 1.22, riser: 1.2, thud: 0.45, clank: 0.21, tick: 0.07, slam: 0.5, grit: 0.32, metal: 1.13 };
+export const LENGTH: Record<Instrument, number> = { pluck: 0.5, bell: 1.7, chime: 0.7, bass: 0.7, swell: 2.6, tom: 0.45, kick: 0.4, snare: 0.18, hat: 0.07, shaker: 0.14, click: 0.05, crash: 1.22, riser: 1.45, thud: 0.45, clank: 0.21, tick: 0.07, slam: 0.5, grit: 0.32, metal: 1.13 };
 /** Shared material: a noise buffer and the saturation curve of the enemy kit. */
 export interface Kit {
   noise: AudioBuffer;
   drive: Float32Array<ArrayBuffer>;
 }
-type Play = (ctx: BaseAudioContext, out: AudioNode, at: number, hz: number, velocity: number, kit: Kit) => number;
+/** `length` overrides a voice's own length where it must fit the tempo (the riser). */
+type Play = (ctx: BaseAudioContext, out: AudioNode, at: number, hz: number, velocity: number, kit: Kit, length?: number) => number;
 /** tanh soft clipping, normalised to ±1. */
 export function driveCurve(amount = 3, n = 1024) {
   const c = new Float32Array(new ArrayBuffer(n * 4));
@@ -138,30 +139,34 @@ const noisy =
     s.stop(end);
     return end;
   };
+/** A two-partial wood block. */
 const click: Play = (ctx, out, at, _hz, v) => {
-  const o = ctx.createOscillator(),
-    g = envelope(ctx, at, 0.25 * v, 0.001, 0.05),
+  const g = envelope(ctx, at, 0.5 * v, 0.001, 0.03),
     end = at + LENGTH.click;
-  o.frequency.value = 1700;
-  o.connect(g).connect(out);
-  o.start(at);
-  o.stop(end);
+  g.connect(out);
+  for (const f of [800, 1250]) {
+    const o = ctx.createOscillator();
+    o.frequency.value = f;
+    o.connect(g);
+    o.start(at);
+    o.stop(end);
+  }
   return end;
 };
 /** Filtered noise sweeping up while it swells, into the next phrase. */
-const riser: Play = (ctx, out, at, _hz, v, kit) => {
+const riser: Play = (ctx, out, at, _hz, v, kit, length = LENGTH.riser) => {
   const s = ctx.createBufferSource(),
     f = ctx.createBiquadFilter(),
     g = ctx.createGain(),
-    end = at + LENGTH.riser;
+    end = at + length;
   s.buffer = kit.noise;
   s.loop = true;
   f.type = "bandpass";
-  f.Q.value = 2;
+  f.Q.value = 4;
   f.frequency.setValueAtTime(300, at);
   f.frequency.exponentialRampToValueAtTime(6000, end);
   g.gain.setValueAtTime(0.0001, at);
-  g.gain.exponentialRampToValueAtTime(0.15 * v, end - 0.02);
+  g.gain.exponentialRampToValueAtTime(0.5 * v, end - 0.02);
   g.gain.linearRampToValueAtTime(0, end);
   s.connect(f).connect(g).connect(out);
   s.start(at);
@@ -255,14 +260,14 @@ const grit: Play = (ctx, out, at, hz, v, kit) => {
 export const INSTRUMENTS: Record<Instrument, Play> = {
   pluck,
   bell: fm(1.6, LENGTH.bell, 0.22),
-  chime: fm(0.6, LENGTH.chime, 0.2),
+  chime: fm(0.6, LENGTH.chime, 0.3),
   bass,
   swell,
   tom: drum(140, 70, 0.2, 0.4, 0.45),
   kick: drum(120, 45, 0.12, 0.35, 0.7),
   snare: noisy("bandpass", 1800, 0.7, 0.16, 0.3),
   hat: noisy("highpass", 7000, 0.7, 0.05, 0.12),
-  shaker: noisy("bandpass", 5200, 1.5, 0.07, 0.1),
+  shaker: noisy("bandpass", 3500, 1, 0.12, 0.35),
   click,
   crash: noisy("highpass", 5000, 0.5, 1.2, 0.18),
   riser,

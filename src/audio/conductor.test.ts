@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import type { GameEvent, TowerId } from "../core/types";
 import { stepLength } from "./clock";
-import { Conductor, type Voices } from "./conductor";
+import { Conductor, towerLevel, type Voices } from "./conductor";
 import { MUSIC } from "./harmony";
 import { POLYPHONY } from "./engine";
 import { LENGTH, type Instrument } from "./instruments";
@@ -11,7 +11,7 @@ const rapid = Object.values(DEFAULT_CONTENT.towers).find((d) => d.attack.kind ==
 const electric = Object.values(DEFAULT_CONTENT.towers).find((d) => d.attack.kind === "chain" && !d.placement)!.id as TowerId;
 const at = { x: 0, y: 0 };
 class Recorder implements Voices {
-  notes: { name: Instrument; at: number; hz: number; bus?: string }[] = [];
+  notes: { name: Instrument; at: number; hz: number; bus?: string; length?: number }[] = [];
   effects = 0;
   ducks = 0;
   energies: number[] = [];
@@ -23,8 +23,12 @@ class Recorder implements Voices {
     this.effects++;
     return true;
   }
-  instrument(name: Instrument, hz: number, at: number, _velocity: number, _pan: number, bus?: string) {
-    this.notes.push({ name, at, hz, bus });
+  balances: [number, boolean][] = [];
+  balance(tower: number, dark: boolean) {
+    this.balances.push([tower, dark]);
+  }
+  instrument(name: Instrument, hz: number, at: number, _velocity: number, _pan: number, bus?: string, length?: number) {
+    this.notes.push({ name, at, hz, bus, length });
     return true;
   }
   duck() {
@@ -86,12 +90,15 @@ describe("Conductor", () => {
       expect(sounding, `${n.name} at ${n.at.toFixed(2)}`).toBeLessThanOrEqual(POLYPHONY);
     }
   });
-  it("escalates at the top: phrase marks, rapid part an octave up, more energy", () => {
+  it("escalates at the top with enemy material: phrase marks and more energy, no doubled towers", () => {
     const calm = run(20, 8, rapid, 0, 0.1),
       top = run(20, 8, rapid, 0, 0.9);
     const names = new Set(top.r.notes.map((n) => n.name));
     for (const name of ["metal", "riser", "slam"] as const) expect(names.has(name), name).toBe(true);
-    expect(plucks(top)).toBeGreaterThan(plucks(calm) * 1.8);
+    // Escalation adds enemy material, not more pretty layers: the rapid part is not doubled.
+    expect(plucks(top)).toBe(plucks(calm));
+    const riser = top.r.notes.find((n) => n.name === "riser")!;
+    expect(riser.length).toBeCloseTo(120 / MUSIC.outpost.bpm);
     expect(top.r.energies.at(-1)!).toBeGreaterThan(calm.r.energies.at(-1)! + 0.5);
   });
   it("plays the enemies on the industrial kit with dissonance at high threat", () => {
@@ -138,5 +145,16 @@ describe("Conductor", () => {
   it("gives a boss the full escalated groove even at low threat", () => {
     const names = new Set(run(0, 1, rapid, 0, 0.1, 1).r.notes.map((n) => n.name));
     for (const part of ["thud", "clank", "tick", "grit"] as const) expect(names.has(part), part).toBe(true);
+  });
+  it("routes towers and enemies to their own sub-mixes, stingers to the effects", () => {
+    const { r } = run(20, 1, rapid, 0, 0.9);
+    expect(r.notes.filter((n) => n.name === "pluck").every((n) => n.bus === "tower")).toBe(true);
+    expect(r.notes.filter((n) => n.name === "thud").every((n) => n.bus === "enemy")).toBe(true);
+  });
+  it("lets the threat push the towers down when it outweighs the defense", () => {
+    expect(towerLevel(0.9, 0.2)).toBeCloseTo(1 - 0.35 * 0.7);
+    expect(towerLevel(0.3, 0.8)).toBe(1);
+    const { r } = run(0, 1, rapid, 0.2, 0.9);
+    expect(r.balances.at(-1)![0]).toBeCloseTo(towerLevel(0.9, 0.2));
   });
 });

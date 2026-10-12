@@ -12,7 +12,7 @@ export const PARTS: Record<Family, Part> = {
   heavy: { steps: "1.......2.......", voices: tones("0000000000000000") },
   electric: { steps: "..2...1...2...1.", voices: tones("0020001000300020") },
   control: { steps: "1...............", voices: tones("0000000000000000") },
-  fire: { steps: "3.1.3.1.3.1.3.1.", voices: tones("0000000000000000") },
+  fire: { steps: ".3.1.3.1.3.1.3.1", voices: tones("0000000000000000") },
   traps: { steps: "...1..2....1..2.", voices: tones("0000000000000000") },
 };
 /** Activity each rank needs. */

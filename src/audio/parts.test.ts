@@ -17,4 +17,8 @@ describe("parts", () => {
   it("answers the first rapid shot within a beat", () => {
     for (let s = 0; s < 16; s += 4) expect(partNote("rapid", s, 0.06)).not.toBeNull();
   });
+  it("puts fire on the offbeat 16ths, apart from the 8th-note layers", () => {
+    expect(partNote("fire", 0, 1)).toBeNull();
+    expect(partNote("fire", 1, 1)).not.toBeNull();
+  });
 });

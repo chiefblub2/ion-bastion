@@ -23,4 +23,7 @@ describe("DRONES", () => {
       expect(d.noise, id).toBeLessThanOrEqual(0.2);
     }
   });
+  it("gives every drone at least four voices, so the pad can keep the third", () => {
+    for (const [id, d] of Object.entries(DRONES)) expect(d.intervals.length, id).toBeGreaterThanOrEqual(4);
+  });
 });

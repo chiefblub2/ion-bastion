@@ -10,12 +10,16 @@ describe("harmony", () => {
     expect(chordOf(MUSIC.outpost, -1)).toEqual(chordOf(MUSIC.outpost, 3));
     expect([0.1, 0.3, 0.6].map(extentFor)).toEqual([3, 4, 5]);
   });
-  it("adds a tension note to the pad only in a dark mood", () => {
-    expect(padChord([33, 36, 40], true)).toEqual([33, 36, 40, 46]);
+  it("adds the tension note in place of the 9th or 5th", () => {
+    // The b9 replaces the 9th (or, without one, the 5th) instead of clustering next to it.
+    expect(padChord([33, 36, 40, 43, 47], true)).toEqual([33, 36, 40, 43, 46]);
+    expect(padChord([33, 36, 40], true)).toEqual([33, 36, 46]);
     expect(padChord([33, 36, 40], false)).toEqual([33, 36, 40]);
   });
-  it("voices the bass on the root and the pad from the top of the chord down", () => {
-    expect(padVoicing([33, 36, 40], 4)).toEqual([33, 52, 48, 45]);
+  it("voices the bass on the root and the pad colour first", () => {
+    // Root, then the colour first: 3rd, 7th (or 5th), 9th, an octave up.
+    expect(padVoicing([33, 36, 40, 43, 47], 4)).toEqual([33, 48, 55, 59]);
+    expect(padVoicing([33, 36, 40], 4)).toEqual([33, 48, 52, 48]);
   });
   it("snaps to a chord tone in the octave nearest the target", () => {
     expect(hz(69)).toBe(440);

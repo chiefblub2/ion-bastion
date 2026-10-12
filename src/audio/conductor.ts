@@ -18,7 +18,9 @@ import { STINGERS } from "./stingers";
 /** What the conductor needs from the audio engine; tests pass a recorder. */
 export interface Voices {
   play(note: Note): boolean;
-  instrument(name: Instrument, hz: number, at: number, velocity: number, pan: number, bus?: "music" | "sfx"): boolean;
+  instrument(name: Instrument, hz: number, at: number, velocity: number, pan: number, bus?: "tower" | "enemy" | "sfx", length?: number): boolean;
+  /** The towers' sub-mix level and whether their tone closes (losing). */
+  balance(tower: number, dark: boolean): void;
   duck(at: number): void;
   /** Music loudness from the fight's energy, 0–1. */
   energy(level: number): void;
@@ -39,32 +41,35 @@ interface Player {
   instrument: Instrument;
   pan: number;
   gain: number;
+  bus: "tower" | "enemy";
 }
 /** Each family's instrument, place in the stereo field and level. */
 const PLAYERS: Record<Family, Player> = {
-  rapid: { instrument: "pluck", pan: -0.35, gain: 0.6 },
-  heavy: { instrument: "bass", pan: 0, gain: 0.8 },
-  electric: { instrument: "bell", pan: 0.4, gain: 0.45 },
-  control: { instrument: "swell", pan: 0, gain: 0.6 },
-  fire: { instrument: "shaker", pan: 0.25, gain: 0.5 },
-  traps: { instrument: "click", pan: -0.2, gain: 0.5 },
+  rapid: { instrument: "pluck", pan: -0.6, gain: 0.6, bus: "tower" },
+  heavy: { instrument: "bass", pan: 0, gain: 0.8, bus: "tower" },
+  electric: { instrument: "bell", pan: 0.6, gain: 0.45, bus: "tower" },
+  control: { instrument: "swell", pan: 0, gain: 0.6, bus: "tower" },
+  fire: { instrument: "shaker", pan: 0.25, gain: 0.8, bus: "tower" },
+  traps: { instrument: "click", pan: -0.2, gain: 0.5, bus: "tower" },
 };
 /** The enemies' kit: machines, not a drum set. */
 const DRUMS: Record<Drum, Player> = {
-  kick: { instrument: "thud", pan: 0, gain: 0.8 },
-  snare: { instrument: "clank", pan: 0.05, gain: 0.6 },
-  hat: { instrument: "tick", pan: 0.15, gain: 0.5 },
-  hat16: { instrument: "tick", pan: -0.15, gain: 0.3 },
-  stomp: { instrument: "slam", pan: 0, gain: 0.8 },
-  fill: { instrument: "slam", pan: -0.1, gain: 0.6 },
-  bass: { instrument: "grit", pan: 0, gain: 0.6 },
-  bass8: { instrument: "grit", pan: 0, gain: 0.65 },
-  crash: { instrument: "metal", pan: 0.1, gain: 0.7 },
-  riser: { instrument: "riser", pan: 0, gain: 0.8 },
+  kick: { instrument: "thud", pan: 0, gain: 0.8, bus: "enemy" },
+  snare: { instrument: "clank", pan: 0.05, gain: 0.6, bus: "enemy" },
+  hat: { instrument: "tick", pan: 0.15, gain: 0.5, bus: "enemy" },
+  hat16: { instrument: "tick", pan: -0.15, gain: 0.3, bus: "enemy" },
+  stomp: { instrument: "slam", pan: 0, gain: 0.8, bus: "enemy" },
+  fill: { instrument: "slam", pan: -0.1, gain: 0.6, bus: "enemy" },
+  bass: { instrument: "grit", pan: 0, gain: 0.6, bus: "enemy" },
+  bass8: { instrument: "grit", pan: 0, gain: 0.65, bus: "enemy" },
+  crash: { instrument: "metal", pan: 0.1, gain: 0.7, bus: "enemy" },
+  riser: { instrument: "riser", pan: 0, gain: 0.8, bus: "enemy" },
 };
 /** Its own short bell, so the 8th-note arpeggio never crowds out the electric part. */
-const ARP: Player = { instrument: "chime", pan: -0.15, gain: 0.25 };
+const ARP: Player = { instrument: "chime", pan: 0.35, gain: 0.25, bus: "tower" };
 const SILENT = silent();
+/** The towers' sub-mix level: the threat pulls it down where it outweighs the defense. */
+export const towerLevel = (threat: number, defense: number) => 1 - 0.35 * Math.max(0, threat - defense);
 
 export class Conductor {
   readonly score = new Score();
@@ -104,6 +109,7 @@ export class Conductor {
     };
     this.voices.energy(fighting ? Math.min(1, m.threat + (escalate ? 0.3 : 0)) : 0);
     this.voices.ambience.tone(toneFor(this.mood, m.defense));
+    this.voices.balance(fighting ? towerLevel(m.threat, m.defense) : 1, this.mood === "dark");
   }
   /** A cue: a stinger on instruments when it has one, else its effect. */
   cue(id: CueId, now: number, voice = 0, gain = 1) {
@@ -139,20 +145,20 @@ export class Conductor {
       else if (b.kind === "part") {
         (this.started[b.family] ??= []).push(b.at);
         this.note(PLAYERS[b.family], b.voice, b.velocity, b.at);
-        // Escalated, the rapid part doubles an octave up.
-        if (b.family === "rapid" && this.parts.escalate) this.note(PLAYERS.rapid, b.voice, b.velocity * 0.5, b.at, 2);
       }
       else if (b.kind === "arp") this.note(ARP, b.voice, 1, b.at);
       else {
         // The enemies' bass grows dissonant with the threat: tritones, then minor seconds.
         const offset = b.drum === "bass" || b.drum === "bass8" ? tensionOffset(stepAt(this.score.clock, b.at), this.parts.threat) : 0;
         // Tension notes an octave up, where the grit's harmonics make the interval audible.
-        this.note(DRUMS[b.drum], 0, 1, b.at, 2 ** (offset / 12) * (offset ? 2 : 1));
+        // The riser ends on the next downbeat (half a bar), whatever the tempo.
+        const length = b.drum === "riser" ? 8 * stepLength(this.score.clock, 16) : undefined;
+        this.note(DRUMS[b.drum], 0, 1, b.at, 2 ** (offset / 12) * (offset ? 2 : 1), length);
       }
     }
   }
-  private note(player: Player, tone: number, velocity: number, at: number, ratio = 1) {
-    this.voices.instrument(player.instrument, pitch(player.instrument, this.score.chordAt(at), tone) * ratio, at, velocity * player.gain, player.pan);
+  private note(player: Player, tone: number, velocity: number, at: number, ratio = 1, length?: number) {
+    this.voices.instrument(player.instrument, pitch(player.instrument, this.score.chordAt(at), tone) * ratio, at, velocity * player.gain, player.pan, player.bus, length);
   }
 }
 /** A pitched instrument's chord tone around its register; unpitched instruments ignore it. */

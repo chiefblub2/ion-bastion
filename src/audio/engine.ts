@@ -24,6 +24,9 @@ export class AudioEngine {
   private bus: Record<"sfx" | "ui" | "music", GainNode>;
   private duckGain: GainNode;
   private energyGain: GainNode;
+  /** The towers' and the enemies' sub-mixes and the pad, all into the music bus. */
+  private side: Record<"tower" | "enemy" | "pad", GainNode>;
+  private towerTone: BiquadFilterNode;
   private kit: Kit;
   private buffers = new Map<CueId, AudioBuffer>();
   private voices: Playing[] = [];
@@ -60,16 +63,27 @@ export class AudioEngine {
     this.bus.ui.connect(this.master);
     this.duckGain = ctx.createGain();
     this.energyGain = ctx.createGain();
-    this.bus.music.connect(this.energyGain).connect(this.duckGain).connect(this.master);
+    this.bus.music.connect(this.duckGain).connect(this.master);
+    // Towers (through a tone filter that closes when losing), enemies (with the fight's energy) and the pad.
+    this.side = { tower: ctx.createGain(), enemy: ctx.createGain(), pad: ctx.createGain() };
+    this.towerTone = ctx.createBiquadFilter();
+    this.towerTone.type = "lowpass";
+    this.towerTone.frequency.value = 20000;
+    this.side.tower.connect(this.towerTone).connect(this.bus.music);
+    this.side.enemy.connect(this.energyGain).connect(this.bus.music);
+    this.side.pad.connect(this.bus.music);
     const send = (from: AudioNode, amount: number) => {
       const g = ctx.createGain();
       g.gain.value = amount;
       from.connect(g).connect(lows);
     };
-    send(this.duckGain, 0.35);
+    // Space for towers, pad and the enemies' metal; the reverb's 250 Hz high-pass keeps their subs and grit dry.
+    send(this.towerTone, 0.2);
+    send(this.side.pad, 0.08);
+    send(this.side.enemy, 0.15);
     send(this.bus.sfx, 0.12);
     this.kit = { noise: noiseBuffer(ctx), drive: driveCurve() };
-    this.ambience = new Ambience(ctx, this.bus.music, this.kit.noise);
+    this.ambience = new Ambience(ctx, this.side.pad, this.kit.noise);
   }
   volumes(s: SoundSettings) {
     const now = this.ctx.currentTime;
@@ -103,22 +117,28 @@ export class AudioEngine {
     if (spec.duck) this.duck(at);
     return true;
   }
-  /** Plays a note on the music bus (ducked) or, for stingers, the effects bus; false when the instrument already sounds too many notes at that time. */
-  instrument(name: Instrument, hz: number, at: number, velocity: number, pan: number, bus: "music" | "sfx" = "music") {
+  /** Plays a note on the towers' or enemies' sub-mix or, for stingers, the effects bus; false when the instrument already sounds too many notes at that time. */
+  instrument(name: Instrument, hz: number, at: number, velocity: number, pan: number, bus: "tower" | "enemy" | "sfx" = "tower", length?: number) {
     // Judged at the note's own time, so an offline render (currentTime stays 0 while scheduling) works the same.
     const start = Math.max(this.ctx.currentTime, at),
       sounding = (this.notes.get(name) ?? []).filter((end) => end > start);
     if (sounding.length >= POLYPHONY) return false;
     const panner = this.ctx.createStereoPanner();
     panner.pan.value = pan;
-    panner.connect(this.bus[bus]);
-    sounding.push(INSTRUMENTS[name](this.ctx, panner, start, hz, velocity, this.kit));
+    panner.connect(bus === "sfx" ? this.bus.sfx : this.side[bus]);
+    sounding.push(INSTRUMENTS[name](this.ctx, panner, start, hz, velocity, this.kit, length));
     this.notes.set(name, sounding);
     return true;
   }
   /** Music loudness from the fight's energy (0 calm … 1 climax): about −2 dB to +6 dB; the layers add the rest of the build-up. */
   energy(level: number) {
     this.energyGain.gain.setTargetAtTime(0.8 + 1.2 * Math.max(0, Math.min(1, level)), this.ctx.currentTime, 0.8);
+  }
+  /** The tug of war: the towers' level, and their tone closing to 4 kHz while the defense is losing. */
+  balance(tower: number, dark: boolean) {
+    const now = this.ctx.currentTime;
+    this.side.tower.gain.setTargetAtTime(tower, now, 0.5);
+    this.towerTone.frequency.setTargetAtTime(dark ? 4000 : 20000, now, 0.5);
   }
   /** Rewrites the duck automation from now on: the gain is only known now, never at a future `at`. */
   duck(at: number) {

@@ -60,8 +60,19 @@ describe("Sequencer", () => {
     expect(hits(8, 8.1)).toEqual(["crash"]);
     expect(hits(0.1, 6)).toEqual([]);
   });
-  it("adds the pad's tension note at high threat even when winning", () => {
-    const [chord] = schedule(clock, MUSIC.outpost, { ...parts, drums: [], threat: 0.7, color: "bright" }, 0, 0.1);
-    expect(chord).toEqual({ kind: "chord", notes: padChord(chordOf(MUSIC.outpost, 0), true), at: 0 });
+  it("adds the pad's tension note only when losing or escalated", () => {
+    const pad = (p: Partial<Parts>) => schedule(clock, MUSIC.outpost, { ...parts, drums: [], ...p }, 0, 0.1)[0];
+    expect(pad({ threat: 0.7, color: "bright" })).toEqual({ kind: "chord", notes: padChord(chordOf(MUSIC.outpost, 0), false), at: 0 });
+    expect(pad({ escalate: true })).toEqual({ kind: "chord", notes: padChord(chordOf(MUSIC.outpost, 0), true), at: 0 });
+  });
+  it("plays the arpeggio in dotted 8ths against the 8th-note layers", () => {
+    const arp = schedule(clock, MUSIC.outpost, { ...parts, drums: [], arp: true }, 0, 0.5).filter((b) => b.kind === "arp");
+    expect(arp.map((b) => b.at)).toEqual([0, 0.375]);
+  });
+  it("clears kick and stomp in the second half of an escalated phrase's last bar", () => {
+    const drums = (from: number, to: number) =>
+      schedule(clock, MUSIC.outpost, { ...parts, drums: ["kick", "stomp"], escalate: true }, from, to).flatMap((b) => (b.kind === "hit" ? [b.drum] : []));
+    expect(drums(6, 7)).toContain("kick");
+    expect(drums(7, 8).filter((d) => d === "kick" || d === "stomp")).toEqual([]);
   });
 });
