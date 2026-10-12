@@ -22,10 +22,10 @@ describe("harmony", () => {
     expect(snap(440, [33, 36, 40], 0)).toBeCloseTo(440);
     expect(snap(500, [33, 36, 40], 1)).toBeCloseTo(523.25, 1);
   });
-  it("gives every theme a playable tempo", () => {
+  it("keeps every theme calm (84–104 BPM)", () => {
     for (const [id, m] of Object.entries(MUSIC)) {
-      expect(m.bpm, id).toBeGreaterThanOrEqual(80);
-      expect(m.bpm, id).toBeLessThanOrEqual(130);
+      expect(m.bpm, id).toBeGreaterThanOrEqual(84);
+      expect(m.bpm, id).toBeLessThanOrEqual(104);
     }
   });
   it("walks an arpeggio through the chord in one direction, one octave around the target", () => {
