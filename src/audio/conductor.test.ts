@@ -103,7 +103,8 @@ describe("Conductor", () => {
       grit = r.notes.filter((n) => n.name === "grit" && n.at < 16 * step),
       root = grit.find((n) => Math.abs(n.at) < 1e-6)!,
       tritone = grit.find((n) => Math.abs(n.at - 6 * step) < 1e-6)!;
-    expect(12 * Math.log2(tritone.hz / root.hz)).toBeCloseTo(6);
+    // Tension notes sit an octave up, where the grit's harmonics expose the interval.
+    expect(12 * Math.log2(tritone.hz / root.hz)).toBeCloseTo(18);
   });
   it("reports how long ago each family's latest note began, ignoring notes still ahead", () => {
     const r = new Recorder(),
@@ -121,7 +122,8 @@ describe("Conductor", () => {
       grit = r.notes.filter((n) => n.name === "grit"),
       root = grit.find((n) => Math.abs(n.at) < 1e-6)!,
       tritone = grit.find((n) => Math.abs(n.at - 6 * step) < 1e-6)!;
-    expect(12 * Math.log2(tritone.hz / root.hz)).toBeCloseTo(6);
+    // Tension notes sit an octave up, where the grit's harmonics expose the interval.
+    expect(12 * Math.log2(tritone.hz / root.hz)).toBeCloseTo(18);
   });
   it("holds an escalation until the threat clearly drops", () => {
     const c = new Conductor(new Recorder()),

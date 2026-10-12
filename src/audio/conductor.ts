@@ -4,7 +4,7 @@ import { nextSlot, stepAt, stepLength } from "./clock";
 import type { Cue } from "./cues";
 import { shotsByFamily, type Family } from "./families";
 import { CALM_DOWN, ESCALATE, layersFor, tensionOffset, type Drum } from "./grooves";
-import { climb, extentFor, type Color } from "./harmony";
+import { climb, extentFor, rooted, type Color } from "./harmony";
 import { REGISTER, type Instrument } from "./instruments";
 import { colorOf, toneFor } from "./intensity";
 import type { DroneId } from "./mood";
@@ -146,7 +146,8 @@ export class Conductor {
       else {
         // The enemies' bass grows dissonant with the threat: tritones, then minor seconds.
         const offset = b.drum === "bass" || b.drum === "bass8" ? tensionOffset(stepAt(this.score.clock, b.at), this.parts.threat) : 0;
-        this.note(DRUMS[b.drum], 0, 1, b.at, 2 ** (offset / 12));
+        // Tension notes an octave up, where the grit's harmonics make the interval audible.
+        this.note(DRUMS[b.drum], 0, 1, b.at, 2 ** (offset / 12) * (offset ? 2 : 1));
       }
     }
   }
@@ -157,5 +158,7 @@ export class Conductor {
 /** A pitched instrument's chord tone around its register; unpitched instruments ignore it. */
 const pitch = (name: Instrument, chord: readonly number[], tone: number) => {
   const register = REGISTER[name];
-  return register ? climb(register, chord, tone) : 0;
+  if (!register) return 0;
+  // The bass instruments centre on the root, so a widening chord never drops them an octave.
+  return (name === "bass" || name === "grit" ? rooted : climb)(register, chord, tone);
 };

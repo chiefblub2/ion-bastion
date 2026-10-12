@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chordOf, climb, extentFor, hz, MUSIC, padChord, padVoicing, snap, type Extent } from "./harmony";
+import { chordOf, climb, extentFor, rooted, hz, MUSIC, padChord, padVoicing, snap, type Extent } from "./harmony";
 
 describe("harmony", () => {
   it("builds the bar's chord from the theme's scale, as wide as the defense allows", () => {
@@ -42,5 +42,15 @@ describe("harmony", () => {
               expect(f / base).toBeLessThanOrEqual(2.2);
             }
           }
+  });
+  it("keeps the bass on its root's octave however wide the chord gets", () => {
+    for (const music of Object.values(MUSIC))
+      for (let bar = 0; bar < 4; bar++) {
+        const triad = rooted(82, chordOf(music, bar, 3), 0),
+          ninth = rooted(82, chordOf(music, bar, 5), 0);
+        expect(ninth).toBe(triad);
+        expect(triad).toBeGreaterThanOrEqual(57);
+        expect(triad).toBeLessThanOrEqual(117);
+      }
   });
 });

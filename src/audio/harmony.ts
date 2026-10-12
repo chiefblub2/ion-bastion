@@ -85,5 +85,11 @@ export function climb(targetHz: number, chord: readonly number[], index: number)
     target = 69 + 12 * Math.log2(targetHz / 440);
   return hz(chord[((index % n) + n) % n] + 12 * Math.round((target - centre) / 12));
 }
+/** Like `climb`, but centred on the chord's root, so the bass never flips an octave when the chord widens. */
+export function rooted(targetHz: number, chord: readonly number[], index: number) {
+  const n = chord.length,
+    target = 69 + 12 * Math.log2(targetHz / 440);
+  return hz(chord[((index % n) + n) % n] + 12 * Math.round((target - chord[0]) / 12));
+}
 /** A stable chord-tone index per tower, so each tower keeps its own voice. */
 export const voiceOf = (tower: string) => fnv(`voice:${tower}`) % 4;

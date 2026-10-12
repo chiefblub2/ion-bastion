@@ -10,7 +10,9 @@ describe("grooves", () => {
   });
   it("hits only the playing parts on their steps", () => {
     expect(hitsAt("straight", 4, ["kick", "snare", "hat"])).toEqual(["snare", "hat"]);
-    expect(hitsAt("straight", 8, ["stomp", "bass"])).toEqual(["stomp"]);
+    expect(hitsAt("straight", 6, ["stomp", "bass"])).toEqual(["stomp", "bass"]);
+    // Heavy enemies answer the kick instead of doubling it.
+    expect(hitsAt("straight", 0, ["stomp"])).toEqual([]);
     expect(hitsAt("none", 0, ["kick"])).toEqual([]);
   });
   it("lets the arpeggio rise when bright and fall when dark", () => {

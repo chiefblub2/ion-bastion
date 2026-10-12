@@ -12,7 +12,7 @@ const GROOVES: Record<Exclude<Groove, "none">, Record<"kick" | "snare", string>>
 const SHARED: Partial<Record<Drum, string>> = {
   hat: "x.x.x.x.x.x.x.x.",
   hat16: "xxxxxxxxxxxxxxxx",
-  stomp: "x.......x.......",
+  stomp: "......x.......x.",
   bass: "x.....x...x...x.",
   bass8: "x.x.x.x.x.x.x.x.",
 };

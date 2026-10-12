@@ -3,7 +3,7 @@
 
 export type Instrument = "pluck" | "bell" | "chime" | "bass" | "swell" | "tom" | "kick" | "snare" | "hat" | "shaker" | "click" | "crash" | "riser" | "thud" | "clank" | "tick" | "slam" | "grit" | "metal";
 /** Pitched instruments play their chord tone in the octave around this frequency (Hz); the others are unpitched. */
-export const REGISTER: Partial<Record<Instrument, number>> = { pluck: 520, bell: 1040, chime: 1040, bass: 65, swell: 262, grit: 65 };
+export const REGISTER: Partial<Record<Instrument, number>> = { pluck: 520, bell: 1040, chime: 1040, bass: 82, swell: 262, grit: 82 };
 /** Seconds from a note's start until its voice stops (polyphony counts notes inside this span). */
 export const LENGTH: Record<Instrument, number> = { pluck: 0.5, bell: 1.7, chime: 0.7, bass: 0.7, swell: 2.6, tom: 0.45, kick: 0.4, snare: 0.18, hat: 0.07, shaker: 0.09, click: 0.07, crash: 1.22, riser: 1.2, thud: 0.45, clank: 0.21, tick: 0.07, slam: 0.5, grit: 0.32, metal: 1.13 };
 /** Shared material: a noise buffer and the saturation curve of the enemy kit. */
@@ -223,7 +223,7 @@ const metallic =
     }
     return end;
   };
-const clank = metallic(1.41, 330, 0.18, 0.28, 0.25, LENGTH.clank),
+const clank = metallic(1.41, 330, 0.18, 0.7, 0.5, LENGTH.clank),
   slamBody = saturated(110, 45, 0.2, 0.45, 0.6, LENGTH.slam);
 /** The enemies' bass: saw and square through saturation and a resonant low-pass that snaps shut. */
 const grit: Play = (ctx, out, at, hz, v, kit) => {
@@ -241,8 +241,8 @@ const grit: Play = (ctx, out, at, hz, v, kit) => {
   shaper.curve = kit.drive;
   f.type = "lowpass";
   f.Q.value = 4;
-  f.frequency.setValueAtTime(900, at);
-  f.frequency.setTargetAtTime(220, at, 0.06);
+  f.frequency.setValueAtTime(2400, at);
+  f.frequency.setTargetAtTime(600, at, 0.06);
   saw.connect(shaper);
   square.connect(shaper);
   shaper.connect(f).connect(g).connect(out);
@@ -266,12 +266,13 @@ export const INSTRUMENTS: Record<Instrument, Play> = {
   click,
   crash: noisy("highpass", 5000, 0.5, 1.2, 0.18),
   riser,
-  thud: saturated(150, 40, 0.14, 0.4, 0.75, LENGTH.thud),
+  thud: saturated(150, 40, 0.14, 0.4, 0.6, LENGTH.thud),
   clank,
-  tick: metallic(7.1, 3200, 0.04, 0.08, 0.06, LENGTH.tick),
-  slam: (ctx, out, at, hz, v, kit) => Math.max(slamBody(ctx, out, at, hz, v, kit), clank(ctx, out, at, hz, v * 0.6, kit)),
+  tick: metallic(7.1, 3200, 0.04, 0.2, 0.06, LENGTH.tick),
+  // The clank layer stays a texture under the slam's body (the clank alone is much louder).
+  slam: (ctx, out, at, hz, v, kit) => Math.max(slamBody(ctx, out, at, hz, v, kit), clank(ctx, out, at, hz, v * 0.25, kit)),
   grit,
-  metal: metallic(2.76, 520, 1.1, 0.16, 0.12, LENGTH.metal),
+  metal: metallic(2.76, 520, 1.1, 0.45, 0.12, LENGTH.metal),
 };
 /** A stereo reverb impulse of decaying noise (the technique Tone.js's Reverb renders offline), from xorshift32. */
 export function impulse(ctx: BaseAudioContext, seconds = 2.4, decay = 3) {

@@ -46,8 +46,14 @@ export class AudioEngine {
     compressor.connect(limiter).connect(ctx.destination);
     this.master = ctx.createGain();
     this.master.connect(compressor);
+    // The convolver normalises its impulse, so the return needs real gain; no lows into the reverb, they only blur.
+    const lows = ctx.createBiquadFilter();
+    lows.type = "highpass";
+    lows.frequency.value = 250;
+    lows.Q.value = 0.7;
+    lows.connect(reverb);
     reverb.buffer = impulse(ctx);
-    wet.gain.value = 0.3;
+    wet.gain.value = 1.4;
     reverb.connect(wet).connect(this.master);
     this.bus = { sfx: ctx.createGain(), ui: ctx.createGain(), music: ctx.createGain() };
     this.bus.sfx.connect(this.master);
@@ -58,7 +64,7 @@ export class AudioEngine {
     const send = (from: AudioNode, amount: number) => {
       const g = ctx.createGain();
       g.gain.value = amount;
-      from.connect(g).connect(reverb);
+      from.connect(g).connect(lows);
     };
     send(this.duckGain, 0.35);
     send(this.bus.sfx, 0.12);

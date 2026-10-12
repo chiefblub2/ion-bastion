@@ -23,9 +23,9 @@ describe("cue recipes", () => {
   it("keeps per-shot transients instant, quiet and sparse", () => {
     for (const id of SHOT_CUES) {
       expect(TIMING[id].grid, id).toBe(0);
-      expect(RECIPES[id].gap, id).toBeGreaterThanOrEqual(0.12);
+      expect(RECIPES[id].gap, id).toBeGreaterThanOrEqual(0.2);
       expect(RECIPES[id].cap, id).toBe(1);
-      expect(RECIPES[id].params[0], id).toBeLessThanOrEqual(0.12);
+      expect(RECIPES[id].params[0], id).toBeLessThanOrEqual(0.045);
     }
   });
 });

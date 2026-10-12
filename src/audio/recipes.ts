@@ -26,7 +26,7 @@ export interface CueSpec {
 const combat = (params: ZzfxParams, cap: number, gap: number, priority = 1): CueSpec => ({ params, pool: "combat", cap, gap, priority });
 const flow = (params: ZzfxParams, priority: number, duck = false): CueSpec => ({ params, pool: "flow", cap: 2, gap: 0.08, priority, duck });
 const ui = (params: ZzfxParams, gap: number): CueSpec => ({ params, pool: "ui", cap: 2, gap, priority: 1 });
-const shot = (params: ZzfxParams): CueSpec => ({ params, pool: "combat", cap: 1, gap: 0.12, priority: 0 });
+const shot = (params: ZzfxParams): CueSpec => ({ params, pool: "combat", cap: 1, gap: 0.2, priority: 0 });
 
 export const RECIPES: Record<CueId, CueSpec> = {
   blast: combat([0.45, 0.05, 70, 0, 0.05, 0.35, 4, 2, -2, 0, 0, 0, 0, 0.6, 0, 0, 0, 0.5, 0.05, 0, -700], 1, 0.5, 2),
@@ -35,12 +35,12 @@ export const RECIPES: Record<CueId, CueSpec> = {
   overload: combat([0.3, 0, 440, 0, 0.1, 0.4, 0, 1, -8, 0, 0, 0, 0, 0, 0, 0, 0, 0.6, 0.05, 0, -1500], 1, 0.3, 3),
   income: combat([0.12, 0.05, 1760, 0, 0.01, 0.06, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, -6000], 1, 0.3, 0),
   repair: combat([0.15, 0, 660, 0.02, 0.05, 0.15, 0, 1, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0.7, 0, 0, -3000], 1, 0.3, 0),
-  shotRapid: shot([0.05, 0.1, 1800, 0, 0, 0.025, 0, 1, 0, 0, 0, 0, 0, 0.6, 0, 0, 0, 1, 0, 0, -6000]),
-  shotHeavy: shot([0.12, 0.1, 90, 0, 0.01, 0.08, 0, 1, -3, 0, 0, 0, 0, 0.4, 0, 0, 0, 1, 0.01, 0, -600]),
-  shotElectric: shot([0.05, 0.1, 2600, 0, 0, 0.03, 0, 1, -40, 0, 0, 0, 0, 0.9, 0, 0.05, 0, 1, 0, 0, 5000]),
-  shotControl: shot([0.05, 0.1, 600, 0.01, 0.01, 0.06, 4, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2000]),
-  shotFire: shot([0.05, 0.1, 400, 0.005, 0.02, 0.06, 4, 1, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 3000]),
-  shotTrap: shot([0.07, 0.05, 1400, 0, 0, 0.02, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, -4000]),
+  shotRapid: shot([0.0175, 0.1, 1800, 0, 0, 0.025, 0, 1, 0, 0, 0, 0, 0, 0.6, 0, 0, 0, 1, 0, 0, -3000]),
+  shotHeavy: shot([0.042, 0.1, 90, 0, 0.01, 0.08, 0, 1, -3, 0, 0, 0, 0, 0.4, 0, 0, 0, 1, 0.01, 0, -600]),
+  shotElectric: shot([0.0175, 0.1, 2600, 0, 0, 0.03, 0, 1, -40, 0, 0, 0, 0, 0.9, 0, 0.05, 0, 1, 0, 0, -3500]),
+  shotControl: shot([0.0175, 0.1, 600, 0.01, 0.01, 0.06, 4, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2000]),
+  shotFire: shot([0.0175, 0.1, 400, 0.005, 0.02, 0.06, 4, 1, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 3000]),
+  shotTrap: shot([0.0245, 0.05, 1400, 0, 0, 0.02, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, -4000]),
   build: flow([0.35, 0, 523, 0, 0.03, 0.12, 1, 1, 0, 0, 262, 0.04, 0, 0, 0, 0, 0, 0.7, 0.01, 0, -3000], 2),
   sell: flow([0.3, 0, 784, 0, 0.03, 0.12, 1, 1, 0, 0, -262, 0.04, 0, 0, 0, 0, 0, 0.7, 0.01, 0, -3000], 2),
   upgrade: flow([0.35, 0, 523, 0, 0.06, 0.2, 0, 1, 0, 0, 262, 0.05, 0.1, 0, 0, 0, 0, 0.7, 0.01, 0, -4000], 2),
