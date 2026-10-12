@@ -1,0 +1,1415 @@
+/*
+ * Start screen and menu pages: the "tactical command terminal" look. Everything is scoped to `.start-screen`
+ * (or to elements that only exist there), so the game HUD in style.css is untouched.
+ */
+:root {
+  --m-bg: #0b121a;
+  --m-surface: #131f29;
+  --m-surface-2: #16232d;
+  --m-accent: #a2f5be;
+  --m-accent-hover: #7edba2;
+  --m-text: #e5eeec;
+  --m-text-2: #aebec6;
+  --m-border: #30434d;
+  --m-warn: #ffbd76;
+  --m-danger: #ff8f86;
+  --m-ring: #a5a2ff;
+  --m-radius: 4px;
+  --m-speed: 180ms;
+}
+/* Shared pieces ---------------------------------------------------------------------------------------------- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Menu and game are separate screens in one document; `data-view` on <html> (app/screens.ts) shows one. */
+:root[data-view="menu"] #game-view,
+:root[data-view="game"] #start-screen {
+  display: none;
+}
+html.sheet-open {
+  overflow: hidden;
+}
+.start-screen {
+  --mode: var(--m-accent);
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 40px 24px 64px;
+  background:
+    radial-gradient(ellipse 70% 50% at 70% 0%, #a2f5be14, transparent 70%),
+    linear-gradient(#30434d33 1px, transparent 1px) 0 0 / 40px 40px,
+    linear-gradient(90deg, #30434d33 1px, transparent 1px) 0 0 / 40px 40px,
+    var(--m-bg);
+}
+.start-screen :is(button, input):focus-visible,
+.start-screen a:focus-visible,
+.mission-brief :is(button):focus-visible {
+  outline: 2px solid var(--m-accent);
+  outline-offset: 3px;
+}
+.start-screen button {
+  min-height: 44px;
+  transition:
+    background var(--m-speed),
+    border-color var(--m-speed),
+    color var(--m-speed),
+    transform var(--m-speed);
+}
+.start-screen .quiet,
+.mission-brief .quiet {
+  border-radius: var(--m-radius);
+  background: var(--m-surface-2);
+  border-color: var(--m-border);
+  color: var(--m-text);
+}
+.start-screen .quiet:hover {
+  border-color: var(--m-accent);
+  background: #1c2b34;
+}
+.start-screen .primary,
+.mission-brief .primary {
+  border-radius: var(--m-radius);
+  background: var(--m-accent);
+  border-color: var(--m-accent);
+  min-height: 48px;
+}
+.start-screen .primary:hover,
+.mission-brief .primary:hover {
+  background: var(--m-accent-hover);
+}
+.menu-page {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+.menu-page:focus {
+  outline: none;
+}
+.menu-page > h1 {
+  font: 700 clamp(34px, 5vw, 52px) / 1.02 "Barlow Condensed", sans-serif;
+  letter-spacing: 0.5px;
+  margin-bottom: 18px;
+}
+.menu-page .eyebrow {
+  color: var(--m-accent);
+  margin-bottom: 6px;
+}
+.menu-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--m-border);
+}
+.menu-page-head .brand {
+  font-size: 22px;
+}
+.menu-page-head .brand-mark {
+  width: 26px;
+  height: 30px;
+  font-size: 17px;
+}
+.menu-back {
+  min-width: 44px;
+}
+.notice {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  max-width: 720px;
+  border-left: 3px solid var(--m-accent);
+  background: color-mix(in srgb, var(--m-accent) 8%, var(--m-bg));
+  color: var(--m-text);
+  font-size: 14px;
+}
+.notice:empty {
+  display: none;
+}
+.notice-error {
+  border-color: var(--m-danger);
+  background: color-mix(in srgb, var(--m-danger) 10%, var(--m-bg));
+}
+.mission-warning {
+  border-left: 3px solid var(--m-warn);
+  background: color-mix(in srgb, var(--m-warn) 10%, var(--m-bg));
+  padding: 10px 14px;
+  margin: 0;
+  font-size: 14px;
+  color: #f0dcc0;
+}
+/* Home ------------------------------------------------------------------------------------------------------- */
+.menu-home {
+  max-width: 1240px;
+  padding-top: min(7vh, 64px);
+}
+.home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: 48px;
+  align-items: center;
+}
+.home-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.home-label {
+  margin: 0 0 14px;
+  font: 500 12px var(--mono);
+  letter-spacing: 0.22em;
+  color: var(--m-accent);
+}
+.home-label::before {
+  content: "";
+  display: inline-block;
+  width: 28px;
+  height: 1px;
+  margin-right: 12px;
+  vertical-align: middle;
+  background: var(--m-accent);
+}
+.menu-home .menu-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 12px;
+  font: 700 clamp(44px, 6vw, 76px) / 1 "Barlow Condensed", sans-serif;
+  letter-spacing: 2px;
+}
+.menu-home .menu-title .brand-mark {
+  width: 0.85em;
+  height: 1em;
+  font-size: 0.62em;
+  flex-shrink: 0;
+}
+.menu-page p.menu-tagline {
+  margin: 0 0 32px;
+  font-size: 17px;
+  color: var(--m-text-2);
+}
+.home-primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 84px;
+  padding: 16px 22px;
+  text-align: left;
+  color: #0d2418;
+  background: var(--m-accent);
+  border: 1px solid var(--m-accent);
+  border-radius: var(--m-radius);
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+  box-shadow: inset 0 -4px #0d241822;
+}
+.home-primary:hover {
+  background: var(--m-accent-hover);
+  border-color: var(--m-accent-hover);
+}
+.start-screen .home-primary:focus-visible {
+  outline-offset: -6px;
+  outline-color: #0d2418;
+}
+.home-primary-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.home-primary strong {
+  font: 700 32px / 1 "Barlow Condensed", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: inherit;
+}
+.home-primary small {
+  font: 500 13px var(--mono);
+  color: #1d4430;
+  overflow-wrap: anywhere;
+}
+.home-primary-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.home-modes {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.home-mode {
+  --accent: var(--m-accent);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 12px 16px;
+  text-align: left;
+  background: var(--m-surface);
+  border: 1px solid var(--m-border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--m-radius);
+}
+.home-mode[data-mode="circle"] {
+  --accent: var(--m-ring);
+}
+.home-mode strong {
+  font: 600 22px / 1.1 "Barlow Condensed", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.home-mode span {
+  font: 500 12px var(--mono);
+  color: var(--m-text-2);
+  text-align: right;
+}
+.home-mode:hover {
+  background: #1c2b34;
+  border-color: var(--accent);
+}
+.home-utility {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.home-utility .quiet {
+  flex: 1 1 160px;
+}
+/* The preview: the real map of the mission the primary button is about, framed like an operations display. */
+.home-map {
+  position: relative;
+  min-width: 0;
+  padding: 14px;
+  background: linear-gradient(180deg, var(--m-surface-2), var(--m-bg));
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+}
+.home-map::before,
+.home-map::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--m-accent);
+  pointer-events: none;
+}
+.home-map::before {
+  top: -1px;
+  left: -1px;
+  border-right: 0;
+  border-bottom: 0;
+}
+.home-map::after {
+  right: -1px;
+  bottom: -1px;
+  border-left: 0;
+  border-top: 0;
+}
+.home-map-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  font: 500 12px var(--mono);
+  letter-spacing: 0.12em;
+  color: var(--m-text-2);
+}
+.home-map-head span:first-child {
+  color: var(--m-accent);
+  overflow-wrap: anywhere;
+}
+.home-map-view {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--m-border);
+}
+.home-map-view .map-preview {
+  border: 0;
+  border-radius: 0;
+  max-height: 52vh;
+}
+.home-map-view .scan {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 40%;
+  background: linear-gradient(180deg, transparent, #a2f5be1f 90%, #a2f5be55);
+  border-bottom: 1px solid #a2f5be66;
+  transform: translateY(-100%);
+  animation: map-scan 7s linear infinite;
+  pointer-events: none;
+}
+.map-preview .map-reactor,
+.map-preview .map-entry {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.home-map .map-reactor {
+  animation: reactor-pulse 3s ease-in-out infinite;
+}
+.map-preview rect {
+  shape-rendering: crispEdges;
+}
+@keyframes map-scan {
+  to {
+    transform: translateY(250%);
+  }
+}
+@keyframes reactor-pulse {
+  50% {
+    transform: scale(1.45);
+    opacity: 0.7;
+  }
+}
+.home-map-foot {
+  margin-top: 14px;
+}
+.home-map-foot strong {
+  font: 600 26px / 1.1 "Barlow Condensed", sans-serif;
+}
+.home-map-foot p {
+  margin: 4px 0 12px;
+  font-size: 14px;
+  color: var(--m-text-2);
+}
+.home-map-stats,
+.mission-brief-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+}
+.home-map-stats strong,
+.mission-brief-stats strong {
+  font: 600 22px "Barlow Condensed", sans-serif;
+}
+.home-map-stats .stat-label,
+.mission-brief-stats .stat-label {
+  margin-bottom: 2px;
+  font-size: 12px;
+}
+/* Mission page ----------------------------------------------------------------------------------------------- */
+/* An operations console: one header row, then sector rail, mission list and briefing side by side. On screens
+   large enough it fills exactly one viewport, so the page never scrolls and Start is always in view. */
+#mission-page[data-circle] {
+  --mode: var(--m-ring);
+}
+.menu-page.ops-page {
+  max-width: 1440px;
+}
+.ops-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--m-border);
+}
+.ops-title .eyebrow {
+  margin: 0 0 2px;
+}
+.ops-title h1 {
+  margin: 0;
+  font: 700 30px / 1 "Barlow Condensed", sans-serif;
+  letter-spacing: 0.3px;
+}
+.ops-head .brand {
+  font-size: 20px;
+}
+.ops-head .brand-mark {
+  width: 24px;
+  height: 28px;
+  font-size: 16px;
+}
+/* Campaign / Circuit: a small segmented control. */
+.mode-tabs {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  background: var(--m-bg);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+}
+.mode-tab {
+  --accent: var(--m-accent);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 14px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--m-text-2);
+}
+.start-screen .mode-tab {
+  min-height: 40px;
+}
+.mode-tab[data-mode="circle"] {
+  --accent: var(--m-ring);
+}
+.mode-tab strong {
+  font: 600 20px / 1 "Barlow Condensed", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.mode-tab small {
+  font: 500 12px var(--mono);
+}
+.mode-tab:hover {
+  border-color: var(--accent);
+}
+.mode-tab[aria-selected="true"] {
+  background: color-mix(in srgb, var(--accent) 16%, var(--m-surface));
+  border-color: var(--accent);
+  color: var(--m-text);
+}
+.mode-tab[data-current="true"] strong::after {
+  content: " ●";
+  font-size: 10px;
+  vertical-align: middle;
+}
+.mode-rules {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--m-ring);
+  background: color-mix(in srgb, var(--m-ring) 10%, var(--m-bg));
+  font-size: 13px;
+  line-height: 1.5;
+  color: #d6d5ff;
+}
+.ops-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+/* Sectors: a horizontal strip of chips on narrow screens, a vertical rail beside the list on wide ones. */
+.sector-tabs {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--m-border) transparent;
+}
+.sector-tab {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 2.2em minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 10px;
+  text-align: left;
+  background: var(--m-surface);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  color: var(--m-text-2);
+}
+.sector-tab:hover {
+  background: #1c2b34;
+  border-color: var(--mode);
+}
+.sector-tab[aria-selected="true"] {
+  color: var(--m-text);
+  border-color: var(--mode);
+  background: color-mix(in srgb, var(--mode) 14%, var(--m-bg));
+  box-shadow: inset 3px 0 var(--mode);
+}
+.sector-index {
+  font: 700 18px / 1 "Barlow Condensed", sans-serif;
+  color: var(--mode);
+}
+.sector-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+.sector-tab small {
+  font: 500 12px var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.sector-tab[data-current="true"] small::before {
+  content: "● ";
+  font-size: 9px;
+  color: var(--mode);
+}
+/* Missions: compact rows, focus on one line. */
+.mission-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mission-card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  text-align: left;
+  padding: 8px 14px;
+  background: var(--m-surface);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+}
+.mission-card:hover {
+  background: #1c2b34;
+  border-color: var(--mode);
+}
+.mission-card[aria-pressed="true"] {
+  border-color: var(--mode);
+  background: color-mix(in srgb, var(--mode) 12%, var(--m-bg));
+  box-shadow: inset 4px 0 var(--mode);
+}
+.mission-card[aria-pressed="true"] .mission-index::before {
+  content: "▸";
+  position: absolute;
+  margin-left: -13px;
+  font-size: 15px;
+}
+.mission-index {
+  position: relative;
+  font: 700 24px "Barlow Condensed", sans-serif;
+  color: var(--mode);
+}
+.mission-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.mission-copy strong {
+  font: 600 20px / 1.1 "Barlow Condensed", sans-serif;
+  letter-spacing: 0.02em;
+}
+.mission-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--m-text-2);
+}
+.current-tag {
+  margin-left: 6px;
+  padding: 1px 5px;
+  font: 600 12px var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--m-bg);
+  background: var(--m-text-2);
+  vertical-align: 2px;
+}
+.mission-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  white-space: nowrap;
+}
+.mission-stats b {
+  font: 500 13px var(--mono);
+}
+.mission-stats small {
+  font-size: 13px;
+  color: var(--m-text-2);
+}
+.mission-stats .ring-badge {
+  color: var(--m-ring);
+}
+.mission-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mission-tags li {
+  margin: 0;
+  padding: 1px 6px;
+  font: 500 12px var(--mono);
+  color: var(--m-text-2);
+  border: 1px solid var(--m-border);
+  border-radius: 2px;
+}
+/* The briefing: a side panel on wide screens (a non-modal dialog that is always open), a bottom sheet below. */
+.mission-brief {
+  display: flex;
+  flex-direction: column;
+  inset-inline: auto;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  color: var(--m-text);
+  background: linear-gradient(180deg, var(--m-surface-2), var(--m-bg));
+  border: 1px solid var(--mode);
+  border-radius: var(--m-radius);
+  box-shadow: none;
+}
+.mission-brief:not([open]) {
+  display: none;
+}
+.brief-body {
+  flex: 1;
+  min-height: 0;
+  padding: 14px 16px 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.brief-actions {
+  display: grid;
+  gap: 8px;
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--m-border);
+}
+.sheet-close {
+  display: none;
+}
+.mission-brief .eyebrow {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.mission-brief h2 {
+  margin: 2px 0 4px;
+  font: 700 30px / 1.05 "Barlow Condensed", sans-serif;
+}
+.mission-brief h3 {
+  margin: 12px 0 6px;
+  font: 500 12px var(--mono);
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.mission-brief-focus {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--m-text-2);
+}
+.brief-map {
+  position: relative;
+  background: var(--m-bg);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  overflow: hidden;
+}
+.brief-map-name {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  padding: 2px 8px;
+  font: 500 12px var(--mono);
+  letter-spacing: 0.08em;
+  background: #0b121acc;
+  color: var(--m-text-2);
+}
+.map-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mission-brief-stats {
+  margin-top: 10px;
+}
+.mission-brief .mission-brief-stats strong {
+  font-size: 20px;
+}
+.brief-tags {
+  margin-top: 8px;
+}
+.mission-brief-enemies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mission-brief-enemies li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 2px 8px 2px 4px;
+  background: var(--m-surface);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  font-size: 13px;
+  color: var(--m-text);
+}
+.mission-brief-enemies .new-tag {
+  font: 600 12px var(--mono);
+  color: var(--m-warn);
+  letter-spacing: 0.08em;
+}
+.mission-brief-towers {
+  margin: 0;
+  font-size: 13px;
+  color: var(--m-text-2);
+}
+@media (min-width: 900px) {
+  .ops-body {
+    grid-template-columns: 210px minmax(0, 1fr) minmax(320px, 0.85fr);
+    align-items: start;
+  }
+  .sector-tabs {
+    flex-direction: column;
+    overflow: hidden auto;
+    padding: 0 4px 0 0;
+  }
+  .sector-tab {
+    width: 100%;
+  }
+}
+/* Tall enough: the page is exactly one viewport and only the columns scroll, each inside itself. */
+@media (min-width: 900px) and (min-height: 600px) {
+  .start-screen:has(#mission-page:not([hidden])) {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    padding: 16px 24px;
+    overflow: hidden;
+  }
+  #mission-page {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100%;
+  }
+  .ops-body {
+    min-height: 0;
+    align-items: stretch;
+  }
+  .sector-tabs,
+  .ops-missions {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--m-border) transparent;
+  }
+  .mission-brief[open] {
+    position: static;
+    min-height: 0;
+    height: auto;
+    max-height: none;
+  }
+  .brief-map .map-preview {
+    max-height: 34vh;
+    max-height: 34dvh;
+  }
+}
+@media (max-width: 899px) {
+  .ops-head {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "back brand" "title title" "modes modes";
+    gap: 10px 12px;
+  }
+  .ops-head .menu-back {
+    grid-area: back;
+  }
+  .ops-head .brand {
+    grid-area: brand;
+    justify-self: end;
+  }
+  .ops-title {
+    grid-area: title;
+  }
+  .mode-tabs {
+    grid-area: modes;
+    display: flex;
+  }
+  .mode-tab {
+    flex: 1;
+    justify-content: center;
+  }
+  .mission-brief[open] {
+    position: fixed;
+    inset: auto 0 0;
+    width: 100%;
+    max-height: 90dvh;
+    border-width: 1px 0 0;
+    border-radius: 14px 14px 0 0;
+    animation: sheet-in 220ms ease-out;
+  }
+  .brief-body {
+    padding-top: 22px;
+  }
+  .brief-actions {
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+    background: var(--m-surface-2);
+  }
+  .sheet-close {
+    display: grid;
+    place-items: center;
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    z-index: 1;
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+    font-size: 20px;
+    color: var(--m-text);
+    background: none;
+    border: 0;
+  }
+  .brief-body::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: -12px auto 14px;
+    border-radius: 2px;
+    background: var(--m-border);
+  }
+  .mission-brief h2 {
+    padding-right: 40px;
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+/* Multiplayer ------------------------------------------------------------------------------------------------ */
+.coop-choose {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 720px;
+}
+.choice-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 150px;
+  padding: 18px;
+  text-align: left;
+  background: var(--m-surface);
+  border: 1px solid var(--m-border);
+  border-top: 3px solid var(--m-accent);
+  border-radius: var(--m-radius);
+  color: var(--m-text-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.choice-card:hover:not(:disabled) {
+  background: #1c2b34;
+  border-color: var(--m-accent);
+}
+.choice-index {
+  font: 500 12px var(--mono);
+  color: var(--m-accent);
+  letter-spacing: 0.12em;
+}
+.choice-card strong {
+  font: 700 30px / 1 "Barlow Condensed", sans-serif;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--m-text);
+}
+.coop-panel {
+  padding: 18px;
+  background: var(--m-surface);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+}
+.coop-panel > h2 {
+  font-size: 30px;
+  margin-bottom: 12px;
+}
+#coop-join-panel,
+.coop-room {
+  max-width: 880px;
+}
+.coop-join-row {
+  display: flex;
+  gap: 10px;
+}
+.coop-join-row .primary {
+  width: auto;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.coop-join label,
+.coop-modes legend,
+.coop-mission .stat-label {
+  font: 500 12px var(--mono);
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.coop-join input,
+.room-code {
+  flex: 1;
+  min-width: 0;
+  font: 700 28px var(--mono);
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--m-text);
+  background: var(--m-bg);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  padding: 8px 14px;
+}
+.coop-join label {
+  display: block;
+  margin: 0 0 8px;
+}
+.field-help {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--m-text-2);
+}
+.field-help:empty {
+  display: none;
+}
+#coop-join-panel .quiet {
+  margin-top: 14px;
+}
+.lobby-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.code-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+.room-code {
+  font-size: 36px;
+  color: var(--m-accent);
+  text-align: center;
+  padding-inline: 8px 0;
+}
+.lobby-count {
+  margin: 4px 0 10px;
+  font-size: 14px;
+}
+.lobby-count strong {
+  font: 700 32px "Barlow Condensed", sans-serif;
+  color: var(--m-accent);
+  margin-right: 8px;
+}
+.seats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.seats li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 8px;
+  font: 500 12px var(--mono);
+  color: var(--muted);
+  border: 1px dashed var(--m-border);
+  border-radius: 2px;
+}
+.seats li.taken {
+  color: var(--m-text);
+  border-style: solid;
+}
+.seats i {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border: 1px solid currentColor;
+}
+.seats .taken i {
+  background: var(--m-accent);
+  border-color: var(--m-accent);
+}
+.host-panel {
+  position: relative;
+  margin-bottom: 12px;
+  border-color: color-mix(in srgb, var(--m-accent) 50%, var(--m-border));
+}
+.host-tag {
+  position: absolute;
+  top: -9px;
+  left: 14px;
+  padding: 0 8px;
+  font: 600 12px var(--mono);
+  letter-spacing: 0.12em;
+  color: var(--m-accent);
+  background: var(--m-bg);
+}
+.coop-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.coop-modes legend {
+  margin-bottom: 8px;
+  padding: 0;
+}
+.coop-modes label {
+  position: relative;
+  flex: 1 1 100px;
+  cursor: pointer;
+}
+.coop-modes input {
+  position: absolute;
+  opacity: 0;
+}
+.coop-modes span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 12px;
+  font: 600 20px "Barlow Condensed", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--m-bg);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+}
+.coop-modes input:checked + span {
+  border-color: var(--m-accent);
+  color: var(--m-accent);
+  background: color-mix(in srgb, var(--m-accent) 10%, var(--m-bg));
+  box-shadow: inset 0 -3px var(--m-accent);
+}
+.coop-modes input:checked + span::after {
+  content: " ✓";
+  font-size: 14px;
+}
+.coop-modes input:focus-visible + span {
+  outline: 2px solid var(--m-accent);
+  outline-offset: 2px;
+}
+.coop-modes input:disabled + span {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.coop-rules {
+  margin: 14px 0;
+  min-height: 3em;
+  font-size: 14px;
+}
+.coop-mission {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--m-border);
+}
+.coop-mission strong {
+  display: block;
+  font: 600 24px / 1.1 "Barlow Condensed", sans-serif;
+}
+.coop-wait {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--m-text-2);
+}
+.coop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+.coop-actions .primary {
+  width: auto;
+  min-width: 220px;
+  justify-content: center;
+  gap: 14px;
+}
+/* Codex and help: the same surfaces, tabs and type ------------------------------------------------------------- */
+.start-screen .codex-tabs {
+  gap: 8px;
+}
+.start-screen .codex-tab {
+  min-height: 44px;
+  border-radius: var(--m-radius);
+  background: var(--m-surface);
+  border-color: var(--m-border);
+  color: var(--m-text-2);
+}
+.start-screen .codex-tab:hover {
+  background: #1c2b34;
+  border-color: var(--m-accent);
+}
+.start-screen .codex-tab[aria-selected="true"] {
+  color: var(--m-text);
+  border-color: var(--m-accent);
+  box-shadow: inset 0 -3px var(--m-accent);
+}
+.start-screen .codex-card {
+  border-radius: var(--m-radius);
+}
+/* Tower codex: wider cards than the enemy codex, they carry a level table. */
+.tower-codex-list {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+}
+.tower-codex-card {
+  border-top: 3px solid var(--accent);
+}
+.tower-codex-art,
+.tower-codex-glyph {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: var(--m-radius);
+}
+.tower-codex-glyph {
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  color: var(--accent);
+  background: var(--m-bg);
+  border: 1px solid var(--m-border);
+}
+.start-screen .tower-codex-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.tower-codex-card .codex-stats {
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+}
+.tower-codex-card .codex-stats b {
+  font-size: 14px;
+  white-space: normal;
+}
+.tower-codex-card .codex-stats span {
+  font-size: 12px;
+}
+.start-screen .tower-codex-card p.tower-codex-params {
+  font-size: 13px;
+  color: var(--m-text-2);
+}
+.tower-codex-params b {
+  color: var(--m-text);
+  font: 500 13px var(--mono);
+}
+.tower-codex-card h3 {
+  margin: 4px 0 0;
+  font: 500 12px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.tower-codex-levels {
+  width: 100%;
+  border-collapse: collapse;
+  font: 500 13px var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.tower-codex-levels th,
+.tower-codex-levels td {
+  padding: 4px 6px;
+  text-align: right;
+  border-bottom: 1px solid var(--m-border);
+}
+.tower-codex-levels thead th {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.tower-codex-levels :is(th, td):first-child {
+  text-align: left;
+  color: var(--accent);
+}
+.tower-codex-levels tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+.tower-codex-upgrades,
+.tower-codex-paths {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.start-screen .tower-codex-card :is(.tower-codex-upgrades, .tower-codex-paths) li {
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--m-text-2);
+  background: var(--m-bg);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+}
+.tower-codex-upgrades li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.tower-codex-upgrades b {
+  font: 500 13px var(--mono);
+  white-space: nowrap;
+}
+.start-screen .tower-codex-card .tower-codex-paths li {
+  display: grid;
+  gap: 2px;
+  border-left: 3px solid var(--path);
+}
+.tower-codex-paths strong {
+  font-size: 18px;
+  color: var(--path);
+}
+.tower-codex-paths small {
+  font: 500 12px var(--mono);
+  color: var(--muted);
+}
+#help-page {
+  max-width: 800px;
+}
+#help-page > ol {
+  list-style: none;
+  counter-reset: step;
+  margin: 24px 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+#help-page > ol > li {
+  counter-increment: step;
+  position: relative;
+  margin: 0;
+  padding: 14px 16px 14px 60px;
+  background: var(--m-surface);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+}
+#help-page > ol > li::before {
+  content: counter(step, decimal-leading-zero);
+  position: absolute;
+  left: 16px;
+  top: 12px;
+  font: 700 26px "Barlow Condensed", sans-serif;
+  color: var(--m-accent);
+}
+#help-page .tip {
+  border-radius: 0 var(--m-radius) var(--m-radius) 0;
+  font-size: 15px;
+}
+#help-page .keyboard-help {
+  font-size: 13px;
+  line-height: 2.1;
+}
+#help-page > .primary {
+  margin-top: 24px;
+  justify-content: center;
+}
+/* Responsive ------------------------------------------------------------------------------------------------- */
+@media (max-width: 1099px) {
+  .home-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+  .menu-home {
+    max-width: 640px;
+  }
+}
+@media (max-width: 640px) {
+  .start-screen {
+    padding: 20px 16px 48px;
+  }
+  .menu-home {
+    padding-top: 8px;
+  }
+  .menu-page p.menu-tagline {
+    margin-bottom: 20px;
+  }
+  .home-primary {
+    min-height: 76px;
+  }
+  .home-primary strong {
+    font-size: 28px;
+  }
+  .home-mode {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .home-mode span {
+    text-align: left;
+  }
+  .home-map {
+    padding: 10px;
+  }
+  .home-map-view .map-preview {
+    max-height: 34vh;
+  }
+  .menu-page-head {
+    margin-bottom: 22px;
+  }
+  .coop-choose,
+  .lobby-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mission-card {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+  .mission-stats {
+    grid-column: 2;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+  }
+  .coop-join-row {
+    flex-direction: column;
+  }
+  .coop-join-row .primary,
+  .coop-actions .primary {
+    width: 100%;
+  }
+  .coop-mission {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .room-code {
+    font-size: 30px;
+  }
+  .coop-actions {
+    flex-direction: column-reverse;
+  }
+  .code-row {
+    flex-direction: column;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-map-view .scan {
+    display: none;
+  }
+  .home-map .map-reactor {
+    animation: none;
+  }
+  .mission-brief[open] {
+    animation: none;
+  }
+  .start-screen button {
+    transition: none;
+  }
+}

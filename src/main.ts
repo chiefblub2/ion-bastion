@@ -15,6 +15,7 @@ import { waveHpScale } from "./systems/spawn";
 import type { MissionDefinition } from "./core/types";
 import { ART_FILTERING } from "./render/enemy-art-scene";
 import "./style.css";
+import "./menu.css";
 // Dependencies flow top-down: state → view → UI → battlefield → input.
 /** The mission from wave `wave` on; every remaining wave keeps the HP factor it has in the full mission. */
 const fromWave = (m: MissionDefinition, wave: number): MissionDefinition => ({

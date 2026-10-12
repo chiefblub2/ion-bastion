@@ -13,10 +13,11 @@ describe("screen URLs", () => {
   it("reads menu pages from the hash and ignores unknown ones", () => {
     expect(screenFromUrl("", "#missionen", MISSIONS)).toEqual({ view: "menu", page: "missions" });
     expect(screenFromUrl("", "#gegnerakte", MISSIONS)).toEqual({ view: "menu", page: "codex" });
+    expect(screenFromUrl("", "#turmakte", MISSIONS)).toEqual({ view: "menu", page: "towers" });
     expect(screenFromUrl("", "#unbekannt", MISSIONS)).toEqual(HOME);
   });
   it("round-trips every screen", () => {
-    for (const screen of [HOME, GAME, ...(["missions", "coop", "codex", "help"] as const).map((page) => ({ view: "menu" as const, page }))]) {
+    for (const screen of [HOME, GAME, ...(["missions", "coop", "codex", "towers", "help"] as const).map((page) => ({ view: "menu" as const, page }))]) {
       const url = new URL(urlOf(screen, id, "/game/"), "http://localhost");
       expect(url.pathname).toBe("/game/");
       expect(screenFromUrl(url.search, url.hash, MISSIONS)).toEqual(screen);

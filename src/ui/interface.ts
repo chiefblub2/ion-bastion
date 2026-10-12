@@ -10,9 +10,12 @@ import { renderWaveForecast, waveForecast } from "./wave-forecast";
 import { liveUnits, renderLiveUnits } from "./live-units";
 import { closeCodexPreview } from "./codex-preview";
 import { renderEnemyCodex, type CodexTab } from "./enemy-codex";
+import { renderTowerCodex } from "./tower-codex";
 import { effectiveTowerStats, isInAura } from "../systems/auras";
 import type { MissionDefinition, MissionSector, TowerId } from "../core/types";
 import { mapPreviewSvg, missionEnemies } from "./mission-brief";
+import { missionTags } from "./mission-tags";
+import type { HomeAction } from "../app/home-action";
 import { enemyIcon } from "./wave-forecast";
 import { MODE_IDS, MODES } from "../core/modes";
 import { renderPlayers, renderSends, versusOutcome, type MultiplayerSession } from "./players";
@@ -33,15 +36,16 @@ function towerKeyRange(count: number, wrap = (key: string) => key) {
 }
 /** Header of a start-screen page: back, the brand (a link home) and the title. */
 const pageHead = (eyebrow: string, title: string, id: string) =>
-  `<header class="menu-page-head"><button class="quiet menu-back" data-back>← Back</button><a class="brand" href="/" aria-label="ION BASTION home"><span class="brand-mark">I</span><span>ION<span class="brand-light">BASTION</span></span></a></header><p class="eyebrow">${eyebrow}</p><h1 id="${id}">${title}</h1>`;
+  `<header class="menu-page-head"><button class="quiet menu-back" data-back>← Back</button><a class="brand" href="/" aria-label="ION BASTION home"><span class="brand-mark">I</span><span>ION<span class="brand-light">BASTION</span></span></a></header><p class="eyebrow" id="${id}-eyebrow">${eyebrow}</p><h1 id="${id}">${title}</h1>`;
 export function mountUI(game: Game) {
   const TOWERS = game.content.towers;
   document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div id="start-screen" class="start-screen">
-  <section class="menu-page menu-home" data-page="home" tabindex="-1" aria-labelledby="menu-title"><p class="eyebrow">TOWER DEFENSE</p><h2 id="menu-title" class="menu-title"><span class="brand-mark">I</span><span>ION<span class="brand-light">BASTION</span></span></h2><p class="menu-tagline">Hold the line. Protect the reactor.</p><div class="menu-options"><button id="menu-continue" class="mission-mode menu-continue" hidden><strong>Continue ▶</strong><span id="menu-continue-mission"></span></button><button id="menu-campaign" class="mission-mode"><strong>Campaign</strong><span>Defend the reactor</span><small id="menu-campaign-info"></small></button><button id="menu-circle" class="mission-mode" data-mode="circle"><strong>⟳ Circuit</strong><span>Keep the ring under the limit</span><small id="menu-circle-info"></small></button><button id="menu-coop" class="mission-mode"><strong>Multiplayer ⇄</strong><span>Together or against each other</span><small>2–4 players · ${MODE_IDS.map((id) => MODES[id].name).join(" · ")}</small></button></div><div class="dialog-actions"><button id="menu-codex" class="quiet">Enemy Codex <span>◆</span></button><button id="menu-help" class="quiet">Help <span>?</span></button></div></section>
-  <section id="mission-page" class="menu-page" tabindex="-1" data-page="missions" aria-labelledby="missions-title" hidden>${pageHead("OPERATIONS", "Choose a mission.", "missions-title")}<p class="mission-hint">Pick a sector, select a mission to see its briefing, then start it.</p><div id="mission-modes" class="mission-modes" role="tablist" aria-label="Game mode" hidden></div><div id="sector-tabs" class="sector-tabs" role="tablist" aria-label="Sectors" hidden></div><p id="mode-rules" class="mode-rules" hidden>Closed rings without a reactor: enemies circle until they fall. Waves start on a timer; calling one early earns credits. If more enemies are in the ring than the limit allows, the mission is lost.</p><div class="mission-browser"><aside id="mission-brief" class="mission-brief" aria-live="polite" aria-label="Mission briefing"></aside><div id="mission-list" class="mission-list"></div></div></section>
-  <section id="coop-page" class="menu-page" tabindex="-1" data-page="coop" aria-labelledby="coop-title" hidden>${pageHead("MULTIPLAYER · 2–4 PLAYERS", "Together or against each other.", "coop-title")}<fieldset id="coop-modes" class="coop-modes"><legend>Mode</legend>${MODE_IDS.map((id) => `<label><input type="radio" name="coop-mode" value="${id}"${id === "coop" ? " checked" : ""}><span>${MODES[id].name}</span></label>`).join("")}</fieldset><p id="coop-rules" class="coop-rules">${MODES.coop.rules}</p><p class="coop-mission">Mission: <b id="coop-mission"></b> <button id="coop-pick" class="text-button">Choose mission</button></p><p id="coop-status" role="status"></p><div id="coop-lobby"><div class="dialog-actions"><button id="coop-create" class="primary">Create room</button></div><form id="coop-join-form" class="coop-join"><label for="coop-code">Room code</label><input id="coop-code" maxlength="4" autocomplete="off" spellcheck="false" placeholder="ABCD"><button id="coop-join" class="quiet" type="submit">Join</button></form></div><div id="coop-room" hidden><p class="coop-code">Room <b id="coop-room-code"></b></p><div class="dialog-actions"><button id="coop-leave" class="quiet">Leave room</button><button id="coop-launch" class="primary" hidden>Start mission</button></div></div></section>
+  <section class="menu-page menu-home" data-page="home" tabindex="-1" aria-labelledby="menu-title"><div class="home-grid"><div class="home-main"><p class="home-label">TACTICAL TOWER DEFENSE</p><h1 id="menu-title" class="menu-title"><span class="brand-mark">I</span><span>ION<span class="brand-light">BASTION</span></span></h1><p class="menu-tagline">Hold the line. Protect the reactor.</p><button id="menu-primary" class="home-primary" data-action="start"><span class="home-primary-copy"><strong id="menu-primary-title">Start Playing</strong><small id="menu-primary-sub">Begin your defense campaign</small></span><span class="home-primary-icon" aria-hidden="true">▶</span></button><nav aria-label="Game modes"><ul class="home-modes"><li><button id="menu-campaign" class="home-mode"><strong>Campaign</strong><span id="menu-campaign-info"></span></button></li><li><button id="menu-circle" class="home-mode" data-mode="circle"><strong>⟳ Circuit</strong><span id="menu-circle-info"></span></button></li><li><button id="menu-coop" class="home-mode"><strong>Multiplayer ⇄</strong><span>2–4 players · ${MODE_IDS.map((id) => MODES[id].name).join(" · ")}</span></button></li></ul></nav><div class="home-utility"><button id="menu-codex" class="quiet">Enemy Codex <span>◆</span></button><button id="menu-towers" class="quiet">Tower Codex <span>▣</span></button><button id="menu-help" class="quiet">How to Play <span>?</span></button></div></div><aside id="home-map" class="home-map" aria-label="Operation preview"></aside></div></section>
+  <section id="mission-page" class="menu-page ops-page" tabindex="-1" data-page="missions" aria-labelledby="missions-title" hidden><header class="ops-head"><button class="quiet menu-back" data-back>← Back</button><div class="ops-title"><p class="eyebrow" id="missions-title-eyebrow">OPERATIONS</p><h1 id="missions-title">Choose a mission</h1></div><div id="mission-modes" class="mode-tabs" role="tablist" aria-label="Game mode" hidden></div><a class="brand" href="/" aria-label="ION BASTION home"><span class="brand-mark">I</span><span>ION<span class="brand-light">BASTION</span></span></a></header><div class="ops-body"><div id="sector-tabs" class="sector-tabs" role="tablist" aria-label="Sectors" hidden></div><div class="ops-missions"><p id="mode-rules" class="mode-rules" hidden>Rings without a reactor: enemies circle until they fall. Waves start on a timer, calling one early earns credits, and too many enemies in the ring loses the mission.</p><div id="mission-list" class="mission-list"></div></div><dialog id="mission-brief" class="mission-brief" aria-labelledby="brief-title"><button class="sheet-close" data-brief-close aria-label="Close briefing"><span aria-hidden="true">✕</span></button><div id="brief-body" class="brief-body"></div><div id="brief-actions" class="brief-actions"></div></dialog></div></section>
+  <section id="coop-page" class="menu-page" tabindex="-1" data-page="coop" aria-labelledby="coop-title" hidden>${pageHead("MULTIPLAYER · 2–4 PLAYERS", "Together or against each other.", "coop-title")}<p id="coop-error" class="notice notice-error" role="alert" hidden></p><p id="coop-status" class="notice" role="status"></p><div id="coop-choose" class="coop-choose"><button id="coop-create" class="choice-card"><span class="choice-index">01</span><strong>Create Room</strong><span>Host a game, share the four-letter code and pick mode and mission.</span></button><button id="coop-show-join" class="choice-card"><span class="choice-index">02</span><strong>Join Room</strong><span>Enter the code your host gave you.</span></button></div><div id="coop-join-panel" class="coop-panel" hidden><h2>Join a room</h2><form id="coop-join-form" class="coop-join"><label for="coop-code">Room code</label><div class="coop-join-row"><input id="coop-code" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD" aria-describedby="coop-code-help"><button id="coop-join" class="primary" type="submit">Join <span aria-hidden="true">▶</span></button></div><p id="coop-code-help" class="field-help">Four letters, for example ABCD. Capitals and spaces do not matter.</p></form><button id="coop-join-back" class="quiet">← Other options</button></div><div id="coop-room" class="coop-room" hidden><div class="lobby-grid"><section class="coop-panel lobby-code" aria-labelledby="lobby-code-label"><span id="lobby-code-label" class="stat-label">ROOM CODE</span><div class="code-row"><input id="coop-room-code" class="room-code" readonly aria-labelledby="lobby-code-label" value="…" size="4"><button id="coop-copy" class="quiet">Copy code</button></div><p id="coop-copy-status" class="field-help" role="status"></p></section><section class="coop-panel" aria-labelledby="lobby-players-label"><span id="lobby-players-label" class="stat-label">PLAYERS</span><p class="lobby-count"><strong id="coop-count">1/4</strong> <span id="coop-role"></span></p><ul id="coop-seats" class="seats"></ul></section></div><div id="coop-host" class="coop-panel host-panel"><span class="host-tag">HOST CONTROLS</span><fieldset id="coop-modes" class="coop-modes"><legend>Mode</legend>${MODE_IDS.map((id) => `<label><input type="radio" name="coop-mode" value="${id}"${id === "coop" ? " checked" : ""}><span>${MODES[id].name}</span></label>`).join("")}</fieldset><p id="coop-rules" class="coop-rules">${MODES.coop.rules}</p><div class="coop-mission"><div><span class="stat-label">MISSION</span><strong id="coop-mission"></strong></div><button id="coop-pick" class="quiet">Change Mission</button></div></div><p id="coop-wait" class="coop-wait" hidden></p><div class="coop-actions"><button id="coop-leave" class="quiet">Leave Room</button><button id="coop-launch" class="primary" hidden>Start Mission <span aria-hidden="true">▶</span></button></div></div></section>
   <section id="codex-page" class="menu-page" tabindex="-1" data-page="codex" aria-labelledby="codex-title" hidden>${pageHead("ENEMY CODEX", "Know your enemy.", "codex-title")}<p>All enemy types in the order the campaign introduces them. HP and speed apply to wave 1; later waves have more HP.</p><div id="codex-tabs" class="codex-tabs" role="tablist" aria-label="Enemy Codex"></div><div id="codex-list" class="codex-list" role="tabpanel"></div></section>
+  <section id="towers-page" class="menu-page" tabindex="-1" data-page="towers" aria-labelledby="towers-title" hidden>${pageHead("TOWER CODEX", "Know your arsenal.", "towers-title")}<p>Every tower by build-menu category: cost, targets, levels 1–5 and the paths beyond. Values are base values before Aura bonuses.</p><div id="tower-codex-tabs" class="codex-tabs" role="tablist" aria-label="Tower categories"></div><div id="tower-codex-list" class="codex-list tower-codex-list" role="tabpanel"></div></section>
   <section id="help-page" class="menu-page" tabindex="-1" data-page="help" aria-labelledby="help-title" hidden>${pageHead("FIELD MANUAL", "Your core. Your line.", "help-title")}<p>Survive all waves of a mission. When an enemy reaches the reactor, it loses energy. At 0 the mission is lost.</p><ol><li><strong>Build your defense</strong><br>Pick a tower on the right and click a free cell next to the path. Traps go right on the path. The circle shows its range.</li><li><strong>Start a wave</strong><br>Defeated enemies give credits. After each wave you get a bonus, and after ${WAVE_BREAK} seconds the next wave starts on its own. You can also build during a wave. Press <kbd>N</kbd> to start it earlier.</li><li><strong>Upgrade towers</strong><br>Click a built tower. Attack towers reach level 5; levels 4 and 5 are expensive, but give more per credit than another tower. With the Aura tower you pick a path (damage, attack speed or range) and expand it in three levels. For several bonuses, build several Auras. Selling refunds ${SELL_REFUND * 100}% of your investment.</li></ol><div class="tip">Tip: Nova hits groups, but only ground units. Against Gliders in the air, Flak and all other attack towers help. Tesla jumps from enemy to enemy, the Lance pierces whole rows. Stasis halts enemies briefly, Corrosion makes them take more damage, Decay cracks Titans. Focus gets stronger the longer it stays on the same target, and Gravitron pulls ground enemies back. The Mortar shells groups from long range, Quake shakes everything around the tower, the Executioner finishes off wounded enemies, Shrapnel hits several targets at once, the Jammer switches off shields and healing, and the Snare Net pulls flyers into range of ground towers. Bounty Beacon, Repair Dock and Tracker help without attacking themselves. Traps like Mine, Caltrops, Sticky Mine or Pitfall go directly on the path; they trigger when ground enemies walk over them, stealthed ones too. Aura boosts nearby attack towers once you buy a path. A Refinery built early pays out credits after every wave. A tower can only target stealthed enemies within range of a Detector.</div><p class="keyboard-help">${towerKeyRange(Math.max(...TOWER_PAGES.map((_, i) => Object.values(TOWERS).filter((t) => pageOf(t) === i).length)), (key) => `<kbd>${key}</kbd>`)} Pick a tower on the open tab · <kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>${TOWER_PAGES.length}</kbd> Switch tab<br><kbd>Esc</kbd>, right-click or ✕: deselect<br><kbd>Shift</kbd>+click: build several towers of the same type<br><kbd>Space</kbd> Pause · <kbd>N</kbd> Start wave · <kbd>F</kbd> Fullscreen<br><kbd>T</kbd> Cycle target priority of the selected tower<br>Click an enemy: HP and traits<br>On the field: arrow keys + Enter</p><button class="primary" data-back>Got it</button></section>
   </div>
   <div id="game-view"><header class="topbar"><a class="brand" href="/" aria-label="ION BASTION home"><span class="brand-mark">I</span><span>ION<span class="brand-light">BASTION</span></span></a><span class="edition">TOWER DEFENSE <b id="edition-number">01</b></span><div class="header-actions"><button id="menu-btn" class="quiet">Menu <span>☰</span></button><button id="coop-btn" class="quiet">Multiplayer <span>⇄</span></button><button id="codex-btn" class="quiet">Enemy Codex <span>◆</span></button><button id="help-btn" class="quiet">Help <span>?</span></button><button id="sound-btn" class="quiet" aria-pressed="false">Sound off</button></div></header>
@@ -112,24 +116,31 @@ export function modeGroups(sectors: readonly MissionSector[]) {
 const missionCount = (members: readonly MissionSector[]) => members.reduce((n, sector) => n + sector.missions.length, 0);
 const campaignInfo = (campaign: readonly MissionSector[]) => `Sector I–${roman(campaign.length - 1)} · ${missionCount(campaign)} ${plural(missionCount(campaign), "mission")}`;
 /**
- * Fills the start screen's home page. "Continue" returns to `resume` when a mission is in progress in this
- * session, else it loads the remembered mission `last` while it still exists.
+ * Fills the start screen's home page: the primary button for `action` and, beside it, the map of the mission
+ * that button is about.
  */
-export function renderMenu(game: Game, last: string | undefined, resume: boolean) {
+export function renderMenu(game: Game, action: HomeAction) {
   const missions = game.content.missions,
     { campaign, rings } = modeGroups(game.content.sectors ?? []),
-    target = resume ? game.mission : missions.find((m) => m.id === last);
-  document.getElementById("menu-continue")!.hidden = !target;
-  if (target) text("menu-continue-mission", `Mission ${pad(missionNumber(target, missions))} · ${target.name}${resume ? ` · Wave ${pad(Math.max(1, game.state.wave))}` : ""}`);
+    m = action.mission,
+    sectors = game.content.sectors ?? [],
+    sector = sectorOf(m, sectors),
+    primary = document.getElementById("menu-primary")!;
+  primary.dataset.action = action.kind;
+  text("menu-primary-title", action.title);
+  text("menu-primary-sub", action.subtitle);
   text("menu-campaign-info", campaign.length ? campaignInfo(campaign) : `${missions.length} ${plural(missions.length, "mission")}`);
-  document.getElementById("menu-circle")!.hidden = !rings.length;
+  document.getElementById("menu-circle")!.parentElement!.hidden = !rings.length;
   text("menu-circle-info", `${missionCount(rings)} ${plural(missionCount(rings), "mission")}`);
+  const stat = (label: string, value: string) => `<div><span class="stat-label">${label}</span><strong>${value}</strong></div>`;
+  document.getElementById("home-map")!.innerHTML = `<div class="home-map-head"><span>${sector ? `SECTOR ${roman(sectors.indexOf(sector))} · ${sector.name.toUpperCase()}` : "OPERATION MAP"}</span><span>MISSION ${pad(missionNumber(m, missions))}</span></div><div class="home-map-view">${mapPreviewSvg(m.map)}<i class="scan" aria-hidden="true"></i></div><div class="home-map-foot"><strong>${m.name}</strong><p>${m.focus}</p><div class="home-map-stats">${stat("WAVES", String(m.waves.length))}${stat("CREDITS", `◇ ${m.startingCredits}`)}${m.circle ? stat("RING LIMIT", String(m.circle.limit)) : stat("REACTOR", `♡ ${m.reactorEnergy}`)}</div></div>`;
 }
 /**
  * Fills the mission page; called each time it opens and on every tab change.
- * With sectors, one tab per sector shows its missions; it opens on the active mission's sector.
+ * With sectors, one tab per sector shows its missions; it opens on the active mission's sector, and the
+ * briefing on `pickedId`, else the active mission when listed, else the first.
  */
-export function renderMissionList(game: Game, sectorIndex?: number, lobby = false) {
+export function renderMissionList(game: Game, sectorIndex?: number, lobby = false, pickedId?: string) {
   const missions = game.content.missions,
     sectors = game.content.sectors ?? [],
     current = sectorOf(game.mission, sectors),
@@ -143,14 +154,15 @@ export function renderMissionList(game: Game, sectorIndex?: number, lobby = fals
   modes.innerHTML = modes.hidden
     ? ""
     : ([
-        [false, campaign, "Campaign", "Defend the reactor", campaignInfo(campaign)],
-        [true, rings, "⟳ Circuit", "Keep the ring under the limit", `${missionCount(rings)} ${plural(missionCount(rings), "mission")}`],
-      ] as const).map(([ring, members, name, goal, info]) => {
+        [false, campaign, "Campaign", `${missionCount(campaign)}<span class="sr-only"> missions</span>`],
+        [true, rings, "⟳ Circuit", `${missionCount(rings)}<span class="sr-only"> missions</span>`],
+      ] as const).map(([ring, members, name, info]) => {
         const active = ring === circle,
           i = sectors.indexOf(members[0]);
-        return `<button class="mission-mode" role="tab" id="mission-mode-${ring ? "circle" : "campaign"}" data-sector="${i}"${ring ? ' data-mode="circle"' : ""} aria-controls="mission-list" aria-selected="${active}" tabindex="${active ? 0 : -1}"${!!current && isCircleSector(current) === ring ? ' data-current="true"' : ""}><strong>${name}</strong><span>${goal}</span><small>${info}</small></button>`;
+        return `<button class="mode-tab" role="tab" id="mission-mode-${ring ? "circle" : "campaign"}" data-sector="${i}"${ring ? ' data-mode="circle"' : ""} aria-controls="mission-list" aria-selected="${active}" tabindex="${active ? 0 : -1}"${!!current && isCircleSector(current) === ring ? ' data-current="true"' : ""}><strong>${name}</strong> <small>${info}</small></button>`;
       }).join("");
   document.getElementById("mission-page")!.toggleAttribute("data-circle", circle);
+  text("missions-title-eyebrow", lobby ? "MULTIPLAYER · CHOOSE FOR ROOM" : `${modes.hidden && !circle ? "" : circle ? "CIRCUIT · " : "CAMPAIGN · "}OPERATIONS`);
   document.getElementById("mode-rules")!.hidden = !circle;
   const tabs = document.getElementById("sector-tabs")!;
   tabs.hidden = !selected || group.length < 2;
@@ -159,8 +171,14 @@ export function renderMissionList(game: Game, sectorIndex?: number, lobby = fals
       first = missionNumber(sector.missions[0], missions),
       last = first + sector.missions.length - 1,
       active = sector === selected;
-    return `<button class="sector-tab" role="tab" id="sector-tab-${i}" data-sector="${i}" aria-controls="mission-list" aria-selected="${active}" tabindex="${active ? 0 : -1}"${sector === current ? ' data-current="true"' : ""}><span class="sector-index">${roman(i)} <small>${pad(first)}–${pad(last)}</small></span><span class="sector-name">${sector.name}</span></button>`;
+    return `<button class="sector-tab" role="tab" id="sector-tab-${i}" data-sector="${i}" aria-controls="mission-list" aria-selected="${active}" tabindex="${active ? 0 : -1}"${sector === current ? ' data-current="true"' : ""}><span class="sector-index">${roman(i)}</span><span class="sector-name">${sector.name}</span><small>${pad(first)}–${pad(last)}${sector === current ? '<span class="sr-only"> · contains the current mission</span>' : ""}</small></button>`;
   }).join("");
+  // Scroll the rail (vertical) or strip (horizontal) itself, never the page, so the selected sector sits in view.
+  const tab = tabs.querySelector<HTMLElement>('[aria-selected="true"]');
+  if (tab) {
+    tabs.scrollLeft = tab.offsetLeft - (tabs.clientWidth - tab.offsetWidth) / 2;
+    tabs.scrollTop = tab.offsetTop - (tabs.clientHeight - tab.offsetHeight) / 2;
+  }
   const list = document.getElementById("mission-list")!;
   if (selected && !tabs.hidden) {
     list.setAttribute("role", "tabpanel");
@@ -172,20 +190,20 @@ export function renderMissionList(game: Game, sectorIndex?: number, lobby = fals
     list.removeAttribute("role");
     list.removeAttribute("aria-labelledby");
   }
-  // The briefing opens on the active mission if it is listed, else on the first.
   const shown = selected?.missions ?? missions,
-    picked = shown.find((m) => m.id === game.mission.id) ?? shown[0];
+    picked = shown.find((m) => m.id === pickedId) ?? shown.find((m) => m.id === game.mission.id) ?? shown[0];
   list.innerHTML = shown.map((m) => {
     const n = missionNumber(m, missions);
-    return `<button class="mission-card" data-pick="${m.id}" aria-pressed="${m === picked}"${m.id === game.mission.id ? ' aria-current="true"' : ""}><span class="mission-index">${pad(n)}</span><span class="mission-copy"><strong>${m.name}</strong><small>${m.focus}</small></span><span class="mission-stats"><b>${m.waves.length} ${plural(m.waves.length, "wave")}</b><small>◇ ${m.startingCredits}</small>${m.circle ? `<small class="ring-badge">⟳ Ring · max ${m.circle.limit}</small>` : ""}</span></button>`;
+    return `<button class="mission-card" data-pick="${m.id}" title="${m.focus}" aria-pressed="${m === picked}"${m.id === game.mission.id ? ' aria-current="true"' : ""}><span class="mission-index">${pad(n)}</span><span class="mission-copy"><strong>${m.name}${m.id === game.mission.id ? ' <b class="current-tag">CURRENT</b>' : ""}</strong><small>${m.focus}</small></span><span class="mission-stats"><b>${m.waves.length} ${plural(m.waves.length, "wave")}</b><small>◇ ${m.startingCredits}${m.circle ? ` · <span class="ring-badge">⟳ ${m.circle.limit}</span>` : ""}</small></span></button>`;
   }).join("");
   renderMissionBrief(game, picked, lobby);
 }
-/** The briefing beside the mission list: map, numbers, enemies and the button that starts the mission. */
+/** The briefing: map, numbers, enemies and the button that starts the mission. A side panel on wide screens, a sheet on narrow ones. */
 export function renderMissionBrief(game: Game, m: MissionDefinition | undefined, lobby: boolean) {
-  const brief = document.getElementById("mission-brief")!;
+  const body = document.getElementById("brief-body")!,
+    actions = document.getElementById("brief-actions")!;
   if (!m) {
-    brief.innerHTML = "";
+    body.innerHTML = actions.innerHTML = "";
     return;
   }
   const { missions, enemies, towers } = game.content,
@@ -199,10 +217,12 @@ export function renderMissionBrief(game: Game, m: MissionDefinition | undefined,
       stat("CREDITS", `◇ ${m.startingCredits}`),
       ...(m.circle ? [stat("RING LIMIT", String(m.circle.limit)), stat("INTERVAL", `${m.circle.interval} s`)] : [stat("REACTOR", `♡ ${m.reactorEnergy}`)]),
     ],
+    tags = missionTags(m, game.content),
     foes = missionEnemies(m, game.content)
       .map(({ id, isNew }) => `<li>${enemyIcon(enemies[id].visual, enemies[id].color, id)}<span>${enemies[id].name}</span>${isNew ? '<b class="new-tag">NEW</b>' : ""}</li>`)
       .join("");
-  brief.innerHTML = `<p class="eyebrow">MISSION ${pad(missionNumber(m, missions))}${sector ? ` · SECTOR ${roman(sectors.indexOf(sector))} · ${sector.name.toUpperCase()}` : ""}</p><h2>${m.name}</h2><p class="mission-brief-focus">${m.focus}</p>${mapPreviewSvg(m.map)}<div class="mission-brief-stats">${stats.join("")}</div><h3>Enemies</h3><ul class="mission-brief-enemies">${foes}</ul>${m.availableTowers ? `<h3>Towers</h3><p class="mission-brief-towers">${m.availableTowers.map((id) => towers[id].name).join(" · ")}</p>` : ""}<div class="mission-brief-actions">${reset ? '<p class="mission-warning">Your current defense and progress will be reset.</p>' : ""}<button class="primary" data-mission="${m.id}">${lobby ? "Choose for room" : "Start mission"} <span>▶</span></button></div>`;
+  body.innerHTML = `<p class="eyebrow">MISSION ${pad(missionNumber(m, missions))}${sector ? ` · SECTOR ${roman(sectors.indexOf(sector))} · ${sector.name.toUpperCase()}` : ""}</p><h2 id="brief-title">${m.name}</h2><p class="mission-brief-focus">${m.focus}</p><div class="brief-map">${mapPreviewSvg(m.map)}<span class="brief-map-name">${m.map.name}</span></div><div class="mission-brief-stats">${stats.join("")}</div>${tags.length ? `<ul class="mission-tags brief-tags" aria-label="Mission traits">${tags.map((t) => `<li>${t}</li>`).join("")}</ul>` : ""}<h3>Enemies</h3><ul class="mission-brief-enemies">${foes}</ul>${m.availableTowers ? `<h3>Restricted to these towers</h3><p class="mission-brief-towers">${m.availableTowers.map((id) => towers[id].name).join(" · ")}</p>` : ""}`;
+  actions.innerHTML = `${reset ? '<p class="mission-warning">Starting another mission resets your current defense and progress.</p>' : ""}<button class="primary" data-mission="${m.id}">${lobby ? "Choose for Room" : "Start Mission"} <span aria-hidden="true">▶</span></button>`;
 }
 /** Fills the enemy codex page; called when it opens and on every tab change. */
 export function renderCodex(game: Game, tab: CodexTab = "enemies") {
@@ -213,6 +233,14 @@ export function renderCodex(game: Game, tab: CodexTab = "enemies") {
   panel.innerHTML = list;
   panel.setAttribute("aria-labelledby", `codex-tab-${tab}`);
   panel.scrollTop = 0;
+}
+/** Fills the tower codex page for one build-menu category; called when it opens and on every tab change. */
+export function renderTowerCodexPage(game: Game, page = 0) {
+  const { tabs, list } = renderTowerCodex(game.content, page),
+    panel = document.getElementById("tower-codex-list")!;
+  document.getElementById("tower-codex-tabs")!.innerHTML = tabs;
+  panel.innerHTML = list;
+  panel.setAttribute("aria-labelledby", `tower-codex-tab-${page}`);
 }
 export function nextMission(game: Game) {
   const missions = game.content.missions;

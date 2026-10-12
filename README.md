@@ -4,7 +4,7 @@ Tower defense in the browser, built with TypeScript, Phaser 3 and Vite. <!-- cou
 
 ![Mission 54 Ember Chamber in the Volcano Chain sector, first wave: Ember Runners in the windings and the first towers](docs/images/screens/glutkammer.png)
 
-The game runs entirely in the browser; only multiplayer needs a small relay server. Saves live in memory on purpose: reloading restarts the current mission (it is in the address, `?mission=<id>`), and `/` leads to the start screen. The browser only remembers the last mission you started, which the start screen offers under "Continue".
+The game runs entirely in the browser; only multiplayer needs a small relay server. Saves live in memory on purpose: reloading restarts the current mission (it is in the address, `?mission=<id>`), and `/` leads to the start screen. The browser only remembers the last mission you started, which the start screen offers as "Restart Last Mission" (from wave 1; it is not a saved game).
 
 ## Quick start
 
@@ -74,14 +74,14 @@ npm run dev      # game on http://0.0.0.0:4173
 **Host**
 
 1. Open `http://localhost:4173`.
-2. On the start screen choose "Multiplayer" → "Create room". Send the four-letter room code (e.g. `KJSK`) to the other players.
-3. Optionally "Choose mission"; you then return to the lobby. Without a choice, the currently loaded mission starts.
+2. On the start screen choose "Multiplayer" → "Create Room". Send the four-letter room code (e.g. `KJSK`) to the other players.
+3. Optionally "Change Mission"; you then return to the lobby. Without a choice, the currently loaded mission starts.
 4. Choose a mode and "Start mission" once enough players are in the room. Everyone then switches to the game.
 
 **Players**
 
 1. Open the game from the host's machine: `http://<host-IP>:4173`.
-2. "Multiplayer" → enter the room code → "Join".
+2. "Multiplayer" → "Join Room" → enter the room code → "Join". The host's code can be copied with "Copy code".
 3. Wait until the host starts the mission. You see the mode when it starts.
 
 **Modes**
@@ -103,12 +103,12 @@ In all modes the host decides mission, restart and speed. Dialogs and tab switch
 - **"The room is full …":** A room has four seats. Nobody can join after the mission has started.
 - **A player leaves the room:**
   - The game stops and the remaining players move up. If the host leaves, the next player becomes host and can relaunch.
-  - "Leave room" continues the mission alone.
+  - "Leave Room" continues the mission alone.
   - Reconnecting is not supported yet.
 
 ## Missions
 
-The game opens on the start screen with Continue, Campaign, Circuit, Multiplayer, Enemy Codex and Help; each item is its own page with "← Back", and the browser's back button works too. Under "Campaign" and "Circuit" all missions can be picked directly, with one tab per sector. In the game, "Menu" returns to the start screen and pauses the running wave; "Continue" resumes it. After a win, "Next mission" moves on.
+The game opens on the start screen with one primary button ("Start Playing" on a first visit, "Resume Game" while a game is in memory, "Restart Last Mission" after a reload), Campaign, Circuit, Multiplayer, Enemy Codex, Tower Codex (every tower with cost, targets, levels 1–5 and its paths) and How to Play, beside a map of the mission the button is about; each item is its own page with "← Back", and the browser's back button works too. Under "Campaign" and "Circuit" all missions can be picked directly, with one tab per sector. A click selects a mission and shows its briefing (a bottom sheet on phones); "Start Mission" launches it. In the game, "Menu" returns to the start screen and pauses the running wave; "Resume Game" resumes it. After a win, "Next mission" moves on.
 
 <!-- missions:start -->
 | No. | Mission | Focus | Map | Waves | Credits | HP/Wave |

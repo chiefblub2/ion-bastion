@@ -4,6 +4,7 @@ import { fitsMode, isModeId, MODES, type ModeId } from "../core/modes";
 import { coopSim, LockstepDriver, type Applied } from "../net/lockstep";
 import { RelayClient, relayUrl } from "../net/client";
 import { MAX_PLAYERS, type ServerMessage, type Speed } from "../net/protocol";
+import { copyText, isRoomCode, normalizeRoomCode } from "./room-code";
 import type { Driver, ViewState } from "../render/scene";
 import type { Interface, MultiplayerSession } from "../ui/interface";
 interface CoopDeps {
@@ -17,8 +18,8 @@ interface CoopDeps {
   setDriver: (driver: Driver | null) => void;
 }
 const ERRORS: Record<Extract<ServerMessage, { type: "error" }>["reason"], string> = {
-  "room-unknown": "That room does not exist.",
-  "room-full": "The room is full or the mission is already running.",
+  "room-unknown": "No room with that code. Check it with your host.",
+  "room-full": "That room is full or its mission is already running.",
   "not-host": "Only the host can do that.",
   "not-in-room": "You are not in a room.",
   "players-mode": "The player count does not fit this mode.",
@@ -35,22 +36,43 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
     /** Own seat in the room; moves down when an earlier player leaves. */
     seat = 0,
     mode: ModeId = "coop",
-    status = "";
+    /** Plain progress ("Connecting …") and the last failure, each in its own live region. */
+    status = "",
+    error = "",
+    /** Which entry panel shows while there is no room: the two choices or the join form. */
+    panel: "choose" | "join" = "choose",
+    shown = "";
   const CIRCLE_RULES =
     "Circuit: enemies circle until they fall. Waves come on a timer; calling one early earns credits. If you exceed the limit together, the mission is lost. Race and Siege are not available here.";
   const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   ui.session = () => session;
   function render() {
-    el("coop-lobby").hidden = !!client;
-    el("coop-room").hidden = !client;
-    el("coop-room-code").textContent = room?.code ?? "…";
-    el("coop-status").textContent = status;
-    const host = !!room && seat === 0,
+    const connecting = !!client && !room,
+      view = room ? "room" : panel,
+      host = !!room && seat === 0,
       idle = !session || stopped,
       // Ring missions run their own wave timer on one shared map: co-op only.
       circle = !!game.mission.circle;
     if (circle && MODES[mode].versus) mode = "coop";
-    el("coop-modes").hidden = !!client && !host;
+    el("coop-choose").hidden = view !== "choose";
+    el("coop-join-panel").hidden = view !== "join";
+    el("coop-room").hidden = view !== "room";
+    for (const id of ["coop-create", "coop-show-join", "coop-join", "coop-join-back"]) (el(id) as HTMLButtonElement).disabled = connecting;
+    (el("coop-code") as HTMLInputElement).readOnly = connecting;
+    el("coop-status").textContent = status;
+    el("coop-error").textContent = error;
+    el("coop-error").hidden = !error;
+    el("coop-room-code").setAttribute("value", room?.code ?? "…");
+    (el("coop-room-code") as HTMLInputElement).value = room?.code ?? "…";
+    const players = room?.players ?? 0;
+    el("coop-count").textContent = `${players}/${MAX_PLAYERS}`;
+    el("coop-role").textContent = host ? "You are the host" : `You are player ${seat + 1}`;
+    el("coop-seats").innerHTML = Array.from({ length: MAX_PLAYERS }, (_, i) => {
+      const label = i < players ? `Player ${i + 1}${i === 0 ? " · Host" : ""}${i === seat ? " · You" : ""}` : "Open seat";
+      return `<li${i < players ? ' class="taken"' : ""}><i aria-hidden="true"></i>${label}</li>`;
+    }).join("");
+    // The host's controls: mode, mission, start. Everyone else waits for them, so those controls are not shown.
+    el("coop-host").hidden = !host;
     for (const radio of document.querySelectorAll<HTMLInputElement>("input[name=coop-mode]")) {
       radio.checked = radio.value === mode;
       radio.disabled = !idle || (circle && MODES[radio.value as ModeId].versus);
@@ -58,14 +80,31 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
     const rules = MODES[session && !stopped ? session.mode : mode].rules;
     el("coop-rules").textContent = circle ? `${rules} ${CIRCLE_RULES}` : rules;
     el("coop-launch").hidden = !host || !idle;
-    el("coop-pick").hidden = (!!client && !host) || !idle;
-    (el("coop-launch") as HTMLButtonElement).disabled = !room || !fitsMode(mode, room.players);
+    el("coop-pick").hidden = !host || !idle;
+    const fits = !!room && fitsMode(mode, room.players);
+    (el("coop-launch") as HTMLButtonElement).disabled = !fits;
     el("coop-mission").textContent = game.mission.name;
+    const wait = el("coop-wait");
+    wait.hidden = !room;
+    wait.textContent = !room
+      ? ""
+      : !idle
+        ? `${MODES[session!.mode].name} is running.`
+        : !host
+          ? "Waiting for the host to choose the mission and start it."
+          : fits
+            ? "Ready to start."
+            : `${MODES[mode].name} needs ${MODES[mode].minPlayers}–${MODES[mode].maxPlayers} players. Waiting for more players to join.`;
+    // A panel the player was on disappears (e.g. a room appears): keep the focus inside the page.
+    if (view !== shown) {
+      const was = shown;
+      shown = view;
+      if (was && document.activeElement && (!document.activeElement.isConnected || (document.activeElement as HTMLElement).offsetParent === null || document.activeElement === document.body))
+        el(view === "room" ? "coop-copy" : view === "join" ? "coop-code" : "coop-create").focus({ preventScroll: true });
+    }
   }
-  function roomStatus(players: number, code: string) {
-    const count = `${players}/${MAX_PLAYERS} players in the room.`;
-    if (players < 2) return `Waiting for teammates. Give them the code ${code}.`;
-    return seat === 0 ? `${count} Pick the mode and start the mission.` : `${count} The host picks the mode and mission.`;
+  function roomStatus(players: number) {
+    return players < 2 ? "Waiting for players. Share the code with them." : "";
   }
   function message(m: ServerMessage) {
     switch (m.type) {
@@ -74,7 +113,8 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
         seat = m.player;
         // Seats only change mid-session after a player left; the new seat applies at the next launch.
         if (!session) view.player = seat;
-        status = roomStatus(m.players, m.code);
+        status = roomStatus(m.players);
+        error = "";
         break;
       case "launched": {
         view.player = seat;
@@ -90,7 +130,7 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
           hash: (frame, hash) => client?.send({ type: "hash", frame, hash }),
         });
         setDriver({ advance: () => driver?.advance() });
-        status = `${MODES[m.mode].name} is running.`;
+        status = "";
         break;
       }
       case "frames":
@@ -102,51 +142,66 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
         return;
       case "peer-left":
         stopped = true;
-        status = "A teammate left the game. The host can restart, or you can play on alone.";
+        status = "";
+        error = "A teammate left the game. The host can restart, or you can play on alone.";
         ui.notice("Teammate disconnected. The game is stopped.", true);
         break;
       case "desync":
         ui.notice(`Game states diverged (frame ${m.frame}). Restart the mission.`, true);
         return;
       case "error":
-        status = ERRORS[m.reason];
-        ui.notice(status, true);
+        error = ERRORS[m.reason];
+        status = "";
+        ui.notice(error, true);
+        // Before a room exists the connection is of no use: drop it so the entry panel is usable again.
+        if (!room) closeClient();
         break;
     }
     render();
     ui.refresh();
   }
+  /** Closes the socket without its close hook touching the next connection. */
+  function closeClient() {
+    const old = client;
+    client = null;
+    old?.close();
+  }
   function connect(first: { type: "create" } | { type: "join"; code: string }) {
     if (client) return;
-    status = "Connecting …";
-    client = new RelayClient(relayUrl(), {
-      open: () => client?.send(first),
-      message,
+    status = "Connecting to the relay …";
+    error = "";
+    const mine: RelayClient = new RelayClient(relayUrl(), {
+      open: () => mine.send(first),
+      message: (m) => client === mine && message(m),
       close: () => {
+        if (client !== mine) return;
         const wasRunning = !!driver;
         client = null;
         room = null;
+        status = "";
         if (wasRunning) {
           stopped = true;
-          status = "Connection to the relay lost.";
-          ui.notice("Connection to the relay lost. The game is stopped.", true);
-        } else status = `No relay reachable at ${relayUrl()}. Is "npm run server" running?`;
+          error = "Connection to the relay lost. The game is stopped.";
+          ui.notice(error, true);
+        } else error = `No relay reachable at ${relayUrl()}. Is "npm run server" running?`;
         render();
       },
     });
+    client = mine;
     render();
   }
   /** Back to single-player with the current mission. */
   function leave() {
     const wasRunning = !!driver;
-    client?.close();
-    client = null;
+    closeClient();
     driver = null;
     session = null;
     stopped = false;
     room = null;
     seat = 0;
     status = "";
+    error = "";
+    panel = "choose";
     view.player = 0;
     view.speed = 1;
     game.setPlayers(1);
@@ -154,12 +209,41 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
     if (wasRunning) applied({ command: { type: "restart" }, result: game.command({ type: "restart" }), player: 0 });
     render();
   }
+  let copyTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Says what the copy did; only a copy the browser confirmed is called one. Otherwise the code is selected for Ctrl+C. */
+  async function copyCode() {
+    const code = room?.code,
+      out = el("coop-copy-status");
+    if (!code) return;
+    const done = await copyText(code);
+    if (done) out.textContent = "Code copied.";
+    else {
+      const input = el<HTMLInputElement>("coop-room-code");
+      input.focus();
+      input.select();
+      out.textContent = "Copying is not available here. The code is selected: press Ctrl+C (⌘C on Mac).";
+    }
+    clearTimeout(copyTimer);
+    if (done) copyTimer = setTimeout(() => (out.textContent = ""), 3000);
+  }
   el("coop-page").addEventListener("click", (e) => {
     const b = (e.target as HTMLElement).closest("button");
     if (b?.id === "coop-create") connect({ type: "create" });
+    if (b?.id === "coop-show-join") {
+      panel = "join";
+      error = status = "";
+      render();
+    }
+    if (b?.id === "coop-join-back") {
+      panel = "choose";
+      error = status = "";
+      render();
+      el("coop-show-join").focus({ preventScroll: true });
+    }
     if (b?.id === "coop-launch") client?.send({ type: "launch", missionId: game.mission.id, mode });
     if (b?.id === "coop-leave") leave();
     if (b?.id === "coop-pick") pickMission();
+    if (b?.id === "coop-copy") void copyCode();
   });
   el("coop-modes").addEventListener("change", (e) => {
     const value = (e.target as HTMLInputElement).value;
@@ -168,11 +252,15 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
   });
   el("coop-join-form").addEventListener("submit", (e) => {
     e.preventDefault();
-    const code = (el("coop-code") as HTMLInputElement).value.trim().toUpperCase();
-    if (/^[A-Z]{4}$/.test(code)) connect({ type: "join", code });
+    const input = el<HTMLInputElement>("coop-code"),
+      code = normalizeRoomCode(input.value);
+    input.value = code;
+    if (isRoomCode(code)) connect({ type: "join", code });
     else {
-      status = "The room code has four letters.";
+      error = "The room code has four letters.";
+      status = "";
       render();
+      input.focus();
     }
   });
   return {
