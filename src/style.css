@@ -1696,6 +1696,35 @@ dialog::backdrop {
   }
 }
 
+/* Phones play in landscape: in portrait the game view asks to rotate (menus stay usable). */
+.rotate-hint {
+  display: none;
+}
+@media (orientation: portrait) and (pointer: coarse) and (max-width: 600px) {
+  :root[data-view="game"] .rotate-hint {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 24px;
+    text-align: center;
+    background: #05070f;
+    color: var(--muted);
+    font: 15px var(--mono);
+  }
+  :root[data-view="game"] .rotate-hint span {
+    font-size: 54px;
+    color: var(--mint);
+    transform: rotate(90deg);
+  }
+  :root[data-view="game"] body {
+    overflow: hidden;
+  }
+}
 /* Immersive mode (no Fullscreen API, e.g. iPhone): same layout, no pull-to-refresh. */
 :root.is-immersive body {
   overscroll-behavior: none;
@@ -1710,31 +1739,74 @@ dialog::backdrop {
     padding: max(6px, env(safe-area-inset-top)) 8px max(4px, env(safe-area-inset-bottom));
   }
   :root.is-fullscreen .workspace {
-    grid-template-columns: minmax(0, 1fr) clamp(180px, 30vw, 250px);
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) clamp(150px, 22vw, 200px);
+    gap: 6px;
   }
   :root.is-fullscreen .sidebar {
     display: block;
   }
-  :root.is-fullscreen .section-title {
-    margin-bottom: 6px;
+  /* The category tabs label the list; the "Towers" heading only costs height. */
+  :root.is-fullscreen .towers-title {
+    display: none;
+  }
+  :root.is-fullscreen .tower-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px;
+    margin-bottom: 5px;
+  }
+  :root.is-fullscreen .tower-tab {
+    padding: 4px 3px;
+    font-size: 10px;
+  }
+  :root.is-fullscreen .tower-tab small {
+    display: none;
   }
   :root.is-fullscreen .tower-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px;
+    gap: 3px;
   }
   :root.is-fullscreen .tower-card {
-    gap: 2px;
-    padding: 5px 5px 4px;
+    gap: 1px;
+    padding: 4px 4px 3px;
   }
   :root.is-fullscreen .tower-symbol {
-    font-size: 16px;
-  }
-  :root.is-fullscreen .tower-name {
     font-size: 14px;
   }
+  :root.is-fullscreen .tower-name {
+    font-size: 12px;
+  }
+  :root.is-fullscreen .tower-cost {
+    justify-content: center;
+  }
   :root.is-fullscreen .tower-cost b {
-    font-size: 11px;
+    font-size: 10px;
+  }
+  /* A selected tower or enemy: its upgrades or details replace the tower list. */
+  :root.is-fullscreen .sidebar.inspecting .tower-menu {
+    display: none;
+  }
+  :root.is-fullscreen .sidebar.inspecting .selection {
+    margin-top: 0;
+    padding-top: 2px;
+    border-top: 0;
+  }
+  :root.is-fullscreen .selection-heading {
+    margin-bottom: 8px;
+    font-size: 9px;
+  }
+  :root.is-fullscreen .selection > p {
+    margin-bottom: 8px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  :root.is-fullscreen .tower-stats {
+    margin-bottom: 8px;
+  }
+  :root.is-fullscreen .tower-stats strong {
+    font-size: 13px;
+  }
+  :root.is-fullscreen .tower-stats span {
+    font-size: 10px;
   }
   :root.is-fullscreen .tower-cost kbd {
     display: none;

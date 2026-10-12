@@ -11,6 +11,10 @@
 /** Keyboard Lock API (Chromium); not yet part of the TypeScript DOM types. */
 type KeyboardLock = { lock?: (keys: string[]) => Promise<void>; unlock?: () => void };
 const keyboard = () => (navigator as Navigator & { keyboard?: KeyboardLock }).keyboard;
+/** Screen Orientation lock; only granted in native full screen (Android), missing from the TypeScript DOM types. */
+type OrientationLock = { lock?: (orientation: "landscape") => Promise<void>; unlock?: () => void };
+const orientation = () => (screen as Screen & { orientation?: OrientationLock }).orientation;
+const isPhone = () => matchMedia("(pointer: coarse)").matches;
 export function bindFullscreen(onChange: () => void) {
   const root = document.documentElement,
     button = document.getElementById("fullscreen-btn") as HTMLButtonElement;
@@ -21,8 +25,14 @@ export function bindFullscreen(onChange: () => void) {
     const on = isActive();
     // A short Esc then reaches the game (cancel build mode); holding Esc still
     // leaves full screen. Browsers without Keyboard Lock exit on the first Esc.
-    if (document.fullscreenElement) keyboard()?.lock?.(["Escape"]).catch(() => {});
-    else keyboard()?.unlock?.();
+    if (document.fullscreenElement) {
+      keyboard()?.lock?.(["Escape"]).catch(() => {});
+      // Phones play in landscape; elsewhere a rotate hint in the game view asks for it (style.css).
+      if (isPhone()) orientation()?.lock?.("landscape").catch(() => {});
+    } else {
+      keyboard()?.unlock?.();
+      orientation()?.unlock?.();
+    }
     root.classList.toggle("is-fullscreen", on);
     root.classList.toggle("is-immersive", immersive);
     if (immersive) window.scrollTo(0, 0);

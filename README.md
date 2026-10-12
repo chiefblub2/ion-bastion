@@ -58,7 +58,7 @@ Every sector has its own terrain. In the Circuit (bottom right) there is no reac
 | Right click, `Esc` or ✕ | Cancel build mode and selection. Without a selection, `Esc` leaves fullscreen. |
 | `N` | Start the next wave (in versus: "Ready"). From wave 2 on it also starts by itself 10 s after the previous one ends. |
 | Space | Pause, only during a wave or the countdown and not in versus |
-| `F` or ⛶ | Fullscreen. On phones it also works without browser support (iPhone) and fits board and towers side by side in landscape; "Add to Home Screen" launches the game without browser bars. |
+| `F` or ⛶ | Fullscreen. On phones it also works without browser support (iPhone) and fits board and towers side by side; phones play in landscape only, and a selected tower shows its upgrades in place of the tower list; "Add to Home Screen" launches the game without browser bars. |
 | Arrow keys + Enter | Keyboard control on the focused battlefield |
 
 Switching tabs pauses a solo game automatically. Audio is optional and off by default.
