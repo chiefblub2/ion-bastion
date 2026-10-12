@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import { isCircleSector, missionNumber } from "../content/missions";
-import { atlasPick, atlasSectors } from "./sector-atlas";
+import { atlasPick, atlasSectors, atlasStep } from "./sector-atlas";
 const { missions, sectors = [] } = DEFAULT_CONTENT;
 describe("sector atlas", () => {
   const campaign = atlasSectors(DEFAULT_CONTENT, false),
@@ -27,5 +27,11 @@ describe("sector atlas", () => {
     expect(atlasPick(list, list[3].id, list[1].id)).toBe(list[3]);
     expect(atlasPick(list, "elsewhere", list[1].id)).toBe(list[1]);
     expect(atlasPick(list, undefined, "elsewhere")).toBe(list[0]);
+  });
+  it("steps through a sector's missions and wraps around", () => {
+    const list = sectors[0].missions;
+    expect(atlasStep(list, list[1].id, 1)).toBe(list[2]);
+    expect(atlasStep(list, list[0].id, -1)).toBe(list[list.length - 1]);
+    expect(atlasStep(list, list[list.length - 1].id, 1)).toBe(list[0]);
   });
 });

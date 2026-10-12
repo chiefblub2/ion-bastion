@@ -5,7 +5,7 @@ import { hasPage, hotkeyTowers, isPaged, pageOf, towerOrder } from "../ui/tower-
 import { isSupport } from "../systems/attacks";
 import type { MatchCommand } from "../core/match";
 import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderMission, renderTowerCodexPage, TOWER_KEYS } from "../ui/interface";
-import { type AtlasOptions, renderAtlas, selectMission as featureMission, selectSector, stepRail, syncRailSteps } from "../ui/sector-atlas";
+import { type AtlasOptions, renderAtlas, selectMission as featureMission, selectSector, stepMission, stepRail, syncRailSteps } from "../ui/sector-atlas";
 import { terrainImage } from "../render/terrain-snapshot";
 import { describeResult } from "../ui/messages";
 import { playerName } from "../ui/players";
@@ -322,6 +322,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     if (!b) return;
     if (b.dataset.back !== undefined) return screens.back();
     if (b.dataset.railStep) return stepRail(Number(b.dataset.railStep));
+    if (b.dataset.missionStep) return stepMission(game, Number(b.dataset.missionStep), atlas());
     if (b.dataset.tower) return choose(b.dataset.tower as TowerId);
     if (b.dataset.mission) return selectMission(b.dataset.mission);
     if (b.dataset.pick) return pickMission(b.dataset.pick);

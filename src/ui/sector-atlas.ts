@@ -56,6 +56,11 @@ export function atlasSectors(content: ContentPack, circle: boolean, currentId?: 
 export function atlasPick(missions: readonly MissionDefinition[], pickedId?: string, currentId?: string) {
   return missions.find((m) => m.id === pickedId) ?? missions.find((m) => m.id === currentId) ?? missions[0];
 }
+/** The mission `direction` steps away from `id` within a sector, wrapping around at both ends. */
+export function atlasStep(missions: readonly MissionDefinition[], id: string, direction: number) {
+  const at = Math.max(0, missions.findIndex((m) => m.id === id));
+  return missions[(((at + direction) % missions.length) + missions.length) % missions.length];
+}
 /** Renders a map's terrain to an image URL (`render/terrain-snapshot.ts`); the SVG stays where it fails. */
 export type MapImage = (map: MapDefinition) => Promise<string>;
 export interface AtlasOptions {
@@ -130,6 +135,20 @@ export function selectMission(game: Game, id: string, options: AtlasOptions) {
   const node = document.querySelector<HTMLElement>(`#mission-list [data-pick="${id}"]`);
   if (node) centreInRail($("mission-list"), node);
   renderFeatured(game, m, options);
+  syncCount(id);
+}
+/** Features the previous or next mission of the shown sector (the arrows on the preview). */
+export function stepMission(game: Game, direction: number, options: AtlasOptions) {
+  const nodes = [...document.querySelectorAll<HTMLElement>("#mission-list [data-pick]")],
+    shown = nodes.map((node) => game.content.missions.find((m) => m.id === node.dataset.pick)!),
+    pressed = nodes.find((node) => node.getAttribute("aria-pressed") === "true")?.dataset.pick ?? "";
+  if (shown.length) selectMission(game, atlasStep(shown, pressed, direction).id, options);
+}
+/** The "2 / 5" counter between the preview's arrows; they hide when there is nothing to step to. */
+function syncCount(id: string) {
+  const ids = [...document.querySelectorAll<HTMLElement>("#mission-list [data-pick]")].map((node) => node.dataset.pick);
+  $("preview-steps").hidden = ids.length < 2;
+  $("preview-count").textContent = `${ids.indexOf(id) + 1} / ${ids.length}`;
 }
 /** Header, mode toggle and the gallery of one mode. */
 function renderModes(game: Game, circle: boolean, { lobby, image }: AtlasOptions) {
@@ -172,13 +191,17 @@ function renderModes(game: Game, circle: boolean, { lobby, image }: AtlasOptions
     // Requested after the featured map, so the large preview comes first.
     if (rail.dataset.covers) return;
     rail.dataset.covers = "1";
-    for (const img of rail.querySelectorAll<HTMLImageElement>("img[data-map]")) {
-      const map = content.missions.find((m) => m.map.id === img.dataset.map)!.map;
-      fillImage(img, map, image);
-    }
+    fillImages(rail, content, image);
   };
 }
 let coverImages = () => {};
+/** Fills every not yet requested map picture (`img[data-map]`) inside `root`. */
+function fillImages(root: HTMLElement, content: ContentPack, image: MapImage) {
+  for (const img of root.querySelectorAll<HTMLImageElement>("img[data-map]:not([data-filling])")) {
+    img.dataset.filling = "";
+    fillImage(img, content.missions.find((m) => m.map.id === img.dataset.map)!.map, image);
+  }
+}
 /** Marks the sector's card, fills the mission rail and features a mission. */
 function showSector(game: Game, sector: MissionSector | undefined, options: AtlasOptions, pickedId: string | undefined, smooth: boolean) {
   const { missions } = game.content,
@@ -196,11 +219,12 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
   if (!rail.querySelector('[tabindex="0"]')) rail.querySelector<HTMLElement>("[data-sector]")?.setAttribute("tabindex", "0");
   const list = $("mission-list");
   list.setAttribute("aria-label", sector ? `Missions of sector ${roman(sectors.indexOf(sector))}, ${sector.name}` : "Missions");
+  $("missions-label").innerHTML = `Missions${sector ? ` <span aria-hidden="true">·</span> Sector ${roman(sectors.indexOf(sector))}` : ""} <small>${shown.length}</small>`;
   list.innerHTML = shown
     .map((m) => {
       const n = missionNumber(m, missions),
         loaded = m.id === game.mission.id;
-      return `<button class="mission-node" data-pick="${m.id}" aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""} title="${escape(m.focus)}"><span class="node-dot" aria-hidden="true"></span><span class="node-number">${pad(n)}</span><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (current)</span>' : ""}</span></button>`;
+      return `<button class="mission-node" data-pick="${m.id}" aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""} title="${escape(m.focus)}"><span class="node-thumb" aria-hidden="true">${mapPreviewSvg(m.map).replace("<svg ", `<svg preserveAspectRatio="xMidYMid slice" `)}<img alt="" data-map="${m.map.id}"></span><span class="node-copy"><span class="node-number">${pad(n)}</span><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (current)</span>' : ""}</span><small class="node-meta">${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}</small></span></button>`;
     })
     .join("");
   // Restarts the entry animation of the rail.
@@ -211,6 +235,7 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
   const node = list.querySelector<HTMLElement>('[aria-pressed="true"]');
   if (node) centreInRail(list, node, false);
   renderFeatured(game, picked, options);
+  if (picked) syncCount(picked.id);
   requestAnimationFrame(syncRailSteps);
 }
 /** The large battlefield preview and the briefing beside it. */
@@ -254,8 +279,12 @@ export function renderFeatured(game: Game, m: MissionDefinition | undefined, { l
     fillImage(img, m.map, image, () => {
       layer.classList.remove("is-loading");
       coverImages();
+      fillImages($("mission-list"), content, image);
     });
-  } else coverImages();
+  } else {
+    coverImages();
+    fillImages($("mission-list"), content, image);
+  }
   // Briefing.
   const s = game.state,
     loaded = m.id === game.mission.id,

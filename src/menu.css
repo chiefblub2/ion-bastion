@@ -1243,16 +1243,52 @@
 .start-screen .atlas-start:focus-visible {
   outline-offset: -5px;
 }
-/* Mission rail: numbered nodes on one connected line. */
+/* Mission rail: a labelled strip of mission cards, each with its battlefield as a thumbnail. */
 .atlas-missions {
   grid-area: missions;
   min-width: 0;
 }
+.missions-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+.missions-head h2 {
+  margin: 0;
+  font: 600 12px var(--mono);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--mode);
+}
+.missions-head h2 span {
+  color: var(--muted);
+}
+.missions-head h2 small {
+  margin-left: 6px;
+  padding: 1px 7px;
+  font: inherit;
+  letter-spacing: 0.08em;
+  color: var(--m-bg);
+  background: var(--mode);
+  border-radius: 999px;
+}
+.missions-hint {
+  margin: 0;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 .mission-rail {
   position: relative;
   display: flex;
+  gap: 12px;
+  padding: 2px 2px 4px;
   overflow-x: auto;
   scroll-snap-type: x proximity;
+  scroll-padding-inline: 2px;
   scrollbar-width: none;
 }
 .mission-rail::-webkit-scrollbar {
@@ -1260,50 +1296,72 @@
 }
 .start-screen .mission-node {
   position: relative;
-  flex: 1 0 170px;
-  max-width: 300px;
+  flex: 1 1 0;
+  min-width: 200px;
   display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-height: 66px;
-  padding: 26px 18px 10px 2px;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 12px 7px 7px;
+  overflow: hidden;
   text-align: left;
   color: var(--m-text-2);
-  background: none;
-  border: 0;
-  border-radius: 0 0 8px 8px;
+  background: color-mix(in srgb, var(--m-surface) 78%, transparent);
+  border: 1px solid #ffffff1f;
+  border-radius: 10px;
   scroll-snap-align: start;
-}
-.mission-node::before {
-  content: "";
-  position: absolute;
-  top: 9px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #ffffff1a;
-}
-.mission-node:first-child::before {
-  left: 6px;
-}
-.mission-node:last-child::before {
-  right: auto;
-  width: 0;
-}
-.node-dot {
-  position: absolute;
-  top: 3px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--m-bg);
-  border: 2px solid #ffffff4d;
   transition:
     transform var(--m-speed) ease-out,
     background var(--m-speed),
     border-color var(--m-speed),
-    box-shadow var(--m-speed);
+    box-shadow var(--m-speed),
+    color var(--m-speed);
+}
+/* The selected card's accent bar along the bottom edge. */
+.mission-node::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--mode);
+  transform: scaleX(0);
+  transition: transform var(--m-speed) ease-out;
+}
+.node-thumb {
+  position: relative;
+  flex: 0 0 auto;
+  width: 84px;
+  aspect-ratio: 7 / 5;
+  overflow: hidden;
+  background: #03050b;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #ffffff14;
+}
+.node-thumb :is(svg, img) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.6) brightness(0.75);
+  transition: filter var(--m-speed);
+}
+.node-thumb img {
+  opacity: 0;
+  transition:
+    opacity 300ms ease-out,
+    filter var(--m-speed);
+}
+.node-thumb img.is-ready {
+  opacity: 1;
+}
+.node-copy {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 2px 8px;
 }
 .node-number {
   font: 700 22px / 1 "Rajdhani", sans-serif;
@@ -1318,35 +1376,117 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.mission-node[aria-current="true"] .node-number::after {
-  content: "NOW";
-  margin-left: 6px;
-  font: 600 10px var(--mono);
-  letter-spacing: 0.1em;
+.node-meta {
+  grid-column: 2;
+  white-space: nowrap;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.mission-node[aria-current="true"] .node-meta::after {
+  content: " · NOW";
   color: var(--m-warn);
-  vertical-align: 3px;
 }
-.mission-node:hover {
+.start-screen .mission-node:hover {
   color: var(--m-text);
+  background: var(--m-hover);
+  border-color: color-mix(in srgb, var(--mode) 50%, transparent);
+  transform: translateY(-2px);
 }
-.mission-node:hover .node-dot {
-  border-color: var(--mode);
+.mission-node:hover .node-thumb :is(svg, img) {
+  filter: none;
 }
-.mission-node[aria-pressed="true"] {
+.start-screen .mission-node[aria-pressed="true"] {
   color: var(--m-text);
-  background: linear-gradient(180deg, transparent 18px, color-mix(in srgb, var(--mode) 11%, transparent));
-}
-.mission-node[aria-pressed="true"] .node-dot {
-  background: var(--mode);
+  background: color-mix(in srgb, var(--mode) 12%, var(--m-surface));
   border-color: var(--mode);
-  box-shadow: 0 0 12px var(--mode);
-  transform: scale(1.25);
+  box-shadow: 0 0 22px -8px var(--mode);
+}
+.mission-node[aria-pressed="true"]::after {
+  transform: scaleX(1);
+}
+.mission-node[aria-pressed="true"] .node-thumb :is(svg, img) {
+  filter: none;
 }
 .mission-node[aria-pressed="true"] .node-number {
   color: var(--mode);
 }
 .start-screen .mission-node:focus-visible {
-  outline-offset: -2px;
+  outline-offset: 2px;
+}
+/* Narrower screens: the thumbnail goes on top, so the name gets the card's whole width. */
+@media (max-width: 1399px) {
+  .start-screen .mission-node {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    min-width: 160px;
+    padding: 6px 6px 9px;
+  }
+  .node-thumb {
+    width: 100%;
+    aspect-ratio: 5 / 2;
+  }
+  .node-copy {
+    padding: 0 4px;
+  }
+}
+@media (max-width: 699px) {
+  .start-screen .mission-node {
+    flex: 0 0 46%;
+    min-width: 0;
+  }
+  .missions-hint {
+    display: none;
+  }
+}
+/* Arrows and a counter on the preview step through the sector's missions. */
+.atlas-preview:has(.preview-steps:not([hidden])) .preview-caption {
+  right: calc(var(--side) + 150px);
+}
+.preview-steps {
+  position: absolute;
+  top: 14px;
+  right: var(--side);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px;
+  background: color-mix(in srgb, var(--m-bg) 70%, transparent);
+  border: 1px solid #ffffff1a;
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+}
+.preview-steps[hidden] {
+  display: none;
+}
+.start-screen .preview-step {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--m-text);
+  background: color-mix(in srgb, var(--m-surface) 80%, transparent);
+  border: 1px solid #ffffff14;
+  border-radius: 7px;
+}
+.start-screen .preview-step:hover {
+  background: var(--m-hover);
+  border-color: color-mix(in srgb, var(--mode) 60%, transparent);
+}
+.start-screen .preview-step:active {
+  transform: scale(0.94);
+}
+.preview-count {
+  min-width: 48px;
+  font: 600 13px var(--mono);
+  letter-spacing: 0.12em;
+  text-align: center;
+  color: var(--m-text);
 }
 /* Entry: the briefing and the rail rise in quickly after a change. */
 .brief-body.is-entering > *,
@@ -1455,11 +1595,6 @@
     bottom: 10px;
     font-size: 11px;
   }
-  .start-screen .mission-node {
-    flex: 0 0 auto;
-    max-width: 70vw;
-    min-height: 60px;
-  }
   /* The Start button belongs to the page here, so it can stay at the bottom of the screen while scrolling. */
   .atlas-brief {
     display: contents;
@@ -1488,7 +1623,8 @@
   .sector-card::before,
   .preview-layer,
   .preview-layer img,
-  .node-dot,
+  .start-screen .mission-node,
+  .mission-node::after,
   .brief-intel summary::before {
     transition: none;
   }
@@ -1501,6 +1637,9 @@
   .mission-rail.is-entering .mission-node,
   .preview-layer.is-loading::after {
     animation: none;
+  }
+  .start-screen .mission-node:hover {
+    transform: none;
   }
 }
 /* Multiplayer ------------------------------------------------------------------------------------------------ */
