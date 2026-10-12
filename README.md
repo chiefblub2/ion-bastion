@@ -101,7 +101,7 @@ In all modes the host decides mission, restart and speed. Dialogs and tab switch
 
 - **"No relay reachable …":** `npm run server` is not running, or a firewall blocks port 4174.
 - **Relay on another machine or port:** `http://<IP>:4173/?server=ws://<relay-IP>:4174`. Without this, the game connects to port 4174 on the machine that serves the page.
-- **Hosted version** (`https://chiefblub2.github.io/ion-bastion/`, deployed by `.github/workflows/pages.yml` on every push to `main`): GitHub Pages cannot run the relay, so solo works out of the box and multiplayer needs a relay reachable over TLS, either per link (`?server=wss://<relay-host>`) or built in through the repository variable `RELAY_URL`.
+- **Hosted version** (`https://chiefblub2.github.io/ion-bastion/`, deployed by `.github/workflows/pages.yml` on every push to `main`): GitHub Pages cannot run the relay, so solo works out of the box and multiplayer needs a relay reachable over TLS, either per link (`?server=wss://<relay-host>`) or built in through the repository variable `RELAY_URL`. Without either, the Multiplayer page there explains this (the build sets `VITE_STATIC_HOST`).
 - **"The room is full …":** A room has four seats. Nobody can join after the mission has started.
 - **A player leaves the room:**
   - The game stops and the remaining players move up. If the host leaves, the next player becomes host and can relaunch.

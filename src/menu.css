@@ -206,6 +206,20 @@
 .notice:empty {
   display: none;
 }
+.notice-warn {
+  border-color: var(--m-warn);
+  box-shadow: -4px 0 12px -6px var(--m-warn);
+  background: color-mix(in srgb, var(--m-warn) 8%, var(--m-bg));
+  line-height: 1.5;
+}
+.notice-warn strong {
+  display: block;
+  color: var(--m-warn);
+}
+.notice-warn code {
+  color: var(--m-accent);
+  white-space: nowrap;
+}
 .notice-error {
   border-color: var(--m-danger);
   background: color-mix(in srgb, var(--m-danger) 10%, var(--m-bg));

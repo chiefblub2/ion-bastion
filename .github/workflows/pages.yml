@@ -29,6 +29,7 @@ jobs:
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
           VITE_RELAY_URL: ${{ vars.RELAY_URL }}
+          VITE_STATIC_HOST: github-pages
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

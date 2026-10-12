@@ -2,7 +2,7 @@ import type { Game } from "../core/game";
 import { Match, type MatchCommand } from "../core/match";
 import { fitsMode, isModeId, MODES, type ModeId } from "../core/modes";
 import { coopSim, LockstepDriver, type Applied } from "../net/lockstep";
-import { RelayClient, relayUrl } from "../net/client";
+import { RelayClient, relayMissing, relayUrl } from "../net/client";
 import { MAX_PLAYERS, type ServerMessage, type Speed } from "../net/protocol";
 import { copyText, isRoomCode, normalizeRoomCode } from "./room-code";
 import type { Driver, ViewState } from "../render/scene";
@@ -46,6 +46,7 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
     "Circuit: enemies circle until they fall. Waves come on a timer; calling one early earns credits. If you exceed the limit together, the mission is lost. Race and Siege are not available here.";
   const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   ui.session = () => session;
+  el("coop-hosting").hidden = !relayMissing();
   function render() {
     const connecting = !!client && !room,
       view = room ? "room" : panel,
