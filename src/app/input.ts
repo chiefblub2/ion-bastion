@@ -133,7 +133,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
         inProgress: inProgress(),
         multiplayer: coop.active(),
       });
-      renderMenu(game, primary);
+      renderMenu(game, primary, terrainImage);
     }
     if (to.page !== "missions") forRoom = false;
     if (to.page === "missions") {
@@ -299,6 +299,12 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       showSector(Number(buttons[(next + buttons.length) % buttons.length].dataset.sector), bar);
     });
   }
+  /** The coverage overlay: every tower's range and how well each path cell is covered. */
+  function toggleCoverage() {
+    view.coverage = !view.coverage;
+    document.getElementById("coverage-btn")!.setAttribute("aria-pressed", String(view.coverage));
+    ui.notice(view.coverage ? "Ranges shown. Red path: no tower reaches ground units there." : "Ranges hidden.");
+  }
   const fullscreen = () =>
     toggleFullscreen().catch(() => ui.notice("Fullscreen is not available in this browser.", true));
   const pauseIfRunning = () => {
@@ -344,6 +350,9 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
         break;
       case "fullscreen-btn":
         fullscreen();
+        break;
+      case "coverage-btn":
+        toggleCoverage();
         break;
       case "speed-btn":
         if (!coop.active()) {
@@ -457,6 +466,10 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     }
     if (e.key.toLowerCase() === "n") {
       execute({ type: "start" });
+      return;
+    }
+    if (e.key.toLowerCase() === "c") {
+      toggleCoverage();
       return;
     }
     if (e.key.toLowerCase() === "t") {

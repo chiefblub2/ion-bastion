@@ -6,6 +6,8 @@ export const DEPTH = {
   /** Ground, path, obstacles and the map's labels (`drawTerrain`). */
   terrain: 0,
   ambient: 1,
+  /** Build-mode cell hints and the coverage overlay, above the ground and below the towers. */
+  hints: 1.5,
   /** `towerInk`, then its additive `towerGlow`. */
   towers: 2,
   enemyUnderlay: 3,

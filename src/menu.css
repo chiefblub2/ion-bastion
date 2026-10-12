@@ -474,6 +474,19 @@
   background: repeating-linear-gradient(180deg, #05070f33 0 1px, transparent 1px 3px);
   pointer-events: none;
 }
+/* The rendered terrain over the SVG placeholder, letterboxed the same way. */
+.home-map-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+}
+.home-map-img.is-ready {
+  opacity: 1;
+}
 .home-map-view .map-preview {
   border: 0;
   border-radius: 0;

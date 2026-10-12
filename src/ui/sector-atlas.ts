@@ -68,7 +68,7 @@ const intelOpen = () => matchMedia("(min-width: 1100px) and (min-height: 700px)"
 const motion = () => !matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $ = (id: string) => document.getElementById(id)!;
 /** Sets an <img> once the terrain picture is ready; it fades in over the SVG placeholder. */
-function fillImage(img: HTMLImageElement, map: MapDefinition, image: MapImage, ready?: () => void) {
+export function fillImage(img: HTMLImageElement, map: MapDefinition, image: MapImage, ready?: () => void) {
   image(map).then(
     (url) => {
       img.onload = () => {

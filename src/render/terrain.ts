@@ -1,6 +1,10 @@
 import type Phaser from "phaser";
 import type { MapDefinition, MapTheme, Point } from "../core/types";
-import { CELL, polygon, px, shade, type Ink } from "./shapes";
+import { CELL, disc, hash01, polygon, px, shade, type Ink } from "./shapes";
+import { drawBoardLight, drawGround, GROUND_FAMILY, groundRandom } from "./ground";
+import { landmarkAt, landmarkSpots } from "./landmarks";
+import { contactShadow, drawLandmark, landmarkLight } from "./landmark-art";
+import { fnv } from "../core/hash";
 type Random = () => number;
 /** Draws into one cell, given by its top-left pixel corner. */
 type CellDrawing = (g: Ink, x: number, y: number, rand: Random) => void;
@@ -1838,51 +1842,102 @@ function drawReactor(g: Phaser.GameObjects.Graphics, end: Point, accent: number,
   polygon(g, end.x, end.y, 13, 6, accent, Math.PI / 6);
   polygon(g, end.x, end.y, 7, 6, shade(accent, -0.65), Math.PI / 6);
 }
-/** Static terrain, drawn once per mission. */
-export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: (x: number, y: number) => boolean) {
-  const g = scene.add.graphics(),
+/** A polyline moved sideways by `d` pixels (positive to the right of travel), with mitred corners. */
+function offsetPath(path: readonly Point[], d: number) {
+  const normal = (a: Point, b: Point) => {
+    const l = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    return { x: -(b.y - a.y) / l, y: (b.x - a.x) / l };
+  };
+  return path.map((p, i) => {
+    const n0 = i > 0 ? normal(path[i - 1], p) : normal(p, path[i + 1]),
+      n1 = i < path.length - 1 ? normal(p, path[i + 1]) : n0,
+      n = { x: n0.x + n1.x, y: n0.y + n1.y },
+      k = d / Math.max(0.5, n.x * n0.x + n.y * n0.y);
+    return { x: p.x + n.x * k, y: p.y + n.y * k };
+  });
+}
+const shifted = (path: readonly Point[], dx: number, dy: number) => path.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+/**
+ * Static terrain, drawn once per mission: ground (`ground.ts`), decor, obstacles and landmarks, the path, entry and
+ * reactor, the board light and the labels. Returns the objects it added; the battlefield bakes them into one texture.
+ */
+export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: (x: number, y: number) => boolean): Phaser.GameObjects.GameObject[] {
+  const first = scene.children.length,
     theme = themeOf(map),
-    onPath = new Set(map.path.map((p) => `${p.x},${p.y}`));
-  g.fillStyle(theme.backdrop);
-  g.fillRect(0, 0, CELL * map.columns, CELL * map.rows);
-  for (let y = 0; y < map.rows; y++)
-    for (let x = 0; x < map.columns; x++) {
-      g.fillStyle(theme.ground[(x + y) % 2]);
-      g.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
-      g.fillStyle(theme.grid, 0.65);
-      g.fillCircle(x * CELL, y * CELL, 1);
-    }
-  // Decoration before obstacles, so rock and crystal shadows sit on top of it.
+    onPath = new Set(map.path.map((p) => `${p.x},${p.y}`)),
+    family = GROUND_FAMILY[map.theme ?? "outpost"],
+    spots = landmarks(map);
+  drawGround(scene.add.graphics(), map, theme, isBlocked, (x, y) => onPath.has(`${x},${y}`));
+  // Decor is background: drawn quieter than the ground pads, before obstacles so their shadows sit on top of it.
+  const decor = scene.add.graphics().setAlpha(0.7);
   for (let y = 0; y < map.rows; y++)
     for (let x = 0; x < map.columns; x++) {
       if (onPath.has(`${x},${y}`) || isBlocked(x, y)) continue;
       const rand = cellRandom(map, x, y);
-      if (rand() < 0.25) theme.decor(g, x * CELL, y * CELL, rand);
+      if (rand() < 0.25) theme.decor(decor, x * CELL, y * CELL, rand);
     }
+  const g = scene.add.graphics();
+  // One light for every theme: a soft shadow to the lower right under each obstacle, then the theme's own drawing.
   for (let y = 0; y < map.rows; y++)
-    for (let x = 0; x < map.columns; x++) if (isBlocked(x, y)) theme.obstacle(g, x * CELL, y * CELL, cellRandom(map, x, y));
-  const path = pixelPath(map);
+    for (let x = 0; x < map.columns; x++) if (isBlocked(x, y) && !landmarkAt(spots, x, y)) contactShadow(g, px(x), px(y), CELL * 0.46, CELL * 0.38);
+  for (let y = 0; y < map.rows; y++)
+    for (let x = 0; x < map.columns; x++) if (isBlocked(x, y) && !landmarkAt(spots, x, y)) theme.obstacle(g, x * CELL, y * CELL, cellRandom(map, x, y));
+  for (const spot of spots) drawLandmark(g, spot, family, theme, groundRandom(map, "landmark", spot.x, spot.y));
+  const path = pixelPath(map),
+    bed = theme.path.bed;
+  // The road sits in the ground: a cast shadow, a lit and a shaded lip, a sunken bed with its inner shadow.
   g.lineStyle(54, theme.path.line, 0.06);
   g.strokePoints(path, false);
+  g.lineStyle(46, 0x000000, 0.35);
+  g.strokePoints(shifted(path, 3, 4), false);
+  g.lineStyle(42, shade(theme.path.edge, -0.4));
+  g.strokePoints(shifted(path, 1.5, 1.5), false);
+  g.lineStyle(42, shade(theme.path.edge, 0.2));
+  g.strokePoints(shifted(path, -1, -1), false);
   g.lineStyle(42, theme.path.edge);
   g.strokePoints(path, false);
-  g.lineStyle(38, theme.path.bed);
+  g.lineStyle(38, shade(bed, -0.3));
   g.strokePoints(path, false);
-  g.lineStyle(20, shade(theme.path.bed, 0.06));
+  g.lineStyle(35, bed);
+  g.strokePoints(shifted(path, 1.2, 1.5), false);
+  g.lineStyle(20, shade(bed, 0.06));
   g.strokePoints(path, false);
+  // Worn lanes either side of the centre.
+  for (const side of [-9, 9]) {
+    g.lineStyle(3, shade(bed, -0.12), 0.55);
+    g.strokePoints(offsetPath(path, side), false);
+  }
+  // Grit along the bed: pebbles and specks, seeded per map so they never move.
+  const grit = fnv(`${map.id}:grit`);
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = path[i],
+      b = path[i + 1],
+      l = Math.hypot(b.x - a.x, b.y - a.y),
+      nx = -(b.y - a.y) / l,
+      ny = (b.x - a.x) / l;
+    for (let d = 0; d < l; d += 6) {
+      const h = hash01(grit, i, d),
+        side = (hash01(grit, d, i) - 0.5) * 30,
+        x = a.x + ((b.x - a.x) * d) / l + nx * side,
+        y = a.y + ((b.y - a.y) * d) / l + ny * side;
+      if (h < 0.5) disc(g, x, y, 0.8 + h * 1.6, shade(bed, h < 0.25 ? -0.18 : 0.1), 0.55);
+    }
+  }
   g.lineStyle(2, theme.path.line, 0.4);
   g.strokePoints(path, false);
   for (let i = 2; i < path.length - 1; i += 3) {
     const p = path[i],
       n = path[i + 1],
       a = Math.atan2(n.y - p.y, n.x - p.x);
-    g.lineStyle(2, theme.path.arrow, 0.55);
+    g.lineStyle(2, theme.path.arrow, 0.45);
     for (const sign of [-1, 1])
       g.lineBetween(p.x, p.y, p.x - Math.cos(a + sign * 0.65) * 7, p.y - Math.sin(a + sign * 0.65) * 7);
   }
   const start = path[0],
     end = path[path.length - 1],
     accent = theme.accent;
+  contactShadow(g, start.x, start.y, 26, 22, 0.35);
+  if (!map.loop) contactShadow(g, end.x, end.y, 30, 26, 0.35);
   // A ring has no reactor; its entry portal glows in the accent colour instead.
   const portal = map.loop ? accent : 0xf0cf87;
   // Entry: amber in every theme, pointing along the path, inside a dashed ring.
@@ -1901,6 +1956,7 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
   g.strokeCircle(start.x, start.y, 18);
   polygon(g, start.x, start.y, 8, 3, portal, Math.atan2(path[1].y - start.y, path[1].x - start.x));
   if (!map.loop) drawReactor(g, end, accent, theme.backdrop);
+  drawBoardLight(scene.add.graphics(), map, theme, themeGlow(map));
   const label = (x: number, y: number, text: string, color: string) =>
     scene.add.text(x, y, text, {
       fontFamily: "monospace",
@@ -1933,9 +1989,19 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
   if (clear(0, false)) name.setPosition(20, 22);
   else if (clear(map.rows - 1, false)) name.setPosition(20, height - name.height - 22);
   else name.setPosition(width - name.width - 20, clear(0, true) ? 22 : height - name.height - 22);
+  return scene.children.list.slice(first);
+}
+/** Landmark spots per map, computed once (ambient asks every frame). */
+const LANDMARKS = new Map<string, ReturnType<typeof landmarkSpots>>();
+function landmarks(map: MapDefinition) {
+  let spots = LANDMARKS.get(map.id);
+  if (!spots) LANDMARKS.set(map.id, (spots = landmarkSpots(map)));
+  return spots;
 }
 /** Animated terrain details, redrawn every frame. */
 export function drawAmbient(g: Ink, map: MapDefinition, clock: number) {
+  const family = GROUND_FAMILY[map.theme ?? "outpost"];
+  for (const spot of landmarks(map)) landmarkLight(g, spot, family, themeOf(map).accent, clock);
   themeOf(map).ambient({
     g,
     map,

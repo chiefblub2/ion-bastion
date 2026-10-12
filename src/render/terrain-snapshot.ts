@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import type { MapDefinition } from "../core/types";
 import { CELL } from "./shapes";
-import { drawTerrain } from "./terrain";
+import { drawAmbient, drawTerrain } from "./terrain";
 /**
  * Battlefield pictures for the mission page: the real static terrain (`drawTerrain`) of a map, rendered once into an
  * image URL. One small canvas-renderer Phaser game, created on the first request and asleep between jobs, draws
@@ -45,6 +45,8 @@ async function render(map: MapDefinition) {
     game.scale.resize(width, height);
     scene.cameras.resize(width, height);
     drawTerrain(scene, map, (x, y) => blocked.has(`${x},${y}`));
+    // One still frame of the animated layer, so beacons, glows and landmark lights show too.
+    drawAmbient(scene.add.graphics(), map, 0);
     await new Promise((done) => game.events.once(Phaser.Core.Events.POST_RENDER, done));
     const blob = await new Promise<Blob | null>((done) => game.canvas.toBlob(done, "image/webp", 0.86));
     if (!blob) throw new Error(`No snapshot of map ${map.id}`);

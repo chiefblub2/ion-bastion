@@ -1,12 +1,12 @@
 import Phaser from "phaser";
 import { Game, FIXED_STEP, isRunning } from "../core/game";
 import { isFullyUpgraded, resolveUpgrades, towerColor, towerLevel, towerPath } from "../core/upgrades";
-import { attackModule } from "../systems/attacks";
+import { attackModule, isSupport } from "../systems/attacks";
 import { effectiveTowerStats, isInAura } from "../systems/auras";
 import { statusFlags } from "../systems/status";
 import { isHidden, traitFlags } from "../systems/traits";
 import { enemyAt } from "./pick";
-import type { GameEvent, GameState, Point, TowerId } from "../core/types";
+import type { GameEvent, GameState, Point, Tower, TowerId } from "../core/types";
 import { PLAYER_COLORS } from "../net/protocol";
 import { drawEffect, effectLifetime, INCOME_LIFETIME, isVisual, type EffectOrigin, type VisualEvent } from "./effects";
 import { DEPTH } from "./depths";
@@ -16,7 +16,8 @@ import { missionAnimationTypes } from "./enemy-animations";
 import { queueEnemyAnimations, queueEnemyArt, sceneSpriteHost } from "./enemy-art-scene";
 import { EnemyFeedback } from "./enemy-feedback";
 import { drawEnemyLayers, EnemySprites } from "./enemy-sprites";
-import { CELL, px, type Pen } from "./shapes";
+import { arcBand, CELL, disc, px, ring, type Pen } from "./shapes";
+import { pathCoverage, towerReach } from "./coverage";
 import { drawAmbient, drawTerrain, themeAccent, themeGlow } from "./terrain";
 import { drawTower } from "./towers";
 import { Trails } from "./trails";
@@ -34,6 +35,8 @@ export interface ViewState {
   player: number;
   /** Open tab of the build menu, an index into `TOWER_PAGES`. */
   page: number;
+  /** The coverage overlay (key C): every attack tower's range and how well each path cell is covered. */
+  coverage: boolean;
 }
 /** Advances the simulation once per render frame. */
 export interface Driver {
@@ -82,7 +85,21 @@ interface Effect {
   label?: Phaser.GameObjects.Text;
 }
 export class Battlefield extends Phaser.Scene {
+  /**
+   * The static terrain, baked once into a texture at the camera's zoom (re-baked when the zoom changes), so the
+   * richly drawn ground costs nothing per frame. `terrainParts` are the hidden source objects of `drawTerrain`.
+   */
+  private terrain?: Phaser.GameObjects.RenderTexture;
+  private terrainParts: Phaser.GameObjects.GameObject[] = [];
+  private terrainZoom = 0;
   private ambient!: Phaser.GameObjects.Graphics;
+  /** Build-mode cell hints and the coverage overlay. */
+  private hints!: Phaser.GameObjects.Graphics;
+  /** The tower about to be built, drawn faintly on the hovered cell. */
+  private ghost!: Phaser.GameObjects.Graphics;
+  /** Cells the armed tower may be built on, recomputed only when the towers, the status or the armed tower change. */
+  private buildCells: { key: string; cells: Point[] } = { key: "", cells: [] };
+  private still = matchMedia("(prefers-reduced-motion: reduce)");
   /** Towers and their light lie below the enemies, so units cover them and health bars are never lit. */
   private towerInk!: Phaser.GameObjects.Graphics;
   private towerGlow!: Phaser.GameObjects.Graphics;
@@ -153,13 +170,20 @@ export class Battlefield extends Phaser.Scene {
       this.observer = new ResizeObserver(() => this.fit());
       this.observer.observe(this.scale.parent);
     }
-    drawTerrain(this, this.sim.map, (x, y) => this.sim.isBlocked(x, y));
+    this.terrainParts = drawTerrain(this, this.sim.map, (x, y) => this.sim.isBlocked(x, y));
+    for (const part of this.terrainParts) (part as Phaser.GameObjects.Graphics).setVisible(false);
+    this.terrain = undefined;
+    this.terrainZoom = 0;
+    this.bakeTerrain();
     // Explicit depths (`DEPTH`), so sprites created mid-game sort between the enemy layers; equal depths keep creation order.
     this.ambient = this.add.graphics().setDepth(DEPTH.ambient);
     // Additive light is dimmed on light ground, so it never washes out.
     const glow = themeGlow(this.sim.map);
     this.towerInk = this.add.graphics().setDepth(DEPTH.towers);
     this.towerGlow = this.add.graphics().setDepth(DEPTH.towers).setBlendMode(Phaser.BlendModes.ADD).setAlpha(glow);
+    this.hints = this.add.graphics().setDepth(DEPTH.hints);
+    this.ghost = this.add.graphics().setDepth(DEPTH.towers).setAlpha(0.55);
+    this.buildCells = { key: "", cells: [] };
     this.enemyUnderlay = this.add.graphics().setDepth(DEPTH.enemyUnderlay);
     this.enemyBody = this.add.graphics().setDepth(DEPTH.enemyBody);
     this.enemyOverlay = this.add.graphics().setDepth(DEPTH.enemyOverlay);
@@ -218,6 +242,28 @@ export class Battlefield extends Phaser.Scene {
     this.cameras.main.setOrigin(0, 0).setSize(width, height).setZoom(width / worldWidth, height / worldHeight);
     this.textResolution = Math.max(1, zoom);
     this.sharpenText();
+    this.bakeTerrain();
+  }
+  /** Draws the terrain's source objects into a texture of the canvas's pixel size, shown at world size. */
+  private bakeTerrain() {
+    const camera = this.cameras.main,
+      zoom = Math.max(camera.zoomX, camera.zoomY),
+      width = this.sim.map.columns * CELL,
+      height = this.sim.map.rows * CELL;
+    if (!this.terrainParts.length || Math.abs(zoom - this.terrainZoom) < 0.01) return;
+    this.terrainZoom = zoom;
+    this.terrain?.destroy();
+    const texture = this.add
+      .renderTexture(0, 0, Math.ceil(width * zoom), Math.ceil(height * zoom))
+      .setOrigin(0, 0)
+      .setDepth(DEPTH.terrain);
+    texture.setDisplaySize(width, height);
+    texture.camera.setOrigin(0, 0).setZoom(zoom);
+    // The map labels are Text: render them at the texture's resolution too.
+    this.textResolution = Math.max(1, zoom);
+    this.sharpenText();
+    texture.draw(this.terrainParts);
+    this.terrain = texture;
   }
   private sharpenText() {
     for (const child of this.children.list)
@@ -319,6 +365,65 @@ export class Battlefield extends Phaser.Scene {
       .setScale(0.6 + 0.55 * pop - 0.15 * Math.min(1, Math.max(0, (age - 0.18) / 0.2)))
       .setAlpha(k < 0.65 ? 1 : Math.max(0, 1 - (k - 0.65) / 0.35));
   }
+  /** Marks every cell the armed tower may go on: a soft fill in its colour and corner ticks, gently breathing. */
+  private drawBuildCells(type: TowerId) {
+    const s = this.sim.state,
+      key = `${type}|${s.status}|${s.towers.map((t) => `${t.x},${t.y}`).join(";")}`;
+    if (key !== this.buildCells.key) {
+      const cells: Point[] = [];
+      for (let y = 0; y < this.sim.map.rows; y++) for (let x = 0; x < this.sim.map.columns; x++) if (this.sim.canBuild(x, y, type)) cells.push({ x, y });
+      this.buildCells = { key, cells };
+    }
+    const g = this.hints,
+      color = this.sim.content.towers[type].color,
+      breath = this.still.matches ? 1 : 0.8 + 0.2 * Math.sin(this.fxClock * 2.6),
+      tick = 7,
+      inset = 5;
+    for (const { x, y } of this.buildCells.cells) {
+      const x0 = x * CELL,
+        y0 = y * CELL,
+        x1 = x0 + CELL,
+        y1 = y0 + CELL;
+      g.fillStyle(color, 0.08 * breath);
+      g.fillRect(x0 + inset, y0 + inset, CELL - 2 * inset, CELL - 2 * inset);
+      g.fillStyle(color, 0.5 * breath);
+      for (const [cx, cy, dx, dy] of [[x0 + inset, y0 + inset, 1, 1], [x1 - inset, y0 + inset, -1, 1], [x0 + inset, y1 - inset, 1, -1], [x1 - inset, y1 - inset, -1, -1]]) {
+        g.fillRect(dx > 0 ? cx : cx - tick, dy > 0 ? cy : cy - 1.5, tick, 1.5);
+        g.fillRect(dx > 0 ? cx : cx - 1.5, dy > 0 ? cy : cy - tick, 1.5, tick);
+      }
+    }
+  }
+  /**
+   * Every attack tower's range, faint enough that overlaps build up into a heat map, and a strip along the path:
+   * red where no tower reaches a ground unit, amber for one, the map's accent for two or more.
+   */
+  private drawCoverage(strength: number) {
+    const g = this.hints,
+      { content, map } = this.sim,
+      reach = towerReach(this.sim.state.towers, content, this.sim);
+    // Shown on its own while building, it waits for the first attack tower instead of painting the whole path red.
+    if (strength < 1 && !reach.length) return;
+    for (const r of reach) {
+      const color = towerColor(r.tower, content);
+      disc(g, px(r.tower.x), px(r.tower.y), r.range * CELL, color, 0.035 * strength);
+      ring(g, px(r.tower.x), px(r.tower.y), r.range * CELL, 1.5, color, 0.3 * strength);
+    }
+    const counts = pathCoverage(map, reach),
+      accent = themeAccent(map);
+    map.path.forEach((cell, i) => {
+      const next = map.path[i + 1] ?? (map.loop ? map.path[0] : undefined),
+        prev = map.path[i - 1],
+        dir = next ? { x: next.x - cell.x, y: next.y - cell.y } : { x: cell.x - prev.x, y: cell.y - prev.y },
+        n = counts[i],
+        color = n === 0 ? 0xff5a6e : n === 1 ? 0xffc94a : accent,
+        half = CELL * 0.42,
+        x = px(cell.x),
+        y = px(cell.y);
+      g.fillStyle(color, 0.75 * strength);
+      if (dir.x !== 0) g.fillRect(x - half, y - 2, half * 2, 4);
+      else g.fillRect(x - 2, y - half, 4, half * 2);
+    });
+  }
   private draw() {
     const g = this.towerInk,
       s = this.sim.state,
@@ -326,44 +431,66 @@ export class Battlefield extends Phaser.Scene {
       { towers, enemies } = content,
       towerPen: Pen = { g: this.towerInk, glow: this.towerGlow },
       pen: Pen = { g: this.ink, glow: this.glow };
-    for (const layer of [this.towerInk, this.towerGlow, this.enemyUnderlay, this.enemyBody, this.enemyOverlay, this.ink, this.glow]) layer.clear();
+    for (const layer of [this.towerInk, this.towerGlow, this.hints, this.ghost, this.enemyUnderlay, this.enemyBody, this.enemyOverlay, this.ink, this.glow]) layer.clear();
     this.ambient.clear();
     drawAmbient(this.ambient, this.sim.map, this.clock);
     const selected = s.towers.find((t) => t.id === this.view.selected),
-      hover = this.view.hover;
-    const preview = this.view.build && hover ? { ...hover, type: this.view.build, upgrades: [] } : selected;
-    if (preview && s.status !== "won" && s.status !== "lost") {
+      hover = this.view.hover,
+      over = !this.view.build && hover ? s.towers.find((t) => t.x === hover.x && t.y === hover.y) : undefined,
+      ended = s.status === "won" || s.status === "lost",
+      armed = this.view.build && !ended ? towers[this.view.build] : undefined;
+    // Without anything armed or selected, hovering a tower shows its range.
+    const preview = this.view.build && hover ? { ...hover, type: this.view.build, upgrades: [] } : (selected ?? over);
+    // Traps only: their cells on the path are marked while placing (a cursor on the board), since they cannot go beside it.
+    const trap = armed?.placement === "path";
+    if (trap && this.view.build && hover) this.drawBuildCells(this.view.build);
+    if (this.view.coverage || (armed && hover && !isSupport(armed.attack) && armed.placement !== "path")) this.drawCoverage(this.view.coverage ? 1 : 0.55);
+    if (preview && !ended) {
       const valid = !this.view.build || this.sim.canBuild(preview.x, preview.y, this.view.build),
         color = valid ? towerColor(preview, content) : 0xff647c,
         x = px(preview.x),
         y = px(preview.y),
         r = effectiveTowerStats(preview, s.towers, content).range * CELL;
       // Towers without an area, such as the refinery, show no range circle.
-      if (r > 0) {
-        g.fillStyle(color, 0.045);
-        g.fillCircle(x, y, r);
-        g.lineStyle(1.5, color, 0.35);
-        g.strokeCircle(x, y, r);
+      if (r > 0 && (valid || !trap)) {
+        disc(g, x, y, r, color, 0.07);
+        ring(g, x, y, r, 2, color, 0.6);
+        // A dashed outer ring turns slowly, so the edge of the range reads against any ground.
+        const spin = this.still.matches ? 0 : this.fxClock * 0.15;
+        for (let i = 0; i < 24; i++) {
+          const a = spin + (i * Math.PI) / 12;
+          arcBand(g, x, y, r + 5, 2, a, a + Math.PI / 24, color, 0.35);
+        }
         // Mortar: the dead zone it cannot fire into, as a dashed inner ring.
         const attack = resolveUpgrades(preview, content).attack,
           dead = (attackModule(attack)?.minRange?.(attack) ?? 0) * CELL;
         if (dead > 0)
           for (let i = 0; i < 16; i++) {
             const a = (i * Math.PI) / 8;
-            g.beginPath();
-            g.arc(x, y, dead, a, a + Math.PI / 16);
-            g.strokePath();
+            arcBand(g, x, y, dead, 1.5, a, a + Math.PI / 16, color, 0.55);
           }
       }
-      g.lineStyle(2, color, 0.8);
-      g.strokeRoundedRect(preview.x * CELL + 3, preview.y * CELL + 3, CELL - 6, CELL - 6, 6);
-      if (this.view.build) {
-        g.fillStyle(color, 0.25);
-        g.fillCircle(x, y, 16);
-        g.lineStyle(2, color, 0.7);
-        g.strokeCircle(x, y, 16);
+      const cx = preview.x * CELL,
+        cy = preview.y * CELL;
+      g.lineStyle(2, color, preview === over ? 0.45 : 0.8);
+      g.strokeRoundedRect(cx + 3, cy + 3, CELL - 6, CELL - 6, 6);
+      if (this.view.build && !trap) {
+        // Other towers: a crosshair on the cell, red where it cannot go.
+        disc(g, x, y, 16, color, 0.25);
+        ring(g, x, y, 16, 2, color, 0.7);
         g.lineBetween(x - 6, y, x + 6, y);
         g.lineBetween(x, y - 6, x, y + 6);
+      } else if (this.view.build && valid) {
+        const ghost: Tower = { id: -1, type: this.view.build, x: preview.x, y: preview.y, upgrades: [], cooldown: 0, spent: 0, angle: -Math.PI / 2, kills: 0, owner: this.view.player },
+          d = towers[ghost.type];
+        drawTower({ g: this.ghost, glow: this.ghost }, x, y, ghost, d, this.clock, { markers: 1, maxed: false, color: towerColor(ghost, content), path: undefined, boosted: false });
+      } else if (this.view.build) {
+        // Not buildable: a red cell with a cross.
+        g.fillStyle(color, 0.16);
+        g.fillRect(cx + 4, cy + 4, CELL - 8, CELL - 8);
+        g.lineStyle(3, color, 0.85);
+        g.lineBetween(x - 9, y - 9, x + 9, y + 9);
+        g.lineBetween(x + 9, y - 9, x - 9, y + 9);
       }
     }
     if (

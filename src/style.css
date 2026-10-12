@@ -430,10 +430,13 @@ p {
   background: #2a8fb0;
   border-radius: 2px;
 }
+/* A buildable pad: lit top-left edge, shaded bottom-right, as drawn on the board. */
 .legend-build {
   width: 10px;
   height: 10px;
-  border: 1px solid #3e6496;
+  background: #1a2a33;
+  border: 1px solid;
+  border-color: #52707e #0a1216 #0a1216 #52707e;
 }
 .wave-timeline {
   padding: 20px 24px 16px;
@@ -1626,7 +1629,8 @@ dialog::backdrop {
 }
 
 /* Full screen: hide page chrome, fit field and sidebar into the viewport. */
-#fullscreen-btn svg {
+#fullscreen-btn svg,
+#coverage-btn svg {
   width: 15px;
   height: 15px;
   fill: none;
@@ -1636,7 +1640,8 @@ dialog::backdrop {
   stroke-linejoin: round;
   vertical-align: middle;
 }
-#fullscreen-btn[aria-pressed="true"] {
+#fullscreen-btn[aria-pressed="true"],
+#coverage-btn[aria-pressed="true"] {
   border-color: var(--mint);
   color: var(--mint);
 }

@@ -40,7 +40,7 @@ installEnemyArtFallback();
 renderMission(game);
 bindUpgradeTooltip();
 const first = towerOrder(game)[0];
-const view: ViewState = { build: first, selected: null, enemy: null, hover: null, speed: 1, player: 0, page: pageOf(game.content.towers[first]) };
+const view: ViewState = { build: first, selected: null, enemy: null, hover: null, speed: 1, player: 0, coverage: false, page: pageOf(game.content.towers[first]) };
 const ui = new Interface(game, view);
 const audio = new Audio();
 const battlefield = new Battlefield(game, view, {
