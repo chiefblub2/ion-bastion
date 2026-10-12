@@ -530,7 +530,7 @@ export class Battlefield extends Phaser.Scene {
       const family = familyOf(d),
         age = family ? pulses[family] : undefined;
       // The music visibly comes from the towers: a soft halo when their family's note sounds.
-      if (age !== undefined && age < PULSE) halo(this.towerGlow, px(t.x), px(t.y), CELL * 0.6, towerColor(t, content), 0.6 * (1 - age / PULSE));
+      if (age !== undefined && age < PULSE && !this.still.matches) halo(this.towerGlow, px(t.x), px(t.y), CELL * 0.6, towerColor(t, content), 0.6 * (1 - age / PULSE));
       // Co-op: a corner mark in the owner's colour.
       if (this.sim.players > 1) {
         const color = PLAYER_COLORS[t.owner] ?? 0xffffff;

@@ -154,6 +154,14 @@ Listening result: bearable only up to about 10 shots/s, "too busy, too loud, noi
 Listening result: "the enemy sounds are not threatening at all; everything is too pretty; the drums are too clean; tower shots and their sounds feel disconnected". Agreed:
 
 - **Industrial enemy kit** (plain Web Audio, a shared tanh saturation curve): thud (saturated sub sweep + click) for the kick, clank (inharmonic FM hit + noise) for the snare, tick (tiny metallic ring) for hats, slam (saturated low tom + clank) for stomp and fills, grit bass (saw + square through saturation and a resonant low-pass) for the bass pulse, metal crash (inharmonic FM, long tail). Towers keep their bright, glassy instruments.
-- **Dissonance with threat:** from threat 0.5 the grit bass plays a tritone on step 6; from 0.75 also minor-second stabs (steps 10 and 14) and more tritones (step 12). The pad carries the b9 tension note from threat 0.6 or when losing.
+- **Dissonance with threat:** the grit bass enters at threat 0.5 (steps 0, 6, 10, 14) with a tritone on step 6; from 0.75 also minor-second stabs on steps 10 and 14; escalated (straight 8ths) also a tritone on step 12. The pad carries the b9 tension note from threat 0.6 or when losing.
 - **Per-shot transient:** each family has a very short, quiet, unpitched ZzFX tick or thump played immediately (grid instant), at most one per family per ~0.12 s, well below the music.
 - **Visual pulse:** when a family's part note sounds, its towers flash a soft glow halo on the glow layer (core ≤ 0.3 alpha) that fades over 0.25 s. The audio reports per family how long ago its last note started on the audio clock; the scene reads it through a battlefield hook. Render-only; no pulses with sound off.
+
+## Climax escalation (agreed after the second listening, recorded with revision 3)
+
+Listening result: "climax does not sound very climax-like". Agreed: an escalation layer, losing tense rather than muffled, about 12 dB from calm to climax.
+
+- **Escalation** is entered at threat 0.85 or while a boss is on the field, and left only below 0.75 (hysteresis). It plays the full groove whatever the measured threat: 16th ticks, a straight 8th-note grit bass, a crash on each 4-bar phrase, a riser in the second half of the 4th bar and a tom-like slam fill on its last beat, and the rapid part doubled an octave up.
+- **Losing** keeps its tension note but the pad's filter stays open (supersedes "Dark: pad × 0.6" above).
+- **Energy gain** on the music bus follows the fight: about −2 dB calm to +6 dB at the climax (threat, +0.3 while escalated); measured calm −33 vs climax −19 dBFS RMS.

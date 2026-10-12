@@ -32,7 +32,7 @@ class Recorder implements Voices {
   }
 }
 /** Drives a conductor through `bars` bars of rapid fire at `rate` shots per second, frame by frame like the game. */
-function run(rate: number, bars: number, tower = rapid, defense = 0, threat = 0) {
+function run(rate: number, bars: number, tower = rapid, defense = 0, threat = 0, bosses = 0) {
   const r = new Recorder(),
     c = new Conductor(r),
     frame = 1 / 30;
@@ -45,7 +45,7 @@ function run(rate: number, bars: number, tower = rapid, defense = 0, threat = 0)
     for (owed += rate * frame; owed >= 1; owed--) events.push({ type: "shot", tower, from: at, to: at, color: 0 });
     if (events.length && first < 0) first = t;
     c.shots(events, DEFAULT_CONTENT, t);
-    c.measure({ threat, defense, clear: 5, heavies: 0, bosses: 0, drums: true, playing: true });
+    c.measure({ threat, defense, clear: 5, heavies: 0, bosses, drums: true, playing: true });
     c.window(t, t + frame);
   }
   return { r, first, end, beat: stepLength(c.score.clock, 4) };
@@ -114,5 +114,27 @@ describe("Conductor", () => {
     c.window(0, 0.1);
     expect(c.ages(-0.01).rapid).toBeUndefined();
     expect(c.ages(0.05).rapid).toBeCloseTo(0.05);
+  });
+  it("lets the bass's tritone in from threat 0.5", () => {
+    const { r } = run(0, 1, rapid, 0, 0.6),
+      step = 60 / MUSIC.outpost.bpm / 4,
+      grit = r.notes.filter((n) => n.name === "grit"),
+      root = grit.find((n) => Math.abs(n.at) < 1e-6)!,
+      tritone = grit.find((n) => Math.abs(n.at - 6 * step) < 1e-6)!;
+    expect(12 * Math.log2(tritone.hz / root.hz)).toBeCloseTo(6);
+  });
+  it("holds an escalation until the threat clearly drops", () => {
+    const c = new Conductor(new Recorder()),
+      m = { defense: 0, clear: 5, heavies: 0, bosses: 0, drums: true, playing: true };
+    c.theme("outpost", 0);
+    c.measure({ ...m, threat: 0.9 });
+    c.measure({ ...m, threat: 0.8 });
+    expect(c.escalating).toBe(true);
+    c.measure({ ...m, threat: 0.7 });
+    expect(c.escalating).toBe(false);
+  });
+  it("gives a boss the full escalated groove even at low threat", () => {
+    const names = new Set(run(0, 1, rapid, 0, 0.1, 1).r.notes.map((n) => n.name));
+    for (const part of ["thud", "clank", "tick", "grit"] as const) expect(names.has(part), part).toBe(true);
   });
 });

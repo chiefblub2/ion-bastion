@@ -3,7 +3,7 @@ import { Activity, silent } from "./activity";
 import { nextSlot, stepAt, stepLength } from "./clock";
 import type { Cue } from "./cues";
 import { shotsByFamily, type Family } from "./families";
-import { ESCALATE, layersFor, tensionOffset, type Drum } from "./grooves";
+import { CALM_DOWN, ESCALATE, layersFor, tensionOffset, type Drum } from "./grooves";
 import { climb, extentFor, type Color } from "./harmony";
 import { REGISTER, type Instrument } from "./instruments";
 import { colorOf, toneFor } from "./intensity";
@@ -70,12 +70,17 @@ export class Conductor {
   readonly score = new Score();
   readonly activity = new Activity();
   private mood: Color = "drive";
+  private escalated = false;
   private parts: Parts = { drums: [], arp: false, extent: 3, color: "drive", activity: SILENT, escalate: false, threat: 0 };
   /** Start times of each family's part notes, for the towers' visual pulse. */
   private started: Partial<Record<Family, number[]>> = {};
   constructor(private voices: Voices) {}
   get color() {
     return this.mood;
+  }
+  /** The top of a fight: entered at threat 0.85 or with a boss, left below 0.75. */
+  get escalating() {
+    return this.escalated;
   }
   theme(drone: DroneId, now: number) {
     if (this.score.theme(drone, now)) this.voices.ambience.chord(this.score.chordAt(now), now);
@@ -87,9 +92,9 @@ export class Conductor {
     this.mood = colorOf(m.clear, this.mood);
     this.score.extent = extentFor(m.defense);
     const fighting = m.playing && m.drums,
-      escalate = fighting && (m.threat >= ESCALATE || m.bosses > 0);
+      escalate = (this.escalated = fighting && (m.threat >= ESCALATE || m.bosses > 0 || (this.escalated && m.threat >= CALM_DOWN)));
     this.parts = {
-      drums: m.playing && m.drums ? layersFor(m.threat, m.heavies) : [],
+      drums: fighting ? layersFor(m.threat, m.heavies, escalate) : [],
       arp: m.playing && m.defense >= 0.75,
       extent: this.score.extent,
       color: this.mood,

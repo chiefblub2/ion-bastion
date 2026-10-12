@@ -13,18 +13,21 @@ const SHARED: Partial<Record<Drum, string>> = {
   hat: "x.x.x.x.x.x.x.x.",
   hat16: "xxxxxxxxxxxxxxxx",
   stomp: "x.......x.......",
-  bass: "x.....x...x.....",
+  bass: "x.....x...x...x.",
   bass8: "x.x.x.x.x.x.x.x.",
 };
-/** Threat from which the music escalates. */
-export const ESCALATE = 0.85;
+/** Threat from which the music escalates, and below which an escalation ends (hysteresis, so a riser never leads into nothing). */
+export const ESCALATE = 0.85,
+  CALM_DOWN = 0.75;
 /** No drums at low threat; then the kick, a backbeat, and at the top hats and a bass pulse; heavy enemies stomp. */
-export function layersFor(threat: number, heavies: number): Drum[] {
-  const parts: Drum[] = [];
-  if (threat >= 0.25) parts.push("kick");
-  if (threat >= 0.5) parts.push("snare");
-  if (threat >= ESCALATE) parts.push("hat", "hat16", "bass8");
-  else if (threat >= 0.75) parts.push("hat", "bass");
+export function layersFor(threat: number, heavies: number, escalate = false): Drum[] {
+  // Escalated (high threat or a boss), the full groove plays whatever the measured threat.
+  const t = escalate ? Math.max(threat, ESCALATE) : threat,
+    parts: Drum[] = [];
+  if (t >= 0.25) parts.push("kick");
+  if (t >= 0.5) parts.push("snare", escalate ? "bass8" : "bass");
+  if (t >= 0.75) parts.push("hat");
+  if (escalate) parts.push("hat16");
   if (heavies > 0) parts.push("stomp");
   return parts;
 }

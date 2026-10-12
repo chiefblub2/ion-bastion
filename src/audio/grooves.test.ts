@@ -5,8 +5,8 @@ describe("grooves", () => {
   it("plays no drums at low threat, then kick, backbeat, hats and bass, and a stomp for heavy enemies", () => {
     expect(layersFor(0.1, 0)).toEqual([]);
     expect(layersFor(0.3, 0)).toEqual(["kick"]);
-    expect(layersFor(0.6, 0)).toEqual(["kick", "snare"]);
-    expect(layersFor(0.8, 2)).toEqual(["kick", "snare", "hat", "bass", "stomp"]);
+    expect(layersFor(0.6, 0)).toEqual(["kick", "snare", "bass"]);
+    expect(layersFor(0.8, 2)).toEqual(["kick", "snare", "bass", "hat", "stomp"]);
   });
   it("hits only the playing parts on their steps", () => {
     expect(hitsAt("straight", 4, ["kick", "snare", "hat"])).toEqual(["snare", "hat"]);
@@ -19,7 +19,8 @@ describe("grooves", () => {
     expect([0, 1, 2, 3, 4].map((s) => arpIndex(s, "drive", 3))).toEqual([0, 1, 2, 1, 0]);
   });
   it("escalates at the top with 16th hats and a straight 8th-note bass", () => {
-    expect(layersFor(0.9, 0)).toEqual(["kick", "snare", "hat", "hat16", "bass8"]);
+    expect(layersFor(0.9, 0, true)).toEqual(["kick", "snare", "bass8", "hat", "hat16"]);
+    expect(layersFor(0.1, 0, true)).toEqual(layersFor(0.9, 0, true));
     expect(hitsAt("straight", 2, ["bass8"])).toEqual(["bass8"]);
   });
   it("grows the bass's dissonance with the threat", () => {
