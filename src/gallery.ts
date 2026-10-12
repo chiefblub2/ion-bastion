@@ -102,14 +102,18 @@ const query = new URLSearchParams(location.search),
   art = query.has("art"),
   /** `?anim`: frame-by-frame review of the enemy animations (see `anim-review.ts`). */
   anim = query.has("anim"),
+  /** `?sound`: the sound board (see `sound-board.ts`); no canvas. */
+  sound = query.has("sound"),
   pageSize = anim ? animReviewSize : art ? artReviewSize : showcase ? showcaseSize : { width: width * ZOOM, height: height * ZOOM };
-new Phaser.Game({
-  type: Phaser.AUTO,
-  parent: "gallery",
-  ...pageSize,
-  transparent: true,
-  antialias: true,
-  render: ART_FILTERING,
-  scene: anim ? AnimReview : art ? ArtReview : showcase ? Showcase : Gallery,
-  audio: { noAudio: true },
-});
+if (sound) void import("./sound-board").then((m) => m.mountSoundBoard(document.getElementById("gallery")!));
+else
+  new Phaser.Game({
+    type: Phaser.AUTO,
+    parent: "gallery",
+    ...pageSize,
+    transparent: true,
+    antialias: true,
+    render: ART_FILTERING,
+    scene: anim ? AnimReview : art ? ArtReview : showcase ? Showcase : Gallery,
+    audio: { noAudio: true },
+  });
