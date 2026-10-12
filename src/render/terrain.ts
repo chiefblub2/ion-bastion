@@ -90,6 +90,9 @@ function crate(g: Ink, x: number, y: number, s: number) {
   polygon(g, x + s / 2, y + s * 0.62, s * 0.1, 3, 0x41604c, -Math.PI / 2);
 }
 const RUST = 0x8a4a22;
+/** Storm theme: one lightning strike per slot of this many seconds, each lasting `STRIKE_TIME`. */
+const STRIKE_PERIOD = 14,
+  STRIKE_TIME = 0.27;
 /** Brick wall with a knocked-off side, missing bricks, bent rebar and moss at its foot. */
 function brokenWall(g: Ink, x: number, y: number, rand: Random) {
   const bricks = [0x6e4c3a, 0x5e4536, 0x7a5842],
@@ -1203,7 +1206,7 @@ export const THEMES: Record<MapTheme, Theme> = {
       });
     },
   },
-  // Gewitterplateau: basalt needles and lightning rods, rain and flashes.
+  // Storm plateau: basalt needles and lightning rods, rain and flashes.
   storm: {
     backdrop: 0x0b0f18,
     ground: [0x141a26, 0x121722],
@@ -1270,7 +1273,7 @@ export const THEMES: Record<MapTheme, Theme> = {
         for (let i = 0; i < 3; i++) g.fillRect(cx + (rand() - 0.5) * 10, cy + (rand() - 0.5) * 6, 1.5, 1.5);
       }
     },
-    // Slanted rain, flashes at the rods, crackle along the channel.
+    // Slanted rain, a rare strike at one rod, crackle along the channel.
     ambient: ({ g, map, path, clock, hash }) => {
       const w = map.columns * CELL,
         h = map.rows * CELL;
@@ -1282,18 +1285,19 @@ export const THEMES: Record<MapTheme, Theme> = {
           y0 = life * (h + 20) - 10;
         g.lineBetween(x0, y0, x0 - 5, y0 + 12);
       }
-      for (const b of map.blocked) {
-        const o = hash(b.x, b.y);
-        if (o < 0.55) continue;
-        const t = (clock * 0.22 + o * 11) % 1;
-        if (t > 0.06) continue;
-        const f = 1 - t / 0.06,
+      // One strike per slot at a hashed moment and rod, so strikes stay rare and never overlap.
+      const rods = map.blocked.filter((b) => hash(b.x, b.y) >= 0.55),
+        slot = Math.floor(clock / STRIKE_PERIOD),
+        t = (clock % STRIKE_PERIOD) - hash(slot, 97) * (STRIKE_PERIOD - 1),
+        b = rods[Math.floor(hash(slot, 98) * rods.length)];
+      if (b && t >= 0 && t < STRIKE_TIME) {
+        const f = 1 - t / STRIKE_TIME,
           flick = f * (0.6 + 0.4 * Math.sin(clock * 90)),
           tipX = px(b.x),
           tipY = b.y * CELL + 12;
         g.fillStyle(0xcfeaff, 0.3 * flick);
         g.fillCircle(tipX, tipY, 26);
-        g.fillStyle(0xffffff, 0.12 * flick);
+        g.fillStyle(0xffffff, 0.05 * flick);
         g.fillRect(0, 0, w, h);
         g.lineStyle(2, 0xe6f6ff, 0.9 * flick);
         g.strokePoints([{ x: tipX, y: tipY - 40 }, { x: tipX + 6, y: tipY - 24 }, { x: tipX - 4, y: tipY - 12 }, { x: tipX, y: tipY }], false);
