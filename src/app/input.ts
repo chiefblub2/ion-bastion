@@ -57,12 +57,15 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       shared = c.type === "mission" || c.type === "restart" || (!versus && (c.type === "start" || c.type === "pause"));
     // In versus, the others' commands act on their own fields; only a send aimed at us is news.
     if (versus && !own && !shared) {
-      if (c.type === "send" && result.ok && result.params?.target === view.player + 1)
+      if (c.type === "send" && result.ok && result.params?.target === view.player + 1) {
         ui.notice(`${playerName(player)} sends you ${result.params.enemy}!`, true);
+        audio.cue("incoming");
+      }
       ui.refresh();
       return;
     }
     if (own || (shared && result.ok)) ui.notice(`${own ? "" : `${playerName(player)}: `}${describeResult(result)}`, own && !result.ok);
+    if (own && !result.ok) audio.cue("reject");
     if ((c.type === "restart" || c.type === "mission") && result.ok) {
       view.selected = null;
       view.enemy = null;
@@ -363,16 +366,6 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
         } else if (view.player === 0) coop.setSpeed(view.speed === 1 ? 2 : 1);
         else ui.notice(describeResult({ ok: false, code: "host-only" }), true);
         break;
-      case "sound-btn": {
-        try {
-          const on = await audio.toggle();
-          b.textContent = on ? "Sound on" : "Sound off";
-          b.setAttribute("aria-pressed", String(on));
-        } catch {
-          ui.notice("Audio is not available in this browser.", true);
-        }
-        break;
-      }
       case "sell-btn":
         if (view.selected !== null) execute({ type: "sell", id: view.selected });
         break;
@@ -474,6 +467,10 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       toggleCoverage();
       return;
     }
+    if (e.key.toLowerCase() === "m") {
+      audio.update({ muted: !audio.settings.muted }).catch(() => ui.notice("Audio is not available in this browser.", true));
+      return;
+    }
     if (e.key.toLowerCase() === "t") {
       // Cycles the selected attack tower to its next target priority.
       const t = game.state.towers.find((t) => t.id === view.selected);
@@ -515,5 +512,5 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     // In multiplayer the others keep playing; pausing stays an explicit choice.
     if (document.hidden && !coop.active() && isRunning(game.state) && !game.state.paused) execute({ type: "pause" });
   });
-  return { execute, chooseCell, chooseEnemy, cancel, screens };
+  return { execute, chooseCell, chooseEnemy, cancel, screens, match: coop.match };
 }

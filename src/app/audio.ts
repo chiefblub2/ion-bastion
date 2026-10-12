@@ -1,44 +1,68 @@
+import { cuesFor, newlyEliminated, ReactorWatch } from "../audio/cues";
+import { AudioEngine } from "../audio/engine";
+import { moodOf } from "../audio/mood";
+import type { CueId } from "../audio/recipes";
+import { loadSettings, saveSettings, type SoundSettings } from "../audio/settings";
+import type { Game } from "../core/game";
+import type { Match } from "../core/match";
 import type { GameEvent } from "../core/types";
-/** Start and end pitch of a short blip per event type; other events are silent. */
-const TONES: Partial<Record<GameEvent["type"], [number, number]>> = {
-  shot: [430, 180],
-  income: [990, 1320],
-  build: [660, 180],
-  leak: [140, 60],
-  waveEnd: [880, 180],
-  end: [880, 180],
-};
+// Render-side sound: reads drained events and state once per frame, never changes them.
+
 export class Audio {
-  enabled = false;
-  private context: AudioContext | null = null;
-  private lastShot = 0;
-  async toggle() {
-    this.enabled = !this.enabled;
-    if (this.enabled) {
-      this.context ??= new AudioContext();
-      await this.context.resume();
-    }
-    return this.enabled;
+  settings: SoundSettings = loadSettings();
+  private engine: AudioEngine | null = null;
+  private listeners = new Set<() => void>();
+  private reactor = new ReactorWatch();
+  private eliminated: readonly (number | null)[] = [];
+  get on() {
+    return !this.settings.muted;
   }
-  play(events: GameEvent[]) {
-    if (!this.enabled || !this.context) return;
-    for (const e of events) {
-      const tone = TONES[e.type];
-      if (!tone) continue;
-      if (e.type === "shot" && this.context.currentTime - this.lastShot < 0.09) continue;
-      this.lastShot = this.context.currentTime;
-      const o = this.context.createOscillator(),
-        v = this.context.createGain(),
-        t = this.context.currentTime;
-      o.type = "sine";
-      o.frequency.setValueAtTime(tone[0], t);
-      o.frequency.exponentialRampToValueAtTime(tone[1], t + 0.11);
-      v.gain.setValueAtTime(0.035, t);
-      v.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-      o.connect(v);
-      v.connect(this.context.destination);
-      o.start(t);
-      o.stop(t + 0.13);
+  onChange(f: () => void) {
+    this.listeners.add(f);
+  }
+  /** Creates or resumes the context; the first call must come from a user gesture. Throws without Web Audio. */
+  async start() {
+    if (!this.engine) {
+      this.engine = new AudioEngine(new AudioContext());
+      this.engine.volumes(this.settings);
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) void this.engine?.ctx.suspend();
+        else if (this.on) void this.engine?.ctx.resume();
+      });
     }
+    await this.engine.ctx.resume();
+  }
+  /** A saved "on" waits for the visit's first gesture, because browsers keep a context silent until then. */
+  armAutoStart() {
+    if (!this.on) return;
+    const go = () => {
+      removeEventListener("pointerdown", go, true);
+      removeEventListener("keydown", go, true);
+      this.start().catch(() => undefined);
+    };
+    addEventListener("pointerdown", go, true);
+    addEventListener("keydown", go, true);
+  }
+  async update(next: Partial<SoundSettings>) {
+    this.settings = { ...this.settings, ...next };
+    saveSettings(this.settings);
+    for (const f of this.listeners) f();
+    if (this.on) await this.start();
+    this.engine?.volumes(this.settings);
+    if (!this.on) await this.engine?.ctx.suspend();
+  }
+  cue(id: CueId) {
+    if (this.on) this.engine?.play({ id, pitch: 1, gain: 1 });
+  }
+  frame(events: readonly GameEvent[], game: Game, match: Match | null) {
+    const engine = this.engine;
+    if (!engine || !this.on) return;
+    const view = document.documentElement.dataset.view === "menu" ? "menu" : "game",
+      s = game.state;
+    for (const c of cuesFor(events, game.content, view)) engine.play(c);
+    if (this.reactor.crossed(s, game.mission.reactorEnergy)) this.cue("lowReactor");
+    if (match && newlyEliminated(this.eliminated, match.eliminatedAt, match.fields.indexOf(game)).length) this.cue("eliminated");
+    this.eliminated = match ? [...match.eliminatedAt] : [];
+    engine.ambience.set(moodOf({ view, theme: game.map.theme ?? "outpost", status: s.status, paused: s.paused, enemies: s.enemies.length }));
   }
 }

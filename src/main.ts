@@ -43,6 +43,7 @@ const first = towerOrder(game)[0];
 const view: ViewState = { build: first, selected: null, enemy: null, hover: null, speed: 1, player: 0, coverage: false, page: pageOf(game.content.towers[first]) };
 const ui = new Interface(game, view);
 const audio = new Audio();
+audio.armAutoStart();
 const battlefield = new Battlefield(game, view, {
   // Pointer events only arrive after start-up, once `input` exists.
   chooseCell: (x, y, keepBuilding) => input.chooseCell(x, y, keepBuilding),
@@ -50,7 +51,7 @@ const battlefield = new Battlefield(game, view, {
   cancel: () => input.cancel(),
   refresh: () => ui.refresh(),
   events: (e) => {
-    audio.play(e);
+    audio.frame(e, game, input.match());
     if (e.some((event) => event.type === "income")) ui.flashCredits();
   },
 });
