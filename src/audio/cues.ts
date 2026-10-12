@@ -1,23 +1,15 @@
 import type { AttackSpec, ContentPack, GameEvent, GameState } from "../core/types";
-import { voiceOf } from "./harmony";
 import { RECIPES, type CueId } from "./recipes";
-// Drained game events → sound cues. Every firing emits a `shot` with its tower id; chain, beam and pulse events only
-// accompany it and stay silent. `Score.place` decides when and at which pitch a cue sounds.
+// Drained game events → effect cues. Shots are not cues: they raise their tower family's activity, which plays its
+// instrument part (`Conductor`). Only heavy impacts make an effect sound.
 
 export interface Cue {
   id: CueId;
-  /** Chord-tone index for pitched cues: the tower's own voice, or a fixed tone for flow cues. */
+  /** Chord-tone index for pitched cues. */
   voice: number;
   gain: number;
 }
 export type View = "menu" | "game";
-/** Support kinds never fire, so they have no cue. */
-const FIRE: Record<AttackSpec["kind"], CueId | null> = {
-  direct: "bolt", pierce: "beam", volley: "bolt", splash: "lob", mortar: "lob", chain: "crackle", focus: "beam", quake: "swell",
-  slow: "chime", net: "chime", burn: "hiss", corrode: "hiss", decay: "hiss", stun: "zap", disrupt: "zap", pull: "sweep",
-  execute: "crack", bleed: "trap", charge: "trap", pit: "trap", alarm: "trap",
-  aura: null, income: null, detect: null, bounty: null, repair: null, mark: null,
-};
 const BLASTS = new Set<AttackSpec["kind"]>(["splash", "mortar", "charge"]);
 const PLAIN: Partial<Record<GameEvent["type"], CueId>> = {
   kill: "kill", evade: "evade", overload: "overload", leak: "leak", build: "build", sell: "sell", upgrade: "upgrade",
@@ -29,13 +21,8 @@ export const burstGain = (n: number) => Math.min(1.5, 1 + 0.1 * (n - 1));
 
 function cueOf(e: GameEvent, content: ContentPack): { id: CueId; voice: number } | null {
   switch (e.type) {
-    case "shot": {
-      const d = content.towers[e.tower];
-      const id = d.placement === "path" ? "trap" : FIRE[d.attack.kind];
-      return id && { id, voice: voiceOf(e.tower) };
-    }
     case "impact":
-      return { id: BLASTS.has(content.towers[e.tower].attack.kind) ? "blast" : "impact", voice: voiceOf(e.tower) };
+      return BLASTS.has(content.towers[e.tower].attack.kind) ? { id: "blast", voice: 0 } : null;
     case "end":
       return { id: e.result, voice: 0 };
     default: {

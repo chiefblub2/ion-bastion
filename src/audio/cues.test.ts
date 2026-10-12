@@ -2,24 +2,22 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import type { GameEvent, GameState, TowerId } from "../core/types";
 import { burstGain, cuesFor, newlyEliminated, ReactorWatch } from "./cues";
-import { voiceOf } from "./harmony";
 
 const towers = Object.values(DEFAULT_CONTENT.towers);
 const idOf = (pick: (d: (typeof towers)[number]) => boolean) => towers.find(pick)!.id as TowerId;
 const direct = idOf((d) => d.attack.kind === "direct" && !d.placement),
-  splash = idOf((d) => d.attack.kind === "splash" && !d.placement),
-  trap = idOf((d) => d.placement === "path");
+  splash = idOf((d) => d.attack.kind === "splash" && !d.placement);
 const at = { x: 0, y: 0 };
-const shot = (tower: TowerId): GameEvent => ({ type: "shot", tower, from: at, to: at, color: 0 });
+const kill: GameEvent = { type: "kill", at, color: 0, reward: 1 };
 
 describe("cuesFor", () => {
-  it("maps a shot to its attack kind's cue in the tower's voice", () => {
-    expect(cuesFor([shot(direct)], DEFAULT_CONTENT, "game")).toEqual([{ id: "bolt", voice: voiceOf(direct), gain: 1 }]);
-    expect(cuesFor([shot(trap)], DEFAULT_CONTENT, "game")[0].id).toBe("trap");
-    expect(cuesFor([{ type: "impact", tower: splash, at, color: 0 }], DEFAULT_CONTENT, "game")[0].id).toBe("blast");
+  it("leaves shots to the instrument parts and voices only heavy impacts", () => {
+    expect(cuesFor([{ type: "shot", tower: direct, from: at, to: at, color: 0 }], DEFAULT_CONTENT, "game")).toEqual([]);
+    expect(cuesFor([{ type: "impact", tower: splash, at, color: 0 }], DEFAULT_CONTENT, "game")).toEqual([{ id: "blast", voice: 0, gain: 1 }]);
+    expect(cuesFor([{ type: "impact", tower: direct, at, color: 0 }], DEFAULT_CONTENT, "game")).toEqual([]);
   });
   it("merges a burst into one louder cue", () => {
-    expect(cuesFor([shot(direct), shot(direct), shot(direct)], DEFAULT_CONTENT, "game")).toEqual([{ id: "bolt", voice: voiceOf(direct), gain: burstGain(3) }]);
+    expect(cuesFor([kill, kill, kill], DEFAULT_CONTENT, "game")).toEqual([{ id: "kill", voice: 0, gain: burstGain(3) }]);
     expect(burstGain(1)).toBe(1);
     expect(burstGain(50)).toBe(1.5);
   });
@@ -28,11 +26,8 @@ describe("cuesFor", () => {
       upgrade: GameEvent = { type: "upgrade", at, tower: direct, color: 0 };
     expect(cuesFor([build, upgrade], DEFAULT_CONTENT, "game").map((c) => c.voice)).toEqual([2, 3]);
   });
-  it("stays silent for events that only accompany others", () => {
-    expect(cuesFor([{ type: "damage", at, amount: 3, enemy: 1 }, { type: "spawn", at, enemy: 2 }], DEFAULT_CONTENT, "game")).toEqual([]);
-  });
   it("keeps only flow cues while the menu is open", () => {
-    const events: GameEvent[] = [shot(direct), { type: "leak", at, amount: 1 }, { type: "end", result: "lost" }];
+    const events: GameEvent[] = [kill, { type: "leak", at, amount: 1 }, { type: "end", result: "lost" }];
     expect(cuesFor(events, DEFAULT_CONTENT, "menu").map((c) => c.id)).toEqual(["leak", "lost"]);
   });
 });

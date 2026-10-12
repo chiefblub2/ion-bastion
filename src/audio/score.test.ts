@@ -17,16 +17,16 @@ describe("Score", () => {
     const s = new Score();
     s.theme("outpost", 0);
     s.extent = 4;
-    const n = s.place({ id: "bolt", voice: 1, gain: 1 }, 0.01),
-      base = RECIPES.bolt.params[2]!;
-    expect(n.at).toBe(nextSlot(s.clock, 0.01, TIMING.bolt.grid));
+    const n = s.place({ id: "income", voice: 1, gain: 1 }, 0.01),
+      base = RECIPES.income.params[2]!;
+    expect(n.at).toBe(nextSlot(s.clock, 0.01, TIMING.income.grid));
     expect(n.rate).toBeCloseTo(snap(base, chordOf(MUSIC.outpost, barAt(s.clock, n.at), 4), 1) / base);
   });
   it("plays instant and unpitched cues unchanged", () => {
     const s = new Score();
     s.theme("outpost", 0);
     expect(s.place({ id: "reject", voice: 0, gain: 1 }, 0.37)).toEqual({ id: "reject", rate: 1, gain: 1, at: 0.37 });
-    expect(s.noteAt("kick", 3, 0.6, 2)).toEqual({ id: "kick", rate: 1, gain: 0.6, at: 2 });
+    expect(s.noteAt("blast", 3, 0.6, 2)).toEqual({ id: "blast", rate: 1, gain: 0.6, at: 2 });
   });
   it("climbs the chord with every kill", () => {
     const s = new Score();
