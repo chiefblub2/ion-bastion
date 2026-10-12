@@ -35,8 +35,8 @@ export class Score {
   noteAt(id: CueId, voice: number, gain: number, at: number): Note {
     if (!TIMING[id].pitched) return { id, rate: 1, gain, at };
     const base = RECIPES[id].params[2] ?? 220,
-      // Arpeggio and kills keep their direction through the chord; other cues take the nearest octave.
-      pitch = id === "arp" || id === "kill" ? climb(base, this.chordAt(at), voice) : snap(base, this.chordAt(at), voice);
+      // Kills keep their direction through the chord; other cues take the nearest octave.
+      pitch = id === "kill" ? climb(base, this.chordAt(at), voice) : snap(base, this.chordAt(at), voice);
     return { id, rate: pitch / base, gain, at };
   }
   /** When and at which rate a cue sounds; kills climb the chord one tone per kill. */

@@ -24,7 +24,7 @@ interface Layer {
 export class Ambience {
   private layer: Layer | null = null;
   constructor(
-    private ctx: AudioContext,
+    private ctx: BaseAudioContext,
     private out: AudioNode,
     private noise: AudioBuffer,
   ) {}

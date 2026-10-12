@@ -1,17 +1,21 @@
 import { Ambience } from "./ambience";
 import { addDuck, type Span } from "./duck";
+import { impulse, INSTRUMENTS, type Instrument } from "./instruments";
 import { admit, type Voice } from "./mixer";
 import { RECIPES, TIMING, type CueId } from "./recipes";
 import type { Note } from "./score";
 import type { SoundSettings } from "./settings";
 import { buildSamples } from "./zzfx";
-// Buses: sfx and ui → master; music (drone, drums, arpeggio) → duck → master; master → compressor → speakers.
+// Buses: sfx and ui → master; music (drone and instruments) → duck → master; music and sfx also feed one reverb.
+// master → gentle compressor → limiter → speakers. Works on an OfflineAudioContext too (scripts/render-music.ts).
 
-/** Bus gain scale, so full sliders leave headroom for bursts. */
+/** Bus gain scale, so full sliders leave headroom. */
 const HEADROOM = 0.5,
   DUCK_LEVEL = 0.4,
-  DUCK_TIME = 0.6;
-const BUS_OF = { combat: "sfx", flow: "sfx", ui: "ui", drums: "music" } as const;
+  DUCK_TIME = 0.6,
+  /** Notes one instrument may sound at once. */
+  POLYPHONY = 6;
+const BUS_OF = { combat: "sfx", flow: "sfx", ui: "ui" } as const;
 type Playing = Voice & { source: AudioBufferSourceNode };
 
 export class AudioEngine {
@@ -19,30 +23,52 @@ export class AudioEngine {
   private master: GainNode;
   private bus: Record<"sfx" | "ui" | "music", GainNode>;
   private duckGain: GainNode;
+  private noise: AudioBuffer;
   private buffers = new Map<CueId, AudioBuffer>();
   private voices: Playing[] = [];
   private last = new Map<CueId, number>();
   private ducks: Span[] = [];
-  constructor(readonly ctx: AudioContext) {
-    const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.value = -18;
-    compressor.ratio.value = 4;
-    compressor.connect(ctx.destination);
+  private notes = new Map<Instrument, number[]>();
+  constructor(readonly ctx: BaseAudioContext) {
+    const compressor = ctx.createDynamicsCompressor(),
+      limiter = ctx.createDynamicsCompressor(),
+      reverb = ctx.createConvolver(),
+      wet = ctx.createGain();
+    compressor.threshold.value = -20;
+    compressor.knee.value = 10;
+    compressor.ratio.value = 3;
+    limiter.threshold.value = -3;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.1;
+    compressor.connect(limiter).connect(ctx.destination);
     this.master = ctx.createGain();
     this.master.connect(compressor);
+    reverb.buffer = impulse(ctx);
+    wet.gain.value = 0.3;
+    reverb.connect(wet).connect(this.master);
     this.bus = { sfx: ctx.createGain(), ui: ctx.createGain(), music: ctx.createGain() };
     this.bus.sfx.connect(this.master);
     this.bus.ui.connect(this.master);
     this.duckGain = ctx.createGain();
     this.bus.music.connect(this.duckGain).connect(this.master);
-    this.ambience = new Ambience(ctx, this.bus.music, noiseBuffer(ctx));
+    const send = (from: AudioNode, amount: number) => {
+      const g = ctx.createGain();
+      g.gain.value = amount;
+      from.connect(g).connect(reverb);
+    };
+    send(this.duckGain, 0.35);
+    send(this.bus.sfx, 0.12);
+    this.noise = noiseBuffer(ctx);
+    this.ambience = new Ambience(ctx, this.bus.music, this.noise);
   }
   volumes(s: SoundSettings) {
     const now = this.ctx.currentTime;
     this.master.gain.setTargetAtTime(s.muted ? 0 : s.master, now, 0.05);
     for (const b of ["sfx", "ui", "music"] as const) this.bus[b].gain.setTargetAtTime(s[b] * HEADROOM, now, 0.05);
   }
-  /** Schedules a note at its time (never in the past); false when the mixer refused it. */
+  /** Schedules an effect at its time (never in the past); false when the mixer refused it. */
   play(note: Note) {
     const spec = RECIPES[note.id],
       now = this.ctx.currentTime,
@@ -69,18 +95,21 @@ export class AudioEngine {
     if (spec.duck) this.duck(at);
     return true;
   }
-  private buffer(id: CueId) {
-    let b = this.buffers.get(id);
-    if (!b) {
-      const samples = buildSamples(RECIPES[id].params, this.ctx.sampleRate);
-      b = this.ctx.createBuffer(1, Math.max(1, samples.length), this.ctx.sampleRate);
-      b.getChannelData(0).set(samples);
-      this.buffers.set(id, b);
-    }
-    return b;
+  /** Plays a music note; false when the instrument already sounds too many notes at that time. */
+  instrument(name: Instrument, hz: number, at: number, velocity: number, pan: number) {
+    // Judged at the note's own time, so an offline render (currentTime stays 0 while scheduling) works the same.
+    const start = Math.max(this.ctx.currentTime, at),
+      sounding = (this.notes.get(name) ?? []).filter((end) => end > start);
+    if (sounding.length >= POLYPHONY) return false;
+    const panner = this.ctx.createStereoPanner();
+    panner.pan.value = pan;
+    panner.connect(this.bus.music);
+    sounding.push(INSTRUMENTS[name](this.ctx, panner, start, hz, velocity, this.noise));
+    this.notes.set(name, sounding);
+    return true;
   }
   /** Rewrites the duck automation from now on: the gain is only known now, never at a future `at`. */
-  private duck(at: number) {
+  duck(at: number) {
     const g = this.duckGain.gain,
       now = this.ctx.currentTime;
     this.ducks = addDuck(this.ducks, { start: at, end: at + DUCK_TIME }, now);
@@ -91,9 +120,19 @@ export class AudioEngine {
       g.setTargetAtTime(1, d.end, 0.3);
     }
   }
+  private buffer(id: CueId) {
+    let b = this.buffers.get(id);
+    if (!b) {
+      const samples = buildSamples(RECIPES[id].params, this.ctx.sampleRate);
+      b = this.ctx.createBuffer(1, Math.max(1, samples.length), this.ctx.sampleRate);
+      b.getChannelData(0).set(samples);
+      this.buffers.set(id, b);
+    }
+    return b;
+  }
 }
 /** Two seconds of white noise from xorshift32, the same on every load. */
-function noiseBuffer(ctx: AudioContext) {
+function noiseBuffer(ctx: BaseAudioContext) {
   const b = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate),
     data = b.getChannelData(0);
   let x = 0x9e3779b9;
