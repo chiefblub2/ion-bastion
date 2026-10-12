@@ -42,3 +42,10 @@ export function arpIndex(step: number, color: Color, n: number) {
     p = s % period;
   return p < n ? p : period - p;
 }
+/** Semitones above the chord root per 1/16 step for the enemies' bass: a tritone from threat 0.5, minor seconds and more tritones from 0.75. */
+const TENSION = [0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 1, 0, 6, 0, 1, 0];
+export function tensionOffset(step: number, threat: number) {
+  const i = ((step % 16) + 16) % 16;
+  if (threat < 0.5) return 0;
+  return threat < 0.75 ? (i === 6 ? 6 : 0) : TENSION[i];
+}

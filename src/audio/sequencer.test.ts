@@ -4,7 +4,7 @@ import { chordOf, MUSIC, padChord } from "./harmony";
 import { schedule, Sequencer, stepsIn, type Parts } from "./sequencer";
 
 const clock = { origin: 0, bpm: 120 }; // 1/16 = 0.125 s
-const parts: Parts = { drums: ["kick"], arp: false, extent: 3, color: "drive", activity: silent(), escalate: false };
+const parts: Parts = { drums: ["kick"], arp: false, extent: 3, color: "drive", activity: silent(), escalate: false, threat: 0 };
 describe("stepsIn", () => {
   it("lists the 1/16 steps inside the half-open window", () => {
     expect(stepsIn(clock, 0.1, 0.375)).toEqual([
@@ -22,7 +22,7 @@ describe("schedule", () => {
   });
   it("plays the arpeggio in 8ths through a widened, darkened chord", () => {
     expect(schedule(clock, MUSIC.outpost, { ...parts, drums: [], arp: true, extent: 4, color: "dark" }, 0, 0.25)).toEqual([
-      { kind: "chord", notes: padChord(chordOf(MUSIC.outpost, 0, 4), "dark"), at: 0 },
+      { kind: "chord", notes: padChord(chordOf(MUSIC.outpost, 0, 4), true), at: 0 },
       { kind: "arp", voice: 3, at: 0 },
     ]);
   });
@@ -59,5 +59,9 @@ describe("Sequencer", () => {
     expect(hits(7.5, 8)).toEqual(["fill", "fill", "fill", "fill"]);
     expect(hits(8, 8.1)).toEqual(["crash"]);
     expect(hits(0.1, 6)).toEqual([]);
+  });
+  it("adds the pad's tension note at high threat even when winning", () => {
+    const [chord] = schedule(clock, MUSIC.outpost, { ...parts, drums: [], threat: 0.7, color: "bright" }, 0, 0.1);
+    expect(chord).toEqual({ kind: "chord", notes: padChord(chordOf(MUSIC.outpost, 0), true), at: 0 });
   });
 });

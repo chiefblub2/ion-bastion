@@ -11,8 +11,8 @@ describe("harmony", () => {
     expect([0.1, 0.3, 0.6].map(extentFor)).toEqual([3, 4, 5]);
   });
   it("adds a tension note to the pad only in a dark mood", () => {
-    expect(padChord([33, 36, 40], "dark")).toEqual([33, 36, 40, 46]);
-    expect(padChord([33, 36, 40], "bright")).toEqual([33, 36, 40]);
+    expect(padChord([33, 36, 40], true)).toEqual([33, 36, 40, 46]);
+    expect(padChord([33, 36, 40], false)).toEqual([33, 36, 40]);
   });
   it("voices the bass on the root and the pad from the top of the chord down", () => {
     expect(padVoicing([33, 36, 40], 4)).toEqual([33, 52, 48, 45]);

@@ -61,8 +61,8 @@ export function chordOf(music: ThemeMusic, bar: number, extent: Extent = 3): num
 }
 /** The defense builds the harmony: triads, then 7ths from a quarter, 9ths from half. */
 export const extentFor = (defense: number): Extent => (defense >= 0.5 ? 5 : defense >= 0.25 ? 4 : 3);
-/** The pad's chord: a dark mood adds the minor second above the root as a tension note. */
-export const padChord = (chord: readonly number[], color: Color) => (color === "dark" ? [...chord, chord[0] + 13] : [...chord]);
+/** The pad's chord; under tension (high threat or a losing defense) it adds the minor ninth above the root. */
+export const padChord = (chord: readonly number[], tense: boolean) => (tense ? [...chord, chord[0] + 13] : [...chord]);
 /** MIDI note per drone voice: the bass on the root, the other voices from the top of the chord down, an octave up. */
 export function padVoicing(chord: readonly number[], voices: number) {
   const n = chord.length;

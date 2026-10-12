@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { arpIndex, hitsAt, layersFor } from "./grooves";
+import { arpIndex, hitsAt, layersFor, tensionOffset } from "./grooves";
 
 describe("grooves", () => {
   it("plays no drums at low threat, then kick, backbeat, hats and bass, and a stomp for heavy enemies", () => {
@@ -21,5 +21,12 @@ describe("grooves", () => {
   it("escalates at the top with 16th hats and a straight 8th-note bass", () => {
     expect(layersFor(0.9, 0)).toEqual(["kick", "snare", "hat", "hat16", "bass8"]);
     expect(hitsAt("straight", 2, ["bass8"])).toEqual(["bass8"]);
+  });
+  it("grows the bass's dissonance with the threat", () => {
+    expect(tensionOffset(6, 0.3)).toBe(0);
+    expect(tensionOffset(6, 0.6)).toBe(6);
+    expect(tensionOffset(10, 0.6)).toBe(0);
+    expect(tensionOffset(10, 0.9)).toBe(1);
+    expect(tensionOffset(22, 0.9)).toBe(6);
   });
 });
