@@ -1,4 +1,5 @@
 import { Ambience } from "./ambience";
+import { addDuck, type Span } from "./duck";
 import { admit, type Voice } from "./mixer";
 import { RECIPES, TIMING, type CueId } from "./recipes";
 import type { Note } from "./score";
@@ -21,6 +22,7 @@ export class AudioEngine {
   private buffers = new Map<CueId, AudioBuffer>();
   private voices: Playing[] = [];
   private last = new Map<CueId, number>();
+  private ducks: Span[] = [];
   constructor(readonly ctx: AudioContext) {
     const compressor = ctx.createDynamicsCompressor();
     compressor.threshold.value = -18;
@@ -77,12 +79,17 @@ export class AudioEngine {
     }
     return b;
   }
+  /** Rewrites the duck automation from now on: the gain is only known now, never at a future `at`. */
   private duck(at: number) {
-    const g = this.duckGain.gain;
-    g.cancelScheduledValues(at);
-    g.setValueAtTime(g.value, at);
-    g.linearRampToValueAtTime(DUCK_LEVEL, at + 0.05);
-    g.setTargetAtTime(1, at + DUCK_TIME, 0.3);
+    const g = this.duckGain.gain,
+      now = this.ctx.currentTime;
+    this.ducks = addDuck(this.ducks, { start: at, end: at + DUCK_TIME }, now);
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    for (const d of this.ducks) {
+      g.setTargetAtTime(DUCK_LEVEL, Math.max(now, d.start), 0.015);
+      g.setTargetAtTime(1, d.end, 0.3);
+    }
   }
 }
 /** Two seconds of white noise from xorshift32, the same on every load. */
