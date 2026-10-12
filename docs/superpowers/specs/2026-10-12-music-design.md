@@ -148,3 +148,12 @@ Listening result: bearable only up to about 10 shots/s, "too busy, too loud, noi
 - **Professional sound:** plain Web Audio instruments with filter and amplitude envelopes (parameters after Tone.js's MonoSynth/FMSynth defaults, no dependency), a generated stereo reverb (decaying-noise impulse, as Tone.Reverb does) with sends from music and effects, fixed stereo places per family, a gentle compressor and a limiter. ZzFX remains for short effects only.
 - **Listening without effort:** `scripts/render-music.ts` renders 8-bar WAV clips offline (headless Chrome, `OfflineAudioContext`) for each tower mix at 5–80 shots/s plus calm and climax scenes, with peak and RMS in dBFS and an `index.html` to play them back to back. The engine accepts any `BaseAudioContext` for this.
 - **Architecture:** a `Conductor` (pure apart from the engine it is given) owns score, activity, parts and mood; the game adapter, the sound board and the renderer all drive it, so what is rendered is what is played.
+
+## Revision 3: menace and connection (after the second listening)
+
+Listening result: "the enemy sounds are not threatening at all; everything is too pretty; the drums are too clean; tower shots and their sounds feel disconnected". Agreed:
+
+- **Industrial enemy kit** (plain Web Audio, a shared tanh saturation curve): thud (saturated sub sweep + click) for the kick, clank (inharmonic FM hit + noise) for the snare, tick (tiny metallic ring) for hats, slam (saturated low tom + clank) for stomp and fills, grit bass (saw + square through saturation and a resonant low-pass) for the bass pulse, metal crash (inharmonic FM, long tail). Towers keep their bright, glassy instruments.
+- **Dissonance with threat:** from threat 0.5 the grit bass plays a tritone on step 6; from 0.75 also minor-second stabs (steps 10 and 14) and more tritones (step 12). The pad carries the b9 tension note from threat 0.6 or when losing.
+- **Per-shot transient:** each family has a very short, quiet, unpitched ZzFX tick or thump played immediately (grid instant), at most one per family per ~0.12 s, well below the music.
+- **Visual pulse:** when a family's part note sounds, its towers flash a soft glow halo on the glow layer (core ≤ 0.3 alpha) that fades over 0.25 s. The audio reports per family how long ago its last note started on the audio clock; the scene reads it through a battlefield hook. Render-only; no pulses with sound off.
