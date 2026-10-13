@@ -5,7 +5,7 @@ import { createEnemy } from "./spawn";
 import { repairReactor } from "./support";
 export { DEFAULT_HP_GROWTH } from "./spawn";
 /** Seconds of build time after a wave before the next one starts by itself. */
-export const WAVE_BREAK = 10;
+export const WAVE_BREAK = 3;
 export function spawnEnemies(sim: Sim) {
   const s = sim.state;
   while (s.queue.length && s.queue[0].at <= s.waveTime) {
