@@ -6,7 +6,7 @@ import { moodOf } from "../audio/mood";
 import type { CueId } from "../audio/recipes";
 import { ShotMixer } from "../audio/shots";
 import { Sequencer } from "../audio/sequencer";
-import { loadSettings, saveSettings, type SoundSettings } from "../audio/settings";
+import { loadSettings, MUSIC_ENABLED, saveSettings, type SoundSettings } from "../audio/settings";
 import { unlockOnGesture } from "../audio/unlock";
 import type { Game } from "../core/game";
 import type { Match } from "../core/match";
@@ -44,7 +44,7 @@ export class Audio {
         conductor = new Conductor(engine);
       this.sound = { ctx, engine, conductor, shots: new ShotMixer() };
       engine.volumes(this.settings);
-      new Sequencer(() => ctx.currentTime, (from, to) => this.live()?.conductor.window(from, to)).start();
+      if (MUSIC_ENABLED) new Sequencer(() => ctx.currentTime, (from, to) => this.live()?.conductor.window(from, to)).start();
       document.addEventListener("visibilitychange", () => {
         if (document.hidden) void ctx.suspend();
         else if (this.on) void ctx.resume();
@@ -86,7 +86,7 @@ export class Audio {
       view = document.documentElement.dataset.view === "menu" ? "menu" : "game",
       state = game.state,
       mood = moodOf({ view, theme: game.map.theme ?? "outpost", status: state.status, paused: state.paused, enemies: state.enemies.length });
-    s.engine.ambience.set(mood);
+    if (MUSIC_ENABLED) s.engine.ambience.set(mood);
     s.conductor.theme(mood.drone, now);
     if (now >= this.measured + MEASURE) {
       this.measured = now;

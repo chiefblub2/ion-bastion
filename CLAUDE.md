@@ -109,7 +109,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
   - pan comes from the tower's column, and each tower type keeps a stable pitch offset (`rateOf`).
 
   Shots play on their own sub-bus in `engine.ts`, with a high shelf that closes with the shot density (`shotDensity`) and a gentle compressor.
-- **Music** is a synthwave soundtrack driven only by game state. `Conductor` (`conductor.ts`) takes a `Measure` from `intensity.ts` (read-only, every 0.5 s, never reads towers):
+- **Music** is a synthwave soundtrack driven only by game state. `Conductor` (`conductor.ts`) takes a `Measure` from `intensity.ts` (read-only, every 0.5 s, never reads towers). **Currently off in the game:** `MUSIC_ENABLED` (`audio/settings.ts`) is false, so `app/audio.ts` starts no sequencer and no pad and the Music slider is hidden; stingers, effects and UI sounds still play, and the sound board and `render-music.ts` still play the soundtrack. The conductor:
   - **phase:** menu, build, wave, paused, over;
   - **threat:** enemy weight × progress;
   - **danger:** front line² and reactor damage, or the crowd against the limit on circle missions;

@@ -9,6 +9,8 @@ export interface SoundSettings {
   ui: number;
   music: number;
 }
+/** The soundtrack (pad and sequenced music) is off in the game until it is ready; effects, stingers and UI sounds still play. */
+export const MUSIC_ENABLED = false;
 export const DEFAULT_SETTINGS: Readonly<SoundSettings> = { muted: true, master: 0.8, sfx: 0.8, ui: 0.5, music: 0.5 };
 
 export function parseSettings(raw: string | null): SoundSettings {
