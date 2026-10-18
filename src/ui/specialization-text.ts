@@ -31,6 +31,9 @@ const FIELDS: Record<string, { label: string; unit: string; scale: number }> = {
   width: { label: "Half-width", ...CELLS },
   delay: { label: "Delay", ...SECONDS },
   bonusPerUnused: { label: "Bonus per unused shard", ...SHARE },
+  min: { label: "Min. effects", ...PLAIN },
+  extend: { label: "Extension per hit", ...SECONDS },
+  max: { label: "Longest effect", ...SECONDS },
 };
 /** Labels that read differently for one kind. */
 const OVERRIDES: Partial<Record<SpecializationSpec["kind"], Record<string, string>>> = {
@@ -42,6 +45,9 @@ const OVERRIDES: Partial<Record<SpecializationSpec["kind"], Record<string, strin
   compression: { bonus: "Damage taken" },
   "temporal-exposure": { bonus: "Damage taken" },
   "armor-dissolver": { fraction: "Armor removed" },
+  "pool-dissolve": { fraction: "Armor removed" },
+  "pool-slow": { factor: "Slowed speed" },
+  eruption: { factor: "Eruption (share of burn)" },
 };
 const PREDICATES = { heavy: "heavy targets", "heavy-air": "heavy flyers", armored: "armored enemies", isolated: "a lone target", burning: "burning enemies" };
 

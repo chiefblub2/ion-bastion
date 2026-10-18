@@ -16,6 +16,7 @@ import { missionAnimationTypes } from "./enemy-animations";
 import { queueEnemyAnimations, queueEnemyArt, sceneSpriteHost } from "./enemy-art-scene";
 import { EnemyFeedback } from "./enemy-feedback";
 import { drawEnemyLayers, EnemySprites } from "./enemy-sprites";
+import { drawZones } from "./zones";
 import { familyOf, type Family } from "../audio/families";
 import { halo } from "./material";
 import { arcBand, CELL, disc, px, ring, type Pen } from "./shapes";
@@ -516,6 +517,7 @@ export class Battlefield extends Phaser.Scene {
         g.strokeCircle(px(target.x), px(target.y), 27);
       }
     }
+    if (s.zones) drawZones(this.hints, this.towerGlow, s.zones, s.time, this.clock, content);
     const pulses = this.hooks.pulses?.() ?? {};
     for (const t of s.towers) {
       const d = towers[t.type],

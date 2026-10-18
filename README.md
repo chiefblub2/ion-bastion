@@ -57,7 +57,7 @@ Every sector has its own terrain. In the Circuit (bottom right) there is no reac
 | `M` | Sound on or off |
 | `C` | Show every tower's range and the path coverage (red: no tower reaches ground units there) |
 | Tabs Attack · Control · Traps · Support, `Shift`+`1`–`4` | Switch the tower page (from ten available towers; arrow keys also work on the tabs) |
-| `1`–`9`, `0`, `Q`, `W`, `E` | Pick a tower in the open tab; every tab starts at `1` again (the key is shown on the card). Without tabs the keys count across all towers. |
+| `1`–`9`, `0`, `Q`, `W`, `E`, `R` | Pick a tower in the open tab; every tab starts at `1` again (the key is shown on the card). Without tabs the keys count across all towers. |
 | Right click, `Esc` or ✕ | Cancel build mode and selection. Without a selection, `Esc` leaves fullscreen. |
 | `N` | Start the next wave (in versus: "Ready"). From wave 2 on it also starts by itself 10 s after the previous one ends. |
 | Space | Pause, only during a wave or the countdown and not in versus |
@@ -244,16 +244,18 @@ Every enemy moves on the ground or in the air; every attack tower only hits cert
 | <img src="docs/images/towers/quake.png" width="36" height="36" alt=""> Quake | 140 | Close range: shockwave hits all enemies within range 1.8, still 50 % at the edge | Ground only |
 | <img src="docs/images/towers/executioner.png" width="36" height="36" alt=""> Executioner | 150 | Execution: enemies below 25 % HP take four times the damage on impact | Ground · Air |
 | <img src="docs/images/towers/shrapnel.png" width="36" height="36" alt=""> Shrapnel | 130 | Multi-target: every salvo hits up to 3 different enemies | Ground · Air |
+| <img src="docs/images/towers/catalyst.png" width="36" height="36" alt=""> Catalyst | 130 | Synergy: +50 % damage per running effect on the target (slow, burn, stun, weakening, net, disruption, bleeding, …), up to 4; aims at the most affected enemy | Ground · Air |
 | <img src="docs/images/towers/jammer.png" width="36" height="36" alt=""> Jammer | 130 | Disruption: pulse in radius 1.1 switches off shield, regeneration, healing, stealth, evasion and leader bonus for 3 s; shields break at once | Ground · Air |
 | <img src="docs/images/towers/net.png" width="36" height="36" alt=""> Snare Net | 110 | Air trap: flyers 30 % slower for 3 s and targetable by ground towers like Nova | Air only |
 | <img src="docs/images/towers/gravity.png" width="36" height="36" alt=""> Gravitron | 170 | Knockback: pulse in radius 1 pulls enemies back at 1.5 times speed for 0.6 s, then 2.5 s immune; Berserkers resist | Ground only |
+| <img src="docs/images/towers/plasma.png" width="36" height="36" alt=""> Plasma | 140 | Area denial: canisters leave a pool of radius 0.85 for 4 s that burns every ground enemy in it for the tower's damage each second, burrowed and stealthed ones too; pools of one tower do not stack | Ground only (also netted flyers) |
 | <img src="docs/images/towers/refinery.png" width="36" height="36" alt=""> Refinery | 120 | 25 credits after every wave, no attack | – |
 | <img src="docs/images/towers/detector.png" width="36" height="36" alt=""> Detector | 90 | Reveals stealthed enemies within radius 3.5, no attack of its own | – |
 | <img src="docs/images/towers/beacon.png" width="36" height="36" alt=""> Bounty Beacon | 100 | Kills within radius 2.5 pay 50 % more credits (several Beacons do not stack), no attack | – |
 | <img src="docs/images/towers/dock.png" width="36" height="36" alt=""> Repair Dock | 150 | Restores 1 reactor energy after every wave, up to the starting value; not in the Circuit | – |
 | <img src="docs/images/towers/tracker.png" width="36" height="36" alt=""> Tracker | 140 | Enemies within radius 2.2 take 15 % more damage, on top of Corrosion, no attack | – |
 
-Nova, Mortar, Flak, Skyburst, Cryo, Executioner, Shrapnel and Snare Net fire projectiles that take time; fast enemies can dodge Nova rockets. Tesla, Lance, Focus, Quake, Gravitron and Jammer hit instantly.
+Nova, Mortar, Flak, Skyburst, Cryo, Executioner, Shrapnel, Catalyst, Plasma and Snare Net fire projectiles that take time; fast enemies can dodge Nova rockets. Tesla, Lance, Focus, Quake, Gravitron and Jammer hit instantly.
 
 ### Traps
 
@@ -296,9 +298,11 @@ Levels 4 and 5 are expensive, but bring more damage per credit than additional t
 | Quake | 70 % at the edge | full force to the edge |
 | Executioner | already below 30 % HP | 5 times damage below 35 % HP |
 | Shrapnel | 4 targets per salvo | 5 targets |
+| Catalyst | +60 % per effect | +75 %, counts up to 5 effects |
 | Jammer | 3.5 s, radius 1.3 | 4.5 s, radius 1.5 |
 | Snare Net | 3.5 s | 40 % slower, 4.5 s |
 | Gravitron | radius 1.2, 1.8 times pull | radius 1.4, 2.2 times, 0.7 s |
+| Plasma | radius 1, 5 s | radius 1.15, 6 s |
 
 ### Specializations (levels 6–8)
 
@@ -318,12 +322,14 @@ After level 5 every attack and control tower above offers three specializations.
 | Mortar | Saturation: blast radius 2.3 | Bunker Buster: +75 % against armor | Mobile Artillery: no dead zone, 30 % faster |
 | Quake | Fracture: hit enemies take +20 % for 3 s | Resonance: 35 % faster pulses | Aftershock: a second wave for 55 % |
 | Executioner | Hunter's Mark: executes below 50 % HP | Guillotine: 8× execution damage | Blood Transfer: 60 % of the overkill jumps on |
+| Catalyst | Volatile Mix: 2+ effects splash 65 % within 1.2 cells | Stabilizer: each hit makes effects last 0.6 s longer (up to 5 s) | Catalytic Core: +120 % per effect, up to 6 |
 | Shrapnel | Scatterstorm: 8 targets | Tungsten Shards: ignore 60 % of armor | Concentrated Volley: unused shards hit the main target |
 | Cryo | Permafrost: slows to 20 % speed | Brittle Ice: slowed enemies take +16 % | Frostburst: slows enemies around the target |
 | Stasis | Deep Stasis: 1.8 s stun | Time Field: pulse radius 1.9 | Temporal Exposure: +20 % damage after a stun |
 | Corrosion | Superacid: +55 % damage taken | Acid Fog: radius 1.6 | Armor Dissolver: corroded armor loses 30 % |
 | Gravitron | Reverse Drive: 3.4× pull | Gravity Well: radius 2 | Compression: pulled enemies take +20 % |
 | Jammer | Wideband: radius 2.1 | Blackout: 7 s disruption | Weak Signal: disrupted enemies take +16 % |
+| Plasma | Searing Ground: armor loses 60 % in the pool | Quagmire: 60 % speed in the pool | Eruption: an expiring pool bursts for its whole burn |
 | Snare Net | Anchor Net: netted flyers at 30 % speed | Net Cloud: catches 3 more flyers | Exposed Target: netted flyers take +20 % |
 
 Damage-taken bonuses do not stack with each other or with Corrosion: the strongest one counts. Armor pierce and Armor Dissolver only weaken the armor trait, never shields, mirrors or other defences.
@@ -360,7 +366,7 @@ Every attack tower has its own target priority. You set it in the tower panel un
 | Weakest | the enemy with the least current HP |
 | Closest | the enemy closest to the tower |
 
-On a tie, the enemy further ahead wins. The Lance still aims at the line with the most hits; priority only decides there on equal hit counts. If the target of a Pulse, Flak, Skyburst or Cryo projectile dies in flight, it picks the next enemy as before. Refinery, Detector and Aura have no target priority. In co-op you can only change the priority of your own towers.
+On a tie, the enemy further ahead wins. The Lance still aims at the line with the most hits; priority only decides there on equal hit counts. The Catalyst likewise aims at the enemy with the most running effects; priority only decides between equally affected ones. If the target of a Pulse, Flak, Skyburst, Catalyst or Cryo projectile dies in flight, it picks the next enemy as before. Refinery, Detector and Aura have no target priority. In co-op you can only change the priority of your own towers.
 
 ## Enemies
 

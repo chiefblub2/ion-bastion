@@ -4,10 +4,10 @@ import { dist } from "../path";
 import { canTarget } from "./targeting";
 import type { AttackModule } from "./types";
 /**
- * Damage to every targetable enemy within `radius` of a point; `kind` tells traits which attack it was (splash, mortar or airburst).
+ * Damage to every targetable enemy within `radius` of a point; `kind` tells traits which attack it was (splash, mortar, airburst or a Plasma eruption).
  * Returns the enemies the blast killed, in id order.
  */
-export function blast(sim: Sim, src: DamageSource, at: Point, radius: number, damage: number, kind: "splash" | "mortar" | "airburst"): Enemy[] {
+export function blast(sim: Sim, src: DamageSource, at: Point, radius: number, damage: number, kind: "splash" | "mortar" | "airburst" | "pool"): Enemy[] {
   const killed: Enemy[] = [];
   // A copy: enemies released on death must not catch the same explosion.
   for (const target of [...sim.state.enemies])

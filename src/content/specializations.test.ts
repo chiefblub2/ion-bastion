@@ -14,6 +14,7 @@ const PRICES: Record<string, [number, number, number, number]> = {
   acid: [110, 275, 440, 660], decay: [160, 400, 640, 960], focus: [150, 375, 600, 900], mortar: [160, 400, 640, 960],
   quake: [140, 350, 560, 840], executioner: [150, 375, 600, 900], shrapnel: [130, 325, 520, 780], jammer: [130, 325, 520, 780],
   net: [110, 275, 440, 660], gravity: [170, 425, 680, 1020], skyburst: [140, 350, 560, 840],
+  catalyst: [130, 325, 520, 780], plasma: [140, 350, 560, 840],
 };
 
 function built(type: TowerId, upgrades: string[] = LEVELS) {
@@ -25,8 +26,8 @@ function built(type: TowerId, upgrades: string[] = LEVELS) {
 }
 
 describe("tower specializations: content", () => {
-  it("covers the 19 attack and control towers with three paths of three tiers (T-001)", () => {
-    expect(SPECIALIZED).toHaveLength(19);
+  it("covers the 21 attack and control towers with three paths of three tiers (T-001)", () => {
+    expect(SPECIALIZED).toHaveLength(21);
     for (const type of SPECIALIZED) {
       const upgrades = TOWERS[type].upgrades, paths = new Set(upgrades.map((u) => u.path).filter(Boolean));
       expect(upgrades).toHaveLength(13);

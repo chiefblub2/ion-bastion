@@ -19,6 +19,8 @@ export function stateHash(s: GameState) {
     ...(s.nextWave !== undefined ? [`n${round(s.nextWave)}`] : []),
     // Aftershock waves still to come; absent without them, so older hashes stay unchanged.
     ...(s.pending ? [s.pending.map((p) => `${round(p.due)}@${round(p.at.x)},${round(p.at.y)}r${round(p.radius)}d${round(p.damage)}t${p.source.tower}`).join(";")] : []),
+    // Plasma pools on the ground; absent without them.
+    ...(s.zones ? [s.zones.map((z) => `${z.source.tower}@${round(z.at.x)},${round(z.at.y)}r${round(z.radius)}d${round(z.dps)}u${round(z.until)}n${round(z.next)}`).join(";")] : []),
   ].join("|");
   return fnv(parts);
 }

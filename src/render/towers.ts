@@ -409,6 +409,30 @@ const BASES: Record<TurretStyle, Drawing> = {
     g.fillStyle(shade(PLATE, 0.45), 0.8);
     for (const [sx, sy] of CORNERS) pip(g, x + sx * 16.5 - 0.5, y + sy * 16.5 - 0.5, 0.7);
   },
+  // Hexagonal bench with three spare vials in a rack, their reagent glowing as the next dart brews.
+  flask: (ctx) => {
+    const { g, glow, x, y, definition: d, charge } = ctx,
+      spares = [0, 1, 2].map((i) => at(x, y, Math.PI / 6 + (i * TAU) / 3, 19));
+    base(ctx, { n: 6 }, 23, 18);
+    g.fillStyle(OUTLINE);
+    for (const p of spares) pip(g, p.x, p.y, 3);
+    g.fillStyle(shade(d.color, -0.15));
+    for (const p of spares) pip(g, p.x - 0.3, p.y - 0.3, 1.9);
+    glow.fillStyle(d.color, 0.08 + 0.14 * charge);
+    for (const p of spares) pip(glow, p.x, p.y, 2.6);
+  },
+  // Octagonal casemate with four coolant vents; the vents glow from the plasma reservoir below.
+  caster: (ctx) => {
+    const { g, glow, x, y, definition: d, energy } = ctx,
+      vents = [0, 1, 2, 3].map((i) => (i * Math.PI) / 2);
+    base(ctx, { n: 8, rot: Math.PI / 8 }, 24, 19, "disc");
+    g.fillStyle(OUTLINE);
+    for (const a of vents) tick(g, x, y, a, 18.6, 22.4, 3.4);
+    g.fillStyle(shade(d.color, -0.2));
+    for (const a of vents) tick(g, x, y, a, 19.2, 21.8, 1.4);
+    glow.fillStyle(d.color, 0.12 + energy);
+    for (const a of vents) tick(glow, x, y, a, 18.8, 22.2, 2.6);
+  },
   // Square rack with crossed straps.
   launcher: (ctx) => {
     const { g, x, y, definition: d } = ctx;
@@ -988,6 +1012,62 @@ const TURRETS: Record<TurretStyle, Drawing> = {
     if (level >= 2) disc(glow, r.x, r.y, 2.6, c, 0.12 + 0.1 * Math.max(0, Math.sin(spin * 2)));
     bolt(ctx, 2);
     muzzleGlow(ctx, end + 1.5, 6);
+  },
+  // A round-bottomed flask: its neck is the barrel, the reagent inside rises with the charge and bubbles; a
+  // copper coil wraps the neck from level 3.
+  flask: (ctx) => {
+    const { g, glow, x, y, tower: t, definition: d, level, clock, charge, kick, tip, energy, maxed } = ctx,
+      a = t.angle,
+      c = d.color,
+      { back, end } = reach(ctx, "flask");
+    litBar(g, x, y, a, back + 5, end, 2.8, 2.4, shade(c, -0.55), { tip, bands: level >= 3 ? [0.35, 0.55, 0.75] : undefined });
+    litBar(g, x, y, a, back + 6, end - 1, 1.6, 1.3, shade(c, -0.1), { shadow: false });
+    disc(g, x + 1, y + 1.6, 10.6, SHADOW, 0.4);
+    disc(g, x, y, 10.4, shade(c, -0.6));
+    disc(g, x, y, 9.2, shade(DARK, 0.15));
+    // Reagent level: a chord that rises with the charge, drawn as a wedge from below.
+    const fill = 0.25 + 0.75 * charge,
+      spread = Math.acos(1 - 2 * fill);
+    wedge(g, x, y, 8.6, Math.PI / 2 - spread, Math.PI / 2 + spread, c, 0.9);
+    disc(g, x, y + 8.6 * (1 - fill) * 0.4, 8.6 * Math.sqrt(fill) * 0.7, c, 0.75);
+    disc(glow, x, y, 9, c, Math.min(0.3, 0.08 + 0.14 * charge + energy));
+    for (let i = 0; i < 3; i++) {
+      const phase = (clock * 1.1 + i / 3 + t.id * 0.27) % 1;
+      disc(g, x - 3 + i * 3, y + 6 - phase * 10 * fill, 1.1, shade(c, 0.6), (1 - phase) * 0.9);
+    }
+    arcBand(g, x, y, 8.2, 1.6, LIGHT - 0.7, LIGHT + 0.6, 0xffffff, 0.4);
+    disc(g, x - 3.4, y - 3.6, 1.2, 0xffffff, 0.7);
+    if (kick > 0) ring(glow, x, y, 10 + (1 - kick) * 6, 1.4, shade(c, 0.4), 0.3 * kick);
+    if (maxed) bolt(ctx, 1.4);
+    muzzleGlow(ctx, end + 1.5, 4);
+  },
+  // A short wide-bore launcher: a plasma canister glows in the breech once loaded, coils ring the tube, and the
+  // bore spills light after a shot.
+  caster: (ctx) => {
+    const { g, glow, x, y, tower: t, definition: d, level, charge, kick, tip, energy } = ctx,
+      a = t.angle,
+      c = d.color,
+      ca = Math.cos(a),
+      sa = Math.sin(a),
+      { back, end } = reach(ctx, "caster");
+    boss(g, x, y, 11.5, shade(c, -0.6));
+    litBar(g, x, y, a, back - 4, end, 6, 6.8, shade(c, -0.45), { tip });
+    // Field coils around the tube; they light up as the canister charges.
+    const coils = level >= 3 ? [0.35, 0.55, 0.75] : [0.45, 0.7];
+    for (const f of coils) {
+      const dd = back - 4 + (end - back + 4) * f;
+      strip(g, x, y, ca, sa, dd - 1, dd + 1, -7.6, 7.6, -7.6, 7.6, shade(c, -0.15));
+      strip(glow, x, y, ca, sa, dd - 0.6, dd + 0.6, -7, 7, -7, 7, c, Math.min(0.3, 0.06 + 0.2 * charge + energy));
+    }
+    const mouth = point(x, y, ca, sa, end - 3.5, 0);
+    disc(g, mouth.x, mouth.y, 4.6, OUTLINE);
+    if (charge > 0.8) {
+      disc(g, mouth.x, mouth.y, 3, shade(c, 0.25));
+      disc(glow, mouth.x, mouth.y, 4.4, c, 0.25 * (charge - 0.8) * 5);
+    }
+    if (kick > 0) halo(glow, mouth.x, mouth.y, 9 * (0.6 + kick), c, 0.3 * kick);
+    bolt(ctx, 2.4);
+    muzzleGlow(ctx, end + 1, 6);
   },
   // A gold coin turning slowly: its rim shows as it turns, and its face glints towards the viewer.
   beacon: (ctx) => {
