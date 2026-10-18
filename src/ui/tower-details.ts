@@ -75,6 +75,6 @@ export function towerDetails(
   }
   const cancelLabel = tower ? "Deselect (Esc)" : "Exit build mode (Esc)";
   return `<div class="selection-heading"><span>${tower ? "TOWER SELECTED" : "BUILD MODE"}</span><span class="selection-actions"><b>${heading}</b><button id="cancel-selection" class="cancel-selection" title="${cancelLabel}" aria-label="${cancelLabel}">✕</button></span></div>
-    <p>${definition.description}</p>${isSupport(definition.attack) ? "" : `<p class="tower-targets">Targets: <b>${targets(definition.targets)}</b>${attackSummary(type, tower, content)}</p>`}${values}
+    <p>${definition.description}</p>${isSupport(definition.attack) ? "" : `<p class="tower-targets">Targets: <b>${targets(definition.targets)}</b>${attackSummary(type, tower, content)}${tower ? ` · Kills <b id="tower-kills">${tower.kills}</b>` : ""}</p>`}${values}
     ${tower ? `${isSupport(definition.attack) ? "" : priorityControl(tower)}${upgradeControl(tower, towers, content)}<button id="sell-btn" class="sell">Sell · +${sellValue(tower)} credits</button>` : `<div class="placement-note">${definition.placement === "path" ? "Click a free path cell: the trap triggers when ground enemies walk over it." : "Click a free cell to build."}<br><span>Esc, ✕ or right-click exits build mode. Shift+click builds several.</span></div>`}`;
 }

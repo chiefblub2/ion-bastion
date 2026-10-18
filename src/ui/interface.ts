@@ -314,6 +314,9 @@ export class Interface {
         box.innerHTML =
           '<div class="selection-heading"><span>TACTICS</span><b>◇</b></div><p>Build at bends to keep enemies in range longer.</p><div class="placement-note">Click a built tower to upgrade it, or an enemy to see its HP and traits.</div>';
     }
+    // Kills change every frame in a wave; patch the number instead of rebuilding the panel.
+    const kills = document.getElementById("tower-kills");
+    if (kills && t && kills.textContent !== String(t.kills)) kills.textContent = String(t.kills);
     for (const button of document.querySelectorAll<HTMLButtonElement>("[data-upgrade]")) {
       button.disabled = !t || terminal || foreign || upgradeOption(t, button.dataset.upgrade!, gold, content, upgradeDiscount(t, s.towers, content)).status !== "available";
     }
