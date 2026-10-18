@@ -18,6 +18,15 @@ describe("tower card content", () => {
     expect(choices.map((c) => c.id)).toEqual(["sharpshooter-1", "overclock-1", "ricochet-1"]);
     for (const c of choices) expect(c.detail).not.toBe("");
   });
+  it("explains specialization tiers with their effect and value changes, plain levels stay short", () => {
+    for (const c of cardChoices(tower("pulse", LEVELS), [], 500)) {
+      expect(c.description).not.toBe("");
+      expect(c.changes.length).toBeGreaterThan(0);
+    }
+    expect(cardChoices(tower("pulse"), [], 500)[0]).toMatchObject({ description: "", changes: [] });
+    expect(towerCardHtml(tower("pulse", LEVELS), [], options())).toContain("card-spec-changes");
+    expect(towerCardHtml(tower("pulse", LEVELS), [], options({ slim: true }))).not.toContain("card-spec-changes");
+  });
   it("offers the three Aura paths before the first purchase", () => {
     expect(cardChoices(tower("aura"), [], 500)).toHaveLength(3);
   });

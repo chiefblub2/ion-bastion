@@ -41,3 +41,9 @@ export function hotkeyTowers(game: Game, page: number): TowerId[] {
 }
 /** Whether a page has any of the mission's towers, i.e. whether its tab is shown. */
 export const hasPage = (game: Game, page: number) => towerOrder(game).some((id) => pageOf(game.content.towers[id]) === page);
+/**
+ * Whether the sidebar's build menu is folded away: while a tower or enemy is selected and no tower is being
+ * placed, unless the player opened it by hand (`opened`).
+ */
+export const menuCollapsed = (view: { build: TowerId | null; selected: number | null; enemy: number | null }, opened: boolean) =>
+  !opened && view.build === null && (view.selected !== null || view.enemy !== null);

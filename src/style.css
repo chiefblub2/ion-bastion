@@ -511,6 +511,30 @@ p {
   font: 12px var(--mono);
   color: #7286a8;
 }
+/* The "Towers" heading folds the build menu while a tower or enemy is selected (ui/tower-pages.ts menuCollapsed). */
+.tower-menu-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+.tower-menu-toggle i {
+  font-style: normal;
+  font-size: 14px;
+  color: #7286a8;
+}
+.tower-menu-toggle:hover:not(:disabled),
+.tower-menu-toggle:hover:not(:disabled) i {
+  color: var(--mint);
+  background: none;
+}
+.sidebar.menu-collapsed .tower-menu {
+  display: none;
+}
 /* Category tabs above the cards; hidden when a mission offers only a few towers. */
 .tower-tabs {
   display: grid;
@@ -1801,9 +1825,13 @@ dialog::backdrop {
   :root.is-fullscreen .tower-cost b {
     font-size: 10px;
   }
-  /* A selected tower or enemy: its upgrades or details replace the tower list. */
-  :root.is-fullscreen .sidebar.inspecting .tower-menu {
-    display: none;
+  /* A selected tower or enemy folds the tower list away (.menu-collapsed); its heading stays to reopen it. */
+  :root.is-fullscreen .sidebar.menu-collapsed .towers-title {
+    display: flex;
+    margin: 0 0 6px;
+  }
+  :root.is-fullscreen .sidebar.menu-collapsed .towers-title h2 {
+    font-size: 16px;
   }
   :root.is-fullscreen .sidebar.inspecting .selection {
     margin-top: 0;
@@ -2254,6 +2282,53 @@ dialog::backdrop {
 .card-upgrade small {
   color: var(--muted);
   font-size: 10px;
+}
+/* A specialization tier: role, effect sentence and value changes, accented in the path colour. */
+.tower-card-pop:has(.card-spec):not(.dock-top):not(.dock-bottom) {
+  width: 250px;
+}
+.tower-card-pop .card-upgrade.card-spec {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--path-color, #1f6f85);
+}
+.card-spec .card-spec-head {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.card-spec .card-spec-head > span {
+  display: flex;
+  flex-direction: column;
+}
+.card-spec .card-spec-text {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.3;
+}
+.card-spec .card-spec-changes {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 8px;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.card-spec .card-spec-changes span {
+  display: block;
+}
+.card-spec .card-spec-changes span:nth-child(even) {
+  text-align: right;
+  white-space: nowrap;
+}
+.card-spec .card-spec-changes b {
+  color: var(--mint);
 }
 .card-priority {
   display: grid;

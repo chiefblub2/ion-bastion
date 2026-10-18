@@ -7,6 +7,7 @@ import { TARGET_PRIORITIES } from "../systems/combat";
 import { discountedCost, upgradeDiscount } from "../systems/workshop";
 import { escape, number } from "./format";
 import { PRIORITY_LABELS } from "./messages";
+import { upgradeChanges, type UpgradeChange } from "./upgrade-tooltip";
 // The action card beside a selected tower: upgrade (or the path choice), target priority and sell.
 // Pure HTML from the state; `tower-card-view.ts` shows and places it, `app/input.ts` handles its buttons.
 /**
@@ -25,6 +26,11 @@ export interface CardChoice {
   /** Price after the Workshop discount. */
   price: number;
   disabled: boolean;
+  /** Specialization tiers only: the tier's effect sentence and the values it changes; empty otherwise. */
+  description: string;
+  changes: UpgradeChange[];
+  /** Specialization tiers only: the path colour. */
+  color?: number;
 }
 /** The upgrades on offer right now: the next level, or every path of a choice. */
 export function cardChoices(tower: Tower, towers: readonly Tower[], credits: number, content: ContentPack = DEFAULT_CONTENT): CardChoice[] {
@@ -42,7 +48,17 @@ export function cardChoices(tower: Tower, towers: readonly Tower[], credits: num
         : aura
           ? `+${number(aura[1] * 100)}% ${aura[0]}`
           : "";
-      return { id: upgrade.id, label, detail, price, disabled: credits < price };
+      const special = isSpecialization(upgrade);
+      return {
+        id: upgrade.id,
+        label,
+        detail,
+        price,
+        disabled: credits < price,
+        description: special ? upgrade.description : "",
+        changes: special ? upgradeChanges(tower, towers, upgrade, content) : [],
+        color: special ? definition.visual.paths?.[upgrade.path!]?.color : undefined,
+      };
     });
 }
 export interface CardOptions {
@@ -66,9 +82,17 @@ export function towerCardHtml(tower: Tower, towers: readonly Tower[], options: C
   const upgrades = choices.length
     ? choices
         .map((c) => {
+          const locked = c.disabled || options.owner ? " disabled" : "";
+          if (c.description && !options.slim) {
+            const color = c.color === undefined ? "" : ` style="--path-color:#${c.color.toString(16).padStart(6, "0")}"`;
+            return `<button class="card-upgrade card-spec" data-upgrade="${c.id}"${color}${locked}><span class="card-spec-head"><span>${escape(c.label)}<small>${escape(c.detail)}</small></span><b>◇ ${c.price}</b></span><span class="card-spec-text">${escape(c.description)}</span>${
+              c.changes.length ? `<span class="card-spec-changes">${c.changes.map(changeLine).join("")}</span>` : ""
+            }</button>`;
+          }
           const detail = c.detail && !options.slim ? `<small>${escape(c.detail)}</small>` : "";
-          const title = c.detail && options.slim ? ` title="${escape(c.detail)}"` : "";
-          return `<button class="card-upgrade" data-upgrade="${c.id}"${title}${c.disabled || options.owner ? " disabled" : ""}><span>${escape(c.label)}${detail}</span><b>◇ ${c.price}</b></button>`;
+          const tip = options.slim ? [c.detail, c.description, ...c.changes.map(changeText)].filter(Boolean).join("\n") : "";
+          const title = tip ? ` title="${escape(tip)}"` : "";
+          return `<button class="card-upgrade" data-upgrade="${c.id}"${title}${locked}><span>${escape(c.label)}${detail}</span><b>◇ ${c.price}</b></button>`;
         })
         .join("")
     : '<button class="card-upgrade" disabled>Max level</button>';
@@ -85,3 +109,7 @@ export function towerCardHtml(tower: Tower, towers: readonly Tower[], options: C
     options.owner ? `<p class="card-owner">Owned by ${escape(options.owner)}</p>` : ""
   }<div class="card-upgrades">${upgrades}</div>${target}<button class="card-sell" data-sell${locked}>Sell · ◇ ${sellValue(tower)}</button>`;
 }
+
+const changeText = (c: UpgradeChange) => `${c.label}: ${c.before === undefined ? "–" : `${number(c.before)}${c.unit}`} → ${number(c.after)}${c.unit}`;
+const changeLine = (c: UpgradeChange) =>
+  `<span>${escape(c.label)}</span><span>${c.before === undefined ? "–" : `${number(c.before)}${c.unit}`} → <b>${number(c.after)}${c.unit}</b></span>`;

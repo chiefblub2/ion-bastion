@@ -22,7 +22,7 @@ import { MODE_IDS, MODES } from "../core/modes";
 import { renderPlayers, renderSends, versusOutcome, type MultiplayerSession } from "./players";
 export type { MultiplayerSession } from "./players";
 import type { ViewState } from "../render/scene";
-import { hotkeyTowers, isPaged, pageOf, TOWER_PAGES, towerOrder } from "./tower-pages";
+import { hotkeyTowers, isPaged, menuCollapsed, pageOf, TOWER_PAGES, towerOrder } from "./tower-pages";
 const pad = (n: number) => String(n).padStart(2, "0");
 const plural = (n: number, word: string) => (n === 1 ? word : `${word}s`);
 /** Hotkeys for the towers of the open tab, from 1 again on every tab; more than ten continue with letters. */
@@ -55,7 +55,7 @@ export function mountUI(game: Game) {
   <div class="field-footer"><span><i class="legend-path"></i>Enemy path</span><span><i class="legend-build"></i>Free build area</span><span id="cell-label">Pick a tower, then click a cell</span></div>
   <div class="wave-timeline"><div class="timeline-label"><span>MISSION PROGRESS</span><b id="progress-label"></b></div><div id="wave-segments"></div></div>
   </section>
-  <aside class="sidebar"><div class="section-title towers-title"><h2>Towers</h2><span>01–${String(Object.keys(TOWERS).length).padStart(2, "0")}</span></div><div class="tower-menu"><div id="tower-tabs" class="tower-tabs" role="tablist" aria-label="Tower categories" hidden></div><div id="tower-list" class="tower-list" role="tabpanel">${towerOrder(game)
+  <aside class="sidebar"><div class="section-title towers-title"><button id="tower-menu-toggle" class="tower-menu-toggle" aria-expanded="true" aria-controls="tower-menu"><h2>Towers</h2><i aria-hidden="true">▾</i></button><span>01–${String(Object.keys(TOWERS).length).padStart(2, "0")}</span></div><div id="tower-menu" class="tower-menu"><div id="tower-tabs" class="tower-tabs" role="tablist" aria-label="Tower categories" hidden></div><div id="tower-list" class="tower-list" role="tabpanel">${towerOrder(game)
     .map((id) => TOWERS[id])
     .map(
       (t, i) =>
@@ -170,6 +170,8 @@ export class Interface {
   private selectionKey = "";
   /** The tower or enemy shown in the selection panel; a new one scrolls the sidebar to the top. */
   private selectionSubject = "";
+  /** The build menu opened by hand while a selection would collapse it; reset by every new selection. */
+  private menuOpened = false;
   private forecastKey = "";
   private liveHtml = "";
   private playersHtml = "";
@@ -181,7 +183,13 @@ export class Interface {
   constructor(
     private game: Game,
     private view: ViewState,
-  ) {}
+  ) {
+    document.addEventListener("click", (e) => {
+      if (!(e.target instanceof Element) || !e.target.closest("#tower-menu-toggle")) return;
+      this.menuOpened = menuCollapsed(this.view, this.menuOpened);
+      this.refresh();
+    });
+  }
   /** Flashes the credits counter when refineries pay out. */
   flashCredits() {
     const e = document.querySelector(".credits")!;
@@ -300,14 +308,24 @@ export class Interface {
     if (enemy && isHidden(this.game, enemy)) enemy = undefined;
     if (!enemy) this.view.enemy = null;
     const key = enemy ? `enemy/${enemyKey(this.game, enemy)}` : `${t?.id}/${t?.priority}/${this.view.build}/${auraKey}`;
-    // On phones in landscape a selected enemy replaces the tower list (style.css); a selected tower keeps it,
-    // since its actions are on the card beside it (tower-card-view.ts).
+    // A selected tower or enemy collapses the build menu, so its details sit higher in the sidebar; the
+    // tower's actions are on the card beside it (tower-card-view.ts). On phones in landscape a selected enemy
+    // replaces the tower list (style.css).
     const sidebar = document.querySelector<HTMLElement>(".sidebar")!;
     sidebar.classList.toggle("inspecting", !!enemy);
     const subject = enemy ? `enemy/${enemy.id}` : t ? `tower/${t.id}` : "";
     if (subject !== this.selectionSubject) {
       this.selectionSubject = subject;
+      this.menuOpened = false;
       if (subject) sidebar.scrollTop = 0;
+    }
+    const collapsed = menuCollapsed(this.view, this.menuOpened);
+    if (sidebar.classList.contains("menu-collapsed") !== collapsed) {
+      sidebar.classList.toggle("menu-collapsed", collapsed);
+      const toggle = document.getElementById("tower-menu-toggle")!;
+      toggle.setAttribute("aria-expanded", String(!collapsed));
+      toggle.title = collapsed ? "Show the build menu" : "";
+      toggle.querySelector("i")!.textContent = collapsed ? "▸" : "▾";
     }
     if (key !== this.selectionKey) {
       this.selectionKey = key;

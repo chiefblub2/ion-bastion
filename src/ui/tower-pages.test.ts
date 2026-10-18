@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Game } from "../core/game";
 import { MISSIONS } from "../content/missions";
 import { TOWERS } from "../content/towers";
-import { hasPage, hotkeyTowers, isPaged, pageOf, TOWER_PAGES, towerOrder } from "./tower-pages";
+import { hasPage, hotkeyTowers, isPaged, menuCollapsed, pageOf, TOWER_PAGES, towerOrder } from "./tower-pages";
 const page = (name: string) => TOWER_PAGES.findIndex((p) => p.name === name);
 describe("tower menu pages", () => {
   it("sorts every tower into its category", () => {
@@ -65,5 +65,15 @@ describe("tower menu pages", () => {
     const g = new Game(MISSIONS.find((m) => m.id === "bunkerlinie")!);
     expect(towerOrder(g)).toEqual(["pulse", "blast", "flak", "frost"]);
     expect(isPaged(g)).toBe(false);
+  });
+});
+describe("build menu collapse", () => {
+  const view = (over = {}) => ({ build: null, selected: null, enemy: null, ...over });
+  it("folds while a tower or enemy is selected, unless building or opened by hand", () => {
+    expect(menuCollapsed(view({ selected: 1 }), false)).toBe(true);
+    expect(menuCollapsed(view({ enemy: 4 }), false)).toBe(true);
+    expect(menuCollapsed(view(), false)).toBe(false);
+    expect(menuCollapsed(view({ build: "pulse" }), false)).toBe(false);
+    expect(menuCollapsed(view({ selected: 1 }), true)).toBe(false);
   });
 });

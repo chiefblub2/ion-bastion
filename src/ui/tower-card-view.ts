@@ -42,7 +42,7 @@ export class TowerCard {
       slim = this.phone.matches || this.board.clientWidth < SLIM_BOARD,
       owner = session && !session.match && t.owner !== this.view.player ? playerName(t.owner) : undefined,
       choices = cardChoices(t, s.towers, credits, this.game.content);
-    const key = [t.id, t.upgrades.join(","), t.priority, slim, owner, t.spent, choices.map((c) => `${c.id}:${c.price}:${c.disabled}`).join(",")].join("|");
+    const key = [t.id, t.upgrades.join(","), t.priority, slim, owner, t.spent, choices.map((c) => `${c.id}:${c.price}:${c.disabled}:${c.changes.map((v) => v.after).join("/")}`).join(",")].join("|");
     if (key !== this.key) {
       this.key = key;
       this.el.classList.toggle("slim", slim);

@@ -1,5 +1,5 @@
 import { DEFAULT_CONTENT } from "../content";
-import type { ContentPack, Tower, TowerDefinition } from "../core/types";
+import type { ContentPack, Tower, TowerDefinition, UpgradeDefinition } from "../core/types";
 import { AURA_STATS, auraBonuses, effectiveTowerStats } from "../systems/auras";
 import { describeAttack } from "../systems/attacks";
 import { isSpecialization, previewUpgrade, resolveUpgrades, upgradeOptions, towerLevel } from "../core/upgrades";
@@ -38,22 +38,10 @@ export function upgradeControl(tower: Tower, towers: readonly Tower[] = [], cont
     const purchased = option.status === "purchased";
     const projected = previewUpgrade(tower, upgrade.id, content);
     const nextTower = projected ?? tower;
-    // Substitute the projected source too, so previews never mutate live towers.
-    const nextTowers = towers.map(candidate => candidate.id === tower.id ? nextTower : candidate);
     const current = effectiveTowerStats(tower, towers, content);
-    const next = effectiveTowerStats(nextTower, nextTowers, content);
     const currentAura = auraBonuses(tower, content), nextAura = auraBonuses(nextTower, content);
     const changedAttack = Object.keys(upgrade.effects.attack ?? {});
-    const attackBefore = describeAttack(resolveUpgrades(tower, content).attack, changedAttack);
-    const attackAfter = describeAttack(resolveUpgrades(nextTower, content).attack, changedAttack);
-    const changes = [
-      ...(["damage", "range", "interval"] as const).filter(key => upgrade.effects.stats?.[key] !== undefined).map(key =>
-        row(({damage: "Damage", range: "Range", interval: "Fire interval"})[key], current[key], next[key], key === "interval" ? " s" : "")),
-      ...attackBefore.map((before, i) => row(before.label, before.value, attackAfter[i].value, before.unit)),
-      ...AURA_STATS.filter(key => upgrade.effects.aura?.[key] !== undefined).map(key =>
-        row(({damage: "Damage", speed: "Attack speed", range: "Range"})[key], currentAura[key] * 100, nextAura[key] * 100, "%")),
-      ...specializationRows(resolveUpgrades(tower, content).specialization, upgrade.effects.specialization),
-    ].join("");
+    const changes = upgradeChanges(tower, towers, upgrade, content).map(changeRow).join("");
     const auraKey = AURA_STATS.find(key => upgrade.effects.aura?.[key] !== undefined);
     const summary = auraKey
       ? purchased ? `+${number(currentAura[auraKey] * 100)}% active` : `+${number(currentAura[auraKey] * 100)}% → +${number(nextAura[auraKey] * 100)}%`
@@ -84,15 +72,44 @@ export function upgradeControl(tower: Tower, towers: readonly Tower[] = [], cont
   }).join("")}</div>`;
 }
 
-/** Before → after rows of a specialization; a first tier compares against nothing. */
-function specializationRows(current: Parameters<typeof specializationValues>[0], next: Parameters<typeof specializationValues>[0]): string[] {
+/** One value an upgrade changes; `before` is absent for a value the tower did not have yet (a first specialization tier). */
+export interface UpgradeChange {
+  label: string;
+  before?: number;
+  after: number;
+  unit: string;
+}
+
+const changeRow = (c: UpgradeChange) =>
+  c.before === undefined
+    ? `<div class="upgrade-change"><span>${escape(c.label)}</span><span class="upgrade-before">–</span><span aria-label="becomes">→</span><strong>${number(c.after)}${c.unit}</strong></div>`
+    : row(c.label, c.before, c.after, c.unit);
+
+/** Every value a purchase of `upgrade` changes, with active Aura bonuses included on both sides. */
+export function upgradeChanges(tower: Tower, towers: readonly Tower[], upgrade: UpgradeDefinition, content: ContentPack = DEFAULT_CONTENT): UpgradeChange[] {
+  const nextTower = previewUpgrade(tower, upgrade.id, content) ?? tower;
+  // Substitute the projected source too, so previews never mutate live towers.
+  const nextTowers = towers.map(candidate => candidate.id === tower.id ? nextTower : candidate);
+  const current = effectiveTowerStats(tower, towers, content);
+  const next = effectiveTowerStats(nextTower, nextTowers, content);
+  const currentAura = auraBonuses(tower, content), nextAura = auraBonuses(nextTower, content);
+  const changedAttack = Object.keys(upgrade.effects.attack ?? {});
+  const attackBefore = describeAttack(resolveUpgrades(tower, content).attack, changedAttack);
+  const attackAfter = describeAttack(resolveUpgrades(nextTower, content).attack, changedAttack);
+  return [
+    ...(["damage", "range", "interval"] as const).filter(key => upgrade.effects.stats?.[key] !== undefined).map(key =>
+      ({ label: ({damage: "Damage", range: "Range", interval: "Fire interval"})[key], before: current[key], after: next[key], unit: key === "interval" ? " s" : "" })),
+    ...attackBefore.map((before, i) => ({ label: before.label, before: before.value, after: attackAfter[i].value, unit: before.unit })),
+    ...AURA_STATS.filter(key => upgrade.effects.aura?.[key] !== undefined).map(key =>
+      ({ label: ({damage: "Damage", speed: "Attack speed", range: "Range"})[key], before: currentAura[key] * 100, after: nextAura[key] * 100, unit: "%" })),
+    ...specializationChanges(resolveUpgrades(tower, content).specialization, upgrade.effects.specialization),
+  ];
+}
+
+/** Before → after values of a specialization; a first tier compares against nothing. */
+function specializationChanges(current: Parameters<typeof specializationValues>[0], next: Parameters<typeof specializationValues>[0]): UpgradeChange[] {
   const before = current?.kind === next?.kind ? specializationValues(current) : [];
-  return specializationValues(next).map(after => {
-    const old = before.find(value => value.key === after.key);
-    return old
-      ? row(after.label, old.value, after.value, after.unit)
-      : `<div class="upgrade-change"><span>${escape(after.label)}</span><span class="upgrade-before">–</span><span aria-label="becomes">→</span><strong>${number(after.value)}${after.unit}</strong></div>`;
-  });
+  return specializationValues(next).map(after => ({ label: after.label, before: before.find(value => value.key === after.key)?.value, after: after.value, unit: after.unit }));
 }
 
 /** Shared hover/focus preview plus a separate touch target that never buys an upgrade. */
