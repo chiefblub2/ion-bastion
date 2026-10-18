@@ -348,6 +348,183 @@ export const SPECIALIZATIONS: Readonly<Record<string, readonly [PathData, PathDa
     },
     { slug: "exposed-target", name: "Exposed Target", role: "Anti-air synergy", tiers: vulnerability("exposed-target", [0.1, 0.15, 0.2], "Netted flyers") },
   ],
+  // ── new towers: g1 (Attack+Control A) ──
+  orbital: [
+    { slug: "kill-sat", name: "Kill Sat", role: "Boss", tiers: conditional("heavy", [0.3, 0.55, 0.8], "against heavy targets (1,000+ max HP)") },
+    {
+      slug: "cluster-payload", name: "Cluster Payload", role: "Swarm",
+      tiers: fixed([[2, 1.8, 0.35], [3, 2.1, 0.45], [4, 2.4, 0.55]] as const, ([count, radius, factor]) => ({
+        specialization: { kind: "cluster", count, radius, factor },
+        description: `Each strike also drops ${count} bomblets on the nearest enemies within ${radius} cells outside its blast, each dealing ${pct(factor)} of the damage around its target.`,
+      })),
+    },
+    {
+      slug: "rapid-lock", name: "Rapid Lock", role: "Fast targets",
+      tiers: (l5) =>
+        tiers([[0.8, 0.1], [0.5, 0.2], [0.25, 0.3]] as const, ([delay, cut]) => ({
+          attack: { delay },
+          stats: { interval: l5.interval * (1 - cut) },
+          description: `The strike lands ${delay} s after the beacon, and ${pct(cut)} less time between strikes: ${num(l5.interval * (1 - cut))} s.`,
+        })),
+    },
+  ],
+  mesmer: [
+    {
+      slug: "mass-hypnosis", name: "Mass Hypnosis", role: "Crowd",
+      tiers: fixed([[1, 1.2], [2, 1.4], [3, 1.6]] as const, ([count, radius]) => ({
+        specialization: { kind: "mass-trance", count, radius },
+        description: `The trance also takes ${count} other enem${count > 1 ? "ies" : "y"} within ${radius} cells of the target.`,
+      })),
+    },
+    { slug: "deep-trance", name: "Deep Trance", role: "Long trance", tiers: fixed([2.3, 2.7, 3.1] as const, (duration) => ({ attack: { duration }, description: `Hypnotised enemies walk backwards for ${duration} s.` })) },
+    {
+      slug: "mind-break", name: "Mind Break", role: "Damage window",
+      tiers: fixed([0.15, 0.22, 0.3] as const, (bonus) => ({
+        specialization: { kind: "mind-break", bonus },
+        description: `Hypnotised enemies take +${pct(bonus)} damage from every source while the trance lasts.`,
+      })),
+    },
+  ],
+  amber: [
+    { slug: "fossilize", name: "Fossilize", role: "Long hold", tiers: fixed([2.4, 2.8, 3.2] as const, (duration) => ({ attack: { duration }, description: `Enemies stay encased for ${duration} s.` })) },
+    { slug: "fault-line", name: "Fault Line", role: "Shatter burst", tiers: fixed([1.1, 1.4, 1.8] as const, (bonus) => ({ attack: { bonus }, description: `The shatter deals the stored damage +${pct(bonus)}.` })) },
+    {
+      slug: "resin-burst", name: "Resin Burst", role: "Group shatter",
+      tiers: fixed([[0.35, 1], [0.5, 1.2], [0.65, 1.4]] as const, ([factor, radius]) => ({
+        specialization: { kind: "shatter-splash", factor, radius },
+        description: `Shards of the shatter hit every other enemy within ${radius} cells for ${pct(factor)} of its damage.`,
+      })),
+    },
+  ],
+  magnetar: [
+    { slug: "event-field", name: "Event Field", role: "Bigger crowd", tiers: fixed([2.5, 2.8, 3.1] as const, (radius) => ({ attack: { radius }, description: `Pulse radius ${radius} cells.` })) },
+    {
+      slug: "crush-point", name: "Crush Point", role: "Damage window",
+      tiers: fixed([[0.1, 2], [0.15, 2.5], [0.2, 3]] as const, ([bonus, duration]) => ({
+        specialization: { kind: "compression", bonus, duration },
+        description: `Enemies caught in the pulse take +${pct(bonus)} damage for ${duration} s.`,
+      })),
+    },
+    {
+      slug: "lodestone", name: "Lodestone", role: "Hold the clump",
+      tiers: fixed([[0.7, 1], [0.6, 1.3], [0.5, 1.6]] as const, ([factor, duration]) => ({
+        specialization: { kind: "lodestone", factor, duration },
+        description: `Enemies caught in the pulse move at ${pct(factor)} speed for ${duration} s, so the clump holds together.`,
+      })),
+    },
+  ],
+  cyclone: [
+    { slug: "tempest", name: "Tempest", role: "Bigger gust", tiers: fixed([1.8, 2.1, 2.4] as const, (radius) => ({ attack: { radius }, description: `Gust radius ${radius} cells.` })) },
+    {
+      slug: "downburst", name: "Downburst", role: "Ground the flyers",
+      tiers: fixed([[0.8, 1.5], [0.7, 2], [0.6, 2.5]] as const, ([factor, duration]) => ({
+        specialization: { kind: "downdraft", factor, duration },
+        description: `Gusted flyers are forced down: ${pct(factor)} speed for ${duration} s, and ground towers can hit them.`,
+      })),
+    },
+    {
+      slug: "shear-wind", name: "Shear Wind", role: "Damage window",
+      tiers: fixed([[0.1, 2], [0.15, 2.5], [0.2, 3]] as const, ([bonus, duration]) => ({
+        specialization: { kind: "compression", bonus, duration },
+        description: `Gusted flyers take +${pct(bonus)} damage for ${duration} s.`,
+      })),
+    },
+  ],
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  tether: [
+    {
+      slug: "chain-gang", name: "Chain Gang", role: "Big groups",
+      tiers: fixed([[5, 1.9], [6, 2.1], [7, 2.3]] as const, ([links, radius]) => ({
+        attack: { links, radius },
+        description: `Links ${links} enemies within ${radius} cells.`,
+      })),
+    },
+    {
+      slug: "shared-pain", name: "Shared Pain", role: "Damage share",
+      tiers: fixed([0.2, 0.3, 0.4] as const, (share) => ({
+        specialization: { kind: "tether-share", share },
+        description: `Damage a linked enemy takes hits every other linked enemy for ${pct(share)} of it.`,
+      })),
+    },
+    {
+      slug: "whiplash", name: "Whiplash", role: "Kill stun",
+      tiers: fixed([0.5, 0.75, 1] as const, (duration) => ({
+        specialization: { kind: "whiplash", duration },
+        description: `When a linked enemy dies, the chain snaps: the others are stunned for ${duration} s.`,
+      })),
+    },
+  ],
+  shrink: [
+    {
+      slug: "compactor", name: "Compactor", role: "Deep shrink",
+      tiers: fixed([[0.45, 0.3], [0.4, 0.2], [0.35, 0.1]] as const, ([factor, armor]) => ({
+        attack: { factor, armor },
+        description: `Shrinks to ${pct(factor)} size; ${pct(armor)} of the armor is left.`,
+      })),
+    },
+    {
+      slug: "featherweight", name: "Featherweight", role: "Knockback",
+      tiers: fixed([0.25, 0.4, 0.55] as const, (cells) => ({
+        specialization: { kind: "shrink-knock", cells },
+        description: `Every beam knocks the shrunk target ${cells} cells back along the path. Unstoppable enemies stand firm.`,
+      })),
+    },
+    {
+      slug: "brittle-frame", name: "Brittle Frame", role: "Team damage",
+      tiers: fixed([0.12, 0.18, 0.25] as const, (bonus) => ({
+        specialization: { kind: "brittle-frame", bonus },
+        description: `Shrunk enemies take +${pct(bonus)} damage from every source.`,
+      })),
+    },
+  ],
+  hex: [
+    {
+      slug: "resonance", name: "Resonance", role: "Bigger echo",
+      tiers: fixed([0.65, 0.8, 1] as const, (share) => ({
+        attack: { share },
+        description: `The curse echoes ${pct(share)} of the damage.`,
+      })),
+    },
+    {
+      slug: "plague-hex", name: "Plague Hex", role: "Spreading curse",
+      tiers: fixed([[1, 1.5], [2, 1.8], [3, 2.1]] as const, ([count, radius]) => ({
+        specialization: { kind: "hex-spread", count, radius },
+        description: `When a curse goes off or its carrier dies, it jumps to ${count} uncursed enem${count > 1 ? "ies" : "y"} within ${radius} cells.`,
+      })),
+    },
+    {
+      slug: "doom", name: "Doom", role: "Execution",
+      tiers: fixed([0.1, 0.15, 0.2] as const, (threshold) => ({
+        specialization: { kind: "doom", threshold },
+        description: `An echo that leaves the enemy below ${pct(threshold)} of its max HP kills it, shields or not.`,
+      })),
+    },
+  ],
+  siphon: [
+    {
+      slug: "overdrive", name: "Overdrive", role: "Fire rate",
+      tiers: fixed([[0.09, 6], [0.1, 7], [0.11, 8]] as const, ([bonus, cap]) => ({
+        attack: { bonus, cap },
+        description: `+${pct(bonus)} fire rate per enemy, counting up to ${cap}.`,
+      })),
+    },
+    {
+      slug: "leech-field", name: "Leech Field", role: "More slowed",
+      tiers: fixed([[1, 1.4], [2, 1.6], [3, 1.8]] as const, ([count, radius]) => ({
+        specialization: { kind: "siphon-fork", count, radius },
+        description: `The beam forks to ${count} more enem${count > 1 ? "ies" : "y"} within ${radius} cells and slows them too.`,
+      })),
+    },
+    {
+      slug: "power-tap", name: "Power Tap", role: "Damage",
+      tiers: fixed([0.03, 0.04, 0.05] as const, (bonus) => ({
+        specialization: { kind: "power-tap", bonus },
+        description: `Fed towers also deal +${pct(bonus)} damage per counted enemy.`,
+      })),
+    },
+  ],
+  // ── end g2 ──
 };
 
 /** The nine specialization upgrades of a tower, or none if it has no paths. */

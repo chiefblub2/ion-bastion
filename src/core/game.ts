@@ -6,6 +6,7 @@ import { isSupport } from "../systems/attacks";
 import { fireAftershocks } from "../systems/attacks/quake";
 import { tickStatus } from "../systems/status";
 import { tickZones } from "../systems/zones";
+import { landStrikes } from "../systems/strikes";
 import { updateDetection } from "../systems/detection";
 import { spawnEnemies, settleWave } from "../systems/waves";
 import { beginWave, earlyBonus, settleCircle, wavesLeft } from "../systems/circle";
@@ -49,7 +50,8 @@ export function initialState(mission: MissionDefinition, players = 1): GameState
 }
 /** Buildable towers of a mission, in content order. A ring has no reactor, so nothing repairs it. */
 export function availableTowers(mission: MissionDefinition, content: ContentPack = DEFAULT_CONTENT): TowerId[] {
-  const all = (Object.keys(content.towers) as TowerId[]).filter((id) => !(mission.circle && content.towers[id].attack.kind === "repair"));
+  const all = (Object.keys(content.towers) as TowerId[]).filter((id) => !(mission.circle && content.towers[id].attack.kind === "repair"))
+    .filter((id) => !(mission.circle && content.towers[id].attack.kind === "barrier")); // g5: Shield Generator
   return mission.availableTowers ? all.filter((id) => mission.availableTowers!.includes(id)) : all;
 }
 
@@ -254,6 +256,7 @@ export class Game implements Sim {
     updateDetection(this);
     moveProjectiles(this, dt);
     fireAftershocks(this);
+    landStrikes(this);
     tickZones(this);
     attackEnemies(this, dt);
     s.enemies = s.enemies.filter((e) => e.hp > 0);

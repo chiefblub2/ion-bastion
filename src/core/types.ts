@@ -119,8 +119,98 @@ export interface BountyAttack { kind: "bounty"; bonus: number }
 export interface RepairAttack { kind: "repair"; amount: number }
 /** Tracker: enemies in range take this much more damage, e.g. 0.15 for +15 %. */
 export interface MarkAttack { kind: "mark"; amount: number }
+// ── new towers: g1 (Attack+Control A) ──
+/** Orbital: paints a point; `delay` seconds after the beacon lands, a strike hits every enemy it can target within `radius` there. */
+export interface StrikeAttack { kind: "strike"; radius: number; delay: number }
+/** Mesmer: the target walks backwards at its own speed for `duration` seconds, then cannot be hypnotised for `recovery` seconds. */
+export interface ConfuseAttack { kind: "confuse"; duration: number; recovery: number }
+/**
+ * Amber: the target is held and immune for `duration` seconds, storing every hit; then it shatters and takes the
+ * stored damage `1 + bonus` times. It cannot be encased again for `recovery` seconds.
+ */
+export interface EncaseAttack { kind: "encase"; duration: number; bonus: number; recovery: number }
+/** Magnetar: every enemy within `radius` of the target moves up to `strength` cells along the path towards it. */
+export interface GatherAttack { kind: "gather"; radius: number; strength: number }
+/** An Orbital strike on its way down, frozen when the beacon landed; it still lands after a sale. */
+export interface Strike {
+  source: DamageSource;
+  at: Point;
+  radius: number;
+  damage: number;
+  /** Game time of the hit. */
+  due: number;
+  /** Seconds between the beacon and the hit, for the countdown ring. */
+  delay: number;
+}
+// ── end g1 ──
+// ── new towers: g2 (Control B) ──
+/**
+ * Tether: links the target and up to `links - 1` enemies within `radius` for `duration` s. Slow, stun and burn on
+ * one spread to the others, and none of them walks faster than the slowest.
+ */
+export interface TetherAttack { kind: "tether"; links: number; radius: number; duration: number }
+/** Shrink Ray: shrinks the target to `factor` of its size and its armor reduction to `armor` for `duration` s; it leaks 1 reactor energy less (at least 1). */
+export interface ShrinkAttack { kind: "shrink"; factor: number; armor: number; duration: number }
+/** Hex: curses the target; `delay` s later it takes `share` of all damage it took meanwhile once more (the echo is never echoed). */
+export interface EchoAttack { kind: "echo"; share: number; delay: number }
+/** Siphon: a slowing beam; each slowed enemy within the Siphon's range gives other attack towers within `reach` `bonus` fire rate, counting up to `cap`. */
+export interface SiphonAttack { kind: "siphon"; factor: number; duration: number; reach: number; bonus: number; cap: number }
+// ── end g2 ──
+// ── new towers: g3 (Traps) ──
+/** Barricade: blocks its path cell until enemies have chewed through `hp`; whole again after every wave. */
+export interface BlockAttack { kind: "block"; hp: number }
+/** Warp Pad: sends one enemy up to this body size `cells` back along the path, once per enemy. */
+export interface WarpAttack { kind: "warp"; cells: number; size: number }
+/** Oil Slick: coats walkers for `duration` s; burns on them deal `boost` times and leap to oiled enemies within `radius`. */
+export interface OilAttack { kind: "oil"; boost: number; radius: number; duration: number }
+/** Grinder: hits everything on the cell; the hit grows to `1 + bonus` times on an enemy that stands still. */
+export interface GrindAttack { kind: "grind"; bonus: number }
+/** Harpoon: fires up at a flyer, nets it for `duration` s (a ground target meanwhile) and pins it for `pin` s. */
+export interface HarpoonAttack { kind: "harpoon"; pin: number; duration: number }
+// ── end g3 ──
+// ── new towers: g4 (Support A) ──
+/** Overclock: every `period` seconds of wave time, towers in range fire `1 + boost` times as fast for `window` seconds. */
+export interface OverclockAttack { kind: "overclock"; boost: number; window: number; period: number }
+/** Fire Control: every `every`th shot of a tower in range deals `multiplier` times its damage. */
+export interface CritAttack { kind: "crit"; every: number; multiplier: number }
+/** Armory: hits from towers in range ignore `fraction` of the armor trait. */
+export interface PierceAuraAttack { kind: "pierceaura"; fraction: number }
+/** Skylink: flyers in range count as ground targets; ground-only towers deal `factor` of their damage to them. */
+export interface SkylinkAttack { kind: "skylink"; factor: number }
+/** Nexus: towers in range deal `bonus` more damage per distinct attack tower type in range, counting at most `cap`. */
+export interface SynergyAttack { kind: "synergy"; bonus: number; cap: number }
+// ── end g4 ──
+// ── new towers: g5 (Support B) ──
+/** Workshop: upgrades of towers within range cost this share less; the strongest Workshop counts. */
+export interface DiscountAttack { kind: "discount"; amount: number }
+/** Vault: after every completed wave its owner earns `rate` of their unspent credits, at most `cap`; the best Vault per owner counts. */
+export interface InterestAttack { kind: "interest"; rate: number; cap: number }
+/** Shield Generator: absorbs the first `amount` reactor damage of every wave; several generators add up. */
+export interface BarrierAttack { kind: "barrier"; amount: number }
+/** Recycler: `share` of the overkill of a kill within range jumps to the nearest enemy within `reach` cells of the victim, once. */
+export interface OverkillAttack { kind: "overkill"; share: number; reach: number }
+// ── end g5 ──
 /** Towers without an attack of their own; they are never buffed and have no targets. */
-export type SupportAttack = AuraAttack | IncomeAttack | DetectAttack | BountyAttack | RepairAttack | MarkAttack;
+export type SupportAttack =
+  | AuraAttack
+  | IncomeAttack
+  | DetectAttack
+  | BountyAttack
+  | RepairAttack
+  // ── new towers: g4 (Support A) ──
+  | OverclockAttack
+  | CritAttack
+  | PierceAuraAttack
+  | SkylinkAttack
+  | SynergyAttack
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  | DiscountAttack
+  | InterestAttack
+  | BarrierAttack
+  | OverkillAttack
+  // ── end g5 ──
+  | MarkAttack;
 export interface PullAttack {
   kind: "pull";
   radius: number;
@@ -160,6 +250,38 @@ export type AttackSpec =
   | MarkAttack
   | AirburstAttack
   | CatalyzeAttack
+  // ── new towers: g1 (Attack+Control A) ──
+  | StrikeAttack
+  | ConfuseAttack
+  | EncaseAttack
+  | GatherAttack
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  | TetherAttack
+  | ShrinkAttack
+  | EchoAttack
+  | SiphonAttack
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  | BlockAttack
+  | WarpAttack
+  | OilAttack
+  | GrindAttack
+  | HarpoonAttack
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  | OverclockAttack
+  | CritAttack
+  | PierceAuraAttack
+  | SkylinkAttack
+  | SynergyAttack
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  | DiscountAttack
+  | InterestAttack
+  | BarrierAttack
+  | OverkillAttack
+  // ── end g5 ──
   | PoolAttack;
 export type AttackKind = AttackSpec["kind"];
 
@@ -218,8 +340,67 @@ export type TurretStyle =
   | "tracker"
   | "battery"
   | "flask"
+  // ── new towers: g1 (Attack+Control A) ──
+  | "uplink"
+  | "spiral"
+  | "resin"
+  | "magnet"
+  | "fan"
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  | "tether"
+  | "shrinker"
+  | "sigil"
+  | "siphon"
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  | "barricade"
+  | "warp"
+  | "plate"
+  | "slick"
+  | "grinder"
+  | "harpoon"
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  | "clock"
+  | "director"
+  | "armory"
+  | "skylink"
+  | "nexus"
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  | "workshop"
+  | "vault"
+  | "shieldgen"
+  | "recycler"
+  // ── end g5 ──
   | "caster";
-export type ProjectileStyle = "tracer" | "shell" | "crystal" | "twin" | "ember" | "glob" | "orb" | "net" | "rocket" | "lob" | "glaive" | "shard" | "vial";
+export type ProjectileStyle =
+  | "tracer"
+  | "shell"
+  | "crystal"
+  | "twin"
+  | "ember"
+  | "glob"
+  | "orb"
+  | "net"
+  | "rocket"
+  | "lob"
+  | "glaive"
+  | "shard"
+  // ── new towers: g1 (Attack+Control A) ──
+  | "beacon-mark"
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  | "harpoon"
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  // ── end g5 ──
+  | "vial";
 export type PathMotif = "blades" | "vortex" | "rings";
 export interface PathVisual {
   color: number;
@@ -601,6 +782,31 @@ export type StatusEffect =
   | { kind: "bleeding"; perCell: number; last: number; next: number; until: number; source: DamageSource }
   /** Sticky Mine: explodes at `until` or when the carrier dies; `until` is -Infinity once it has gone off. */
   | { kind: "charged"; damage: number; radius: number; until: number; source: DamageSource }
+  // ── new towers: g1 (Attack+Control A) ──
+  /** Mesmer: walks backwards at its own speed until `release`; the entry runs on as recovery until `until`. */
+  | { kind: "confuse"; release: number; until: number }
+  /**
+   * Amber: held and immune until `release`, storing the damage it would have taken; then it shatters and takes
+   * `stored × (1 + bonus)` at once. `stored` is -1 once it has shattered; the entry runs on as recovery until `until`.
+   */
+  | { kind: "encase"; release: number; until: number; stored: number; bonus: number; source: DamageSource }
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  /** Tether: linked to every enemy with the same running `group`; the source carries Shared Pain and Whiplash. */
+  | { kind: "tether"; group: number; until: number; source: DamageSource }
+  /** Shrink Ray: body size × `factor`, armor reduction × `armor`; Brittle Frame adds `bonus` damage taken. */
+  | { kind: "shrink"; factor: number; armor: number; until: number; bonus?: number }
+  /** Hex: damage taken while cursed adds up in `stored`; at `until` (`delay` s after the curse) the enemy takes `share` of it once more. */
+  | { kind: "echo"; share: number; stored: number; delay: number; until: number; source: DamageSource }
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  /** Oil Slick: burns deal `boost` times and leap to oiled enemies within `radius`. */
+  | { kind: "oiled"; boost: number; radius: number; until: number }
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  // ── end g5 ──
   /** Armor Dissolver: the `armor` trait loses `fraction` of its reduction. */
   | { kind: "armorDissolved"; fraction: number; until: number };
 export type StatusKind = StatusEffect["kind"];
@@ -623,6 +829,18 @@ export interface Enemy extends Point {
   revealed?: boolean;
   /** Versus: player who sent this enemy; it pays no kill reward. */
   sentBy?: number;
+  // ── new towers: g1 (Attack+Control A) ──
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  /** Warp Pad: set once the enemy has been warped back; it never warps again. */
+  warped?: true;
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  // ── end g5 ──
 }
 export interface Tower extends Point {
   id: number;
@@ -642,6 +860,22 @@ export interface Tower extends Point {
   focus?: { target: number; stacks: number };
   /** Ricochet and Twin Arc: shots since the last proc; absent without those specializations. */
   specialShots?: number;
+  // ── new towers: g1 (Attack+Control A) ──
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  /** Barricade only: damage its wall has taken this wave; absent while whole. */
+  wall?: number;
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  /** Fire Control: shots fired under its cover since the last crit; absent until a Fire Control first covers the tower. */
+  critCount?: number;
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  /** Shield Generator only: reactor damage absorbed in the current wave; absent while untouched, cleared after each wave. */
+  barrier?: number;
+  // ── end g5 ──
 }
 /** Target selection of an attack tower; ties fall back to path progress, then id. */
 export type TargetPriority = "first" | "last" | "strong" | "weak" | "close";
@@ -690,6 +924,36 @@ export type GameEvent =
   | { type: "build" | "sell" | "upgrade"; at: Point; tower: TowerId; color: number }
   | { type: "waveStart"; wave: number }
   | { type: "waveEnd"; wave: number; bonus: number }
+  // ── new towers: g1 (Attack+Control A) ──
+  /** Orbital: a strike came down here. */
+  | { type: "strike"; at: Point; radius: number; color: number }
+  /** Amber: an encasement shattered, releasing `amount` damage. */
+  | { type: "shatter"; at: Point; amount: number; color: number }
+  /** Magnetar: enemies at `from` were dragged towards `at`. */
+  | { type: "gather"; at: Point; from: Point[]; color: number }
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  /** Hex: a curse went off on an enemy for `amount` damage. */
+  | { type: "echo"; at: Point; amount: number; color: number }
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  /** Warp Pad: an enemy vanished at `at` and reappeared at `to`. */
+  | { type: "warp"; at: Point; to: Point; color: number }
+  /** A barricade was chewed through or smashed. */
+  | { type: "breach"; at: Point; color: number }
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  /** Fire Control: a critical shot from the tower at `from` on the enemy at `at`; `color` is the Fire Control's. */
+  | { type: "crit"; at: Point; from: Point; color: number }
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  /** Recycler: `amount` overkill damage jumped from a kill at `from` to the enemy at `to`. */
+  | { type: "recycle"; from: Point; to: Point; amount: number; color: number }
+  /** Shield Generator at `from` absorbed `amount` reactor damage of an enemy reaching the reactor at `at`. */
+  | { type: "barrier"; from: Point; at: Point; amount: number; color: number }
+  /** Workshop at `from` saved `amount` credits on an upgrade of the tower at `at`. */
+  | { type: "discount"; from: Point; at: Point; amount: number; color: number }
+  // ── end g5 ──
   | { type: "end"; result: "won" | "lost" };
 export type GameStatus = "ready" | "wave" | "won" | "lost";
 export interface GameState {
@@ -718,6 +982,18 @@ export interface GameState {
   pending?: PendingWave[];
   /** Plasma pools on the ground in landing order; absent while empty. */
   zones?: Zone[];
+  // ── new towers: g1 (Attack+Control A) ──
+  /** Orbital strikes still to land, in firing order; absent while none is coming. */
+  strikes?: Strike[];
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  // ── end g5 ──
 }
 /** A Plasma pool; its source is frozen on landing, so it keeps burning after a sale. */
 export interface Zone {

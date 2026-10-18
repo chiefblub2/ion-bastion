@@ -28,11 +28,13 @@ export const pull: AttackModule<PullAttack> = {
             factor: spec.strength,
             release: time + spec.duration,
             until: time + spec.duration + spec.recovery,
-          }) &&
-          src.special?.kind === "compression"
-        )
+          })
+        ) {
           // Compression: only a pull that took hold opens the damage window.
-          applyStatus(sim, target, { kind: "vulnerable", amount: src.special.bonus, until: time + src.special.duration });
+          if (src.special?.kind === "compression") applyStatus(sim, target, { kind: "vulnerable", amount: src.special.bonus, until: time + src.special.duration });
+          // Downburst (Cyclone): a gusted flyer is forced down into reach of ground towers.
+          else if (src.special?.kind === "downdraft") applyStatus(sim, target, { kind: "netted", factor: src.special.factor, until: time + src.special.duration });
+        }
       }
   },
 };

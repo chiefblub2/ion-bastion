@@ -4,6 +4,7 @@ import { AURA_STATS, auraBonuses, effectiveTowerStats } from "../systems/auras";
 import { describeAttack } from "../systems/attacks";
 import { isSpecialization, previewUpgrade, resolveUpgrades, upgradeOptions, towerLevel } from "../core/upgrades";
 import { specializationValues } from "./specialization-text";
+import { discountedCost, upgradeDiscount } from "../systems/workshop";
 import { escape, number, statValue } from "./format";
 
 const row = (label: string, before: number, after: number, unit = "") =>
@@ -21,6 +22,7 @@ export function upgradeControl(tower: Tower, towers: readonly Tower[] = [], cont
   const support = definition.attack.kind === "aura";
   const pathColor = pathColorFor(definition);
   const all = upgradeOptions(tower, Infinity, content);
+  const discount = upgradeDiscount(tower, towers, content), price = (cost: number) => discountedCost(cost, discount); // g5: Workshop
   // Support towers keep their newest purchase per track visible; earlier tiers are superseded.
   const hidden = (option: (typeof all)[number]) => option.status === "locked" || option.status === "excluded";
   const superseded = new Set(all.filter(option => !hidden(option)).flatMap(option => option.definition!.requires));
@@ -68,13 +70,14 @@ export function upgradeControl(tower: Tower, towers: readonly Tower[] = [], cont
       : unchanged.length ? `Unchanged: ${unchanged.map(r => `${r.label} ${statValue(r)}`).join(", ")}.` : "";
     return `<div class="upgrade-control">
       <button class="upgrade ${support || specialized ? "aura-upgrade" : ""}" data-upgrade="${upgrade.id}"${pathColor(upgrade.path)} aria-describedby="${tooltipId}" ${purchased ? "disabled" : ""}>
-        ${support || specialized ? `<span>${escape(upgrade.label)}<small>${summary}</small></span><b>${purchased ? "✓" : `◇ ${upgrade.cost}`}</b>` : `${upgrade.effects.level !== undefined ? "Upgrade" : escape(upgrade.label)} · ◇ ${upgrade.cost}`}
+        ${support || specialized ? `<span>${escape(upgrade.label)}<small>${summary}</small></span><b>${purchased ? "✓" : `◇ ${price(upgrade.cost)}`}</b>` : `${upgrade.effects.level !== undefined ? "Upgrade" : escape(upgrade.label)} · ◇ ${price(upgrade.cost)}`}
       </button>
       <button class="upgrade-info" aria-label="Explain ${escape(upgrade.label)}" aria-controls="${tooltipId}" aria-expanded="false" aria-describedby="${tooltipId}">ⓘ</button>
       <div id="${tooltipId}" class="upgrade-tooltip" role="tooltip" hidden>
         <strong class="upgrade-tooltip-title">${title}</strong>${changes}
         <p>${escape(upgrade.description)}</p>
         ${special ? `<p class="upgrade-unchanged">${special}</p>` : ""}
+        ${discount && !purchased ? `<p class="upgrade-unchanged">Workshop: −${number(discount * 100)}% (◇ ${price(upgrade.cost)} instead of ◇ ${upgrade.cost}).</p>` : ""}
         ${Object.values(current.bonuses).some(Boolean) ? '<p class="upgrade-unchanged">Active Aura bonuses are included in both values.</p>' : ""}
       </div>
     </div>`;

@@ -27,6 +27,31 @@ import { splash } from "./splash";
 import { stun } from "./stun";
 import { bounty, mark, repair } from "./support";
 import { volley } from "./volley";
+// ── new towers: g1 (Attack+Control A) ──
+import { confuse } from "./confuse";
+import { encase } from "./encase";
+import { gather } from "./gather";
+import { strike } from "./strike";
+// ── end g1 ──
+// ── new towers: g2 (Control B) ──
+import { echo } from "./echo";
+import { shrink } from "./shrink";
+import { siphon } from "./siphon";
+import { tether } from "./tether";
+// ── end g2 ──
+// ── new towers: g3 (Traps) ──
+import { block } from "./block";
+import { grind } from "./grind";
+import { harpoon } from "./harpoon";
+import { oil } from "./oil";
+import { warp } from "./warp";
+// ── end g3 ──
+// ── new towers: g4 (Support A) ──
+import { crit, overclock, pierceaura, skylink, synergy } from "./boosters";
+// ── end g4 ──
+// ── new towers: g5 (Support B) ──
+import { barrier, discount, interest, overkill } from "./economy";
+// ── end g5 ──
 import type { AttackModule, ParamRule } from "./types";
 export type { AttackModule, Impact, ParamRule } from "./types";
 export { canAcquire, canTarget } from "./targeting";
@@ -66,6 +91,38 @@ const ATTACKS: { [K in AttackKind]: AttackModule<Extract<AttackSpec, { kind: K }
   airburst,
   catalyze,
   pool,
+  // ── new towers: g1 (Attack+Control A) ──
+  strike,
+  confuse,
+  encase,
+  gather,
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  tether,
+  shrink,
+  echo,
+  siphon,
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  block,
+  warp,
+  oil,
+  grind,
+  harpoon,
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  overclock,
+  crit,
+  pierceaura,
+  skylink,
+  synergy,
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  discount,
+  interest,
+  barrier,
+  overkill,
+  // ── end g5 ──
 };
 export const attackModule = (spec: AttackSpec) => ATTACKS[spec.kind] as AttackModule | undefined;
 /** Support towers (aura, refinery, detector, beacon, dock, tracker) never attack, are never buffed and have no targets. */

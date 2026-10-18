@@ -534,6 +534,93 @@ export const PROJECTILES: Record<ProjectileStyle, ProjectileLook> = {
       },
     },
   },
+  // ── new towers: g1 (Attack+Control A) ──
+  // Orbital: a designator dart, a red-hot needle with a blinking beacon, trailing a thin laser line.
+  "beacon-mark": {
+    body: ({ g, glow }, p, c) => {
+      const co = Math.cos(p.angle),
+        si = Math.sin(p.angle);
+      halo(glow, p.x, p.y, 7, c, 0.3);
+      strip(g, p.x, p.y, co, si, -4, 3, -1.3, 1.3, -0.4, 0.4, shade(c, -0.45));
+      strip(g, p.x, p.y, co, si, -3, 2, -0.6, 0.6, -0.2, 0.2, shade(c, 0.4));
+      disc(g, p.x, p.y, 1, Math.sin(p.age * 30 + p.seed) > 0 ? WHITE : c);
+    },
+    trail: {
+      life: 0.25,
+      step: 4,
+      draw: ({ g, glow }, t, c) => {
+        streak(glow, t, 60, 1.6, c, 0.4);
+        streak(g, t, 40, 0.5, shade(c, 0.5), 0.8);
+      },
+    },
+    impact: {
+      life: 0.45,
+      // The beacon plants itself: four brackets snap onto the spot and a ping ring runs out.
+      draw: ({ g, glow }, x, y, age, c) => {
+        const k = age / 0.45;
+        if (k >= 1) return;
+        const s = 14 * (1 - Math.min(1, age / 0.15)) + 5;
+        for (let i = 0; i < 4; i++) {
+          const a = Math.PI / 4 + (i * Math.PI) / 2;
+          strip(g, x, y, Math.cos(a), Math.sin(a), s, s + 4, -0.8, 0.8, -0.8, 0.8, c, 1 - k);
+        }
+        ring(g, x, y, 4 + 16 * k, 1.2, c, 0.8 * (1 - k));
+        disc(g, x, y, 1.6, WHITE, 1 - k);
+        halo(glow, x, y, 8, c, 0.3 * (1 - k));
+      },
+    },
+  },
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  // Harpoon: a barbed steel head on a short shaft, trailing its rope back to the trap.
+  harpoon: {
+    body: ({ g, glow }, p, c) => {
+      const co = Math.cos(p.angle),
+        si = Math.sin(p.angle);
+      strip(g, p.x + 0.8, p.y + 1.2, co, si, -9, 2, -1, 1, -1, 1, SHADOW, 0.35);
+      strip(g, p.x, p.y, co, si, -9, 1, -0.9, 0.9, -0.9, 0.9, shade(c, -0.3));
+      g.fillStyle(0xd6dde2);
+      g.fillTriangle(...along(p.x, p.y, co, si, 1, -2.8), ...along(p.x, p.y, co, si, 1, 2.8), ...along(p.x, p.y, co, si, 6.5, 0));
+      g.fillStyle(0x8a96a3);
+      g.fillTriangle(...along(p.x, p.y, co, si, 1, 0), ...along(p.x, p.y, co, si, 1, 2.8), ...along(p.x, p.y, co, si, 6.5, 0));
+      // Barbs flaring back from the head.
+      g.lineStyle(1, 0xd6dde2, 0.9);
+      for (const side of [-1, 1]) g.lineBetween(...along(p.x, p.y, co, si, 1.5, side * 2.4), ...along(p.x, p.y, co, si, -1.5, side * 3.6));
+      halo(glow, p.x + co * 4, p.y + si * 4, 5, c, 0.2);
+    },
+    trail: {
+      life: 0.6,
+      step: 3,
+      // The rope: a sagging line through every sample back to the launch point.
+      draw: ({ g }, t) => {
+        if (t.count < 2) return;
+        const pts = Array.from({ length: t.count }, (_, i) => {
+          const k = i / (t.count - 1);
+          return { x: t.x(i), y: t.y(i) + Math.sin(Math.PI * k) * 2.5 };
+        });
+        g.lineStyle(1.6, 0x5a4630, 0.8 * t.fade);
+        g.strokePoints(pts, false);
+        g.lineStyle(0.7, 0xc8a46b, 0.9 * t.fade);
+        g.strokePoints(pts, false);
+      },
+    },
+    impact: {
+      life: 0.4,
+      // The head bites: a white flash, a jolt ring and a few metal sparks.
+      draw: (pen, x, y, age, c, seed, heading) => {
+        sparks(pen, x, y, age, c, seed, heading, 3, 0xd6dde2);
+        const k = age / 0.4;
+        if (k < 1) ring(pen.g, x, y, 4 + 10 * k, 1.5 * (1 - k) + 0.5, shade(c, 0.4), 0.8 * (1 - k));
+      },
+    },
+  },
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  // ── end g5 ──
 };
 /** What a tower's shot looks like when it lands: its projectile's own impact, else its `visual.impact`. */
 export function impactOf(d: Readonly<TowerDefinition>): ImpactDrawing {

@@ -9,7 +9,15 @@ export const TOWER_PAGES = [
   { id: "support", name: "Support" },
 ] as const;
 /** Attack kinds whose main job is to hinder or weaken enemies rather than to kill them. */
-const CONTROL_KINDS: ReadonlySet<AttackKind> = new Set(["slow", "stun", "corrode", "pull", "disrupt", "net", "pool"]);
+const CONTROL_KINDS: ReadonlySet<AttackKind> = new Set<AttackKind>([
+  "slow", "stun", "corrode", "pull", "disrupt", "net", "pool",
+  // ── new towers: g1 (Attack+Control A) ──
+  "confuse", "encase", "gather",
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  "tether", "shrink", "echo", "siphon",
+  // ── end g2 ──
+]);
 /** With fewer available towers the menu shows them all, without tabs. */
 export const PAGED_FROM = 10;
 /** Index into `TOWER_PAGES`, derived from placement and attack, so content needs no extra field. */

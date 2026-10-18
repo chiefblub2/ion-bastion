@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { Game, sellValue } from "../core/game";
 import { TOWERS } from "./towers";
 import { SPECIALIZATIONS } from "./specializations";
+import { isSupport } from "../systems/attacks";
 import { maxTowerLevel, resolveUpgrades, towerPath, upgradeOption, upgradeOptions, validateUpgradeDefinitions } from "../core/upgrades";
 import type { TowerDefinition, TowerId } from "../core/types";
 
@@ -15,6 +16,12 @@ const PRICES: Record<string, [number, number, number, number]> = {
   quake: [140, 350, 560, 840], executioner: [150, 375, 600, 900], shrapnel: [130, 325, 520, 780], jammer: [130, 325, 520, 780],
   net: [110, 275, 440, 660], gravity: [170, 425, 680, 1020], skyburst: [140, 350, 560, 840],
   catalyst: [130, 325, 520, 780], plasma: [140, 350, 560, 840],
+  // ── new towers: g1 (Attack+Control A) ──
+  orbital: [220, 550, 880, 1320], mesmer: [150, 375, 600, 900], amber: [160, 400, 640, 960], magnetar: [150, 375, 600, 900], cyclone: [140, 350, 560, 840],
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  tether: [130, 325, 520, 780], shrink: [140, 350, 560, 840], hex: [150, 375, 600, 900], siphon: [150, 375, 600, 900],
+  // ── end g2 ──
 };
 
 function built(type: TowerId, upgrades: string[] = LEVELS) {
@@ -26,8 +33,9 @@ function built(type: TowerId, upgrades: string[] = LEVELS) {
 }
 
 describe("tower specializations: content", () => {
-  it("covers the 21 attack and control towers with three paths of three tiers (T-001)", () => {
-    expect(SPECIALIZED).toHaveLength(21);
+  it("covers every attack and control tower with three paths of three tiers (T-001)", () => {
+    const attackers = Object.values(TOWERS).filter((t) => t.placement !== "path" && !isSupport(t.attack)).map((t) => t.id);
+    expect([...SPECIALIZED].sort()).toEqual(attackers.sort());
     for (const type of SPECIALIZED) {
       const upgrades = TOWERS[type].upgrades, paths = new Set(upgrades.map((u) => u.path).filter(Boolean));
       expect(upgrades).toHaveLength(13);

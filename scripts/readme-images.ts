@@ -4,6 +4,7 @@
  *   npm run dev   # in the background, on :4173
  *   npx vite-node scripts/readme-images.ts [-- --only towers|enemies|screens] [--url http://localhost:4173]
  *
+ * `--out <dir>` writes the images below another directory (the dev server reloads on writes into docs/).
  * Icons are clipped from the dev-only gallery page (`/gallery.html`, `src/gallery.ts`) into
  * docs/images/towers/<id>.png and docs/images/enemies/<id>.png. Screenshots open each mission directly at a busy wave
  * (`&wave=<n>`, never played through) with enough credits (`&credits=<n>`) for the whole strategy A defense, start
@@ -40,7 +41,8 @@ const flag = (name: string) => {
 const base = flag("--url") ?? "http://localhost:4173";
 const only = flag("--only");
 if (only && !["towers", "enemies", "screens"].includes(only)) fail("--only expects towers, enemies or screens.");
-const out = resolve("docs/images");
+// Writing into docs/images while `npm run dev` watches it reloads the page; `--out` writes elsewhere first.
+const out = resolve(flag("--out") ?? "docs/images");
 
 async function icons(browser: Browser) {
   const page = await browser.newPage({ viewport: { width: 1800, height: 1800 } }),

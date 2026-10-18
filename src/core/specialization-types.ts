@@ -63,6 +63,36 @@ export type SpecializationSpec =
   | { kind: "pool-dissolve"; fraction: number; duration: number }
   /** Enemies in the pool are slowed to `factor` of their speed for `duration` seconds. */
   | { kind: "pool-slow"; factor: number; duration: number }
+  // ── new towers: g1 (Attack+Control A) ──
+  /** Each strike also drops `count` bomblets on the nearest enemies within `radius` outside its blast, each `factor` of the damage. */
+  | { kind: "cluster"; count: number; radius: number; factor: number }
+  /** The trance also takes `count` other enemies within `radius` of the target. */
+  | { kind: "mass-trance"; count: number; radius: number }
+  /** Hypnotised enemies take `bonus` more damage while the trance lasts. */
+  | { kind: "mind-break"; bonus: number }
+  /** A shatter also hits every other enemy within `radius` for `factor` of its damage. */
+  | { kind: "shatter-splash"; factor: number; radius: number }
+  /** Enemies caught in the pulse are slowed to `factor` of their speed for `duration` seconds. */
+  | { kind: "lodestone"; factor: number; duration: number }
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  /** Tether: damage that reaches a linked enemy's HP is dealt `share` again to each of its partners (never passed on twice). */
+  | { kind: "tether-share"; share: number }
+  /** Tether: when a linked enemy dies, its partners are stunned for `duration` seconds. */
+  | { kind: "whiplash"; duration: number }
+  /** Shrink Ray: every beam knocks a shrunk target `cells` back along the path (not unstoppable enemies). */
+  | { kind: "shrink-knock"; cells: number }
+  /** Shrink Ray: shrunk enemies take `bonus` more damage while shrunk. */
+  | { kind: "brittle-frame"; bonus: number }
+  /** Hex: when a curse goes off or its carrier dies, it jumps to `count` uncursed enemies within `radius` (jumped curses never jump again). */
+  | { kind: "hex-spread"; radius: number; count: number }
+  /** Hex: an echo that leaves the enemy below `threshold` of its max HP kills it. */
+  | { kind: "doom"; threshold: number }
+  /** Siphon: the beam forks to `count` more enemies within `radius` of the target, slowing them too. */
+  | { kind: "siphon-fork"; radius: number; count: number }
+  /** Siphon: each counted slowed enemy also gives the towers around it `bonus` more damage. */
+  | { kind: "power-tap"; bonus: number }
+  // ── end g2 ──
   /** An expiring pool erupts once: `factor` of its total burn as an area hit over its radius. */
   | { kind: "eruption"; factor: number };
 
@@ -101,11 +131,47 @@ const FIELDS: { [K in SpecializationKind]: readonly Field<K>[] } = {
   "pool-dissolve": ["fraction", "duration"],
   "pool-slow": ["factor", "duration"],
   eruption: ["factor"],
+  // ── new towers: g1 (Attack+Control A) ──
+  cluster: ["count", "radius", "factor"],
+  "mass-trance": ["count", "radius"],
+  "mind-break": ["bonus"],
+  "shatter-splash": ["factor", "radius"],
+  lodestone: ["factor", "duration"],
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  "tether-share": ["share"],
+  whiplash: ["duration"],
+  "shrink-knock": ["cells"],
+  "brittle-frame": ["bonus"],
+  "hex-spread": ["radius", "count"],
+  doom: ["threshold"],
+  "siphon-fork": ["radius", "count"],
+  "power-tap": ["bonus"],
+  // ── end g2 ──
 };
 
-const COUNT = new Set(["every", "count", "maxPerSalvo", "min"]);
-const POSITIVE = new Set(["radius", "delay", "duration", "width", "extend", "max"]);
-const NON_NEGATIVE = new Set(["bonus", "bonusPerUnused"]);
+const COUNT = new Set([
+  "every", "count", "maxPerSalvo", "min",
+  // ── new towers: g1 (Attack+Control A) ──
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  // ── end g2 ──
+]);
+const POSITIVE = new Set([
+  "radius", "delay", "duration", "width", "extend", "max",
+  // ── new towers: g1 (Attack+Control A) ──
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  "cells",
+  // ── end g2 ──
+]);
+const NON_NEGATIVE = new Set([
+  "bonus", "bonusPerUnused",
+  // ── new towers: g1 (Attack+Control A) ──
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  // ── end g2 ──
+]);
 const PREDICATES: readonly DamagePredicate[] = ["heavy", "heavy-air", "armored", "isolated", "burning"];
 
 function fieldError(field: string, value: unknown): string | undefined {

@@ -1,7 +1,12 @@
 import type { ContentPack, GameEvent, TurretStyle } from "../core/types";
 import { glowLine, halo, SHADOW } from "./material";
 import { MUZZLES, muzzleTips, type FlashStyle } from "./muzzles";
+import { drawFieldEffect } from "./field-effects";
 import { IMPACTS, impactOf } from "./projectiles";
+import { drawTrapEffect, TRAP_EFFECT_LIFE } from "./trap-effects";
+import { drawCrit } from "./support-fx";
+import { drawEconomyEffect } from "./economy-effects";
+import { controlBeam, controlChain, drawEcho } from "./control-marks";
 import { arcBand, CELL, disc, hash01, lightning, polygon, px, ring, shade, strip, type Pen } from "./shapes";
 /** Seconds an effect stays visible. */
 export const EFFECT_LIFETIME = 0.45;
@@ -11,9 +16,44 @@ export const INCOME_LIFETIME = 1.6;
 const QUAKE_LIFETIME = 0.7;
 export type VisualEvent = Extract<
   GameEvent,
-  { type: "shot" | "chain" | "beam" | "pulse" | "income" | "repair" | "impact" | "kill" | "leak" | "build" | "sell" | "upgrade" | "evade" | "overload" }
+  {
+    type:
+      | "shot" | "chain" | "beam" | "pulse" | "income" | "repair" | "impact" | "kill" | "leak" | "build" | "sell" | "upgrade" | "evade" | "overload"
+      // ── new towers: g1 (Attack+Control A) ──
+      | "strike" | "shatter" | "gather"
+      // ── end g1 ──
+      // ── new towers: g2 (Control B) ──
+      | "echo"
+      // ── end g2 ──
+      // ── new towers: g3 (Traps) ──
+      | "warp" | "breach"
+      // ── end g3 ──
+      // ── new towers: g4 (Support A) ──
+      | "crit"
+      // ── end g4 ──
+      // ── new towers: g5 (Support B) ──
+      | "recycle" | "barrier" | "discount"
+      // ── end g5 ──
+  }
 >;
-const VISUAL = new Set<GameEvent["type"]>(["shot", "chain", "beam", "pulse", "income", "repair", "impact", "kill", "leak", "build", "sell", "upgrade", "evade", "overload"]);
+const VISUAL = new Set<GameEvent["type"]>([
+  "shot", "chain", "beam", "pulse", "income", "repair", "impact", "kill", "leak", "build", "sell", "upgrade", "evade", "overload",
+  // ── new towers: g1 (Attack+Control A) ──
+  "strike", "shatter", "gather",
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  "echo",
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  "warp", "breach",
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  "crit",
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  "recycle", "barrier", "discount",
+  // ── end g5 ──
+]);
 export const isVisual = (e: GameEvent): e is VisualEvent => VISUAL.has(e.type);
 /** Read by the scene when an event arrives, so the effect still knows its source after a sale or a turn of the turret. */
 export interface EffectOrigin {
@@ -48,6 +88,9 @@ export function effectLifetime(e: VisualEvent, content: ContentPack) {
       return INCOME_LIFETIME;
     case "impact":
       return impactOf(content.towers[e.tower]).life;
+    case "warp":
+    case "breach":
+      return TRAP_EFFECT_LIFE;
     case "pulse": {
       const turret = sourceOf(content, e.color);
       return turret === "hammer" ? QUAKE_LIFETIME : turret === "heavy" || turret === "limpet" ? IMPACTS.burst.life : EFFECT_LIFETIME;
@@ -198,6 +241,7 @@ function chain(pen: Pen, turret: TurretStyle | undefined, fx: number, fy: number
         return { x: fx + (tx - fx) * k - si * off, y: fy + (ty - fy) * k + co * off };
       });
   if (alpha <= 0) return;
+  if (controlChain(pen, turret, fx, fy, tx, ty, color, age)) return;
   switch (turret) {
     // Ricochet: a straight streak to the next target.
     case "barrel":
@@ -355,9 +399,13 @@ function pulse(pen: Pen, turret: TurretStyle | undefined, x: number, y: number, 
 }
 /** Short-lived effects drawn from simulation events; they never affect the game. */
 export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: ContentPack, origin: EffectOrigin = {}) {
+  if (drawFieldEffect(pen, e, age, content)) return;
   const { g, glow } = pen,
     alpha = Math.max(0, 1 - age / 0.4);
   switch (e.type) {
+    case "warp":
+    case "breach":
+      return drawTrapEffect(pen, e, age);
     case "chain":
       chain(pen, sourceOf(content, e.color), px(e.from.x), px(e.from.y), px(e.to.x), px(e.to.y), e.color, age);
       return;
@@ -372,10 +420,13 @@ export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: Conte
         const tip = muzzleTips(turret, origin.level ?? 1, fx, fy, origin.angle)[0];
         if (tip) ({ x: fx, y: fy } = tip);
       }
+      if (controlBeam(pen, turret, fx, fy, tx, ty, e.color, age)) return;
       if (turret === "lens") focusBeam(pen, fx, fy, tx, ty, e.color, age, e.power ?? 0.4);
       else railBeam(pen, fx, fy, tx, ty, e.color, age);
       return;
     }
+    case "echo":
+      return drawEcho(pen, e, age);
     case "pulse":
       pulse(pen, sourceOf(content, e.color), px(e.at.x), px(e.at.y), e.radius, e.color, age);
       return;
@@ -470,6 +521,10 @@ export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: Conte
       impactOf(d).draw(pen, x, y, age, e.color, hash01(e.at.x, e.at.y), origin.heading, radius);
       return;
     }
+    case "crit":
+      return drawCrit(pen, e, age);
+    case "recycle": case "barrier": case "discount": // g5
+      return drawEconomyEffect(pen, e, age);
     default:
       ring(g, px(e.at.x), px(e.at.y), 6 + age * 65, 2, e.type === "leak" ? DANGER : e.color, alpha);
   }

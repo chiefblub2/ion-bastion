@@ -2,10 +2,13 @@ import type { Enemy, Point, Sim, TowerId } from "../../core/types";
 import { dist } from "../path";
 import { isNetted } from "../status";
 import { isHidden, layerOf } from "../traits";
+import { skylinkHold } from "../support";
 /** A netted flyer (or a leaping enemy currently in the air) counts as air and ground, so ground-only towers can hit it too. */
 export const canTarget = (sim: Sim, tower: TowerId, e: Enemy) => {
   const targets = sim.content.towers[tower].targets;
-  return targets.includes(layerOf(sim, e)) || (targets.includes("ground") && isNetted(e, sim.state.time));
+  return targets.includes(layerOf(sim, e)) || (targets.includes("ground") && isNetted(e, sim.state.time))
+    // Skylink: a flyer it holds counts as a ground target too, for towers only, never for traps.
+    || (targets.includes("ground") && sim.content.towers[tower].placement !== "path" && skylinkHold(sim, e) > 0);
 };
 /** Target selection: like `canTarget`, but stealthed enemies need a detector; area damage still hits them. */
 export const canAcquire = (sim: Sim, tower: TowerId, e: Enemy) => canTarget(sim, tower, e) && !isHidden(sim, e);
