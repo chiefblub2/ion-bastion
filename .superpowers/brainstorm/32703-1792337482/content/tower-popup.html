@@ -1,0 +1,107 @@
+<h2>Where should a selected tower's options appear?</h2>
+<p class="subtitle">Today: details, targeting, upgrade and sell sit in the sidebar under the build menu, often below the fold. Click the one that feels right (or several, then tell me what you'd mix).</p>
+
+<style>
+  .board { position: relative; height: 300px; background: #0d1820; border: 1px solid #1e3a5c; overflow: hidden; font-family: system-ui, sans-serif; color: #e8f6ff; }
+  .path { position: absolute; background: #1f3a33; }
+  .tower { position: absolute; width: 34px; height: 34px; border: 2px solid #93f5b8; background: #12302a; border-radius: 4px; box-shadow: 0 0 0 3px #3ef2ff55; }
+  .range { position: absolute; border: 1px dashed #93f5b866; border-radius: 50%; }
+  .pop { position: absolute; background: #0a1122f2; border: 1px solid #3ef2ff; font-size: 11px; padding: 8px; box-shadow: 0 0 14px #3ef2ff44; }
+  .pop b { color: #3ef2ff; }
+  .btn { display: block; margin-top: 5px; padding: 5px 6px; border: 1px solid #3ef2ff; color: #3ef2ff; text-align: center; font-size: 11px; }
+  .btn.sell { border-color: #ff4d6d; color: #ff4d6d; }
+  .chips span { display: inline-block; border: 1px solid #1e3a5c; padding: 1px 4px; margin: 3px 2px 0 0; font-size: 10px; }
+  .chips span.on { border-color: #3ef2ff; color: #3ef2ff; }
+  .stats { display: flex; gap: 10px; margin-top: 4px; color: #9fb4cc; }
+  .radial { position: absolute; width: 30px; height: 30px; border-radius: 50%; border: 1px solid #3ef2ff; background: #0a1122; font-size: 13px; display: flex; align-items: center; justify-content: center; color: #3ef2ff; }
+  .radial.sell { border-color: #ff4d6d; color: #ff4d6d; }
+  .lbl { position: absolute; font-size: 10px; color: #9fb4cc; }
+  .side { position: absolute; right: 0; top: 0; bottom: 0; width: 120px; border-left: 1px solid #1e3a5c; background: #0a1122; font-size: 10px; padding: 6px; color: #9fb4cc; }
+  .side .sel { border: 1px solid #3ef2ff; padding: 5px; color: #e8f6ff; margin-bottom: 6px; }
+  .side .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+  .side .cards i { display: block; height: 18px; border: 1px solid #1e3a5c; }
+</style>
+
+<div class="cards">
+  <div class="card" data-choice="compact" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="board">
+        <div class="path" style="left:0;top:60px;width:230px;height:26px"></div>
+        <div class="path" style="left:204px;top:60px;width:26px;height:240px"></div>
+        <div class="range" style="left:95px;top:45px;width:170px;height:170px"></div>
+        <div class="tower" style="left:163px;top:113px"></div>
+        <div class="pop" style="left:205px;top:100px;width:140px">
+          <b>Pulse</b> · Lv 2/8<br>
+          <span class="btn">Upgrade → Lv 3 · ◇ 120</span>
+          <div class="chips">Target: <span class="on">First</span><span>Last</span><span>Strong</span>…</div>
+          <span class="btn sell">Sell · ◇ 101</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Compact action card</h3>
+      <p>Next to the tower: upgrade, targeting, sell. Full stats and the upgrade tooltip stay in the sidebar for those who want them.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="full" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="board">
+        <div class="path" style="left:0;top:60px;width:230px;height:26px"></div>
+        <div class="path" style="left:204px;top:60px;width:26px;height:240px"></div>
+        <div class="range" style="left:95px;top:45px;width:170px;height:170px"></div>
+        <div class="tower" style="left:163px;top:113px"></div>
+        <div class="pop" style="left:205px;top:20px;width:170px">
+          <b>Pulse</b> · Lv 2/8 · Kills 14<br>
+          <span style="color:#9fb4cc">Fast, precise shots.</span>
+          <div class="stats"><span>DMG 30</span><span>RNG 2.95</span><span>0.5 s</span></div>
+          <div class="chips">Target: <span class="on">First</span><span>Last</span><span>Strong</span><span>Weak</span><span>Close</span></div>
+          <span class="btn">Upgrade → Lv 3 · ◇ 120<br><span style="color:#9fb4cc">DMG 30→50 · RNG +0.3</span></span>
+          <span class="btn sell">Sell · ◇ 101</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Full panel as popup</h3>
+      <p>Everything the sidebar shows today moves into a popup by the tower. The sidebar keeps only the build menu.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="radial" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="board">
+        <div class="path" style="left:0;top:60px;width:230px;height:26px"></div>
+        <div class="path" style="left:204px;top:60px;width:26px;height:240px"></div>
+        <div class="range" style="left:95px;top:45px;width:170px;height:170px"></div>
+        <div class="tower" style="left:163px;top:113px"></div>
+        <div class="radial" style="left:165px;top:68px">▲</div><div class="lbl" style="left:150px;top:52px">◇ 120</div>
+        <div class="radial" style="left:120px;top:115px">◎</div><div class="lbl" style="left:100px;top:148px">First</div>
+        <div class="radial sell" style="left:165px;top:160px">$</div><div class="lbl" style="left:160px;top:193px">◇ 101</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Radial buttons around the tower</h3>
+      <p>Three round buttons around the tower (upgrade, cycle targeting, sell), like classic TD games. Smallest footprint, least text.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="sidebar-top" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="board">
+        <div class="path" style="left:0;top:60px;width:230px;height:26px"></div>
+        <div class="path" style="left:204px;top:60px;width:26px;height:240px"></div>
+        <div class="range" style="left:95px;top:45px;width:170px;height:170px"></div>
+        <div class="tower" style="left:163px;top:113px"></div>
+        <div class="side">
+          <div class="sel"><b style="color:#3ef2ff">Pulse</b> Lv 2<span class="btn">Upgrade ◇ 120</span><span class="btn sell">Sell</span></div>
+          Build menu (collapsed)
+          <div class="cards"><i></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>D · No popup: selection on top of the sidebar</h3>
+      <p>For comparison. While a tower is selected the build menu shrinks and the tower panel takes the top of the sidebar.</p>
+    </div>
+  </div>
+</div>
