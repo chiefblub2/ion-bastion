@@ -19,4 +19,12 @@ export function positionOnPath(path: readonly Point[], distance: number, loop?: 
     b = path[i + 1];
   return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
 }
+/** Direction of travel (radians) at a path distance; wraps on a `loop` like `positionOnPath`, so a pushed-back unit never reads outside the path. */
+export function headingOnPath(path: readonly Point[], distance: number, loop?: boolean): number {
+  const n = path.length,
+    i = loop ? Math.floor(((distance % n) + n) % n) : Math.max(0, Math.min(Math.floor(distance), n - 2)),
+    a = path[i],
+    b = path[(i + 1) % n];
+  return Math.atan2(b.y - a.y, b.x - a.x);
+}
 export const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);

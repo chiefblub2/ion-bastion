@@ -5,6 +5,7 @@ import { attackModule, isSupport } from "../systems/attacks";
 import { effectiveTowerStats, isInAura } from "../systems/auras";
 import { statusFlags } from "../systems/status";
 import { isHidden, traitFlags } from "../systems/traits";
+import { headingOnPath } from "../systems/path";
 import { enemyAt } from "./pick";
 import type { GameEvent, GameState, Point, Tower, TowerId } from "../core/types";
 import { PLAYER_COLORS } from "../net/protocol";
@@ -288,11 +289,7 @@ export class Battlefield extends Phaser.Scene {
   }
   /** Direction of travel at a path distance, for oriented flying units. */
   private heading(distance: number) {
-    const { path, loop } = this.sim.map,
-      i = loop ? Math.floor(distance) % path.length : Math.min(Math.floor(distance), path.length - 2),
-      a = path[i],
-      b = path[(i + 1) % path.length];
-    return Math.atan2(b.y - a.y, b.x - a.x);
+    return headingOnPath(this.sim.map.path, distance, this.sim.map.loop);
   }
   update(_time: number, delta: number) {
     const dt = Math.min(delta / 1000, 0.2);
