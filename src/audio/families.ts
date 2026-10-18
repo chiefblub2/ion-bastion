@@ -6,7 +6,7 @@ export type Family = (typeof FAMILIES)[number];
 /** Support kinds never fire, so they play no part. */
 const BY_KIND: Record<AttackSpec["kind"], Family | null> = {
   direct: "rapid", volley: "rapid", pierce: "rapid",
-  splash: "heavy", mortar: "heavy", quake: "heavy", execute: "heavy",
+  splash: "heavy", mortar: "heavy", airburst: "heavy", quake: "heavy", execute: "heavy",
   chain: "electric", stun: "electric", disrupt: "electric", focus: "electric",
   slow: "control", net: "control", pull: "control",
   burn: "fire", corrode: "fire", decay: "fire",

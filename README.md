@@ -57,7 +57,7 @@ Every sector has its own terrain. In the Circuit (bottom right) there is no reac
 | `M` | Sound on or off |
 | `C` | Show every tower's range and the path coverage (red: no tower reaches ground units there) |
 | Tabs Attack · Control · Traps · Support, `Shift`+`1`–`4` | Switch the tower page (from ten available towers; arrow keys also work on the tabs) |
-| `1`–`9`, `0`, `Q`, `W` | Pick a tower in the open tab; every tab starts at `1` again (the key is shown on the card). Without tabs the keys count across all towers. |
+| `1`–`9`, `0`, `Q`, `W`, `E` | Pick a tower in the open tab; every tab starts at `1` again (the key is shown on the card). Without tabs the keys count across all towers. |
 | Right click, `Esc` or ✕ | Cancel build mode and selection. Without a selection, `Esc` leaves fullscreen. |
 | `N` | Start the next wave (in versus: "Ready"). From wave 2 on it also starts by itself 10 s after the previous one ends. |
 | Space | Pause, only during a wave or the countdown and not in versus |
@@ -232,6 +232,7 @@ Every enemy moves on the ground or in the air; every attack tower only hits cert
 | <img src="docs/images/towers/frost.png" width="36" height="36" alt=""> Cryo | 100 | Slow | Ground · Air |
 | <img src="docs/images/towers/aura.png" width="36" height="36" alt=""> Aura | 160 | Support, strengthens towers within radius 3 | – |
 | <img src="docs/images/towers/flak.png" width="36" height="36" alt=""> Flak | 90 | Single target, fast | Air only |
+| <img src="docs/images/towers/skyburst.png" width="36" height="36" alt=""> Skyburst | 140 | Airburst: homing missile bursts on its target, hitting every flyer within 0.9 tiles | Air only (including the blast radius) |
 | <img src="docs/images/towers/tesla.png" width="36" height="36" alt=""> Tesla | 150 | Chain lightning: jumps up to 3× to enemies within 1.6 tiles, 75 % damage per jump | Ground · Air |
 | <img src="docs/images/towers/lance.png" width="36" height="36" alt=""> Lance | 170 | Pierce: beam up to range 4.4, hits every enemy on the line, 85 % per further hit | Ground · Air |
 | <img src="docs/images/towers/inferno.png" width="36" height="36" alt=""> Ember | 120 | Burn: additionally 2.5 times the hit over 3 s | Ground · Air |
@@ -252,7 +253,7 @@ Every enemy moves on the ground or in the air; every attack tower only hits cert
 | <img src="docs/images/towers/dock.png" width="36" height="36" alt=""> Repair Dock | 150 | Restores 1 reactor energy after every wave, up to the starting value; not in the Circuit | – |
 | <img src="docs/images/towers/tracker.png" width="36" height="36" alt=""> Tracker | 140 | Enemies within radius 2.2 take 15 % more damage, on top of Corrosion, no attack | – |
 
-Nova, Mortar, Flak, Cryo, Executioner, Shrapnel and Snare Net fire projectiles that take time; fast enemies can dodge Nova rockets. Tesla, Lance, Focus, Quake, Gravitron and Jammer hit instantly.
+Nova, Mortar, Flak, Skyburst, Cryo, Executioner, Shrapnel and Snare Net fire projectiles that take time; fast enemies can dodge Nova rockets. Tesla, Lance, Focus, Quake, Gravitron and Jammer hit instantly.
 
 ### Traps
 
@@ -308,6 +309,7 @@ After level 5 every attack and control tower above offers three specializations.
 | Pulse | Sharpshooter: +70 % against heavy targets | Overclock: 35 % less time between shots | Ricochet: every 2nd hit bounces for 65 % |
 | Nova | Supernova: blast radius 2 | Siegebreaker: +60 % against armor | Chain Reaction: up to 3 kills explode again |
 | Flak | Skyhunter: +70 % against heavy flyers | Flak Curtain: 3 extra flyers for 45 % | Wingclip: hit flyers 30 % slower |
+| Skyburst | Cluster Warhead: up to 4 kills explode again | Shear Front: flyers in the burst 30 % slower | Downdraft: flyers in the burst netted for 1.8 s |
 | Tesla | Storm Network: 8 jumps, 2.6 cells | Overload: +85 % on a lone enemy | Twin Arc: every 2nd salvo a second chain |
 | Lance | Longshot: +2.3 cells range | Broadbeam: half-width 0.95 | Rail Penetrator: ignores 60 % of armor |
 | Ember | Incinerator: 6× the hit over 4 s | Wildfire: burns spread on death | Searing Heat: +40 % against burning enemies |
@@ -358,7 +360,7 @@ Every attack tower has its own target priority. You set it in the tower panel un
 | Weakest | the enemy with the least current HP |
 | Closest | the enemy closest to the tower |
 
-On a tie, the enemy further ahead wins. The Lance still aims at the line with the most hits; priority only decides there on equal hit counts. If the target of a Pulse, Flak or Cryo projectile dies in flight, it picks the next enemy as before. Refinery, Detector and Aura have no target priority. In co-op you can only change the priority of your own towers.
+On a tie, the enemy further ahead wins. The Lance still aims at the line with the most hits; priority only decides there on equal hit counts. If the target of a Pulse, Flak, Skyburst or Cryo projectile dies in flight, it picks the next enemy as before. Refinery, Detector and Aura have no target priority. In co-op you can only change the priority of your own towers.
 
 ## Enemies
 

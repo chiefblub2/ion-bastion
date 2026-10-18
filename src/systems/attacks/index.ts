@@ -1,4 +1,5 @@
 import type { AttackKind, AttackSpec } from "../../core/types";
+import { airburst } from "./airburst";
 import { alarm } from "./alarm";
 import { aura } from "./aura";
 import { bleed } from "./bleed";
@@ -60,6 +61,7 @@ const ATTACKS: { [K in AttackKind]: AttackModule<Extract<AttackSpec, { kind: K }
   bounty,
   repair,
   mark,
+  airburst,
 };
 export const attackModule = (spec: AttackSpec) => ATTACKS[spec.kind] as AttackModule | undefined;
 /** Support towers (aura, refinery, detector, beacon, dock, tracker) never attack, are never buffed and have no targets. */

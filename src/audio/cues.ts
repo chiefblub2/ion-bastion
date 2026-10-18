@@ -10,7 +10,7 @@ export interface Cue {
   gain: number;
 }
 export type View = "menu" | "game";
-const BLASTS = new Set<AttackSpec["kind"]>(["splash", "mortar", "charge"]);
+const BLASTS = new Set<AttackSpec["kind"]>(["splash", "mortar", "airburst", "charge"]);
 const PLAIN: Partial<Record<GameEvent["type"], CueId>> = {
   kill: "kill", evade: "evade", overload: "overload", leak: "leak", build: "build", sell: "sell", upgrade: "upgrade",
   income: "income", repair: "repair", waveStart: "waveStart", waveEnd: "waveEnd",

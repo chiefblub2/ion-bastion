@@ -4,10 +4,10 @@ import { dist } from "../path";
 import { canTarget } from "./targeting";
 import type { AttackModule } from "./types";
 /**
- * Damage to every targetable enemy within `radius` of a point; `kind` tells traits which attack it was (splash or mortar).
+ * Damage to every targetable enemy within `radius` of a point; `kind` tells traits which attack it was (splash, mortar or airburst).
  * Returns the enemies the blast killed, in id order.
  */
-export function blast(sim: Sim, src: DamageSource, at: Point, radius: number, damage: number, kind: "splash" | "mortar"): Enemy[] {
+export function blast(sim: Sim, src: DamageSource, at: Point, radius: number, damage: number, kind: "splash" | "mortar" | "airburst"): Enemy[] {
   const killed: Enemy[] = [];
   // A copy: enemies released on death must not catch the same explosion.
   for (const target of [...sim.state.enemies])
@@ -22,14 +22,14 @@ export const splash: AttackModule<SplashAttack> = {
   params: {
     radius: { label: "Blast radius", valid: (v) => v > 0, unit: " cells" },
   },
-  apply: (sim, src, { at }, damage, spec) => {
-    const killed = blast(sim, src, at, spec.radius, damage, "splash"),
-      special = src.special;
-    // Chain Reaction: the first kills explode once more; kills of those explosions never chain.
-    if (special?.kind !== "chain-reaction") return;
-    for (const dead of killed.slice(0, special.maxPerSalvo)) {
-      sim.state.events.push({ type: "pulse", at: { x: dead.x, y: dead.y }, radius: special.radius, color: sim.content.towers[src.type].color });
-      blast(sim, plain(src), dead, special.radius, damage * special.factor, "splash");
-    }
-  },
+  apply: (sim, src, { at }, damage, spec) => chainReaction(sim, src, blast(sim, src, at, spec.radius, damage, "splash"), damage, "splash"),
 };
+/** Chain Reaction: the first kills of a blast explode once more; kills of those explosions never chain. */
+export function chainReaction(sim: Sim, src: DamageSource, killed: readonly Enemy[], damage: number, kind: "splash" | "airburst") {
+  const special = src.special;
+  if (special?.kind !== "chain-reaction") return;
+  for (const dead of killed.slice(0, special.maxPerSalvo)) {
+    sim.state.events.push({ type: "pulse", at: { x: dead.x, y: dead.y }, radius: special.radius, color: sim.content.towers[src.type].color });
+    blast(sim, plain(src), dead, special.radius, damage * special.factor, kind);
+  }
+}

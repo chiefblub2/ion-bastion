@@ -52,7 +52,9 @@ export type SpecializationSpec =
   /** The net also catches `count` other flyers within `radius`. */
   | { kind: "net-cloud"; radius: number; count: number }
   /** Netted flyers take `bonus` more damage while netted. */
-  | { kind: "exposed-target"; bonus: number };
+  | { kind: "exposed-target"; bonus: number }
+  /** Flyers hit by the burst are netted: `factor` of their speed for `duration` seconds, counting as ground targets. */
+  | { kind: "downdraft"; factor: number; duration: number };
 
 export type SpecializationKind = SpecializationSpec["kind"];
 type Field<K extends SpecializationKind> = Exclude<keyof Extract<SpecializationSpec, { kind: K }>, "kind" | "predicate">;
@@ -83,6 +85,7 @@ const FIELDS: { [K in SpecializationKind]: readonly Field<K>[] } = {
   "weak-signal": ["bonus"],
   "net-cloud": ["radius", "count"],
   "exposed-target": ["bonus"],
+  downdraft: ["factor", "duration"],
 };
 
 const COUNT = new Set(["every", "count", "maxPerSalvo"]);

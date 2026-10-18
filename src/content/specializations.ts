@@ -95,6 +95,29 @@ export const SPECIALIZATIONS: Readonly<Record<string, readonly [PathData, PathDa
       })),
     },
   ],
+  skyburst: [
+    {
+      slug: "cluster-warhead", name: "Cluster Warhead", role: "Swarm cascade",
+      tiers: fixed([[0.3, 0.8, 2], [0.45, 0.95, 3], [0.6, 1.1, 4]] as const, ([factor, radius, maxPerSalvo]) => ({
+        specialization: { kind: "chain-reaction", factor, radius, maxPerSalvo },
+        description: `Flyers killed by the burst explode again: ${pct(factor)} damage within ${radius} cells, up to ${maxPerSalvo} per shot.`,
+      })),
+    },
+    {
+      slug: "shear-front", name: "Shear Front", role: "Air control",
+      tiers: fixed([[0.15, 1.5], [0.22, 2], [0.3, 2.5]] as const, ([slow, duration]) => ({
+        specialization: { kind: "wingclip", slow, duration },
+        description: `Every flyer in the burst is ${pct(slow)} slower for ${duration} s.`,
+      })),
+    },
+    {
+      slug: "downdraft", name: "Downdraft", role: "Ground combo",
+      tiers: fixed([[0.85, 1], [0.8, 1.4], [0.75, 1.8]] as const, ([factor, duration]) => ({
+        specialization: { kind: "downdraft", factor, duration },
+        description: `Flyers in the burst are forced down for ${duration} s: ${pct(1 - factor)} slower and open to ground-only towers.`,
+      })),
+    },
+  ],
   tesla: [
     {
       slug: "storm-network", name: "Storm Network", role: "Swarm chain",
