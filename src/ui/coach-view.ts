@@ -66,7 +66,9 @@ export class Coach {
     const step = this.step;
     if (!step || this.el.hidden) return;
     const t = step.target,
-      rect = !t ? null : "el" in t ? (this.marked?.getBoundingClientRect() ?? null) : this.cellRect(t.cell),
+      // A target on the tower card anchors on the whole card, so the bubble never covers it.
+      card = this.marked?.closest("#tower-card"),
+      rect = !t ? null : "el" in t ? ((card ?? this.marked)?.getBoundingClientRect() ?? null) : this.cellRect(t.cell),
       board = document.getElementById("board")!.getBoundingClientRect(),
       w = this.el.offsetWidth,
       h = this.el.offsetHeight,

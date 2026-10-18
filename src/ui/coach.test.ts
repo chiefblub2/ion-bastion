@@ -33,6 +33,7 @@ describe("Training coach", () => {
     const first = game.state.towers[0];
     expect(coachStep(game, view(), memory)).toMatchObject({ id: "select", highlight: { x: first.x, y: first.y } });
     expect(coachStep(game, view(null, first.id), memory)?.id).toBe("upgrade");
+    expect(coachStep(game, view(null, first.id), memory)?.target).toEqual({ el: "#tower-card [data-upgrade]" });
     game.command({ type: "upgrade", id: first.id, upgrade: "level-2" });
     const next = coachStep(game, view(null, first.id), memory);
     expect(next?.id).toBe("next-wave");
