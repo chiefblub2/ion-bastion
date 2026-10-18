@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { Game } from "./core/game";
-import { missionById } from "./content/missions";
+import { findMission, playableMissions } from "./content/missions";
+import { DEFAULT_CONTENT } from "./content";
 import { pageOf, towerOrder } from "./ui/tower-pages";
 import { Battlefield, CELL, LocalDriver, type ViewState } from "./render/scene";
 import { mountUI, Interface, renderMission } from "./ui/interface";
@@ -13,6 +14,8 @@ import { bindFullscreen } from "./app/fullscreen";
 import { createInput } from "./app/input";
 import { registerTools } from "./app/webmcp";
 import { screenFromUrl } from "./app/screens";
+import { markTrainingDone } from "./app/progress";
+import { Coach } from "./ui/coach-view";
 import { waveHpScale } from "./systems/spawn";
 import type { MissionDefinition } from "./core/types";
 import { ART_FILTERING } from "./render/enemy-art-scene";
@@ -30,7 +33,7 @@ const fromWave = (m: MissionDefinition, wave: number): MissionDefinition => ({
 // see the default map.
 const params = new URLSearchParams(location.search),
   linked = params.get("mission"),
-  target = linked ? missionById(linked) : undefined,
+  target = linked ? findMission(linked, DEFAULT_CONTENT) : undefined,
   skip = Number(params.get("wave")),
   credits = Number(params.get("credits"));
 let linkedMission = target && skip > 1 && skip <= target.waves.length ? fromWave(target, skip) : target;
@@ -42,7 +45,7 @@ installEnemyArtFallback();
 renderMission(game);
 bindUpgradeTooltip();
 const first = towerOrder(game)[0];
-const view: ViewState = { build: first, selected: null, enemy: null, hover: null, speed: 1, player: 0, coverage: false, page: pageOf(game.content.towers[first]) };
+const view: ViewState = { build: game.mission.manualWaves ? null : first, selected: null, enemy: null, hover: null, speed: 1, player: 0, coverage: false, page: pageOf(game.content.towers[first]) };
 const ui = new Interface(game, view);
 const audio = new Audio();
 audio.armAutoStart();
@@ -56,8 +59,11 @@ const battlefield = new Battlefield(game, view, {
   events: (e) => {
     audio.frame(e, game, input.match());
     if (e.some((event) => event.type === "income")) ui.flashCredits();
+    if (game.mission.manualWaves && e.some((event) => event.type === "end" && event.result === "won")) markTrainingDone();
   },
 });
+const coach = new Coach(game, view, (cell) => battlefield.cellRect(cell));
+ui.onRefresh = () => coach.refresh();
 const fullscreen = bindFullscreen(() => battlefield.fit());
 const input = createInput({
   game,
@@ -71,6 +77,7 @@ const input = createInput({
   },
   toggleFullscreen: fullscreen.toggle,
   isFullscreen: fullscreen.isActive,
+  coach,
 });
 bindSoundPanel(audio, (text) => ui.notice(text, true));
 bindUiSounds(audio);
@@ -89,4 +96,4 @@ new Phaser.Game({
 registerTools(game, input.execute);
 ui.refresh();
 // A deep link opens the game; everything else starts on the start screen (or the page its hash names).
-input.screens.start(screenFromUrl(location.search, location.hash, game.content.missions));
+input.screens.start(screenFromUrl(location.search, location.hash, playableMissions(game.content)));

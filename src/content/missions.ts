@@ -1,4 +1,4 @@
-import type { MissionDefinition, MissionSector } from "../core/types";
+import type { ContentPack, MissionDefinition, MissionSector } from "../core/types";
 import { GLUTPASS, KERNFESTUNG, OUTPOST, SCHLEUSENRING, SPLITTERFELD } from "./maps";
 import {
   GLUTPASS_WAVES,
@@ -93,6 +93,14 @@ export const SECTORS: readonly MissionSector[] = [
 export const MISSIONS: readonly MissionDefinition[] = SECTORS.flatMap((s) => s.missions);
 export function missionById(id: string, missions: readonly MissionDefinition[] = MISSIONS) {
   return missions.find((m) => m.id === id);
+}
+/** A campaign or Circuit mission, or the pack's Training mission (which is not in `missions`). */
+export function findMission(id: string, content: Pick<ContentPack, "missions" | "training">) {
+  return missionById(id, content.missions) ?? (content.training?.id === id ? content.training : undefined);
+}
+/** Every mission that can be opened by id: the pack's missions plus Training. */
+export function playableMissions(content: Pick<ContentPack, "missions" | "training">): readonly MissionDefinition[] {
+  return content.training ? [...content.missions, content.training] : content.missions;
 }
 /** 1-based position in the campaign; the list order is the mission order. */
 export function missionNumber(mission: MissionDefinition, missions: readonly MissionDefinition[] = MISSIONS) {

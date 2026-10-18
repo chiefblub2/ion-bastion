@@ -194,6 +194,7 @@ New towers and enemies need a README image: run `scripts/readme-images.ts -- --o
 
 Whole mission packs (new sectors, themes, enemies) follow the project skill `.claude/skills/mission-pack/SKILL.md`: foundation agent, parallel sector and theme agents, integration checklist. New enemies or traits for the existing campaign follow `.claude/skills/enemy-pack/SKILL.md`. Supplied enemy animation sheets follow `.claude/skills/animation-pack/SKILL.md`.
 
+- **Training** (`content/training.ts`, `ContentPack.training`) is a guided mission outside `missions`, the sectors, the balance script and multiplayer; look missions up with `findMission`/`playableMissions` so it opens by id. Its `manualWaves` flag skips the wave countdown. The coach (`ui/coach.ts`, pure: steps derived from state plus acknowledged steps; `ui/coach-view.ts`, the `#coach` bubble and `ViewState.highlight`) only holds the wave start back in `input.execute` (`training-step`).
 - **Mission:** add a `MissionDefinition` to a sector in `content/missions.ts` (or `content/sectors/*.ts`).
   - The fields are map, waves, `startingCredits` and `reactorEnergy`.
   - Optional: `hpGrowth` (default 0.14 per wave) and `availableTowers`.

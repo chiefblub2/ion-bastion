@@ -733,6 +733,8 @@ export interface MissionDefinition {
   availableTowers?: readonly TowerId[];
   /** Circuit: timed, overlapping waves on a ring map; absent on reactor missions. */
   circle?: CircleRules;
+  /** Training: no countdown between waves, the player starts each one; absent everywhere else. */
+  manualWaves?: true;
 }
 /** Rules of a circle mission; its map must be a `loop`. */
 export interface CircleRules {
@@ -755,6 +757,8 @@ export interface ContentPack {
   missions: readonly MissionDefinition[];
   /** Optional grouping; together the sectors list exactly `missions`, in order. */
   sectors?: readonly MissionSector[];
+  /** The guided Training mission: playable by id, but outside `missions`, the sectors and multiplayer. */
+  training?: MissionDefinition;
 }
 
 /** Who dealt the damage; the tower itself may already be sold. */
@@ -1043,6 +1047,8 @@ export type MessageCode =
   | "resumed"
   | "pause-unavailable"
   | "wave-running"
+  /** Training only: the coach holds the wave start back until its step (never returned by the simulation). */
+  | "training-step"
   | "wave-started"
   | "wave-called"
   | "no-waves-left"

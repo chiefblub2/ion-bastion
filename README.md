@@ -24,6 +24,8 @@ Notes for developers and AI agents (architecture, conventions, adding content) a
 
 Enemies walk a fixed path to the reactor. If one reaches the reactor, it costs reactor energy; at 0 the mission is lost. Between and during waves you build towers next to the path and upgrade them. You start the first wave yourself; after that the next wave starts by itself 3 seconds after the previous one ends (earlier with `N`, without a bonus). Defeated enemies pay credits, and every wave you survive pays a bonus. Selling refunds 70 % of the total investment.
 
+New players can start with **Training** (home page, or `?mission=training`): a short guided mission outside the campaign where a coach walks through the reactor, building, starting a wave, earning credits and upgrading. Waves there only start when you say so.
+
 ## Screenshots
 
 Every sector has its own terrain. In the Circuit (bottom right) there is no reactor: enemies circle until they are defeated.

@@ -16,11 +16,12 @@ import type { Audio } from "./audio";
 import { createCoop } from "./coop";
 import { createDialogs } from "./dialogs";
 import { createScreens, GAME, HOME, type MenuPage, type Screen } from "./screens";
-import { lastMission, rememberMission } from "./progress";
+import { lastMission, rememberMission, trainingDone } from "./progress";
 import { homeAction, type HomeAction } from "./home-action";
-import { isCircleSector, missionById, sectorOf } from "../content/missions";
+import { isCircleSector, missionById, playableMissions, sectorOf } from "../content/missions";
 import type { CodexTab } from "../ui/enemy-codex";
 import { bindCodexPreviews, closeCodexPreview } from "../ui/codex-preview";
+import type { Coach } from "../ui/coach-view";
 interface InputDeps {
   game: Game;
   view: ViewState;
@@ -35,9 +36,11 @@ interface InputDeps {
   toggleFullscreen: () => Promise<void>;
   /** True while the app is in full screen. */
   isFullscreen: () => boolean;
+  /** The Training coach: holds the wave start back until its step and starts over with the mission. */
+  coach: Coach;
 }
 /** Turns clicks, keys and tab changes into commands and view changes. */
-export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattlefield, setDriver, toggleFullscreen, isFullscreen }: InputDeps) {
+export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattlefield, setDriver, toggleFullscreen, isFullscreen, coach }: InputDeps) {
   /** In multiplayer the command goes to the relay and takes effect when its frame arrives. */
   function execute(c: MatchCommand): CommandResult {
     if (coop.active()) {
@@ -46,6 +49,12 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     }
     // Versus-only commands; without a match there is nobody to send to.
     if (c.type === "ready" || c.type === "send") return { ok: false, code: "send-unavailable" };
+    const held = coach.refusal(c);
+    if (held) {
+      ui.notice(held, true);
+      audio.cue("reject");
+      return { ok: false, code: "training-step" };
+    }
     const result = game.command(c);
     applied({ command: c, result, player: view.player });
     return result;
@@ -72,9 +81,13 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       view.build = towerOrder(game)[0];
       view.page = pageOf(game.content.towers[view.build]);
       if (!coop.active()) view.speed = 1;
+      // Training lets the player pick the first tower from the menu themselves.
+      if (game.mission.manualWaves) view.build = null;
+      coach.reset();
     }
     if (c.type === "mission" && result.ok) {
-      rememberMission(c.id);
+      // "Restart Last Mission" stays about the campaign; Training has its own button.
+      if (!game.mission.manualWaves) rememberMission(c.id);
       resumeAfterMenu = false;
       renderMission(game);
       reloadBattlefield();
@@ -106,12 +119,14 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
   const sectorRail = document.getElementById("sector-tabs")!;
   sectorRail.addEventListener("scroll", syncRailSteps, { passive: true });
   new ResizeObserver(syncRailSteps).observe(sectorRail);
-  const screens = createScreens(game.content.missions, () => game.mission.id, enter);
+  const screens = createScreens(playableMissions(game.content), () => game.mission.id, enter);
   /** A mission this session has played on, which "Resume Game" returns to instead of reloading it. */
   const inProgress = () => coop.active() || game.state.wave > 0 || game.state.towers.length > 0;
   /** Shows a screen: pauses or resumes the wave between game and menu and fills the menu page. */
   function enter(to: Screen, from: Screen | null) {
     if (to.view === "game") {
+      // Shown on the game view only; refresh() re-places it once the board is laid out.
+      requestAnimationFrame(() => coach.refresh());
       if (resumeAfterMenu && game.state.paused) execute({ type: "pause" });
       resumeAfterMenu = false;
       scrollTo(0, 0);
@@ -124,6 +139,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       resumeAfterMenu = !coop.active() && isRunning(game.state) && !game.state.paused;
       if (resumeAfterMenu) execute({ type: "pause" });
     }
+    coach.refresh();
     let section: HTMLElement | undefined;
     for (const s of document.querySelectorAll<HTMLElement>("#start-screen .menu-page")) {
       s.hidden = s.dataset.page !== to.page;
@@ -137,7 +153,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
         inProgress: inProgress(),
         multiplayer: coop.active(),
       });
-      renderMenu(game, primary, terrainImage);
+      renderMenu(game, primary, terrainImage, !trainingDone());
     }
     if (to.page !== "missions") forRoom = false;
     if (to.page === "missions") {
@@ -380,6 +396,10 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
         break;
       case "menu-primary":
         runPrimary();
+        break;
+      case "menu-training":
+      case "help-training":
+        if (game.content.training) selectMission(game.content.training.id);
         break;
       case "coop-btn":
       case "menu-coop":

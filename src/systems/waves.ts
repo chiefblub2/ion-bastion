@@ -36,7 +36,7 @@ export function settleWave(sim: Sim) {
     repairReactor(sim);
     restoreBarricades(sim);
     s.status = s.wave === waves.length ? "won" : "ready";
-    if (s.status === "ready") s.nextWave = WAVE_BREAK;
+    if (s.status === "ready" && !sim.mission.manualWaves) s.nextWave = WAVE_BREAK;
     s.events.push({ type: "waveEnd", wave: s.wave, bonus });
     if (s.status === "won") s.events.push({ type: "end", result: "won" });
   }

@@ -11,13 +11,14 @@ export const PRIORITY_LABELS: Record<TargetPriority, string> = {
 /** English texts for all command results; the simulation itself stays language-neutral. */
 const MESSAGES: Record<MessageCode, (p: Params) => string> = {
   restarted: () => "New mission. Build your first defense.",
-  "mission-loaded": (p) => `Mission ${String(p.number).padStart(2, "0")}: ${p.name}. Build your first defense.`,
+  "mission-loaded": (p) => (p.number ? `Mission ${String(p.number).padStart(2, "0")}: ${p.name}. Build your first defense.` : `${p.name}: follow the steps to learn the basics.`),
   "mission-unknown": () => "Unknown mission.",
   "mission-over": () => "The mission is over. Start a new round.",
   paused: () => "Game paused.",
   resumed: () => "Game resumed.",
   "pause-unavailable": () => "You can only pause during a wave or the wave countdown.",
   "wave-running": () => "The current wave is still running.",
+  "training-step": () => "Follow the Training steps first.",
   "wave-started": (p) => `Wave ${p.wave} started`,
   "wave-called": (p) => `Wave ${p.wave} called early. +${p.bonus} credits.`,
   "no-waves-left": () => "All waves are already under way.",

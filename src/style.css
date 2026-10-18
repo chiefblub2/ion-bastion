@@ -2066,3 +2066,76 @@ dialog::backdrop {
   color: var(--muted);
   font-size: 12px;
 }
+
+/* Training coach: a bubble beside what the current step is about (placed by ui/coach-view.ts). */
+.coach {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 40;
+  width: min(320px, calc(100vw - 32px));
+  padding: 14px 16px 12px;
+  color: #e8f6ff;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  border: 1px solid var(--neon);
+  box-shadow: var(--glow-strong);
+  backdrop-filter: blur(6px);
+  transition: transform 160ms ease-out;
+}
+.coach[hidden] {
+  display: none;
+}
+.coach-kicker {
+  margin: 0 0 4px;
+  font: 600 10px/1 var(--mono);
+  letter-spacing: 0.16em;
+  color: var(--neon);
+}
+.coach h3 {
+  margin: 0 0 6px;
+  font: 700 15px/1.2 var(--display);
+}
+.coach p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.coach-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.coach-actions .primary {
+  padding: 6px 14px;
+}
+.coach-skip {
+  margin-left: auto;
+  font-size: 12px;
+}
+.coach-target {
+  outline: 2px solid var(--neon);
+  outline-offset: 3px;
+  animation: coach-pulse 1.2s ease-in-out infinite;
+}
+@keyframes coach-pulse {
+  50% {
+    outline-color: transparent;
+    outline-offset: 7px;
+  }
+}
+.help-training {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .coach {
+    transition: none;
+  }
+  .coach-target {
+    animation: none;
+  }
+}

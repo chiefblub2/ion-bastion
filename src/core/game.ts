@@ -1,5 +1,5 @@
 import { DEFAULT_CONTENT } from "../content";
-import { missionById, missionNumber } from "../content/missions";
+import { findMission, missionNumber } from "../content/missions";
 import { moveEnemies } from "../systems/movement";
 import { attackEnemies, moveProjectiles, TARGET_PRIORITIES } from "../systems/combat";
 import { isSupport } from "../systems/attacks";
@@ -86,7 +86,7 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
   mission: {
     run: (g, c) => {
       if (hostOnly(g, c)) return fail("host-only");
-      const m = missionById(c.id, g.content.missions);
+      const m = findMission(c.id, g.content);
       if (!m) return fail("mission-unknown");
       g.loadMission(m);
       return ok("mission-loaded", { number: missionNumber(m, g.content.missions), name: m.name });

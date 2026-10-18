@@ -367,6 +367,40 @@
   outline-offset: -6px;
   outline-color: var(--on-neon);
 }
+/* Training: a quiet line under the primary button, lit up for a player who has not won it yet. */
+.home-training {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 16px;
+  text-align: left;
+  color: var(--m-text);
+  background: var(--m-glass);
+  border: 1px dashed var(--m-border);
+  border-radius: 0;
+}
+.home-training span {
+  color: var(--m-text-2);
+  font-size: 0.85em;
+}
+.home-training:hover {
+  background: var(--m-hover);
+}
+.home-training.fresh {
+  border: 1px solid var(--m-warn);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--m-warn) 30%, transparent), 0 0 18px color-mix(in srgb, var(--m-warn) 25%, transparent);
+}
+.home-training.fresh strong {
+  color: var(--m-warn);
+}
+.home-training.fresh strong::after {
+  content: " · recommended";
+  font-size: 0.75em;
+  letter-spacing: 0.08em;
+}
 .home-primary-copy {
   display: flex;
   flex-direction: column;

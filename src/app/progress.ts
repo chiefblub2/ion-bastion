@@ -15,3 +15,19 @@ export function rememberMission(id: string) {
     // Not remembered; the menu then offers no "Continue".
   }
 }
+const TRAINING_KEY = "ion-bastion:training-done";
+/** Won Training once; until then the home page emphasises it. */
+export function trainingDone(): boolean {
+  try {
+    return localStorage.getItem(TRAINING_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+export function markTrainingDone() {
+  try {
+    localStorage.setItem(TRAINING_KEY, "1");
+  } catch {
+    // Not remembered; the button simply stays emphasised.
+  }
+}

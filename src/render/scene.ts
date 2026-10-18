@@ -46,6 +46,8 @@ export interface ViewState {
   page: number;
   /** The coverage overlay (key C): every attack tower's range and how well each path cell is covered. */
   coverage: boolean;
+  /** A board cell the Training coach points at; absent everywhere else. */
+  highlight?: Point;
 }
 /** Advances the simulation once per render frame. */
 export interface Driver {
@@ -232,6 +234,14 @@ export class Battlefield extends Phaser.Scene {
     this.resize();
     this.scale.refresh();
   }
+  /** Page rectangle of a board cell, for DOM callouts; null before the canvas is laid out. */
+  cellRect(cell: Point): DOMRect | null {
+    const r = this.game?.canvas?.getBoundingClientRect();
+    if (!r?.width) return null;
+    const w = r.width / this.sim.map.columns,
+      h = r.height / this.sim.map.rows;
+    return new DOMRect(r.left + cell.x * w, r.top + cell.y * h, w, h);
+  }
   /** Redraws the terrain after a mission change; `create()` sizes the canvas for the new map. */
   reload() {
     this.scene.restart();
@@ -403,6 +413,26 @@ export class Battlefield extends Phaser.Scene {
       }
     }
   }
+  /** The Training coach's cell: a breathing fill and corner brackets that reach out from the cell. */
+  private drawHighlight({ x, y }: Point) {
+    const g = this.hints,
+      color = themeAccent(this.sim.map),
+      breath = this.still.matches ? 0.5 : 0.5 + 0.5 * Math.sin(this.fxClock * 4),
+      out = 2 + 4 * breath,
+      arm = 12,
+      w = 3,
+      x0 = x * CELL - out,
+      y0 = y * CELL - out,
+      x1 = (x + 1) * CELL + out,
+      y1 = (y + 1) * CELL + out;
+    g.fillStyle(color, 0.12 + 0.12 * breath);
+    g.fillRect(x * CELL + 3, y * CELL + 3, CELL - 6, CELL - 6);
+    g.fillStyle(color, 0.95);
+    for (const [cx, cy, dx, dy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) {
+      g.fillRect(dx > 0 ? cx : cx - arm, dy > 0 ? cy : cy - w, arm, w);
+      g.fillRect(dx > 0 ? cx : cx - w, dy > 0 ? cy : cy - arm, w, arm);
+    }
+  }
   /**
    * Every attack tower's range, faint enough that overlaps build up into a heat map, and a strip along the path:
    * red where no tower reaches a ground unit, amber for one, the map's accent for two or more.
@@ -455,6 +485,7 @@ export class Battlefield extends Phaser.Scene {
     const trap = armed?.placement === "path";
     if (trap && this.view.build && hover) this.drawBuildCells(this.view.build);
     if (this.view.coverage || (armed && hover && !isSupport(armed.attack) && armed.placement !== "path")) this.drawCoverage(this.view.coverage ? 1 : 0.55);
+    if (this.view.highlight && !ended) this.drawHighlight(this.view.highlight);
     if (preview && !ended) {
       const valid = !this.view.build || this.sim.canBuild(preview.x, preview.y, this.view.build),
         color = valid ? towerColor(preview, content) : 0xff647c,
