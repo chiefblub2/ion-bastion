@@ -2,9 +2,8 @@ import { credit, earn } from "../core/economy";
 import { resolveUpgrades } from "../core/upgrades";
 import type { Sim } from "../core/types";
 import { createEnemy } from "./spawn";
-import { repairReactor } from "./support";
+import { repairReactor, settleEconomy } from "./support";
 import { restoreBarricades } from "./barricade";
-import { settleEconomy } from "./support";
 export { DEFAULT_HP_GROWTH } from "./spawn";
 /** Seconds of build time after a wave before the next one starts by itself. */
 export const WAVE_BREAK = 3;
@@ -30,6 +29,8 @@ export function settleWave(sim: Sim) {
     delete s.pending;
     delete s.zones;
     delete s.strikes;
+    // Vault interest on the credits held at the wave's end, before the bonus and the refineries pay.
+    settleEconomy(sim);
     earn(s, bonus);
     payIncome(sim);
     repairReactor(sim);
@@ -42,7 +43,6 @@ export function settleWave(sim: Sim) {
 }
 /** Refineries pay out once per completed wave. */
 export function payIncome(sim: Sim) {
-  settleEconomy(sim); // g5: Vault interest, Shield Generator recharge
   const s = sim.state;
   for (const t of s.towers) {
     const attack = resolveUpgrades(t, sim.content).attack;

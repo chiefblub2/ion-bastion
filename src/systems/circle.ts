@@ -1,10 +1,12 @@
 import { earn } from "../core/economy";
 import type { GameState, Sim, Spawn } from "../core/types";
+import { settleEconomy } from "./support";
 import { payIncome } from "./waves";
 import { restoreBarricades } from "./barricade";
 /** Pays a wave's bonus and the refineries; on a ring this happens when the next wave starts. */
 function payWave(sim: Sim, wave: number) {
   const bonus = sim.mission.waves[wave - 1].bonus;
+  settleEconomy(sim);
   earn(sim.state, bonus);
   payIncome(sim);
   restoreBarricades(sim);

@@ -67,6 +67,15 @@ describe("Tether", () => {
     expect(fast.distance).toBeCloseTo(3 + 0.95);
     expect(slow.distance).toBeCloseTo(3 + 0.95);
   });
+  it("is never held by a partner that stands still or walks backwards", () => {
+    const g = new Game(),
+      fast = walker(g, 1, "runner", 3),
+      held = walker(g, 2, "tank", 3);
+    linked(g, [fast, held]);
+    applyStatus(g, held, { kind: "confuse", release: 2, until: 5 });
+    moveEnemies(g, 1);
+    expect(fast.distance).toBeGreaterThan(3 + 0.95);
+  });
 });
 describe("Shrink Ray", () => {
   it("shrinks size, armor and leak (never below 1), and Pitfall then swallows the unit", () => {
@@ -137,6 +146,18 @@ describe("Siphon", () => {
     // Out of reach, and never the Siphon itself.
     expect(siphonBoost(g, far).rate).toBe(0);
     expect(siphonBoost(g, siphon).rate).toBe(0);
+  });
+  it("takes the best rate and the best Power Tap damage of overlapping Siphons separately", () => {
+    const g = new Game(),
+      levels = ["level-2", "level-3", "level-4", "level-5"];
+    place(g, "siphon", 4, 4, [...levels, "overdrive-1"]);
+    place(g, "siphon", 4, 5, [...levels, "power-tap-1"]);
+    const pulse = place(g, "pulse", 5, 4);
+    g.state.enemies = [makeEnemy(1, "drone", 4, 4.5), makeEnemy(2, "drone", 4.5, 4.5)];
+    for (const e of g.state.enemies) applyStatus(g, e, { kind: "slow", factor: 0.7, until: 3 });
+    const boost = siphonBoost(g, pulse);
+    expect(boost.rate).toBeCloseTo(2 * 0.09);
+    expect(boost.damage).toBeCloseTo(2 * 0.03);
   });
   it("rejects invalid values", () => {
     expect(() => validateTower({ ...TOWERS.siphon, attack: { ...(TOWERS.siphon.attack as SiphonAttack), cap: 0 } }, "siphon")).toThrow();

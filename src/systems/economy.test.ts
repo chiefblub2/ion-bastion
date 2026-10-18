@@ -66,9 +66,8 @@ describe("Vault", () => {
     g.state.wallets = [400, 1000];
     const bonus = g.mission.waves[0].bonus;
     emptyWave(g);
-    // The wave bonus is split first; interest is on what each player holds afterwards.
-    const mine = 400 + Math.floor(bonus / 2) + (bonus % 2);
-    expect(g.state.wallets[0]).toBe(mine + interestOn(mine, 0.07, 60));
+    // Interest is on what each player held at the wave's end, before the wave bonus is split.
+    expect(g.state.wallets[0]).toBe(400 + interestOn(400, 0.07, 60) + Math.floor(bonus / 2) + (bonus % 2));
     expect(g.state.wallets[1]).toBe(1000 + Math.floor(bonus / 2));
   });
 });

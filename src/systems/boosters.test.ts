@@ -88,9 +88,13 @@ describe("Skylink", () => {
     place(g, "skylink", 5, 5);
     expect(canTarget(g, "mortar", held)).toBe(true);
     expect(canTarget(g, "mortar", free)).toBe(false);
-    expect(skylinkFactor(g, { tower: 0, type: "mortar" }, held)).toBe(0.6);
+    expect(skylinkFactor(g, { tower: 0, type: "mortar" }, held, false)).toBe(0.6);
     // Towers that hit flyers anyway keep their full damage.
-    expect(skylinkFactor(g, { tower: 0, type: "pulse" }, held)).toBe(1);
+    expect(skylinkFactor(g, { tower: 0, type: "pulse" }, held, false)).toBe(1);
+    // Only direct hits are scaled: burns, Recycler jumps and trap hits deal full damage.
+    expect(skylinkFactor(g, { tower: 0, type: "mortar" }, held, true)).toBe(1);
+    expect(skylinkFactor(g, { tower: 0, type: "mortar" }, held, false, hitOf("overkill", { tower: 0, type: "mortar" }))).toBe(1);
+    expect(skylinkFactor(g, { tower: 0, type: "arc" }, held, false)).toBe(1);
     applyDamage(g, { tower: 0, type: "blast" }, held, 100);
     expect(held.hp).toBeCloseTo(940);
   });

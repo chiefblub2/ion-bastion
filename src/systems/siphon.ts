@@ -35,7 +35,7 @@ export function siphonCount(sim: Sim, siphon: Tower) {
   for (const e of sim.state.enemies) if (e.hp > 0 && dist(e, siphon) <= stats.range && speedFactor(e, time) < 1 && ++n >= cap) break;
   return n;
 }
-/** Boost of the strongest Siphon whose reach covers an attack tower at `at`; nothing for a Siphon itself. */
+/** Boost from the Siphons whose reach covers an attack tower at `at`, the best value per stat like auras (`from` gives the rate); nothing for a Siphon itself. */
 export function siphonBoost(sim: Sim, at: Point & { type: TowerId }): SiphonBoost {
   if (isSiphon(at.type, sim.content)) return NONE;
   let best = NONE;
@@ -46,7 +46,8 @@ export function siphonBoost(sim: Sim, at: Point & { type: TowerId }): SiphonBoos
     if (dist(t, at) > spec.reach) continue;
     const n = siphonCount(sim, t),
       rate = n * spec.bonus;
-    if (rate > best.rate) best = { rate, damage: special?.kind === "power-tap" ? n * special.bonus : 0, from: t };
+    const damage = special?.kind === "power-tap" ? n * special.bonus : 0;
+    best = rate > best.rate ? { rate, damage: Math.max(damage, best.damage), from: t } : damage > best.damage ? { ...best, damage } : best;
   }
   return best;
 }

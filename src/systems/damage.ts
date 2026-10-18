@@ -91,7 +91,7 @@ export function applyDamage(sim: Sim, src: DamageSource, e: Enemy, amount: numbe
 }
 function deal(sim: Sim, src: DamageSource, e: Enemy, amount: number, dot: boolean, hit?: Hit): DamageOutcome | undefined {
   if (e.hp <= 0) return undefined;
-  amount *= skylinkFactor(sim, src, e);
+  amount *= skylinkFactor(sim, src, e, dot, hit);
   if (absorbEncased(sim, e, amount)) return undefined;
   const s = sim.state,
     hpBefore = e.hp,

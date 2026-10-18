@@ -257,7 +257,7 @@ Every enemy moves on the ground or in the air; every attack tower only hits cert
 | <img src="docs/images/towers/cyclone.png" width="36" height="36" alt=""> Cyclone | 140 | Air knockback: gust in radius 1.1 throws flyers back at 1.6 times speed for 0.6 s, then 2.5 s immune | Air only |
 <!-- end g1 -->
 <!-- new towers: g2 (Control B) -->
-| <img src="docs/images/towers/tether.png" width="36" height="36" alt=""> Tether | 130 | Linking: grapples an enemy and links it with the 2 nearest within 1.4 tiles for 3 s; a slow, stun or burn on one reaches all of them (spread effects never spread again), and none walks faster than the slowest | Ground · Air |
+| <img src="docs/images/towers/tether.png" width="36" height="36" alt=""> Tether | 130 | Linking: grapples an enemy and links it with the 2 nearest within 1.4 tiles for 3 s; a slow, stun or burn on one reaches all of them (spread effects never spread again), and none walks faster than the slowest one still walking forward | Ground · Air |
 | <img src="docs/images/towers/shrink.png" width="36" height="36" alt=""> Shrink Ray | 140 | Shrink: beam shrinks the biggest enemy in range for 4 s to 60 % size (Pitfall then swallows big units), half its armor, and it leaks 1 reactor energy less (at least 1) | Ground · Air |
 | <img src="docs/images/towers/hex.png" width="36" height="36" alt=""> Hex | 150 | Curse: 3 s after the hit the enemy takes 40 % of all damage it took meanwhile once more; echoes are never echoed; prefers uncursed enemies | Ground · Air |
 | <img src="docs/images/towers/siphon.png" width="36" height="36" alt=""> Siphon | 150 | Drain beam: slows 25 % for 1.5 s; every slowed, stunned or pulled enemy within its range gives attack towers within 2.2 tiles of the Siphon +6 % fire rate, up to 5 enemies | Ground · Air |
@@ -271,12 +271,12 @@ Every enemy moves on the ground or in the air; every attack tower only hits cert
 | <img src="docs/images/towers/overclock.png" width="36" height="36" alt=""> Overclock | 150 | Burst: every 10 s, towers within radius 2.2 fire twice as fast for 3 s; several Overclocks share one rhythm and do not stack, no attack | – |
 | <img src="docs/images/towers/firectl.png" width="36" height="36" alt=""> Fire Control | 140 | Criticals: every 4th shot of each tower within radius 2.2 deals 2.5 times the damage, no attack | – |
 | <img src="docs/images/towers/armory.png" width="36" height="36" alt=""> Armory | 130 | Armor pierce: hits of towers within radius 2.2 ignore 50 % of armor (stacks with Armor Pierce, not with other Armories), no attack | – |
-| <img src="docs/images/towers/skylink.png" width="36" height="36" alt=""> Skylink | 170 | Air uplink: flyers within radius 2.5 become targets for ground-only towers (Mortar, Nova, Quake, traps), which deal 60 % damage to them, no attack | – |
+| <img src="docs/images/towers/skylink.png" width="36" height="36" alt=""> Skylink | 170 | Air uplink: flyers within radius 2.5 become targets for ground-only towers (Mortar, Nova, Quake; not traps), whose direct hits deal 60 % damage to them, no attack | – |
 | <img src="docs/images/towers/nexus.png" width="36" height="36" alt=""> Nexus | 160 | Synergy: towers within radius 2.2 deal 4 % more damage per different attack tower type in the radius, up to 6 types, no attack | – |
 <!-- end g4 -->
 <!-- new towers: g5 (Support B) -->
 | <img src="docs/images/towers/workshop.png" width="36" height="36" alt=""> Workshop | 120 | Upgrades of towers within radius 2.5 cost 20 % less (several Workshops do not stack, never on another Workshop), no attack | – |
-| <img src="docs/images/towers/vault.png" width="36" height="36" alt=""> Vault | 130 | After every wave its owner earns 5 % interest on unspent credits, at most 40; only your best Vault pays, no attack | – |
+| <img src="docs/images/towers/vault.png" width="36" height="36" alt=""> Vault | 130 | After every wave its owner earns 5 % interest on the credits left at the wave's end (before the wave bonus), at most 40; only your best Vault pays, no attack | – |
 | <img src="docs/images/towers/shieldgen.png" width="36" height="36" alt=""> Shield Generator | 160 | Absorbs the first 3 reactor damage of every wave, then recharges; generators add up; not in the Circuit | – |
 | <img src="docs/images/towers/recycler.png" width="36" height="36" alt=""> Recycler | 140 | Overkill damage of a kill within radius 2.5 jumps to the nearest enemy within 2 cells, once (never again from that jump), no attack | – |
 <!-- end g5 -->

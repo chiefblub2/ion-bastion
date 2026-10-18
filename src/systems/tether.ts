@@ -40,14 +40,19 @@ export function spreadTether(sim: Sim, e: Enemy, effect: StatusEffect) {
 const ownSpeed = (sim: Sim, e: Enemy) => sim.content.enemies[e.type].speed * speedFactor(e, sim.state.time) * traitSpeedFactor(sim, e);
 /**
  * Called by `moveEnemies` after a step from `from`: a linked enemy walks forward no faster than its slowest
- * partner. Only forward steps are capped; a partner that is pulled back never drags the others with it.
+ * partner that is walking forward. A partner that stands still or goes backwards (encased, hypnotised, pulled)
+ * neither holds nor drags the others; a stun still reaches all of them through `spreadTether`.
  */
 export function tetherStep(sim: Sim, e: Enemy, from: number, dt: number): number {
   if (e.distance <= from || !e.status.length) return e.distance;
   const others = partners(sim, e);
   if (!others.length) return e.distance;
   let cap = Infinity;
-  for (const o of others) cap = Math.min(cap, Math.max(0, ownSpeed(sim, o)));
+  for (const o of others) {
+    const v = ownSpeed(sim, o);
+    if (v > 0) cap = Math.min(cap, v);
+  }
+  if (cap === Infinity) return e.distance;
   return Math.min(e.distance, from + cap * dt);
 }
 /** Shared Pain: damage that reached a linked enemy's HP hits each partner for a share of it, as a dot that is never shared again. */

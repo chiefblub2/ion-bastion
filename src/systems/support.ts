@@ -1,12 +1,10 @@
 import { resolveUpgrades } from "../core/upgrades";
-import type { AttackKind, Enemy, Sim } from "../core/types";
-import { dist } from "./path";
-import { isSuppressed } from "./traits";
-// g4 support towers (Overclock, Fire Control, Armory, Skylink, Nexus).
-import type { AttackSpec, CritAttack, DamageSource, OverclockAttack, Point, Tower, TowerId } from "../core/types";
-import { isNetted } from "./status";
-import { layerOf } from "./traits";
 import { credit } from "../core/economy";
+import type { AttackKind, AttackSpec, CritAttack, DamageSource, Enemy, OverclockAttack, Point, Sim, Tower, TowerId } from "../core/types";
+import type { Hit } from "./damage";
+import { dist } from "./path";
+import { isNetted } from "./status";
+import { isSuppressed, layerOf } from "./traits";
 /**
  * Effects of the passive support towers. Like auras they are derived from the current
  * towers on every query, without a cache, and overlapping towers count only the strongest.
@@ -100,9 +98,14 @@ export function skylinkHold(sim: Sim, at: Point) {
   reaching(sim, "skylink", at, (a) => (best = Math.max(best, a.factor)));
   return best;
 }
-/** Skylink: damage factor of a ground-only tower's hit on a flyer it can only reach through a Skylink; 1 otherwise. */
-export function skylinkFactor(sim: Sim, src: DamageSource, e: Enemy) {
-  if (sim.content.towers[src.type].targets.includes("air") || layerOf(sim, e) !== "air" || isNetted(e, sim.state.time)) return 1;
+/**
+ * Skylink: damage factor of a ground-only tower's direct hit on a flyer it can only reach through a Skylink; 1 otherwise.
+ * Dots, Recycler jumps and trap hits (Arc Plate hops reach flyers on their own) always deal full damage.
+ */
+export function skylinkFactor(sim: Sim, src: DamageSource, e: Enemy, dot: boolean, hit?: Hit) {
+  const d = sim.content.towers[src.type];
+  if (dot || hit?.kind === "overkill" || d.placement === "path") return 1;
+  if (d.targets.includes("air") || layerOf(sim, e) !== "air" || isNetted(e, sim.state.time)) return 1;
   return skylinkHold(sim, e) || 1;
 }
 /** Nexus: the distinct attack tower types (support towers excluded) within a Nexus's radius, in first-built order. */
