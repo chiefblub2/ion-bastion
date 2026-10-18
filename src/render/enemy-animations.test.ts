@@ -35,7 +35,13 @@ const STARTERS = ["drone", "runner", "tank", "boss", "glider", "aegis"];
 /** Every registered type: the manifest's enabled entries. */
 const ANIMATED = Object.keys(ENEMY_ANIMATIONS) as EnemyId[];
 const ROOT = new URL("../../", import.meta.url);
-const sheet = (clip: Pick<AnimationClip, "path">) => decodePng(readFileSync(new URL(`public/${clip.path}`, ROOT)));
+const sheets = new Map<string, Png>();
+/** Each sheet decodes once for the whole file (2048×1024 each; several tests read them all). */
+function sheet(clip: Pick<AnimationClip, "path">): Png {
+  let png = sheets.get(clip.path);
+  if (!png) sheets.set(clip.path, (png = decodePng(readFileSync(new URL(`public/${clip.path}`, ROOT)))));
+  return png;
+}
 /** Sheet frame `f` (row by row) as an image of its own. */
 function cell(png: Png, f: number, w: number): Png {
   const x0 = (f % ANIMATION_COLUMNS) * w,
@@ -43,6 +49,12 @@ function cell(png: Png, f: number, w: number): Png {
     rgba = new Uint8Array(w * w * 4);
   for (let y = 0; y < w; y++) rgba.set(png.rgba.subarray(((y0 + y) * png.width + x0) * 4, ((y0 + y) * png.width + x0 + w) * 4), y * w * 4);
   return { ...png, width: w, height: w, rgba };
+}
+/** The image with every pixel below half alpha cleared (a plain loop: a typed-array `map` callback per byte timed out on CI). */
+function solidOnly(png: Png): Png {
+  const rgba = png.rgba.slice();
+  for (let k = 3; k < rgba.length; k += 4) if (rgba[k] < 128) rgba[k] = 0;
+  return { ...png, rgba };
 }
 
 describe("animation registry", () => {
@@ -237,7 +249,7 @@ describe("animation sheets", () => {
           png = sheet(clip);
         for (let i = 0; i < clip.frames; i++) {
           const c = cell(png, sheetFrame(clip, i), clip.frameWidth),
-            solid = measureArt({ ...c, rgba: c.rgba.map((v, k) => (k % 4 === 3 && v < 128 ? 0 : v)) }).bounds,
+            solid = measureArt(solidOnly(c)).bounds,
             visible = measureArt(c).bounds;
           // Thrust and flame tails reach up to 44 px past the solid body; a speck far off reaches further.
           const reach = Math.max(solid.x0 - visible.x0, visible.x1 - solid.x1, solid.y0 - visible.y0, visible.y1 - solid.y1);
