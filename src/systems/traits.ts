@@ -4,6 +4,7 @@ import type { Hit } from "./damage";
 import { dist } from "./path";
 import { createEnemy } from "./spawn";
 import { armorDissolved, hasStatus } from "./status";
+import { armoryPierce } from "./support";
 /** Spacing in cells between enemies released by `splitOnDeath`. */
 const SPLIT_SPACING = 0.15;
 interface TraitModule<T extends Trait> {
@@ -34,7 +35,10 @@ const TRAITS: Registry = {
     validate: (t) => (t.reduction >= 0 && t.reduction < 1 ? undefined : "reduction must be in [0, 1)."),
     // Armor Pierce (on the hit) and Armor Dissolver (on the enemy) each remove a share of the reduction; they multiply, never add.
     onDamage: (t, amount, e, sim, _dot, hit) => {
-      const pierce = hit?.special?.kind === "armor-pierce" ? hit.special.fraction : 0;
+      const special = hit?.special?.kind === "armor-pierce" ? hit.special.fraction : 0,
+        // An Armory near the firing tower combines like a second pierce; without one the value stays exactly as before.
+        armory = armoryPierce(sim, hit?.tower),
+        pierce = armory ? 1 - (1 - special) * (1 - armory) : special;
       return amount * (1 - t.reduction * (1 - pierce) * (1 - armorDissolved(e, sim.state.time)));
     },
   },

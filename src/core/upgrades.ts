@@ -3,6 +3,7 @@ import { attackError, attackOverrideError } from "../systems/attacks";
 import { ContentError } from "./errors";
 import { specializationError } from "./specialization-types";
 import type { SpecializationSpec } from "./specialization-types";
+import { discountedCost, discountEvent, upgradeDiscount } from "../systems/workshop";
 import type {
   AttackSpec,
   AuraBonuses,
@@ -47,6 +48,7 @@ export function upgradeOption(
   id: string,
   credits: number,
   content: ContentPack = DEFAULT_CONTENT,
+  discount = 0,
 ): UpgradeOption {
   const definition = content.towers[tower.type].upgrades.find((upgrade) => upgrade.id === id);
   if (!definition) return { status: "unknown" };
@@ -55,7 +57,7 @@ export function upgradeOption(
   if (definition.path && chosen && definition.path !== chosen) return { definition, status: "excluded" };
   if (definition.requires.some((required) => !tower.upgrades.includes(required)))
     return { definition, status: "locked" };
-  if (credits < definition.cost) return { definition, status: "unaffordable" };
+  if (credits < discountedCost(definition.cost, discount)) return { definition, status: "unaffordable" };
   return { definition, status: "available" };
 }
 
@@ -166,13 +168,17 @@ export function purchaseUpgrade(
   id: string,
   content: ContentPack = DEFAULT_CONTENT,
 ): CommandResult {
-  const option = upgradeOption(tower, id, state.wallets[tower.owner], content);
+  const discount = upgradeDiscount(tower, state.towers, content); // g5: Workshop
+  const option = upgradeOption(tower, id, state.wallets[tower.owner], content, discount);
   if (option.status !== "available" || !option.definition)
     return { ok: false, code: STATUS_CODES[option.status as Exclude<UpgradeStatus, "available">] };
   const definition = content.towers[tower.type];
-  state.wallets[tower.owner] -= option.definition.cost;
-  tower.spent += option.definition.cost;
+  const price = discountedCost(option.definition.cost, discount);
+  state.wallets[tower.owner] -= price;
+  tower.spent += price;
   tower.upgrades.push(id);
+  const saved = discountEvent(tower, state.towers, option.definition.cost - price, content);
+  if (saved) state.events.push(saved);
   state.events.push({ type: "upgrade", at: { x: tower.x, y: tower.y }, tower: tower.type, color: towerColor(tower, content) });
   return {
     ok: true,

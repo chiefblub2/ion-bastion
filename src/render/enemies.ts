@@ -2,6 +2,9 @@ import type { Enemy, EnemyDefinition, EnemyVisual } from "../core/types";
 import type { StatusFlags } from "../systems/status";
 import type { TraitFlags } from "../systems/traits";
 import { oval, polygon, star, type Ink } from "./shapes";
+import { drawOilCoat } from "./trap-effects";
+import { drawTranceMarks } from "./trance";
+import { shrinkScale } from "./control-marks";
 /**
  * Everything the three enemy stages need, built once per enemy and frame by `enemyContext`.
  * Stages, bottom to top: `drawEnemyUnderlay` (fields, trails, rings, shadow), `drawEnemyBody` (the unit itself)
@@ -42,7 +45,8 @@ export function enemyContext(
   hpBar = true,
 ): EnemyDrawContext {
   const air = traits.phase ? traits.phase === "air" : traits.leaping ? definition.layer !== "air" : definition.layer === "air";
-  return { x, y, cell, r: definition.size * cell, enemy, definition, heading, status, traits, clock, air, hidden: traits.stealth && !traits.revealed, hpBar };
+  const r = definition.size * cell * shrinkScale(enemy, status.shrunk);
+  return { x, y, cell, r, enemy, definition, heading, status, traits, clock, air, hidden: traits.stealth && !traits.revealed, hpBar };
 }
 interface Shape<V> {
   /** Ground or air shadow; part of the underlay, so a sprite body can replace `body` and keep it. */
@@ -544,6 +548,7 @@ function statusBelow(g: Ink, { x, y, r, heading, status, clock, enemy: e }: Enem
       g.fillCircle(x - Math.cos(heading) * (r + 2 + k * 6) + (i - 1) * 2, y - Math.sin(heading) * (r + 2 + k * 6) + k * 3, 1.6);
     }
   }
+  if (status.oiled) drawOilCoat(g, x, y, r, heading, clock, e.id);
   // Pulled: a ring trailing behind against the walking direction.
   if (status.pulled) {
     g.lineStyle(2, STATUS_COLORS.pulled, 0.85);
@@ -644,6 +649,7 @@ export function drawEnemyOverlay(g: Ink, c: EnemyDrawContext) {
   }
   traitsAbove(g, c);
   statusAbove(g, c);
+  drawTranceMarks(g, c);
   if (!c.hpBar) return;
   g.fillStyle(0x050c12);
   g.fillRoundedRect(x - r - 1, y - r - 9, r * 2 + 2, 5, 2);

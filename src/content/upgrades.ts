@@ -121,6 +121,62 @@ export const TRACKER_UPGRADES = supportUpgrades([
   { cost: 200, attack: { amount: 0.25 }, range: 2.8, description: "Target Lock: enemies within radius 2.8 take 25% more damage." },
 ]);
 
+// ── new towers: g1 (Attack+Control A) ──
+// ── end g1 ──
+// ── new towers: g2 (Control B) ──
+// ── end g2 ──
+// ── new towers: g3 (Traps) ──
+// ── end g3 ──
+// ── new towers: g4 (Support A) ──
+/** Overclock: a longer burst, then a harder one in a wider radius. */
+export const OVERCLOCK_UPGRADES = supportUpgrades([
+  { cost: 130, attack: { window: 4 }, range: 2.5, description: "Long Burst: towers within radius 2.5 fire twice as fast for 4 s of every 10 s." },
+  { cost: 220, attack: { boost: 1.5, window: 4 }, range: 2.8, description: "Redline: towers within radius 2.8 fire 2.5 times as fast for 4 s of every 10 s." },
+]);
+/** Fire Control: crits come sooner, then hit harder in a wider radius. */
+export const FIRE_CONTROL_UPGRADES = supportUpgrades([
+  { cost: 120, attack: { every: 3 }, description: "Ranging Shot: every 3rd shot of a tower in the radius crits for 2.5 times the damage." },
+  { cost: 200, attack: { every: 3, multiplier: 3 }, range: 2.6, description: "Fire Solution: every 3rd shot within radius 2.6 crits for triple damage." },
+]);
+/** Armory: deeper armor pierce, the last level also a wider radius. */
+export const ARMORY_UPGRADES = supportUpgrades([
+  { cost: 110, attack: { fraction: 0.65 }, description: "Hardened Cores: hits of towers in the radius ignore 65% of armor." },
+  { cost: 180, attack: { fraction: 0.8 }, range: 2.6, description: "Tungsten Rounds: hits of towers within radius 2.6 ignore 80% of armor." },
+]);
+/** Skylink: harder hits on held flyers, the last level also a wider net. */
+export const SKYLINK_UPGRADES = supportUpgrades([
+  { cost: 140, attack: { factor: 0.75 }, description: "Fine Lock: ground towers deal 75% of their damage to flyers it holds." },
+  { cost: 230, attack: { factor: 0.9 }, range: 3, description: "Full Uplink: holds flyers within radius 3; ground towers deal 90% to them." },
+]);
+/** Nexus: more per tower type, then a wider mix counted. */
+export const NEXUS_UPGRADES = supportUpgrades([
+  { cost: 130, attack: { bonus: 0.05 }, range: 2.5, description: "Wide Mesh: towers within radius 2.5 deal 5% more damage per tower type around it, up to 6 types." },
+  { cost: 210, attack: { bonus: 0.06, cap: 7 }, range: 2.8, description: "Grand Lattice: radius 2.8, 6% more damage per tower type, up to 7 types." },
+]);
+// ── end g4 ──
+// ── new towers: g5 (Support B) ──
+/** Workshop: a deeper discount in a wider radius. */
+export const WORKSHOP_UPGRADES = supportUpgrades([
+  { cost: 110, attack: { amount: 0.25 }, range: 2.8, description: "Tool Racks: upgrades of towers within radius 2.8 cost 25% less." },
+  { cost: 180, attack: { amount: 0.3 }, range: 3.2, description: "Assembly Line: upgrades of towers within radius 3.2 cost 30% less." },
+]);
+/** Vault: a better rate and a higher cap. */
+export const VAULT_UPGRADES = supportUpgrades([
+  { cost: 120, attack: { rate: 0.07, cap: 60 }, description: "Compound Ledger: 7% interest per wave, at most 60 credits." },
+  { cost: 200, attack: { rate: 0.1, cap: 90 }, description: "Deep Reserve: 10% interest per wave, at most 90 credits." },
+]);
+/** Shield Generator: more reactor damage absorbed per wave. */
+export const SHIELDGEN_UPGRADES = supportUpgrades([
+  { cost: 150, attack: { amount: 5 }, description: "Twin Capacitors: absorbs the first 5 reactor damage of every wave." },
+  { cost: 240, attack: { amount: 8 }, description: "Bastion Field: absorbs the first 8 reactor damage of every wave." },
+]);
+/** Recycler: more of the overkill passed on, further and from a wider radius. */
+export const RECYCLER_UPGRADES = supportUpgrades([
+  { cost: 120, attack: { share: 1.25, reach: 2.5 }, description: "Scrap Press: 125% of the overkill jumps up to 2.5 cells." },
+  { cost: 200, attack: { share: 1.5, reach: 3 }, range: 3, description: "Reclaimer Core: 150% of the overkill jumps up to 3 cells, for kills within radius 3." },
+]);
+// ── end g5 ──
+
 /** A trap: an attack tower on a path cell; its trigger radius stays the same at every level. */
 export function trapTower<T extends Omit<TowerDefinition, "upgrades" | "attack" | "placement"> & { attack: Exclude<AttackSpec, SupportAttack> }>(definition: T, specials: LevelSpecials = {}) {
   return { ...definition, placement: "path" as const, upgrades: attackUpgrades(definition, definition.cost, specials, false) };

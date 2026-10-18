@@ -1,11 +1,13 @@
 import { earn } from "../core/economy";
 import type { GameState, Sim, Spawn } from "../core/types";
 import { payIncome } from "./waves";
+import { restoreBarricades } from "./barricade";
 /** Pays a wave's bonus and the refineries; on a ring this happens when the next wave starts. */
 function payWave(sim: Sim, wave: number) {
   const bonus = sim.mission.waves[wave - 1].bonus;
   earn(sim.state, bonus);
   payIncome(sim);
+  restoreBarricades(sim);
   sim.state.events.push({ type: "waveEnd", wave, bonus });
 }
 /**
@@ -60,6 +62,7 @@ export function settleCircle(sim: Sim, dt: number) {
     s.projectiles = [];
     delete s.pending;
     delete s.zones;
+    delete s.strikes;
     s.status = "won";
     s.events.push({ type: "end", result: "won" });
   }

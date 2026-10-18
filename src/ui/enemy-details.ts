@@ -16,6 +16,12 @@ const STATUS_LABELS: { [K in keyof StatusFlags]: string } = {
   netted: "NETTED",
   bleeding: "BLEEDING",
   charged: "CHARGED",
+  oiled: "OILED",
+  confused: "HYPNOTISED",
+  encased: "ENCASED",
+  tethered: "TETHERED",
+  shrunk: "SHRUNK",
+  cursed: "HEXED",
 };
 
 /** Changes whenever the panel's content would; avoids rewriting the HTML on every refresh. */

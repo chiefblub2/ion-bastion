@@ -3,6 +3,7 @@ import { resolveUpgrades, type UpgradeProgress } from "../core/upgrades";
 import { isSupport } from "./attacks";
 import type { AuraBonuses, AuraStat, ContentPack, Point, Sim, TowerId } from "../core/types";
 import { isSuppressed, towerDebuffs } from "./traits";
+import { siphonBoost } from "./siphon";
 
 export const AURA_STATS: readonly AuraStat[] = ["damage", "speed", "range"];
 const emptyBonuses = (): AuraBonuses => ({ damage: 0, speed: 0, range: 0 });
@@ -53,11 +54,13 @@ export function effectiveTowerStats(
   // Blind and jam only touch attack towers: traps and support towers keep their stats.
   const d = content.towers[target.type],
     debuffs = sim && d.placement !== "path" && !isSupport(d.attack) ? towerDebuffs(sim, target) : { range: 0, interval: 0 };
+  // Siphon: hindered enemies near a Siphon speed up the attack towers around it (Power Tap: and strengthen them).
+  const siphon = sim && d.placement !== "path" && !isSupport(d.attack) ? siphonBoost(sim, target) : { rate: 0, damage: 0 };
   return {
     base,
     bonuses,
-    damage: base.damage * (1 + bonuses.damage),
+    damage: base.damage * (1 + bonuses.damage) * (1 + siphon.damage),
     range: base.range * (1 + bonuses.range) * (1 - debuffs.range),
-    interval: (base.interval / (1 + bonuses.speed)) * (1 + debuffs.interval),
+    interval: (base.interval / (1 + bonuses.speed)) * (1 + debuffs.interval) / (1 + siphon.rate),
   };
 }

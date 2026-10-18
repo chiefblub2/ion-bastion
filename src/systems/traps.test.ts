@@ -85,6 +85,9 @@ describe("trap-only attack kinds", () => {
     expect(() => validateTower({ ...TOWERS.tesla, attack: { kind: "pit", size: 0.2 } }, "Tower")).toThrow(/only for traps/);
     expect(() => validateTower(TOWERS.pit, "Tower")).not.toThrow();
   });
+  it("keep traps on ground targets unless the kind is an air trap", () => {
+    expect(() => validateTower({ ...TOWERS.mine, targets: ["ground", "air"] }, "Tower")).toThrow(/ground targets only/);
+  });
 });
 describe("Caltrops", () => {
   const { perCell } = TOWERS.spikes.attack as BleedAttack,

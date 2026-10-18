@@ -1,8 +1,13 @@
 import type { Enemy, Sim, StatusEffect, StatusKind } from "../core/types";
 import { applyDamage, hitOf } from "./damage";
+import { isEncased } from "./encase";
 import { canTarget } from "./attacks/targeting";
 import { dist } from "./path";
 import { resists, tickTraits } from "./traits";
+import { igniteOiled, oilBoost } from "./oil";
+import { jumpCurse, releaseEcho } from "./hex";
+import { shrinkArmor } from "./shrink";
+import { spreadTether, whiplash } from "./tether";
 /** Seconds between two burn damage steps; fewer, larger hits instead of one per tick. */
 export const BURN_TICK = 0.5;
 const active = (effect: StatusEffect, time: number) => time < effect.until;
@@ -81,7 +86,7 @@ const STATUSES: { [K in StatusKind]: StatusModule<Of<K>> } = {
     tick: (sim, e, s) => {
       while (s.next <= sim.state.time && s.next <= s.until && e.hp > 0) {
         s.next += BURN_TICK;
-        applyDamage(sim, s.source, e, s.dps * BURN_TICK, true);
+        applyDamage(sim, s.source, e, s.dps * BURN_TICK * oilBoost(e, sim.state.time), true);
       }
     },
     onDeath: (sim, e, s) => {
@@ -130,6 +135,72 @@ const STATUSES: { [K in StatusKind]: StatusModule<Of<K>> } = {
   armorDissolved: {
     merge: strongest((s) => s.fraction),
   },
+  // ── new towers: g1 (Attack+Control A) ──
+  // Like pull: a reversed walk at the enemy's own speed, the recovery included in the running entry.
+  confuse: {
+    merge: () => false,
+    speed: (s, time) => (time < s.release ? -1 : 1),
+  },
+  // Held until the resin shatters; the damage pipeline stores its hits meanwhile (`absorbEncased`). The release is
+  // marked spent first, so it is never stored again: `stored × (1 + bonus)` on the enemy, Resin Burst around it.
+  encase: {
+    merge: () => false,
+    speed: (s, time) => (time < s.release ? 0 : 1),
+    tick: (sim, e, s) => {
+      if (s.stored < 0 || sim.state.time < s.release) return;
+      const amount = s.stored * (1 + s.bonus),
+        special = s.source.special,
+        src = { tower: s.source.tower, type: s.source.type };
+      s.stored = -1;
+      sim.state.events.push({ type: "shatter", at: { x: e.x, y: e.y }, amount, color: sim.content.towers[s.source.type].color });
+      if (amount <= 0) return;
+      applyDamage(sim, s.source, e, amount, false, hitOf("encase", s.source));
+      if (special?.kind !== "shatter-splash") return;
+      for (const other of [...sim.state.enemies])
+        if (other !== e && other.hp > 0 && canTarget(sim, src.type, other) && dist(other, e) <= special.radius)
+          applyDamage(sim, src, other, amount * special.factor, false, hitOf("encase", src, { area: true }));
+    },
+  },
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  // The newest tether wins: an enemy belongs to one group at a time.
+  tether: {
+    merge: (existing, incoming) => {
+      replace(existing, incoming);
+      return true;
+    },
+    onDeath: (sim, e, s) => whiplash(sim, e, s),
+  },
+  // Read by `sizeOf`, `leakOf` and (through `armorDissolved`) the armor trait; Brittle Frame weakens it.
+  shrink: {
+    merge: strongest((s) => -s.factor),
+    damageTaken: (s) => 1 + (s.bonus ?? 0),
+  },
+  // A running curse keeps its count and its moment, so re-hexing never delays the echo; a stronger Hex only raises the share.
+  echo: {
+    merge: (existing, incoming) => {
+      if (incoming.share <= existing.share) return false;
+      existing.share = incoming.share;
+      return true;
+    },
+    // Runs once: the entry expires in the same pass, so the echo itself is never remembered.
+    tick: (sim, e, s) => {
+      if (sim.state.time >= s.until) releaseEcho(sim, e, s);
+    },
+    onDeath: (sim, e, s) => jumpCurse(sim, e, s),
+  },
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  // Oil Slick: read by the burn step (`oilBoost`); a burning carrier sets oiled neighbours alight.
+  oiled: {
+    merge: strongest((s) => s.boost),
+    tick: (sim, e, s) => igniteOiled(sim, e, s),
+  },
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  // ── end g5 ──
 };
 const moduleOf = (effect: StatusEffect) => STATUSES[effect.kind] as StatusModule<StatusEffect>;
 /**
@@ -142,16 +213,21 @@ export function applyStatus(sim: Sim, e: Enemy, effect: StatusEffect): boolean {
   const existing = e.status.find((s) => s.kind === effect.kind);
   if (!existing) e.status.push({ ...effect });
   else if (!active(existing, sim.state.time)) replace(existing, effect);
-  else return moduleOf(existing).merge(existing, effect);
+  else if (!moduleOf(existing).merge(existing, effect)) return false;
+  spreadTether(sim, e, effect);
   return true;
 }
 /** Share of the armor reduction removed by the strongest running Armor Dissolver. */
 export function armorDissolved(e: Enemy, time: number) {
   const s = e.status.length ? e.status.find((effect) => effect.kind === "armorDissolved") : undefined;
-  return s && active(s, time) ? (s as Of<"armorDissolved">).fraction : 0;
+  const dissolved = s && active(s, time) ? (s as Of<"armorDissolved">).fraction : 0;
+  // Shrink Ray: a shrunk enemy keeps only part of its armor, multiplied with any dissolver.
+  const kept = shrinkArmor(e, time);
+  return kept === 1 ? dissolved : 1 - (1 - dissolved) * kept;
 }
 /** Movement factor from all active effects; 1 means full speed, 0 stunned, negative pulled back. */
 export function speedFactor(e: Enemy, time: number) {
+  if (isEncased(e, time)) return 0;
   let factor = 1;
   for (const s of e.status) if (active(s, time)) factor = Math.min(factor, moduleOf(s).speed?.(s, time) ?? 1);
   return factor;
@@ -172,6 +248,22 @@ export interface StatusFlags {
   netted: boolean;
   bleeding: boolean;
   charged: boolean;
+  // ── new towers: g1 (Attack+Control A) ──
+  confused: boolean;
+  encased: boolean;
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  tethered: boolean;
+  shrunk: boolean;
+  cursed: boolean;
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  oiled: boolean;
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  // ── end g5 ──
 }
 /** Visible states for drawing. */
 export function statusFlags(e: Enemy, time: number): StatusFlags {
@@ -188,6 +280,22 @@ export function statusFlags(e: Enemy, time: number): StatusFlags {
     netted: on("netted"),
     bleeding: on("bleeding"),
     charged: on("charged"),
+    // ── new towers: g1 (Attack+Control A) ──
+    confused: e.status.some((s) => s.kind === "confuse" && time < s.release),
+    encased: e.status.some((s) => s.kind === "encase" && s.stored >= 0 && time < s.release),
+    // ── end g1 ──
+    // ── new towers: g2 (Control B) ──
+    tethered: on("tether"),
+    shrunk: on("shrink"),
+    cursed: on("echo"),
+    // ── end g2 ──
+    // ── new towers: g3 (Traps) ──
+    oiled: on("oiled"),
+    // ── end g3 ──
+    // ── new towers: g4 (Support A) ──
+    // ── end g4 ──
+    // ── new towers: g5 (Support B) ──
+    // ── end g5 ──
   };
 }
 export const isSlowed = (e: Enemy, time: number) => statusFlags(e, time).slowed;
@@ -198,7 +306,7 @@ export const isNetted = (e: Enemy, time: number) => e.status.length > 0 && hasSt
 export function activeEffects(e: Enemy, time: number) {
   let n = 0;
   for (const s of e.status)
-    if (s.kind === "stun" || s.kind === "pull" ? time < s.release : active(s, time)) n++;
+    if ("release" in s ? time < s.release : active(s, time)) n++;
   return n;
 }
 /** Effects Stabilizer may lengthen; stun and pull never, so nothing is held for good. */

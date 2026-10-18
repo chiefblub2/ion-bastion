@@ -30,6 +30,8 @@ export interface AttackModule<S extends AttackSpec = AttackSpec> {
   minRange?: (spec: S) => number;
   /** Only traps may use this kind; validation rejects it elsewhere. */
   trapOnly?: true;
+  /** A trap of this kind may target air (Harpoon); every other trap is limited to ground targets. */
+  airTrap?: boolean;
   /** Different enemies hit per salvo, the chosen target first; 1 when absent. */
   volley?: (spec: S) => number;
   /** Extra checks beyond `params`; returns an error message. */

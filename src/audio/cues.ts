@@ -10,10 +10,39 @@ export interface Cue {
   gain: number;
 }
 export type View = "menu" | "game";
-const BLASTS = new Set<AttackSpec["kind"]>(["splash", "mortar", "airburst", "pool", "charge"]);
+const BLASTS = new Set<AttackSpec["kind"]>([
+  "splash", "mortar", "airburst", "pool", "charge",
+  // ── new towers: g1 (Attack+Control A) ──
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  // ── end g5 ──
+]);
 const PLAIN: Partial<Record<GameEvent["type"], CueId>> = {
   kill: "kill", evade: "evade", overload: "overload", leak: "leak", build: "build", sell: "sell", upgrade: "upgrade",
   income: "income", repair: "repair", waveStart: "waveStart", waveEnd: "waveEnd",
+  // ── new towers: g1 (Attack+Control A) ──
+  strike: "strike", shatter: "shatter",
+  // Magnetar's drag stays silent on purpose: its shot transient already marks the pulse.
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  echo: "echo",
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  warp: "warp", breach: "breach",
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  crit: "crit",
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  // `discount` stays silent on purpose: the upgrade it comes with already has its sound.
+  recycle: "recycle", barrier: "barrier",
+  // ── end g5 ──
 };
 export const burstGain = (n: number) => Math.min(1.5, 1 + 0.1 * (n - 1));
 

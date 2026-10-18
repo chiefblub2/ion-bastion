@@ -1,8 +1,12 @@
 import type { AttackKind, DamageSource, Enemy, SpecializationSpec, Sim } from "../core/types";
 import { earn } from "../core/economy";
+import { absorbEncased } from "./encase";
 import { damageTaken, hasStatus, statusDeath } from "./status";
 import { bountyBonus, markFactor } from "./support";
+import { skylinkFactor } from "./support";
+import { recycleOverkill } from "./recycler";
 import { afterHit, hasTrait, layerOf, linkedGroup, modifyDamage, onDeath } from "./traits";
+import { afterDealt } from "./links";
 export type { DamageSource } from "../core/types";
 /**
  * Context of a hit for traits; absent for dots. `instant`: chain, pierce, focus, quake, pull, disrupt. `area`: splash (centre incl.),
@@ -29,7 +33,20 @@ export interface DamageOutcome {
 /** Max HP from which an enemy counts as a heavy target for specializations. */
 export const HEAVY_HP = 1000;
 const INSTANT: ReadonlySet<AttackKind> = new Set(["chain", "pierce", "focus", "quake", "pull", "disrupt"]);
-const AREA: ReadonlySet<AttackKind> = new Set(["splash", "mortar", "airburst", "pool", "quake", "charge"]);
+const AREA: ReadonlySet<AttackKind> = new Set<AttackKind>([
+  "splash", "mortar", "airburst", "pool", "quake", "charge",
+  // ── new towers: g1 (Attack+Control A) ──
+  "strike",
+  // ── end g1 ──
+  // ── new towers: g2 (Control B) ──
+  // ── end g2 ──
+  // ── new towers: g3 (Traps) ──
+  // ── end g3 ──
+  // ── new towers: g4 (Support A) ──
+  // ── end g4 ──
+  // ── new towers: g5 (Support B) ──
+  // ── end g5 ──
+]);
 /** Hit context for an attack of `kind`; `extra` overrides the derived flags (`chain`, `execution`). */
 export const hitOf = (kind: AttackKind, src: DamageSource, extra: Partial<Hit> = {}): Hit => ({
   kind,
@@ -74,6 +91,8 @@ export function applyDamage(sim: Sim, src: DamageSource, e: Enemy, amount: numbe
 }
 function deal(sim: Sim, src: DamageSource, e: Enemy, amount: number, dot: boolean, hit?: Hit): DamageOutcome | undefined {
   if (e.hp <= 0) return undefined;
+  amount *= skylinkFactor(sim, src, e);
+  if (absorbEncased(sim, e, amount)) return undefined;
   const s = sim.state,
     hpBefore = e.hp,
     // Weakening and marking first, so armor absorbs a share of the amplified hit.
@@ -81,6 +100,7 @@ function deal(sim: Sim, src: DamageSource, e: Enemy, amount: number, dot: boolea
     dealt = Number.isFinite(raw) || raw <= 0 ? raw : e.hp;
   e.hp -= dealt;
   s.events.push({ type: "damage", at: { x: e.x, y: e.y }, amount: dealt, enemy: e.id });
+  afterDealt(sim, e, Math.min(dealt, hpBefore));
   afterHit(sim, e, dot, hit);
   const outcome = { hpBefore, dealt, killed: e.hp <= 0, overkill: Math.max(0, dealt - hpBefore) };
   if (e.hp > 0) return outcome;
@@ -94,5 +114,6 @@ function deal(sim: Sim, src: DamageSource, e: Enemy, amount: number, dot: boolea
   s.events.push({ type: "kill", at: { x: e.x, y: e.y }, color: d.color, reward });
   onDeath(sim, e);
   statusDeath(sim, e);
+  recycleOverkill(sim, src, e, outcome, hit); // g5: Recycler
   return outcome;
 }

@@ -1,9 +1,10 @@
 import type { Enemy, PitAttack, Sim } from "../../core/types";
 import { applyDamage, hitOf } from "../damage";
 import { hasTrait } from "../traits";
+import { sizeOf } from "../shrink";
 import type { AttackModule } from "./types";
-/** Small enough to fall in: body size up to the pit's size, and not unstoppable. */
-const fits = (sim: Sim, e: Enemy, spec: PitAttack) => sim.content.enemies[e.type].size <= spec.size && !hasTrait(sim, e, "unstoppable");
+/** Small enough to fall in: body size (a Shrink Ray counts) up to the pit's size, and not unstoppable. */
+const fits = (sim: Sim, e: Enemy, spec: PitAttack) => sizeOf(sim, e) <= spec.size && !hasTrait(sim, e, "unstoppable");
 /** Fallgrube: swallows small enemies whole, whatever their HP; bigger ones only take damage. */
 export const pit: AttackModule<PitAttack> = {
   aim: "enemy",

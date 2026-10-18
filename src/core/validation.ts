@@ -68,6 +68,7 @@ export function validateTower(t: TowerDefinition, path: string) {
   check(t.cost > 0 && (area ? t.range > 0 : t.range >= 0) && t.damage >= 0 && (support || t.interval > 0), path, "Invalid tower.");
   if (support) check(t.damage === 0 && t.interval === 0, path, "Invalid support tower: no damage, no fire interval.");
   check(!module.trapOnly || t.placement === "path", path, "This attack kind exists only for traps.");
+  check(t.placement !== "path" || !t.targets.includes("air") || !!module.airTrap, path, "Traps hit ground targets only, unless their attack kind is an air trap.");
   if (t.placement !== undefined)
     check(t.placement === "path" && !support, path, "Invalid placement: only attack towers can sit on the path as a trap.");
   check(t.visual?.icon, path, "Missing icon (visual.icon).");

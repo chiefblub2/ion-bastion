@@ -1,6 +1,7 @@
 import { Game, isRunning, SELL_REFUND } from "../core/game";
 import { isCircleSector, missionNumber, sectorOf } from "../content/missions";
 import { upgradeOption } from "../core/upgrades";
+import { upgradeDiscount } from "../systems/workshop";
 import { towerDetails } from "./tower-details";
 import { enemyDetails, enemyKey } from "./enemy-details";
 import { isHidden } from "../systems/traits";
@@ -25,7 +26,7 @@ import { hotkeyTowers, isPaged, pageOf, TOWER_PAGES, towerOrder } from "./tower-
 const pad = (n: number) => String(n).padStart(2, "0");
 const plural = (n: number, word: string) => (n === 1 ? word : `${word}s`);
 /** Hotkeys for the towers of the open tab, from 1 again on every tab; more than ten continue with letters. */
-export const TOWER_KEYS = "1234567890qwer";
+export const TOWER_KEYS = "1234567890qwery";
 export const towerKey = (index: number) => TOWER_KEYS[index]?.toUpperCase() ?? "";
 /** "1–9, 0, Q, W" for a tab of twelve towers; `wrap` formats each key, e.g. as `<kbd>`. */
 function towerKeyRange(count: number, wrap = (key: string) => key) {
@@ -287,6 +288,7 @@ export class Interface {
       t.upgrades,
       effectiveTowerStats(t, s.towers, content).bonuses,
       TOWERS[t.type].attack.kind === "aura" ? s.towers.filter(target => isInAura(t, target, content)).length : 0,
+      upgradeDiscount(t, s.towers, content), // g5: Workshop
     ]) : "";
     // A selected enemy that died, leaked or vanished into stealth drops out of the panel.
     let enemy = s.enemies.find((e) => e.id === this.view.enemy);
@@ -313,7 +315,7 @@ export class Interface {
           '<div class="selection-heading"><span>TACTICS</span><b>◇</b></div><p>Build at bends to keep enemies in range longer.</p><div class="placement-note">Click a built tower to upgrade it, or an enemy to see its HP and traits.</div>';
     }
     for (const button of document.querySelectorAll<HTMLButtonElement>("[data-upgrade]")) {
-      button.disabled = !t || terminal || foreign || upgradeOption(t, button.dataset.upgrade!, gold, content).status !== "available";
+      button.disabled = !t || terminal || foreign || upgradeOption(t, button.dataset.upgrade!, gold, content, upgradeDiscount(t, s.towers, content)).status !== "available";
     }
     const sell = document.getElementById(
       "sell-btn",

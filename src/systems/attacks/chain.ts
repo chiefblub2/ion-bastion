@@ -14,13 +14,15 @@ function arc(sim: Sim, src: DamageSource, start: Enemy, damage: number, spec: Ch
   if (hasTrait(sim, start, "insulated")) return;
   let from: Enemy = start;
   for (let jump = 0; jump < spec.jumps; jump++) {
+    // Arc Plate: a floor trap's lightning leaps to anything near, flyers and stealthed units included.
+    const trap = sim.content.towers[src.type].placement === "path";
     const next = s.enemies
       .filter(
         (c) =>
           c.hp > 0 &&
           !struck.has(c.id) &&
           !hasTrait(sim, c, "insulated") &&
-          canAcquire(sim, src.type, c) &&
+          (trap || canAcquire(sim, src.type, c)) &&
           dist(c, from) <= spec.range,
       )
       .sort((a, b) => dist(a, from) - dist(b, from) || a.id - b.id)[0];

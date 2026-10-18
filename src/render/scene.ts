@@ -16,7 +16,10 @@ import { missionAnimationTypes } from "./enemy-animations";
 import { queueEnemyAnimations, queueEnemyArt, sceneSpriteHost } from "./enemy-art-scene";
 import { EnemyFeedback } from "./enemy-feedback";
 import { drawEnemyLayers, EnemySprites } from "./enemy-sprites";
+import { drawControlMarks } from "./control-marks";
 import { drawZones } from "./zones";
+import { drawSupportFx } from "./support-fx";
+import { drawStrikes } from "./strikes";
 import { familyOf, type Family } from "../audio/families";
 import { halo } from "./material";
 import { arcBand, CELL, disc, px, ring, type Pen } from "./shapes";
@@ -518,6 +521,8 @@ export class Battlefield extends Phaser.Scene {
       }
     }
     if (s.zones) drawZones(this.hints, this.towerGlow, s.zones, s.time, this.clock, content);
+    drawSupportFx({ g: this.hints, glow: this.towerGlow }, this.sim, this.clock);
+    if (s.strikes) drawStrikes(this.hints, this.towerGlow, s.strikes, s.time, this.clock, content);
     const pulses = this.hooks.pulses?.() ?? {};
     for (const t of s.towers) {
       const d = towers[t.type],
@@ -547,6 +552,7 @@ export class Battlefield extends Phaser.Scene {
       enemyContext(px(e.x), px(e.y), CELL, e, enemies[e.type], this.heading(e.distance), statusFlags(e, s.time), traitFlags(this.sim, e), this.clock),
     );
     drawEnemyLayers({ underlay: this.enemyUnderlay, body: this.enemyBody, overlay: this.enemyOverlay }, this.enemySprites, units, this.enemyLook);
+    drawControlMarks({ under: this.enemyUnderlay, over: this.enemyOverlay, glow: this.glow }, this.sim, units, this.clock);
     const ink = this.ink;
     const marked = s.enemies.find((e) => e.id === this.view.enemy);
     if (marked && !isHidden(this.sim, marked)) {
