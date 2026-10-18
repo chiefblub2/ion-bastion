@@ -2139,3 +2139,128 @@ dialog::backdrop {
     animation: none;
   }
 }
+
+/* Tower action card: beside the selected tower on the board (ui/tower-card-view.ts places it). */
+.tower-card-pop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 4;
+  width: 232px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel) 95%, transparent);
+  border: 1px solid var(--neon);
+  box-shadow: var(--glow);
+  backdrop-filter: blur(6px);
+  font-size: 12px;
+}
+.tower-card-pop[hidden] {
+  display: none;
+}
+.tower-card-pop button {
+  min-height: 40px;
+  font-size: 12px;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: #9aabc6;
+}
+.tower-card-pop button:hover:not(:disabled) {
+  color: #e8f6ff;
+  border-color: #1f6f85;
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.card-head strong {
+  font: 700 13px/1.2 var(--display);
+  color: var(--neon);
+}
+.card-head span {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.tower-card-pop .card-close {
+  margin-left: auto;
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0;
+}
+.card-owner {
+  margin: 0;
+  color: var(--muted);
+}
+.card-upgrades {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tower-card-pop .card-upgrade {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  text-align: left;
+  color: var(--mint);
+  background: #0a2a3a;
+  border-color: #1f6f85;
+}
+.tower-card-pop .card-upgrade:hover:not(:disabled) {
+  background: #0e3d52;
+  color: var(--mint);
+}
+.card-upgrade span {
+  display: flex;
+  flex-direction: column;
+}
+.card-upgrade small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.card-priority {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 2px;
+}
+.tower-card-pop .card-priority button {
+  min-height: 32px;
+  padding: 0 1px;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tower-card-pop .card-priority button.active {
+  color: var(--mint);
+  border-color: var(--mint);
+}
+.tower-card-pop .card-close {
+  border: 0;
+}
+.tower-card-pop .card-sell:hover:not(:disabled) {
+  color: #ff9aab;
+  border-color: #ff9aab55;
+}
+.tower-card-pop.slim {
+  width: 168px;
+  padding: 8px;
+  gap: 4px;
+}
+.tower-card-pop.dock-top,
+.tower-card-pop.dock-bottom {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.tower-card-pop.dock-top .card-upgrades,
+.tower-card-pop.dock-bottom .card-upgrades {
+  flex-direction: row;
+  flex: 1;
+}

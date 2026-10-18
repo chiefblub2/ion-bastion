@@ -63,7 +63,7 @@ export function coachStep(game: CoachGame, view: CoachView, memory: CoachMemory)
       const hold = "Upgrade a tower first.";
       if (view.selected === null)
         return step("select", "Select a tower", "Click one of your towers to see its stats and upgrades.", { cell: first }, { highlight: first, holdStart: hold });
-      return step("upgrade", "Upgrade it", "Upgrades raise damage, range and fire rate. Buy the next level.", { el: "#selection [data-upgrade]" }, { holdStart: hold });
+      return step("upgrade", "Upgrade it", "Upgrades raise damage, range and fire rate. Buy the next level.", { el: "#tower-card [data-upgrade]" }, { holdStart: hold });
     }
     return step("next-wave", "Next wave", `Waves only start when you say so.${upgraded ? "" : " Click a tower to upgrade it once you have the credits."} Start wave 2.`, { el: "#toolbar-start" });
   }

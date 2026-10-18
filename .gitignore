@@ -5,3 +5,4 @@ dist/
 *.log
 visual-check/
 .DS_Store
+.superpowers/

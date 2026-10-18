@@ -325,6 +325,13 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     document.getElementById("coverage-btn")!.setAttribute("aria-pressed", String(view.coverage));
     ui.notice(view.coverage ? "Ranges shown. Red path: no tower reaches ground units there." : "Ranges hidden.");
   }
+  /** Moves the selected attack tower to its next target priority (key T, the card's target button). */
+  function cycleTarget() {
+    const t = game.state.towers.find((t) => t.id === view.selected);
+    if (!t || isSupport(game.content.towers[t.type].attack)) return;
+    const next = TARGET_PRIORITIES[(TARGET_PRIORITIES.indexOf(t.priority ?? "first") + 1) % TARGET_PRIORITIES.length];
+    execute({ type: "target", id: t.id, priority: next });
+  }
   const fullscreen = () =>
     toggleFullscreen().catch(() => ui.notice("Fullscreen is not available in this browser.", true));
   const pauseIfRunning = () => {
@@ -359,6 +366,10 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       execute({ type: "upgrade", id: view.selected, upgrade: b.dataset.upgrade });
       return;
     }
+    // The tower card's buttons (ui/tower-card.ts).
+    if (b.dataset.sell !== undefined && view.selected !== null) return void execute({ type: "sell", id: view.selected });
+    if (b.dataset.priorityCycle !== undefined) return cycleTarget();
+    if (b.dataset.deselect !== undefined) return cancel();
     switch (b.id) {
       case "toolbar-start":
         execute({ type: "start" });
@@ -492,11 +503,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       return;
     }
     if (e.key.toLowerCase() === "t") {
-      // Cycles the selected attack tower to its next target priority.
-      const t = game.state.towers.find((t) => t.id === view.selected);
-      if (!t || isSupport(game.content.towers[t.type].attack)) return;
-      const next = TARGET_PRIORITIES[(TARGET_PRIORITIES.indexOf(t.priority ?? "first") + 1) % TARGET_PRIORITIES.length];
-      execute({ type: "target", id: t.id, priority: next });
+      cycleTarget();
       return;
     }
     if (e.key.toLowerCase() === "u") {
