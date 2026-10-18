@@ -268,6 +268,33 @@ export const PROJECTILES: Record<ProjectileStyle, ProjectileLook> = {
     },
     impact: { life: 0.35, draw: (pen, x, y, age, c, seed, heading) => sparks(pen, x, y, age, c, seed, heading, 3, 0xffc27a) },
   },
+  // Catalyst: a stoppered glass vial tumbling end over end, its reagent sloshing and fizzing behind it.
+  vial: {
+    body: ({ g, glow }, p, c) => {
+      const spin = p.angle + Math.sin(p.age * 18 + p.seed) * 0.6,
+        co = Math.cos(spin),
+        si = Math.sin(spin),
+        slosh = 0.5 + 0.5 * Math.sin(p.age * 24 + p.seed);
+      halo(glow, p.x, p.y, 7, c, 0.3);
+      strip(g, p.x, p.y, co, si, -4.4, 3.4, -2.6, 2.6, -2.2, 2.2, shade(c, -0.6));
+      strip(g, p.x, p.y, co, si, -4, 3 - slosh, -2, 2, -1.7, 1.7, c);
+      strip(g, p.x, p.y, co, si, 3.4, 5.2, -1.2, 1.2, -1.2, 1.2, 0xb08a5a);
+      disc(g, ...along(p.x, p.y, co, si, -1.5, -1), 0.9, WHITE, 0.65);
+    },
+    trail: {
+      life: 0.3,
+      step: 6,
+      draw: ({ g, glow }, t, c) => {
+        for (let i = 1; i < t.count; i += 2) {
+          const k = t.age(i) / 0.3;
+          if (k >= 1) break;
+          const r = 1.6 * (1 - k) + 0.3 * hash01(i, t.count);
+          disc(g, t.x(i), t.y(i) - 6 * k, r, shade(c, 0.35), (1 - k) * t.fade);
+          if (i < 5) disc(glow, t.x(i), t.y(i), 2.6, c, 0.18 * (1 - k) * t.fade);
+        }
+      },
+    },
+  },
   // Cryo: a two-faceted ice dart trailing frost sparkles.
   crystal: {
     body: ({ g, glow }, p, c) => {

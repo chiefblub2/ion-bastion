@@ -395,6 +395,30 @@ export const TOWER_CONTENT = {
       description: "Fragment Storm: five targets per salvo.",
     },
   }),
+  catalyst: attackTower({
+    id: "catalyst",
+    name: "Catalyst",
+    role: "SYNERGY",
+    description: "Reagent darts react with every effect already on the target: +50% damage per effect (slow, burn, stun, weakening, net, disruption, …). Aims at the most affected enemy. Weak alone, strong in a mixed defense.",
+    cost: 130,
+    damage: 16,
+    range: 2.8,
+    interval: 1,
+    color: 0x3dffb0,
+    attack: { kind: "catalyze", bonus: 0.5, cap: 4 },
+    targets: ["ground", "air"],
+    projectile: { speed: 10 },
+    visual: { icon: "⚗\uFE0E", turret: "flask", projectile: "vial", impact: "spark" },
+  }, {
+    4: {
+      attack: { bonus: 0.6 },
+      description: "Stronger Reagent: +60% damage per effect, plus more damage.",
+    },
+    5: {
+      attack: { bonus: 0.75, cap: 5 },
+      description: "Full Reaction: +75% per effect, counting up to five effects.",
+    },
+  }),
   jammer: attackTower({
     id: "jammer",
     name: "Jammer",
@@ -440,6 +464,30 @@ export const TOWER_CONTENT = {
     5: {
       attack: { factor: 0.6, duration: 4.5 },
       description: "Steel Net: 40% slower and four and a half seconds on the ground.",
+    },
+  }),
+  plasma: attackTower({
+    id: "plasma",
+    name: "Plasma",
+    role: "AREA DENIAL",
+    description: "Lobs canisters that leave a burning pool on the path for 4 s. Every ground enemy in it takes the tower's damage each second, even burrowed and stealthed ones. Pair it with slows and pulls.",
+    cost: 140,
+    damage: 12,
+    range: 3.2,
+    interval: 2,
+    color: 0x2fd4ff,
+    attack: { kind: "pool", radius: 0.85, duration: 4 },
+    targets: ["ground"],
+    projectile: { speed: 5 },
+    visual: { icon: "◒", turret: "caster", projectile: "lob", impact: "burst" },
+  }, {
+    4: {
+      attack: { radius: 1, duration: 5 },
+      description: "Wider Pool: radius 1 for five seconds, plus more damage.",
+    },
+    5: {
+      attack: { radius: 1.15, duration: 6 },
+      description: "Sun Pool: a wide pool that burns for six seconds.",
     },
   }),
   // Traps: built on path cells, triggered by ground enemies walking over them, stealthed ones included.

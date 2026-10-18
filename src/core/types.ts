@@ -97,6 +97,10 @@ export interface MortarAttack {
 }
 /** Skyburst: a homing missile that bursts at its target, hitting every enemy the tower can target within `radius`. */
 export interface AirburstAttack { kind: "airburst"; radius: number }
+/** Catalyst: a hit deals `1 + bonus` times its damage per distinct running status effect on the target, counting at most `cap`. */
+export interface CatalyzeAttack { kind: "catalyze"; bonus: number; cap: number }
+/** Plasma: a shell leaves a pool of `radius` for `duration` seconds that burns ground enemies in it for the tower's damage per second. */
+export interface PoolAttack { kind: "pool"; radius: number; duration: number }
 export interface DisruptAttack {
   kind: "disrupt";
   radius: number;
@@ -154,7 +158,9 @@ export type AttackSpec =
   | BountyAttack
   | RepairAttack
   | MarkAttack
-  | AirburstAttack;
+  | AirburstAttack
+  | CatalyzeAttack
+  | PoolAttack;
 export type AttackKind = AttackSpec["kind"];
 
 export interface UpgradeDefinition {
@@ -210,8 +216,10 @@ export type TurretStyle =
   | "beacon"
   | "dock"
   | "tracker"
-  | "battery";
-export type ProjectileStyle = "tracer" | "shell" | "crystal" | "twin" | "ember" | "glob" | "orb" | "net" | "rocket" | "lob" | "glaive" | "shard";
+  | "battery"
+  | "flask"
+  | "caster";
+export type ProjectileStyle = "tracer" | "shell" | "crystal" | "twin" | "ember" | "glob" | "orb" | "net" | "rocket" | "lob" | "glaive" | "shard" | "vial";
 export type PathMotif = "blades" | "vortex" | "rings";
 export interface PathVisual {
   color: number;
@@ -708,6 +716,20 @@ export interface GameState {
   nextWave?: number;
   /** Delayed hits (Aftershock) in due order; absent while empty. */
   pending?: PendingWave[];
+  /** Plasma pools on the ground in landing order; absent while empty. */
+  zones?: Zone[];
+}
+/** A Plasma pool; its source is frozen on landing, so it keeps burning after a sale. */
+export interface Zone {
+  source: DamageSource;
+  at: Point;
+  radius: number;
+  /** Damage per second to each ground enemy inside. */
+  dps: number;
+  duration: number;
+  until: number;
+  /** Time of the next damage step; every pool steps on the same `BURN_TICK` grid. */
+  next: number;
 }
 /** A second Quake wave, frozen when the first one went off. */
 export interface PendingWave {

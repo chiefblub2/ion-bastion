@@ -6,7 +6,7 @@ import { afterHit, hasTrait, layerOf, linkedGroup, modifyDamage, onDeath } from 
 export type { DamageSource } from "../core/types";
 /**
  * Context of a hit for traits; absent for dots. `instant`: chain, pierce, focus, quake, pull, disrupt. `area`: splash (centre incl.),
- * mortar, airburst, quake, charge. `chain`: a Tesla jump. `tower`: the firing tower's id. `execution`: Henker's wounded-target hit.
+ * mortar, airburst, pool (an eruption; the pool itself burns as a dot), quake, charge. `chain`: a Tesla jump. `tower`: the firing tower's id. `execution`: Henker's wounded-target hit.
  */
 export interface Hit {
   kind: AttackKind;
@@ -29,7 +29,7 @@ export interface DamageOutcome {
 /** Max HP from which an enemy counts as a heavy target for specializations. */
 export const HEAVY_HP = 1000;
 const INSTANT: ReadonlySet<AttackKind> = new Set(["chain", "pierce", "focus", "quake", "pull", "disrupt"]);
-const AREA: ReadonlySet<AttackKind> = new Set(["splash", "mortar", "airburst", "quake", "charge"]);
+const AREA: ReadonlySet<AttackKind> = new Set(["splash", "mortar", "airburst", "pool", "quake", "charge"]);
 /** Hit context for an attack of `kind`; `extra` overrides the derived flags (`chain`, `execution`). */
 export const hitOf = (kind: AttackKind, src: DamageSource, extra: Partial<Hit> = {}): Hit => ({
   kind,

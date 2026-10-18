@@ -54,7 +54,17 @@ export type SpecializationSpec =
   /** Netted flyers take `bonus` more damage while netted. */
   | { kind: "exposed-target"; bonus: number }
   /** Flyers hit by the burst are netted: `factor` of their speed for `duration` seconds, counting as ground targets. */
-  | { kind: "downdraft"; factor: number; duration: number };
+  | { kind: "downdraft"; factor: number; duration: number }
+  /** Hits on a target with at least `min` status effects splash `factor` of the hit on other enemies within `radius`. */
+  | { kind: "reaction-splash"; min: number; factor: number; radius: number }
+  /** Hits extend the target's running slow, burn, vulnerable, disrupted, netted, bleeding and armor dissolve by `extend` s, to at most `max` s from now. */
+  | { kind: "prolong"; extend: number; max: number }
+  /** Enemies in the pool lose `fraction` of their armor reduction for `duration` seconds. */
+  | { kind: "pool-dissolve"; fraction: number; duration: number }
+  /** Enemies in the pool are slowed to `factor` of their speed for `duration` seconds. */
+  | { kind: "pool-slow"; factor: number; duration: number }
+  /** An expiring pool erupts once: `factor` of its total burn as an area hit over its radius. */
+  | { kind: "eruption"; factor: number };
 
 export type SpecializationKind = SpecializationSpec["kind"];
 type Field<K extends SpecializationKind> = Exclude<keyof Extract<SpecializationSpec, { kind: K }>, "kind" | "predicate">;
@@ -86,10 +96,15 @@ const FIELDS: { [K in SpecializationKind]: readonly Field<K>[] } = {
   "net-cloud": ["radius", "count"],
   "exposed-target": ["bonus"],
   downdraft: ["factor", "duration"],
+  "reaction-splash": ["min", "factor", "radius"],
+  prolong: ["extend", "max"],
+  "pool-dissolve": ["fraction", "duration"],
+  "pool-slow": ["factor", "duration"],
+  eruption: ["factor"],
 };
 
-const COUNT = new Set(["every", "count", "maxPerSalvo"]);
-const POSITIVE = new Set(["radius", "delay", "duration", "width"]);
+const COUNT = new Set(["every", "count", "maxPerSalvo", "min"]);
+const POSITIVE = new Set(["radius", "delay", "duration", "width", "extend", "max"]);
 const NON_NEGATIVE = new Set(["bonus", "bonusPerUnused"]);
 const PREDICATES: readonly DamagePredicate[] = ["heavy", "heavy-air", "armored", "isolated", "burning"];
 

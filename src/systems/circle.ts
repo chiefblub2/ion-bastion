@@ -59,6 +59,7 @@ export function settleCircle(sim: Sim, dt: number) {
     payWave(sim, s.wave);
     s.projectiles = [];
     delete s.pending;
+    delete s.zones;
     s.status = "won";
     s.events.push({ type: "end", result: "won" });
   }

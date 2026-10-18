@@ -118,6 +118,52 @@ export const SPECIALIZATIONS: Readonly<Record<string, readonly [PathData, PathDa
       })),
     },
   ],
+  catalyst: [
+    {
+      slug: "volatile-mix", name: "Volatile Mix", role: "Group reaction",
+      tiers: fixed([[0.35, 0.8], [0.5, 1], [0.65, 1.2]] as const, ([factor, radius]) => ({
+        specialization: { kind: "reaction-splash", min: 2, factor, radius },
+        description: `Hits on an enemy under 2+ effects splash ${pct(factor)} of the hit on every other enemy within ${radius} cells.`,
+      })),
+    },
+    {
+      slug: "stabilizer", name: "Stabilizer", role: "Effect support",
+      tiers: fixed([[0.3, 3], [0.45, 4], [0.6, 5]] as const, ([extend, max]) => ({
+        specialization: { kind: "prolong", extend, max },
+        description: `Each hit makes slow, burn, weakening, disruption, nets, bleeding and armor dissolve last ${extend} s longer (up to ${max} s). Never stuns or pulls.`,
+      })),
+    },
+    {
+      slug: "catalytic-core", name: "Catalytic Core", role: "Raw reaction",
+      tiers: fixed([[0.9, 5], [1.05, 6], [1.2, 6]] as const, ([bonus, cap]) => ({
+        attack: { bonus, cap },
+        description: `+${pct(bonus)} damage per effect on the target, counting up to ${cap} effects.`,
+      })),
+    },
+  ],
+  plasma: [
+    {
+      slug: "searing-ground", name: "Searing Ground", role: "Armor",
+      tiers: fixed([[0.3, 1], [0.45, 1.2], [0.6, 1.5]] as const, ([fraction, duration]) => ({
+        specialization: { kind: "pool-dissolve", fraction, duration },
+        description: `Enemies in the pool lose ${pct(fraction)} of their armor reduction against every tower, for ${duration} s after leaving it.`,
+      })),
+    },
+    {
+      slug: "quagmire", name: "Quagmire", role: "Hold in the fire",
+      tiers: fixed([0.8, 0.7, 0.6] as const, (factor) => ({
+        specialization: { kind: "pool-slow", factor, duration: 0.6 },
+        description: `Enemies in the pool move at ${pct(factor)} speed.`,
+      })),
+    },
+    {
+      slug: "eruption", name: "Eruption", role: "Burst",
+      tiers: fixed([0.5, 0.75, 1] as const, (factor) => ({
+        specialization: { kind: "eruption", factor },
+        description: `An expiring pool erupts: ${pct(factor)} of its whole burn at once on every ground enemy in it.`,
+      })),
+    },
+  ],
   tesla: [
     {
       slug: "storm-network", name: "Storm Network", role: "Swarm chain",

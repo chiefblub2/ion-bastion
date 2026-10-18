@@ -194,6 +194,20 @@ export const isSlowed = (e: Enemy, time: number) => statusFlags(e, time).slowed;
 /** Whether an effect of this kind is running; cheap enough for hot paths such as targeting. */
 export const hasStatus = (e: Enemy, kind: StatusKind, time: number) => e.status.some((s) => s.kind === kind && active(s, time));
 export const isNetted = (e: Enemy, time: number) => e.status.length > 0 && hasStatus(e, "netted", time);
+/** Distinct effects currently working on the enemy (Catalyst); stun and pull count only while they hold, not in their recovery. */
+export function activeEffects(e: Enemy, time: number) {
+  let n = 0;
+  for (const s of e.status)
+    if (s.kind === "stun" || s.kind === "pull" ? time < s.release : active(s, time)) n++;
+  return n;
+}
+/** Effects Stabilizer may lengthen; stun and pull never, so nothing is held for good. */
+const PROLONGABLE: ReadonlySet<StatusKind> = new Set(["slow", "burn", "vulnerable", "disrupted", "netted", "bleeding", "armorDissolved"]);
+/** Stabilizer: running effects last `extend` seconds longer, but never beyond `max` seconds from now. */
+export function prolongEffects(e: Enemy, time: number, extend: number, max: number) {
+  for (const s of e.status)
+    if (PROLONGABLE.has(s.kind) && active(s, time)) s.until = Math.max(s.until, Math.min(s.until + extend, time + max));
+}
 /** Death hooks of running effects, e.g. a Haftmine going off with its carrier. */
 export function statusDeath(sim: Sim, e: Enemy) {
   for (const s of e.status) if (active(s, sim.state.time) || s.kind === "charged") moduleOf(s).onDeath?.(sim, e, s);

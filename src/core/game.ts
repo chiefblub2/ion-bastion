@@ -5,6 +5,7 @@ import { attackEnemies, moveProjectiles, TARGET_PRIORITIES } from "../systems/co
 import { isSupport } from "../systems/attacks";
 import { fireAftershocks } from "../systems/attacks/quake";
 import { tickStatus } from "../systems/status";
+import { tickZones } from "../systems/zones";
 import { updateDetection } from "../systems/detection";
 import { spawnEnemies, settleWave } from "../systems/waves";
 import { beginWave, earlyBonus, settleCircle, wavesLeft } from "../systems/circle";
@@ -253,6 +254,7 @@ export class Game implements Sim {
     updateDetection(this);
     moveProjectiles(this, dt);
     fireAftershocks(this);
+    tickZones(this);
     attackEnemies(this, dt);
     s.enemies = s.enemies.filter((e) => e.hp > 0);
     if (this.mission.circle) settleCircle(this, dt);

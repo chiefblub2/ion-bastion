@@ -26,6 +26,7 @@ export function settleWave(sim: Sim) {
     const bonus = waves[s.wave - 1].bonus;
     s.projectiles = [];
     delete s.pending;
+    delete s.zones;
     earn(s, bonus);
     payIncome(sim);
     repairReactor(sim);

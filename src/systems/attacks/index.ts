@@ -3,6 +3,7 @@ import { airburst } from "./airburst";
 import { alarm } from "./alarm";
 import { aura } from "./aura";
 import { bleed } from "./bleed";
+import { catalyze } from "./catalyze";
 import { burn } from "./burn";
 import { chain } from "./chain";
 import { charge } from "./charge";
@@ -18,6 +19,7 @@ import { mortar } from "./mortar";
 import { net } from "./net";
 import { pierce } from "./pierce";
 import { pit } from "./pit";
+import { pool } from "./pool";
 import { pull } from "./pull";
 import { quake } from "./quake";
 import { slow } from "./slow";
@@ -62,6 +64,8 @@ const ATTACKS: { [K in AttackKind]: AttackModule<Extract<AttackSpec, { kind: K }
   repair,
   mark,
   airburst,
+  catalyze,
+  pool,
 };
 export const attackModule = (spec: AttackSpec) => ATTACKS[spec.kind] as AttackModule | undefined;
 /** Support towers (aura, refinery, detector, beacon, dock, tracker) never attack, are never buffed and have no targets. */
