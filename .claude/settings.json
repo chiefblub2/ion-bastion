@@ -1,4 +1,7 @@
 {
+  "enabledPlugins": {
+    "superpowers@superpowers-dev": true
+  },
   "extraKnownMarketplaces": {
     "superpowers-dev": {
       "source": {
@@ -6,8 +9,5 @@
         "repo": "obra/superpowers"
       }
     }
-  },
-  "enabledPlugins": {
-    "superpowers@superpowers-dev": true
   }
 }
