@@ -16,7 +16,7 @@ import type { Audio } from "./audio";
 import { createCoop } from "./coop";
 import { createDialogs } from "./dialogs";
 import { createScreens, GAME, HOME, type MenuPage, type Screen } from "./screens";
-import { lastMission, rememberMission, trainingDone } from "./progress";
+import { campaignRecord, lastMission, rememberMission, trainingDone } from "./progress";
 import { homeAction, type HomeAction } from "./home-action";
 import { isCircleSector, missionById, playableMissions, sectorOf } from "../content/missions";
 import type { CodexTab } from "../ui/enemy-codex";
@@ -116,7 +116,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     /** What the home page's primary button does right now. */
     primary: HomeAction;
   /** The Sector Atlas picks for a multiplayer room while the page was opened from there or from a lobby. */
-  const atlas = (): AtlasOptions => ({ lobby: forRoom || coop.inLobby(), image: terrainImage });
+  const atlas = (): AtlasOptions => ({ lobby: forRoom || coop.inLobby(), image: terrainImage, record: campaignRecord() });
   const sectorRail = document.getElementById("sector-tabs")!;
   sectorRail.addEventListener("scroll", syncRailSteps, { passive: true });
   new ResizeObserver(syncRailSteps).observe(sectorRail);

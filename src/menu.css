@@ -12,6 +12,7 @@
   --m-text-2: #9fb4cc;
   --m-border: #1e3a5c;
   --m-warn: #ffc94a;
+  --m-star: #ffd166;
   --m-danger: #ff4d6d;
   --m-ring: #ff3dcb;
   --m-radius: 4px;
@@ -895,6 +896,12 @@
   letter-spacing: 0.2em;
   color: var(--accent);
 }
+.sector-copy .sector-progress {
+  color: var(--m-star);
+}
+.sector-copy .sector-progress[data-done="true"] {
+  text-shadow: 0 0 10px color-mix(in srgb, var(--m-star) 50%, transparent);
+}
 .sector-current {
   margin-left: 8px;
   font-weight: 600;
@@ -1107,6 +1114,10 @@
 }
 .brief-kicker span {
   color: var(--muted);
+}
+.brief-best dd {
+  color: var(--m-star);
+  letter-spacing: 0.12em;
 }
 .brief-loaded {
   margin-left: 8px;
@@ -1417,6 +1428,11 @@
   font: 500 11px var(--mono);
   letter-spacing: 0.08em;
   color: var(--muted);
+}
+.node-stars {
+  margin-right: 6px;
+  letter-spacing: 0.1em;
+  color: var(--m-star);
 }
 .mission-node[aria-current="true"] .node-meta::after {
   content: " · NOW";

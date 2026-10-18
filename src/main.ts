@@ -14,7 +14,8 @@ import { bindFullscreen } from "./app/fullscreen";
 import { createInput } from "./app/input";
 import { registerTools } from "./app/webmcp";
 import { screenFromUrl } from "./app/screens";
-import { markTrainingDone } from "./app/progress";
+import { markTrainingDone, recordWin } from "./app/progress";
+import { missionStars, PeakTracker } from "./app/rating";
 import { Coach } from "./ui/coach-view";
 import { TowerCard } from "./ui/tower-card-view";
 import { BuildConfirm } from "./ui/build-confirm";
@@ -51,6 +52,7 @@ const view: ViewState = { build: game.mission.manualWaves ? null : first, select
 const ui = new Interface(game, view);
 const audio = new Audio();
 audio.armAutoStart();
+const peak = new PeakTracker();
 const battlefield = new Battlefield(game, view, {
   // Pointer events only arrive after start-up, once `input` exists.
   chooseCell: (x, y, keepBuilding, touch) => input.chooseCell(x, y, keepBuilding, touch),
@@ -61,7 +63,14 @@ const battlefield = new Battlefield(game, view, {
   events: (e) => {
     audio.frame(e, game, input.match());
     if (e.some((event) => event.type === "income")) ui.flashCredits();
-    if (game.mission.manualWaves && e.some((event) => event.type === "end" && event.result === "won")) markTrainingDone();
+    peak.observe(game.mission, game.state);
+    if (!e.some((event) => event.type === "end" && event.result === "won")) return;
+    if (game.mission.manualWaves) markTrainingDone();
+    // Only real campaign wins count: no versus field and no `&wave=`/`&credits=` run (those are other mission objects).
+    else if (!input.match() && game.mission === findMission(game.mission.id, game.content)) {
+      const stars = missionStars(game.mission, game.state, peak.peak);
+      ui.result = { state: game.state, stars, best: recordWin(game.mission.id, stars) };
+    }
   },
 });
 const coach = new Coach(game, view, (cell) => battlefield.cellRect(cell));

@@ -6,6 +6,8 @@ import { escape } from "./format";
 import { mapPreviewSvg, missionEnemies } from "./mission-brief";
 import { missionTags } from "./mission-tags";
 import { enemyIcon } from "./wave-forecast";
+import type { CampaignRecord } from "../app/progress";
+import { starText } from "../app/rating";
 /**
  * The mission page as a Sector Atlas: a gallery of sector cards, the featured mission (a large battlefield preview
  * beside its briefing) and a rail of the sector's missions. Campaign and Circuit sectors are separate modes and
@@ -30,15 +32,24 @@ export interface AtlasSector {
   accent: string;
   /** Holds the mission currently loaded in the game. */
   current: boolean;
+  /** Won missions and their best stars, from the campaign record. */
+  won: number;
+  stars: number;
+}
+/** Won missions and best stars among `missions`; at most `3 × missions.length` stars. */
+export function progressOf(missions: readonly MissionDefinition[], record: CampaignRecord) {
+  const won = missions.filter((m) => record[m.id]);
+  return { won: won.length, stars: won.reduce((n, m) => n + record[m.id], 0), count: missions.length };
 }
 /** The sectors of one mode (Campaign, or Circuit with `circle`), in content order. */
 export function atlasGroup(sectors: readonly MissionSector[], circle: boolean) {
   return sectors.filter((sector) => isCircleSector(sector) === circle);
 }
-export function atlasSectors(content: ContentPack, circle: boolean, currentId?: string): AtlasSector[] {
+export function atlasSectors(content: ContentPack, circle: boolean, currentId?: string, record: CampaignRecord = {}): AtlasSector[] {
   const sectors = content.sectors ?? [];
   return atlasGroup(sectors, circle).map((sector) => {
-    const first = missionNumber(sector.missions[0], content.missions);
+    const first = missionNumber(sector.missions[0], content.missions),
+      { won, stars } = progressOf(sector.missions, record);
     return {
       index: sectors.indexOf(sector),
       numeral: roman(sectors.indexOf(sector)),
@@ -49,6 +60,8 @@ export function atlasSectors(content: ContentPack, circle: boolean, currentId?: 
       cover: sector.missions[0].map,
       accent: hex(themeAccent(sector.missions[0].map)),
       current: sector.missions.some((m) => m.id === currentId),
+      won,
+      stars,
     };
   });
 }
@@ -67,6 +80,8 @@ export interface AtlasOptions {
   /** Picking for a multiplayer room: the button chooses instead of starting. */
   lobby: boolean;
   image: MapImage;
+  /** Best stars per won mission; absent shows nothing as cleared. */
+  record?: CampaignRecord;
 }
 /** Wide screens have room for the enemy list; narrow ones fold it away. */
 const intelOpen = () => matchMedia("(min-width: 1100px) and (min-height: 700px)").matches;
@@ -151,7 +166,7 @@ function syncCount(id: string) {
   $("preview-count").textContent = `${ids.indexOf(id) + 1} / ${ids.length}`;
 }
 /** Header, mode toggle and the gallery of one mode. */
-function renderModes(game: Game, circle: boolean, { lobby, image }: AtlasOptions) {
+function renderModes(game: Game, circle: boolean, { lobby, image, record = {} }: AtlasOptions) {
   const { content } = game,
     sectors = content.sectors ?? [],
     campaign = atlasGroup(sectors, false),
@@ -176,13 +191,17 @@ function renderModes(game: Game, circle: boolean, { lobby, image }: AtlasOptions
         .join("");
   const group = circle ? rings : campaign;
   $("atlas-mode").textContent = lobby ? "Multiplayer" : modes.hidden && !circle ? "Missions" : circle ? "Circuit" : "Campaign";
-  $("atlas-context").textContent = `${group.length} ${plural(group.length, "sector")} · ${count(group)} ${plural(count(group), "mission")}`;
+  const progress = progressOf(
+    group.flatMap((s) => s.missions),
+    record,
+  );
+  $("atlas-context").textContent = `${group.length} ${plural(group.length, "sector")} · ${count(group)} ${plural(count(group), "mission")}${progress.won ? ` · ${progress.won} cleared · ${progress.stars}/${progress.count * 3} ★` : ""}`;
   $("mode-rules").hidden = !circle;
   const rail = $("sector-tabs");
-  rail.innerHTML = atlasSectors(content, circle, game.mission.id)
+  rail.innerHTML = atlasSectors(content, circle, game.mission.id, record)
     .map(
       (s) =>
-        `<button class="sector-card" role="tab" id="sector-tab-${s.index}" data-sector="${s.index}" aria-controls="mission-list" aria-selected="false" tabindex="-1" style="--accent:${s.accent}"${s.current ? ' data-current="true"' : ""} aria-label="Sector ${s.numeral}: ${escape(s.name)}, ${s.count} ${plural(s.count, "mission")}${s.current ? ", contains the current mission" : ""}"><span class="sector-art" aria-hidden="true">${mapPreviewSvg(s.cover).replace("<svg ", `<svg preserveAspectRatio="xMidYMid slice" `)}<img alt="" data-map="${s.cover.id}"></span><span class="sector-numeral" aria-hidden="true">${s.numeral}</span><span class="sector-copy" aria-hidden="true"><small>SECTOR ${s.numeral}${s.current ? '<b class="sector-current">● CURRENT</b>' : ""}</small><strong>${s.name}</strong><span>${s.count} ${plural(s.count, "mission")} · ${pad(s.first)}–${pad(s.last)}</span></span></button>`,
+        `<button class="sector-card" role="tab" id="sector-tab-${s.index}" data-sector="${s.index}" aria-controls="mission-list" aria-selected="false" tabindex="-1" style="--accent:${s.accent}"${s.current ? ' data-current="true"' : ""} aria-label="Sector ${s.numeral}: ${escape(s.name)}, ${s.count} ${plural(s.count, "mission")}${s.current ? ", contains the current mission" : ""}${s.won ? `, ${s.won} cleared, ${s.stars} of ${s.count * 3} stars` : ""}"><span class="sector-art" aria-hidden="true">${mapPreviewSvg(s.cover).replace("<svg ", `<svg preserveAspectRatio="xMidYMid slice" `)}<img alt="" data-map="${s.cover.id}"></span><span class="sector-numeral" aria-hidden="true">${s.numeral}</span><span class="sector-copy" aria-hidden="true"><small>SECTOR ${s.numeral}${s.current ? '<b class="sector-current">● CURRENT</b>' : ""}</small><strong>${s.name}</strong><span>${s.count} ${plural(s.count, "mission")} · ${pad(s.first)}–${pad(s.last)}</span>${s.won ? `<span class="sector-progress"${s.won === s.count ? ' data-done="true"' : ""}>${s.won}/${s.count} ✓ · ${s.stars} ★</span>` : ""}</span></button>`,
     )
     .join("");
   rail.scrollLeft = 0;
@@ -223,8 +242,9 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
   list.innerHTML = shown
     .map((m) => {
       const n = missionNumber(m, missions),
-        loaded = m.id === game.mission.id;
-      return `<button class="mission-node" data-pick="${m.id}" aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""} title="${escape(m.focus)}"><span class="node-thumb" aria-hidden="true">${mapPreviewSvg(m.map).replace("<svg ", `<svg preserveAspectRatio="xMidYMid slice" `)}<img alt="" data-map="${m.map.id}"></span><span class="node-copy"><span class="node-number">${pad(n)}</span><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (current)</span>' : ""}</span><small class="node-meta">${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}</small></span></button>`;
+        loaded = m.id === game.mission.id,
+        best = options.record?.[m.id];
+      return `<button class="mission-node" data-pick="${m.id}" aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${best ? ' data-won="true"' : ""} title="${escape(m.focus)}"><span class="node-thumb" aria-hidden="true">${mapPreviewSvg(m.map).replace("<svg ", `<svg preserveAspectRatio="xMidYMid slice" `)}<img alt="" data-map="${m.map.id}"></span><span class="node-copy"><span class="node-number">${pad(n)}</span><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (current)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}</small></span></button>`;
     })
     .join("");
   // Restarts the entry animation of the rail.
@@ -239,7 +259,7 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
   requestAnimationFrame(syncRailSteps);
 }
 /** The large battlefield preview and the briefing beside it. */
-export function renderFeatured(game: Game, m: MissionDefinition | undefined, { lobby, image }: AtlasOptions) {
+export function renderFeatured(game: Game, m: MissionDefinition | undefined, { lobby, image, record = {} }: AtlasOptions) {
   const preview = $("atlas-preview"),
     body = $("brief-body"),
     actions = $("brief-actions");
@@ -294,6 +314,9 @@ export function renderFeatured(game: Game, m: MissionDefinition | undefined, { l
       stat("Waves", String(m.waves.length)),
       stat("Credits", String(m.startingCredits), "◇"),
       ...(m.circle ? [stat("Ring limit", String(m.circle.limit)), stat("Wave timer", `${m.circle.interval} s`)] : [stat("Reactor", String(m.reactorEnergy), "♡")]),
+      record[m.id]
+        ? `<div class="brief-best"><dt>Best</dt><dd aria-label="${record[m.id]} of 3 stars">${starText(record[m.id])}</dd></div>`
+        : stat("Best", "—"),
     ],
     rules = [
       ...missionTags(m, content).filter((tag) => tag !== "Restricted towers"),

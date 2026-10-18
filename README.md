@@ -4,7 +4,7 @@ Tower defense in the browser, built with TypeScript, Phaser 3 and Vite. <!-- cou
 
 ![Mission 54 Ember Chamber in the Volcano Chain sector, first wave: Ember Runners in the windings and the first towers](docs/images/screens/glutkammer.png)
 
-The game runs entirely in the browser; only multiplayer needs a small relay server. Saves live in memory on purpose: reloading restarts the current mission (it is in the address, `?mission=<id>`), and `/` leads to the start screen. The browser only remembers the last mission you started, which the start screen offers as "Restart Last Mission" (from wave 1; it is not a saved game).
+The game runs entirely in the browser; only multiplayer needs a small relay server. Saves live in memory on purpose: reloading restarts the current mission (it is in the address, `?mission=<id>`), and `/` leads to the start screen. The browser only remembers the last mission you started, which the start screen offers as "Restart Last Mission" (from wave 1; it is not a saved game), and your best result per won mission.
 
 ## Quick start
 
@@ -115,7 +115,7 @@ In all modes the host decides mission, restart and speed. Dialogs and tab switch
 
 ## Missions
 
-The game opens on the start screen with one primary button ("Start Playing" on a first visit, "Resume Game" while a game is in memory, "Restart Last Mission" after a reload), Campaign, Circuit, Multiplayer, Enemy Codex, Tower Codex (every tower with cost, targets, levels 1–5 and its paths) and How to Play, beside a map of the mission the button is about; each item is its own page with "← Back", and the browser's back button works too. Under "Campaign" and "Circuit" the Sector Atlas lists every sector as an image card; picking a sector shows its missions on a rail below a large preview of the battlefield and the mission briefing, and "Start Mission" launches the selected one. In the game, "Menu" returns to the start screen and pauses the running wave; "Resume Game" resumes it. After a win, "Next mission" moves on.
+The game opens on the start screen with one primary button ("Start Playing" on a first visit, "Resume Game" while a game is in memory, "Restart Last Mission" after a reload), Campaign, Circuit, Multiplayer, Enemy Codex, Tower Codex (every tower with cost, targets, levels 1–5 and its paths) and How to Play, beside a map of the mission the button is about; each item is its own page with "← Back", and the browser's back button works too. Under "Campaign" and "Circuit" the Sector Atlas lists every sector as an image card; picking a sector shows its missions on a rail below a large preview of the battlefield and the mission briefing, and "Start Mission" launches the selected one. In the game, "Menu" returns to the start screen and pauses the running wave; "Resume Game" resumes it. After a win, "Next mission" moves on. Every win earns 1–3 stars (90 % reactor energy left for three, 50 % for two; on a ring, never more than half, or 80 %, of the limit alive at once); the atlas shows the best per mission and the cleared count per sector. Every mission stays open regardless.
 
 <!-- missions:start -->
 | No. | Mission | Focus | Map | Waves | Credits | HP/Wave |

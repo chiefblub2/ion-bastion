@@ -1,4 +1,5 @@
-// The only thing the browser keeps between visits: the id of the last started mission, for "Continue".
+import type { Stars } from "./rating";
+// What the browser keeps between visits: the last started mission (for "Continue"), Training and the campaign record.
 const KEY = "ion-bastion:last-mission";
 /** Storage can be missing or throw (private mode, blocked site data); then there is simply no last mission. */
 export function lastMission(): string | undefined {
@@ -30,4 +31,40 @@ export function markTrainingDone() {
   } catch {
     // Not remembered; the button simply stays emphasised.
   }
+}
+const CAMPAIGN_KEY = "ion-bastion:campaign";
+/** Best stars per won mission id. */
+export type CampaignRecord = Readonly<Record<string, Stars>>;
+const isStars = (v: unknown): v is Stars => v === 1 || v === 2 || v === 3;
+/** Parses a stored record, dropping anything that is not a star count; corrupt JSON is an empty record. */
+export function parseRecord(raw: string | null): CampaignRecord {
+  try {
+    const data: unknown = raw ? JSON.parse(raw) : {};
+    if (!data || typeof data !== "object" || Array.isArray(data)) return {};
+    return Object.fromEntries(Object.entries(data).filter(([, v]) => isStars(v))) as CampaignRecord;
+  } catch {
+    return {};
+  }
+}
+/** The record with a win added; keeps the better of the old and new stars. */
+export const mergeRecord = (record: CampaignRecord, id: string, stars: Stars): CampaignRecord =>
+  (record[id] ?? 0) >= stars ? record : { ...record, [id]: stars };
+export function campaignRecord(): CampaignRecord {
+  try {
+    return parseRecord(localStorage.getItem(CAMPAIGN_KEY));
+  } catch {
+    return {};
+  }
+}
+/** Records a win; true when it beats the stored result (a first win included). */
+export function recordWin(id: string, stars: Stars): boolean {
+  const before = campaignRecord(),
+    after = mergeRecord(before, id, stars);
+  if (after === before) return false;
+  try {
+    localStorage.setItem(CAMPAIGN_KEY, JSON.stringify(after));
+  } catch {
+    // Not remembered; the atlas simply shows the mission as not cleared.
+  }
+  return true;
 }

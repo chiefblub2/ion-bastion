@@ -14,7 +14,8 @@ import { renderEnemyCodex, type CodexTab } from "./enemy-codex";
 import { MUSIC_ENABLED } from "../audio/settings";
 import { renderTowerCodex } from "./tower-codex";
 import { effectiveTowerStats, isInAura } from "../systems/auras";
-import type { MissionSector, TowerId } from "../core/types";
+import type { GameState, MissionSector, TowerId } from "../core/types";
+import { starText, type Stars } from "../app/rating";
 import { mapPreviewSvg } from "./mission-brief";
 import { fillImage, roman, type MapImage } from "./sector-atlas";
 import type { HomeAction } from "../app/home-action";
@@ -51,7 +52,7 @@ export function mountUI(game: Game) {
   <main><div class="mission-heading"><div><p class="eyebrow">MISSION <b id="mission-number">01</b> <span>/</span> <b id="mission-sector">DEFENSE</b></p></div><div class="mission-meta"><span class="sector-label" id="sector-label"></span><span class="difficulty" id="difficulty"></span></div></div>
   <div class="workspace"><section class="field-panel" aria-label="Battlefield"><div class="field-toolbar"><div class="resources"><div><span class="stat-label">CREDITS</span><strong class="credits"><span class="resource-icon">◇</span><span id="gold"></span></strong></div><div><span class="stat-label" id="lives-label">REACTOR</span><strong><span class="resource-icon heart">♡</span><span id="lives"></span><small id="lives-max"></small></strong></div><div><span class="stat-label">WAVE</span><strong><span id="wave">00</span><small id="wave-total"></small></strong></div></div><div id="wave-forecast" class="next-wave-slot"></div><div class="playback"><button id="toolbar-start" class="toolbar-start" title="Start next wave (N)"><b>Wave</b> 01 <span>▶</span></button><button id="pause-btn" title="Pause (Space)" aria-label="Pause game" aria-pressed="false">Ⅱ</button><button id="speed-btn" aria-label="Change game speed">1×</button><button id="coverage-btn" title="Show ranges and path coverage (C)" aria-label="Show ranges and path coverage (C)" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2.5"/></svg></button><button id="fullscreen-btn" title="Fullscreen (F)" aria-label="Fullscreen (F)" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 5.5v-4h4M10.5 1.5h4v4M14.5 10.5v4h-4M5.5 14.5h-4v-4"/></svg></button></div></div>
   <div id="players-panel" class="players-panel" aria-label="Teammates" hidden></div>
-  <div id="board-wrap"><div id="board" tabindex="0" role="application" aria-label="Tower defense battlefield. Arrow keys select a cell; Enter builds or selects a tower. C shows tower ranges. Keys ${towerKeyRange(Object.keys(TOWERS).length)} pick a tower type."></div><div id="game-overlay" hidden><div id="overlay-icon">Ⅱ</div><p class="eyebrow" id="overlay-kicker">TACTICAL PAUSE</p><h2 id="overlay-title">Time for a plan.</h2><p id="overlay-copy">Press Space or the pause button to resume.</p><div class="overlay-actions"><button id="overlay-next" class="primary" hidden>Next mission <span>→</span></button><button id="overlay-restart" class="primary" hidden>Restart</button><button id="overlay-missions" class="quiet" hidden>Missions</button></div></div><div id="tower-card" class="tower-card-pop" role="group" aria-label="Selected tower" hidden></div></div>
+  <div id="board-wrap"><div id="board" tabindex="0" role="application" aria-label="Tower defense battlefield. Arrow keys select a cell; Enter builds or selects a tower. C shows tower ranges. Keys ${towerKeyRange(Object.keys(TOWERS).length)} pick a tower type."></div><div id="game-overlay" hidden><div id="overlay-icon">Ⅱ</div><p class="eyebrow" id="overlay-kicker">TACTICAL PAUSE</p><h2 id="overlay-title">Time for a plan.</h2><p id="overlay-stars" hidden></p><p id="overlay-copy">Press Space or the pause button to resume.</p><div class="overlay-actions"><button id="overlay-next" class="primary" hidden>Next mission <span>→</span></button><button id="overlay-restart" class="primary" hidden>Restart</button><button id="overlay-missions" class="quiet" hidden>Missions</button></div></div><div id="tower-card" class="tower-card-pop" role="group" aria-label="Selected tower" hidden></div></div>
   <div class="field-footer"><span><i class="legend-path"></i>Enemy path</span><span><i class="legend-build"></i>Free build area</span><span id="cell-label">Pick a tower, then click a cell</span></div>
   <div class="wave-timeline"><div class="timeline-label"><span>MISSION PROGRESS</span><b id="progress-label"></b></div><div id="wave-segments"></div></div>
   </section>
@@ -178,6 +179,8 @@ export class Interface {
   private sendHtml = "";
   /** Set by the multiplayer controller; null in single-player. */
   session: () => MultiplayerSession | null = () => null;
+  /** The rating of the last recorded win, set by the app for the state it was won in. */
+  result: { state: GameState; stars: Stars; best: boolean } | null = null;
   /** Runs after every refresh; the Training coach follows the HUD with it. */
   onRefresh: () => void = () => {};
   constructor(
@@ -386,6 +389,14 @@ export class Interface {
         document.getElementById("overlay-missions")!.hidden = !host;
       }
     } else overlay.hidden = !s.paused && !terminal;
+    const rated = !match && s.status === "won" && this.result?.state === s ? this.result : null,
+      stars = document.getElementById("overlay-stars")!;
+    stars.hidden = !rated;
+    if (rated) {
+      stars.setAttribute("aria-label", `${rated.stars} of 3 stars${rated.best ? ", new best" : ""}`);
+      const html = `<span aria-hidden="true">${starText(rated.stars)}</span>${rated.best ? `<b aria-hidden="true">New best</b>` : ""}`;
+      if (stars.innerHTML !== html) stars.innerHTML = html;
+    }
     if (!overlay.hidden && !match) {
       text("overlay-icon", terminal ? (s.status === "won" ? "✦" : "◇") : "Ⅱ");
       text("overlay-kicker", terminal ? "MISSION OVER" : "TACTICAL PAUSE");
