@@ -1501,11 +1501,15 @@ dialog::backdrop {
 .next-wave-slot {
   flex: 1;
   min-width: 0;
+  /* One head line plus one badge row, so the toolbar keeps its height between waves. */
+  min-height: 46px;
   display: flex;
+  align-items: center;
   justify-content: center;
 }
 .next-wave {
   min-width: 0;
+  max-width: 100%;
 }
 .next-wave-head {
   display: flex;
@@ -1516,19 +1520,35 @@ dialog::backdrop {
 .next-wave-head .stat-label {
   margin: 0;
   color: var(--mint);
+  white-space: nowrap;
 }
 .next-wave-head small {
   font: 11px var(--mono);
   color: var(--muted);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .unit-badges {
   display: flex;
-  flex-wrap: wrap;
   gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+/* The toolbar strip stays one row: more types scroll sideways under a fading edge instead of wrapping. */
+.next-wave .unit-badges {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-right: 24px;
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+}
+.next-wave .unit-badges::-webkit-scrollbar {
+  display: none;
+}
+.next-wave .unit-badge {
+  flex: none;
 }
 .unit-badge {
   display: flex;
