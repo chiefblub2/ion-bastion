@@ -44,7 +44,7 @@ export function coachStep(game: CoachGame, view: CoachView, memory: CoachMemory)
   if (!towers.length) {
     if (!view.build)
       return step("pick", "Pick a tower", "Choose the Pulse tower in the build menu. It fires fast, precise shots at ground and air units.", { el: '[data-tower="pulse"]' }, { holdStart: HOLD_FIRST });
-    return step("place", "Place it on the bend", "Click the marked cell. Inside a bend, a tower covers two stretches of the path at once. Any free cell next to the path works too.", { cell: TRAINING_SPOT }, { highlight: TRAINING_SPOT, holdStart: HOLD_FIRST });
+    return step("place", "Place it on the bend", "Click the marked cell (on a touch screen, tap it, then ✓). Inside a bend, a tower covers two stretches of the path at once. Any free cell next to the path works too.", { cell: TRAINING_SPOT }, { highlight: TRAINING_SPOT, holdStart: HOLD_FIRST });
   }
   if (s.wave === 0) return step("start", "Start the wave", "Your defense is ready. Start the first wave when you are.", { el: "#toolbar-start" });
   if (s.wave === 1 && s.status === "wave")
@@ -56,7 +56,7 @@ export function coachStep(game: CoachGame, view: CoachView, memory: CoachMemory)
     if (towers.length < 2 && credits >= cheapest) {
       if (!view.build)
         return step("second", "Build a second tower", "The wave is over and you earned a bonus. Pick another tower: Pulse for damage or Cryo to slow enemies down.", { el: "#tower-list" }, { holdStart: "Build a second tower first." });
-      return step("place", "Place it", "Click a free cell next to the path where it covers a long stretch.", null, { holdStart: "Build a second tower first." });
+      return step("place", "Place it", "Click a free cell next to the path where it covers a long stretch (on a touch screen, tap it, then ✓).", null, { holdStart: "Build a second tower first." });
     }
     // Only coached while affordable, so the step never points at a disabled button.
     if (!upgraded && towers.length >= 2 && credits >= cheapestUpgrade(game)) {

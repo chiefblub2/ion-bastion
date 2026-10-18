@@ -78,6 +78,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     if ((c.type === "restart" || c.type === "mission") && result.ok) {
       view.selected = null;
       view.enemy = null;
+      view.pending = undefined;
       view.build = towerOrder(game)[0];
       view.page = pageOf(game.content.towers[view.build]);
       if (!coop.active()) view.speed = 1;
@@ -170,6 +171,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
   }
   function choose(type: TowerId) {
     view.build = type;
+    view.pending = undefined;
     view.page = pageOf(game.content.towers[type]);
     view.selected = null;
     view.enemy = null;
@@ -181,23 +183,34 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
   function cancel() {
     if (view.build === null && view.selected === null && view.enemy === null) return;
     view.build = null;
+    view.pending = undefined;
     view.selected = null;
     view.enemy = null;
     ui.notice("Selection cleared.");
     ui.refresh();
   }
-  function chooseCell(x: number, y: number, keepBuilding = false) {
+  /** `touch`: a tap only picks the cell for the armed tower; the ✓ button builds it (`confirmBuild`). */
+  function chooseCell(x: number, y: number, keepBuilding = false, touch = false) {
     if (game.state.status === "lost" || game.state.status === "won") return;
     view.enemy = null;
     const tower = game.state.towers.find((t) => t.x === x && t.y === y);
     if (tower) {
       view.selected = tower.id;
       view.build = null;
+      view.pending = undefined;
       ui.notice("Tower selected. Upgrade or sell it.");
       ui.refresh();
       return;
     }
-    if (view.build) {
+    if (view.build && touch) {
+      if (game.canBuild(x, y, view.build)) view.pending = { x, y };
+      else {
+        view.pending = undefined;
+        ui.notice(describeResult({ ok: false, code: game.content.towers[view.build].placement === "path" ? "trap-off-path" : "cell-blocked" }), true);
+        audio.cue("reject");
+      }
+      ui.refresh();
+    } else if (view.build) {
       // Placing ends build mode; Shift+click keeps it for several towers of one type.
       if (execute({ type: "build", tower: view.build, x, y }).ok && !keepBuilding) {
         view.build = null;
@@ -207,6 +220,21 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       view.selected = null;
       ui.refresh();
     }
+  }
+  /** ✓ on a tapped cell: builds the armed tower there; a failure keeps the cell for another try. */
+  function confirmBuild() {
+    const at = view.pending;
+    if (!at || !view.build) return;
+    if (execute({ type: "build", tower: view.build, x: at.x, y: at.y }).ok) {
+      view.pending = undefined;
+      view.build = null;
+      ui.refresh();
+    }
+  }
+  /** ✕ on a tapped cell: forgets the cell, the tower stays armed. */
+  function dropPending() {
+    view.pending = undefined;
+    ui.refresh();
   }
   /** Shows HP and traits of an enemy in the sidebar; drops the tower selection. */
   function chooseEnemy(id: number) {
@@ -539,5 +567,5 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     // In multiplayer the others keep playing; pausing stays an explicit choice.
     if (document.hidden && !coop.active() && isRunning(game.state) && !game.state.paused) execute({ type: "pause" });
   });
-  return { execute, chooseCell, chooseEnemy, cancel, screens, match: coop.match };
+  return { execute, chooseCell, chooseEnemy, cancel, confirmBuild, dropPending, screens, match: coop.match };
 }

@@ -48,6 +48,8 @@ export interface ViewState {
   coverage: boolean;
   /** A board cell the Training coach points at; absent everywhere else. */
   highlight?: Point;
+  /** Touch only: the cell a tap picked for the armed tower, waiting for ✓ or ✕; absent otherwise. */
+  pending?: Point;
 }
 /** Advances the simulation once per render frame. */
 export interface Driver {
@@ -77,9 +79,11 @@ export class LocalDriver implements Driver {
     this.accumulator = 0;
   }
 }
+/** Finger or pen: no reliable hover, so building asks first. */
+const isTouch = (p: Phaser.Input.Pointer) => p.wasTouch || ["touch", "pen"].includes((p.event as PointerEvent | undefined)?.pointerType ?? "");
 interface Hooks {
-  /** `keepBuilding`: stay in build mode after placing (Shift+click). */
-  chooseCell: (x: number, y: number, keepBuilding: boolean) => void;
+  /** `keepBuilding`: stay in build mode after placing (Shift+click). `touch`: a tap, which asks before building. */
+  chooseCell: (x: number, y: number, keepBuilding: boolean, touch: boolean) => void;
   /** Click on a visible enemy outside build mode. */
   chooseEnemy: (id: number) => void;
   /** Right click: leave build mode and drop the selection. */
@@ -206,6 +210,8 @@ export class Battlefield extends Phaser.Scene {
     this.ink = this.add.graphics().setDepth(DEPTH.foreground);
     this.glow = this.add.graphics().setDepth(DEPTH.foreground).setBlendMode(Phaser.BlendModes.ADD).setAlpha(glow);
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
+      // A finger has no hover; its preview is the pending cell.
+      if (isTouch(p)) return;
       const w = this.cameras.main.getWorldPoint(p.x, p.y);
       this.view.hover = { x: Math.floor(w.x / CELL), y: Math.floor(w.y / CELL) };
     });
@@ -217,10 +223,12 @@ export class Battlefield extends Phaser.Scene {
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
       if (p.rightButtonDown()) return this.hooks.cancel();
       const shift = (p.event as MouseEvent | undefined)?.shiftKey ?? false,
+        touch = isTouch(p),
         w = this.cameras.main.getWorldPoint(p.x, p.y);
+      if (touch) this.view.hover = null;
       const enemy = this.view.build ? undefined : enemyAt(this.sim, w.x, w.y, CELL);
       if (enemy) return this.hooks.chooseEnemy(enemy.id);
-      this.hooks.chooseCell(Math.floor(w.x / CELL), Math.floor(w.y / CELL), shift);
+      this.hooks.chooseCell(Math.floor(w.x / CELL), Math.floor(w.y / CELL), shift, touch);
     });
     this.sharpenText();
     this.hooks.refresh();
@@ -475,7 +483,7 @@ export class Battlefield extends Phaser.Scene {
     this.ambient.clear();
     drawAmbient(this.ambient, this.sim.map, this.clock);
     const selected = s.towers.find((t) => t.id === this.view.selected),
-      hover = this.view.hover,
+      hover = (this.view.build && this.view.pending) || this.view.hover,
       over = !this.view.build && hover ? s.towers.find((t) => t.x === hover.x && t.y === hover.y) : undefined,
       ended = s.status === "won" || s.status === "lost",
       armed = this.view.build && !ended ? towers[this.view.build] : undefined;

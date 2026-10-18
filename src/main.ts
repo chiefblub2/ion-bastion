@@ -17,6 +17,7 @@ import { screenFromUrl } from "./app/screens";
 import { markTrainingDone } from "./app/progress";
 import { Coach } from "./ui/coach-view";
 import { TowerCard } from "./ui/tower-card-view";
+import { BuildConfirm } from "./ui/build-confirm";
 import { waveHpScale } from "./systems/spawn";
 import type { MissionDefinition } from "./core/types";
 import { ART_FILTERING } from "./render/enemy-art-scene";
@@ -52,7 +53,7 @@ const audio = new Audio();
 audio.armAutoStart();
 const battlefield = new Battlefield(game, view, {
   // Pointer events only arrive after start-up, once `input` exists.
-  chooseCell: (x, y, keepBuilding) => input.chooseCell(x, y, keepBuilding),
+  chooseCell: (x, y, keepBuilding, touch) => input.chooseCell(x, y, keepBuilding, touch),
   chooseEnemy: (id) => input.chooseEnemy(id),
   cancel: () => input.cancel(),
   refresh: () => ui.refresh(),
@@ -65,9 +66,14 @@ const battlefield = new Battlefield(game, view, {
 });
 const coach = new Coach(game, view, (cell) => battlefield.cellRect(cell));
 const towerCard = new TowerCard(game, view, () => ui.session());
+const buildConfirm = new BuildConfirm(game, view, (cell) => battlefield.cellRect(cell), {
+  confirm: () => input.confirmBuild(),
+  cancel: () => input.dropPending(),
+});
 ui.onRefresh = () => {
   towerCard.refresh();
   coach.refresh();
+  buildConfirm.refresh();
 };
 const fullscreen = bindFullscreen(() => battlefield.fit());
 const input = createInput({

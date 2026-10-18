@@ -2125,6 +2125,37 @@ dialog::backdrop {
     outline-offset: 7px;
   }
 }
+/* Touch build confirm: ✓ / ✕ beside the tapped cell (placed by ui/build-confirm.ts). */
+.build-confirm {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 35;
+  display: flex;
+  gap: 6px;
+}
+.build-confirm[hidden] {
+  display: none;
+}
+.build-confirm button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 16px;
+  box-shadow: var(--glow);
+}
+.build-confirm button span {
+  font: 600 13px/1 var(--mono);
+}
+.build-confirm [data-confirm="cancel"] {
+  color: #ff647c;
+  border-color: #ff647c;
+  background: var(--panel);
+}
 .help-training {
   display: flex;
   align-items: center;
