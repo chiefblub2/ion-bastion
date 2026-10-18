@@ -1,6 +1,6 @@
 import { DEFAULT_CONTENT } from "../content";
 import { sellValue } from "../core/game";
-import type { ContentPack, Tower } from "../core/types";
+import type { ContentPack, GameState, Tower } from "../core/types";
 import { isSpecialization, maxTowerLevel, towerLevel, towerPath, upgradeOptions } from "../core/upgrades";
 import { isSupport } from "../systems/attacks";
 import { TARGET_PRIORITIES } from "../systems/combat";
@@ -9,6 +9,11 @@ import { escape, number } from "./format";
 import { PRIORITY_LABELS } from "./messages";
 // The action card beside a selected tower: upgrade (or the path choice), target priority and sell.
 // Pure HTML from the state; `tower-card-view.ts` shows and places it, `app/input.ts` handles its buttons.
+/** The tower the card is about: the selected one while it exists and the mission still runs. */
+export function cardTower(state: GameState, selected: number | null): Tower | undefined {
+  if (selected === null || state.status === "won" || state.status === "lost") return undefined;
+  return state.towers.find((t) => t.id === selected);
+}
 export interface CardChoice {
   id: string;
   label: string;

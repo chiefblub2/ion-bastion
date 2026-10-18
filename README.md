@@ -52,7 +52,7 @@ Every sector has its own terrain. In the Circuit (bottom right) there is no reac
 | Input | Action |
 | --- | --- |
 | Pick a tower, click a free tile | Build. Build mode ends afterwards; Shift+click builds more towers of the same type. |
-| Click a built tower | Upgrade, sell or choose the target priority |
+| Click a built tower | A card beside it offers the upgrade (or the path choice), the target priority and selling; the sidebar shows the full details |
 | Click an enemy | Show hit points, shield, traits and active effects |
 | `T` | Cycle the target priority of the selected tower |
 | `U` | Buy the next upgrade of the selected tower (next level, or the next tier once a path is chosen; a path choice stays with the buttons) |

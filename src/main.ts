@@ -16,6 +16,7 @@ import { registerTools } from "./app/webmcp";
 import { screenFromUrl } from "./app/screens";
 import { markTrainingDone } from "./app/progress";
 import { Coach } from "./ui/coach-view";
+import { TowerCard } from "./ui/tower-card-view";
 import { waveHpScale } from "./systems/spawn";
 import type { MissionDefinition } from "./core/types";
 import { ART_FILTERING } from "./render/enemy-art-scene";
@@ -63,7 +64,11 @@ const battlefield = new Battlefield(game, view, {
   },
 });
 const coach = new Coach(game, view, (cell) => battlefield.cellRect(cell));
-ui.onRefresh = () => coach.refresh();
+const towerCard = new TowerCard(game, view, () => ui.session());
+ui.onRefresh = () => {
+  towerCard.refresh();
+  coach.refresh();
+};
 const fullscreen = bindFullscreen(() => battlefield.fit());
 const input = createInput({
   game,
