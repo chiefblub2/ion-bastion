@@ -10,6 +10,7 @@ import { renderWaveForecast, waveForecast } from "./wave-forecast";
 import { liveUnits, renderLiveUnits } from "./live-units";
 import { closeCodexPreview } from "./codex-preview";
 import { renderEnemyCodex, type CodexTab } from "./enemy-codex";
+import { MUSIC_ENABLED } from "../audio/settings";
 import { renderTowerCodex } from "./tower-codex";
 import { effectiveTowerStats, isInAura } from "../systems/auras";
 import type { MissionSector, TowerId } from "../core/types";
@@ -62,7 +63,7 @@ export function mountUI(game: Game) {
     .join("")}</div></div>
   <section id="send-panel" class="send-panel" aria-label="Send enemies" hidden></section><div id="selection" class="selection"></div><section id="live-units" class="live-units" aria-label="Enemies on the field" hidden></section></aside></div>
   <footer class="bottom-bar"><span id="notice" role="status" aria-live="polite">Pick a tower and place it next to the path.</span><button id="restart-btn" class="text-button">Restart</button></footer></main></div>
-  <dialog id="restart-dialog"><h2>Restart mission?</h2><p>Your current defense and progress will be reset.</p><div class="dialog-actions"><button id="cancel-restart" class="quiet">Keep playing</button><button id="confirm-restart" class="primary">Restart</button></div></dialog><div id="sound-panel" class="sound-panel" role="dialog" aria-label="Sound settings" hidden><label class="sound-row sound-switch"><span>Sound</span><input type="checkbox" id="sound-on"></label><label class="sound-row"><span>Master</span><input type="range" min="0" max="100" data-bus="master"></label><label class="sound-row"><span>Effects</span><input type="range" min="0" max="100" data-bus="sfx"></label><label class="sound-row"><span>Interface</span><input type="range" min="0" max="100" data-bus="ui"></label><label class="sound-row"><span>Music</span><input type="range" min="0" max="100" data-bus="music"></label><p class="sound-hint">Press <kbd>M</kbd> in game to mute.</p></div>`;
+  <dialog id="restart-dialog"><h2>Restart mission?</h2><p>Your current defense and progress will be reset.</p><div class="dialog-actions"><button id="cancel-restart" class="quiet">Keep playing</button><button id="confirm-restart" class="primary">Restart</button></div></dialog><div id="sound-panel" class="sound-panel" role="dialog" aria-label="Sound settings" hidden><label class="sound-row sound-switch"><span>Sound</span><input type="checkbox" id="sound-on"></label><label class="sound-row"><span>Master</span><input type="range" min="0" max="100" data-bus="master"></label><label class="sound-row"><span>Effects</span><input type="range" min="0" max="100" data-bus="sfx"></label><label class="sound-row"><span>Interface</span><input type="range" min="0" max="100" data-bus="ui"></label><label class="sound-row"${MUSIC_ENABLED ? "" : " hidden"}><span>Music</span><input type="range" min="0" max="100" data-bus="music"></label><p class="sound-hint">Press <kbd>M</kbd> in game to mute.</p></div>`;
 }
 /** Everything in the shell that depends on the active mission. */
 export function renderMission(game: Game) {
