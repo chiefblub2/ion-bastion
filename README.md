@@ -1,6 +1,6 @@
 # ION BASTION
 
-Tower defense in the browser, built with TypeScript, Phaser 3 and Vite. <!-- counts:start -->73 missions in 15 sectors<!-- counts:end --> with their own maps, waves and terrain styles, over thirty towers and <!-- counts:start -->62 enemy types<!-- counts:end --> on the ground and in the air. Play solo or with 2–4 players in co-op or versus mode.
+Tower defense in the browser, built with TypeScript, Phaser 3 and Vite. <!-- counts:start -->73 missions in 15 sectors<!-- counts:end --> with their own maps, waves and terrain styles, over thirty towers and <!-- counts:start -->71 enemy types<!-- counts:end --> on the ground and in the air. Play solo or with 2–4 players in co-op or versus mode.
 
 ![Mission 54 Ember Chamber in the Volcano Chain sector, first wave: Ember Runners in the windings and the first towers](docs/images/screens/glutkammer.png)
 
@@ -191,21 +191,21 @@ The game opens on the start screen with one primary button ("Start Playing" on a
 | 59 | Prism Shaft | Phantoms, no Aura or Refinery | 10 × 10 | 18 | 860 | 100 % |
 | 60 | Crystal Heart | Finale: three Titans | 14 × 11 | 20 | 880 | 110 %¹ |
 | **XIII** | **Circuit** | | | | | |
-| 61 | Orbit | Simple ring, max. 30 enemies, a wave every 22 s | 18 × 12 | 8 | 400 | 35 % |
-| 62 | Double Loop | A dent merges two lanes, max. 30, every 20 s | 20 × 12 | 9 | 450 | 45 % |
-| 63 | Maelstrom | Two dents, max. 35, every 18 s | 20 × 13 | 10 | 500 | 30 % |
+| 61 | Orbit | Simple ring, max. 30 enemies, a wave every 22 s | 18 × 12 | 25 | 400 | 20 % |
+| 62 | Double Loop | A dent merges two lanes, max. 30, every 20 s | 20 × 12 | 25 | 450 | 21 % |
+| 63 | Maelstrom | Two dents, max. 35, every 18 s | 20 × 13 | 28 | 500 | 16 % |
 | **XIV** | **Gearworks** | | | | | |
-| 64 | Ring Gear | Cogwheels speed up the longer they circle, max. 36, every 20 s | 15 × 11 | 10 | 500 | 30 % |
-| 65 | Escapement | Piston Tanks harden every lap, max. 32, every 18 s | 21 × 10 | 10 | 550 | 35 % |
-| 66 | Balance Wheel | Echo in wave 8, the waist merges four lanes, max. 35, every 16 s | 15 × 11 | 11 | 550 | 40 %¹ |
-| 67 | Planet Gear | Only core and control towers, max. 36, every 18 s | 15 × 15 | 11 | 600 | 40 % |
-| 68 | Clockwork | Finale: two Titans, max. 34, every 16 s | 15 × 11 | 12 | 600 | 40 % |
+| 64 | Ring Gear | Cogwheels speed up the longer they circle, max. 36, every 20 s | 15 × 11 | 25 | 500 | 17 % |
+| 65 | Escapement | Piston Tanks harden every lap, max. 32, every 18 s | 21 × 10 | 25 | 550 | 14 % |
+| 66 | Balance Wheel | Echo in wave 18, the waist merges four lanes, max. 35, every 16 s | 15 × 11 | 25 | 550 | 27 %¹ |
+| 67 | Planet Gear | Only core and control towers, max. 36, every 18 s | 15 × 15 | 25 | 600 | 19 % |
+| 68 | Clockwork | Finale: two Titans, max. 34, every 16 s | 15 × 11 | 28 | 600 | 14 % |
 | **XV** | **Moon Lake** | | | | | |
-| 69 | Ebb | Spray Wings harden every lap, max. 45, every 18 s | 20 × 11 | 11 | 550 | 35 % |
-| 70 | Tide Ring | Nautilus: shield and momentum, max. 42, every 17 s | 20 × 11 | 11 | 570 | 38 % |
-| 71 | Surf | Long serpentine ring, max. 45, every 16 s | 22 × 12 | 12 | 600 | 40 % |
-| 72 | Spring Tide | Short interval, tight limit, max. 35, every 14 s | 20 × 14 | 12 | 620 | 40 % |
-| 73 | Lunar Eclipse | Echo wave, finale: three Titans, max. 40, every 16 s | 20 × 13 | 13 | 650 | 50 %¹ |
+| 69 | Ebb | Spray Wings harden every lap, max. 45, every 18 s | 20 × 11 | 25 | 550 | 30 % |
+| 70 | Tide Ring | Nautilus: shield and momentum, max. 42, every 17 s | 20 × 11 | 25 | 570 | 25 % |
+| 71 | Surf | Long serpentine ring, max. 45, every 16 s | 22 × 12 | 25 | 600 | 20 % |
+| 72 | Spring Tide | Short interval, tight limit, max. 35, every 14 s | 20 × 14 | 25 | 620 | 19 % |
+| 73 | Lunar Eclipse | Echo wave, finale: three Titans, max. 40, every 16 s | 20 × 13 | 30 | 650 | 22 %¹ |
 
 ¹ Individual waves have their own HP factor instead of the linear growth.
 <!-- missions:end -->
@@ -459,10 +459,11 @@ Sector I uses five basic enemies, including the **Glider** from mission 02 on: f
 | X Jungle | <img src="docs/images/enemies/ant.png" width="24" height="24" alt=""> Swarm Ant (less damage in a pack), <img src="docs/images/enemies/colossus.png" width="24" height="24" alt=""> Jungle Colossus (armored, regenerates), <img src="docs/images/enemies/martyr.png" width="24" height="24" alt=""> Martyr (heals on death), <img src="docs/images/enemies/thornback.png" width="24" height="24" alt=""> Thornback (punishes nearby towers with cooldown) |
 | XI Volcano Chain | <img src="docs/images/enemies/ember.png" width="24" height="24" alt=""> Ember Runner (speeds up the more HP it is missing), <img src="docs/images/enemies/ashwing.png" width="24" height="24" alt=""> Ash Wing (flies, armored, immune to slow), <img src="docs/images/enemies/salamander.png" width="24" height="24" alt=""> Salamander and <img src="docs/images/enemies/cinderwing.png" width="24" height="24" alt=""> Magma Moth (immune to burn and bleed), <img src="docs/images/enemies/flare.png" width="24" height="24" alt=""> Dazzler (reduces tower range) |
 | XII Crystal Cave | <img src="docs/images/enemies/golem.png" width="24" height="24" alt=""> Crystal Warden (hardens against hits in rhythm, burn works in full), <img src="docs/images/enemies/moth.png" width="24" height="24" alt=""> Shard Moth (flies, splits into two Gliders), <img src="docs/images/enemies/prism.png" width="24" height="24" alt=""> Prism Runner (deflects beams), <img src="docs/images/enemies/monolith.png" width="24" height="24" alt=""> Monolith (no hit above 6 % of its HP) |
-| XIV Gearworks | <img src="docs/images/enemies/cog.png" width="24" height="24" alt=""> Cogwheel (speeds up the longer it circles), <img src="docs/images/enemies/piston.png" width="24" height="24" alt=""> Piston Tank (armored, takes less damage every lap) |
-| XV Moon Lake | <img src="docs/images/enemies/tidewing.png" width="24" height="24" alt=""> Spray Wing (flies, takes less damage every lap), <img src="docs/images/enemies/nautilus.png" width="24" height="24" alt=""> Nautilus (shield, speeds up the longer it circles) |
+| XIII Circuit | <img src="docs/images/enemies/leaper.png" width="24" height="24" alt=""> Leap Spider (regularly leaps into the air), <img src="docs/images/enemies/warden.png" width="24" height="24" alt=""> Damper (makes itself and nearby enemies immune to slow, stun and pull), <img src="docs/images/enemies/sparkworm.png" width="24" height="24" alt=""> Spark Worm (briefly disables nearby towers on death), <img src="docs/images/enemies/molter.png" width="24" height="24" alt=""> Molter (armored down to half HP, then fast) |
+| XIV Gearworks | <img src="docs/images/enemies/cog.png" width="24" height="24" alt=""> Cogwheel (speeds up the longer it circles), <img src="docs/images/enemies/piston.png" width="24" height="24" alt=""> Piston Tank (armored, takes less damage every lap), <img src="docs/images/enemies/broodmother.png" width="24" height="24" alt=""> Broodmother (armored, lays Swarm Ants along the way), <img src="docs/images/enemies/stormcell.png" width="24" height="24" alt=""> Thunder Cell (flies, shield, disables towers on death) |
+| XV Moon Lake | <img src="docs/images/enemies/tidewing.png" width="24" height="24" alt=""> Spray Wing (flies, takes less damage every lap), <img src="docs/images/enemies/nautilus.png" width="24" height="24" alt=""> Nautilus (shield, speeds up the longer it circles), <img src="docs/images/enemies/hydra.png" width="24" height="24" alt=""> Hydra (regenerates, splits into two Hydra Heads), <img src="docs/images/enemies/hydraling.png" width="24" height="24" alt=""> Hydra Head (speeds up the more HP it is missing), <img src="docs/images/enemies/skimmer.png" width="24" height="24" alt=""> Diver (flies, regularly dives to the ground, nimble) |
 
-Ten more enemies are finished but do not appear in any mission yet. The Enemy Codex lists them under "in no mission": <img src="docs/images/enemies/leaper.png" width="24" height="24" alt=""> Leap Spider (regularly leaps into the air), <img src="docs/images/enemies/skimmer.png" width="24" height="24" alt=""> Diver (flies, regularly dives to the ground, nimble), <img src="docs/images/enemies/warden.png" width="24" height="24" alt=""> Damper (makes itself and nearby enemies immune to slow, stun and pull), <img src="docs/images/enemies/broodmother.png" width="24" height="24" alt=""> Broodmother (armored, lays Swarm Ants along the way), <img src="docs/images/enemies/sparkworm.png" width="24" height="24" alt=""> Spark Worm (briefly disables nearby towers on death), <img src="docs/images/enemies/molter.png" width="24" height="24" alt=""> Molter (armored down to half HP, then fast), <img src="docs/images/enemies/wisp.png" width="24" height="24" alt=""> Will-o'-Wisp (flies, stealthed, evades), <img src="docs/images/enemies/hydra.png" width="24" height="24" alt=""> Hydra (regenerates, splits into two Hydra Heads), <img src="docs/images/enemies/hydraling.png" width="24" height="24" alt=""> Hydra Head (speeds up the more HP it is missing) and <img src="docs/images/enemies/stormcell.png" width="24" height="24" alt=""> Thunder Cell (flies, shield, disables towers on death).
+One more enemy is finished but does not appear in any mission yet. The Enemy Codex lists it under "in no mission": <img src="docs/images/enemies/wisp.png" width="24" height="24" alt=""> Will-o'-Wisp (flies, stealthed, evades).
 
 Stealthed enemies and carriers of a cloak field only appear in missions where the Detector can be built.
 

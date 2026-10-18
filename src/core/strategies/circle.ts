@@ -16,6 +16,7 @@ export const CIRCLE_STRATEGIES: Strategies = {
       builds: [
         b("blast", 12, 5), b("tesla", 14, 6), b("pulse", 7, 2), b("frost", 12, 3),
         b("blast", 7, 9), b("pulse", 4, 9), b("flak", 3, 5),
+        b("blast", 4, 5), b("pulse", 14, 2), b("tesla", 3, 9),
       ],
     },
   },
@@ -26,6 +27,8 @@ export const CIRCLE_STRATEGIES: Strategies = {
       builds: [
         b("pulse", 9, 3), b("blast", 10, 2), b("pulse", 2, 2), b("frost", 10, 4), b("tesla", 9, 6),
         b("flak", 16, 2), b("blast", 2, 9), b("pulse", 16, 9), b("blast", 10, 6), b("pulse", 9, 9),
+        b("tesla", 2, 5), b("blast", 16, 5), b("pulse", 9, 2),
+        b("blast", 9, 4), b("tesla", 10, 1), b("blast", 9, 1),
       ],
     },
     // Tesla in the notch, upgrades first.
@@ -34,6 +37,8 @@ export const CIRCLE_STRATEGIES: Strategies = {
       builds: [
         b("tesla", 9, 3), b("blast", 10, 3), b("pulse", 9, 6), b("frost", 2, 2),
         b("blast", 16, 9), b("pulse", 16, 2), b("flak", 10, 6), b("blast", 2, 9),
+        b("blast", 10, 2), b("tesla", 2, 5), b("blast", 16, 5), b("pulse", 9, 9),
+        b("blast", 9, 4), b("pulse", 10, 4), b("tesla", 10, 1), b("blast", 9, 1),
       ],
     },
   },
@@ -53,6 +58,7 @@ export const CIRCLE_STRATEGIES: Strategies = {
       builds: [
         b("tesla", 9, 7), b("blast", 9, 2), b("pulse", 11, 9), b("frost", 10, 4),
         b("blast", 13, 10), b("pulse", 3, 8), b("flak", 16, 7), b("blast", 10, 2), b("pulse", 7, 3),
+        b("blast", 3, 4), b("pulse", 16, 4), b("tesla", 3, 9),
       ],
     },
   },

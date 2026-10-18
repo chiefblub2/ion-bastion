@@ -8,6 +8,7 @@ export const GEAR_STRATEGIES: Strategies = {
       builds: [
         b("pulse", 4, 2), b("frost", 8, 3), b("tesla", 8, 2), b("blast", 4, 9), b("pulse", 12, 2),
         b("blast", 8, 9), b("flak", 6, 8), b("pulse", 12, 9), b("tesla", 10, 8),
+        b("pulse", 2, 4), b("frost", 12, 4), b("tesla", 6, 8), b("lance", 2, 7), b("flak", 12, 7), b("focus", 10, 1),
       ],
     },
     // Gravitron in the middle pulls the cogs back, novas in the bottom pockets.
@@ -15,7 +16,8 @@ export const GEAR_STRATEGIES: Strategies = {
       upgradeFirst: true,
       builds: [
         b("tesla", 8, 3), b("gravity", 7, 4), b("blast", 4, 9), b("frost", 4, 2),
-        b("pulse", 12, 2), b("blast", 8, 9), b("pulse", 12, 9), b("flak", 10, 8),
+        b("pulse", 12, 2), b("pulse", 8, 2), b("pulse", 4, 3), b("blast", 8, 9), b("pulse", 12, 9), b("flak", 10, 8),
+        b("pulse", 2, 4), b("frost", 12, 4), b("tesla", 6, 8), b("lance", 2, 7), b("flak", 12, 7), b("focus", 10, 1),
       ],
     },
   },
@@ -26,14 +28,17 @@ export const GEAR_STRATEGIES: Strategies = {
       builds: [
         b("pulse", 4, 4), b("decay", 8, 4), b("focus", 10, 4), b("frost", 12, 4), b("flak", 6, 5),
         b("pulse", 16, 4), b("tesla", 18, 5), b("blast", 2, 4), b("flak", 14, 5), b("lance", 8, 6),
+        b("tesla", 2, 5), b("pulse", 6, 4), b("focus", 12, 5), b("frost", 16, 6), b("lance", 10, 7), b("decay", 4, 2), b("flak", 20, 5),
       ],
     },
     // Lance on the long corridor, frost and tesla for the cogs.
     B: {
       upgradeFirst: true,
       builds: [
-        b("tesla", 4, 4), b("lance", 10, 4), b("pulse", 12, 4), b("frost", 16, 4),
-        b("decay", 8, 5), b("flak", 18, 4), b("blast", 14, 5), b("pulse", 6, 3),
+        b("tesla", 4, 4), b("lance", 10, 4), b("pulse", 12, 4), b("tesla", 12, 3), b("pulse", 8, 4),
+        b("pulse", 6, 3), b("frost", 16, 4), b("pulse", 2, 3), b("flak", 6, 5), b("tesla", 16, 5),
+        b("pulse", 14, 4), b("pulse", 18, 4), b("tesla", 8, 5), b("focus", 12, 5), b("decay", 4, 2),
+        b("flak", 18, 5), b("blast", 14, 5), b("frost", 10, 7), b("lance", 20, 4),
       ],
     },
   },
@@ -80,6 +85,7 @@ export const GEAR_STRATEGIES: Strategies = {
       builds: [
         b("pulse", 11, 4), b("tesla", 6, 2), b("frost", 8, 5), b("pulse", 4, 4), b("focus", 11, 6),
         b("blast", 3, 6), b("flak", 11, 7), b("decay", 5, 7), b("lance", 12, 8),
+        b("pulse", 3, 2), b("frost", 11, 3), b("tesla", 12, 6), b("focus", 5, 6), b("flak", 11, 8), b("pulse", 2, 4), b("lance", 8, 4), b("decay", 6, 8),
       ],
     },
     // Pulse on the right side, nova in the pocket, tesla at the hook.
@@ -88,6 +94,7 @@ export const GEAR_STRATEGIES: Strategies = {
       builds: [
         b("pulse", 12, 5), b("blast", 4, 6), b("pulse", 4, 4), b("tesla", 8, 5),
         b("frost", 6, 2), b("flak", 11, 7), b("lance", 4, 7), b("decay", 5, 8),
+        b("tesla", 11, 3), b("focus", 12, 7), b("pulse", 3, 2), b("frost", 10, 8), b("flak", 12, 4), b("lance", 8, 4), b("decay", 6, 6), b("pulse", 9, 2),
       ],
     },
   },

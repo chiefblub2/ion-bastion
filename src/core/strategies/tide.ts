@@ -40,12 +40,14 @@ export const TIDE_STRATEGIES: Strategies = {
       builds: [
         b("pulse", 12, 5), b("tesla", 12, 6), b("flak", 16, 6), b("frost", 8, 5), b("blast", 12, 2),
         b("decay", 12, 8), b("flak", 4, 5), b("gravity", 16, 5),
+        b("pulse", 14, 5), b("tesla", 10, 6), b("blast", 14, 6), b("flak", 18, 5), b("pulse", 10, 5), b("tesla", 18, 6), b("blast", 12, 3), b("flak", 12, 9),
       ],
     },
     B: {
       upgradeFirst: true,
       builds: [
         b("blast", 12, 6), b("tesla", 12, 5), b("flak", 16, 6), b("pulse", 12, 8), b("frost", 8, 6), b("jammer", 12, 2),
+        b("pulse", 14, 5), b("tesla", 10, 6), b("blast", 14, 6), b("flak", 18, 5), b("pulse", 10, 5), b("tesla", 18, 6), b("blast", 12, 3), b("flak", 12, 9),
       ],
     },
   },
@@ -56,12 +58,14 @@ export const TIDE_STRATEGIES: Strategies = {
       builds: [
         b("tesla", 9, 5), b("flak", 10, 7), b("blast", 10, 3), b("pulse", 9, 10), b("flak", 14, 6),
         b("frost", 5, 6), b("decay", 10, 5),
+        b("tesla", 10, 6), b("blast", 9, 7), b("pulse", 12, 6), b("flak", 6, 7), b("blast", 12, 8), b("tesla", 10, 9), b("pulse", 9, 3), b("flak", 13, 7),
       ],
     },
     B: {
       upgradeFirst: true,
       builds: [
         b("blast", 10, 3), b("tesla", 9, 5), b("flak", 10, 7), b("pulse", 9, 10), b("flak", 14, 6), b("frost", 5, 6),
+        b("tesla", 10, 6), b("blast", 9, 7), b("pulse", 12, 6), b("flak", 6, 7), b("blast", 12, 8), b("tesla", 10, 9), b("pulse", 9, 3), b("flak", 13, 7),
       ],
     },
   },
@@ -72,12 +76,14 @@ export const TIDE_STRATEGIES: Strategies = {
       builds: [
         b("pulse", 9, 6), b("flak", 8, 6), b("tesla", 10, 6), b("blast", 11, 6), b("gravity", 7, 6),
         b("jammer", 12, 6), b("flak", 3, 6), b("decay", 15, 6),
+        b("pulse", 13, 6), b("blast", 14, 6), b("tesla", 6, 6), b("flak", 16, 6), b("pulse", 4, 6), b("blast", 5, 6), b("tesla", 9, 3), b("flak", 10, 3),
       ],
     },
     B: {
       upgradeFirst: true,
       builds: [
         b("blast", 10, 6), b("tesla", 9, 6), b("pulse", 11, 6), b("flak", 8, 6), b("frost", 12, 6), b("flak", 3, 6),
+        b("pulse", 13, 6), b("blast", 14, 6), b("tesla", 6, 6), b("flak", 16, 6), b("pulse", 4, 6), b("blast", 5, 6), b("tesla", 9, 3), b("flak", 10, 3),
       ],
     },
   },
