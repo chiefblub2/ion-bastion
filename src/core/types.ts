@@ -95,6 +95,8 @@ export interface MortarAttack {
   /** Dead zone: enemies closer than this to the tower cannot be targeted. */
   minRange: number;
 }
+/** Skyburst: a homing missile that bursts at its target, hitting every enemy the tower can target within `radius`. */
+export interface AirburstAttack { kind: "airburst"; radius: number }
 export interface DisruptAttack {
   kind: "disrupt";
   radius: number;
@@ -151,7 +153,8 @@ export type AttackSpec =
   | NetAttack
   | BountyAttack
   | RepairAttack
-  | MarkAttack;
+  | MarkAttack
+  | AirburstAttack;
 export type AttackKind = AttackSpec["kind"];
 
 export interface UpgradeDefinition {
@@ -206,7 +209,8 @@ export type TurretStyle =
   | "launcher"
   | "beacon"
   | "dock"
-  | "tracker";
+  | "tracker"
+  | "battery";
 export type ProjectileStyle = "tracer" | "shell" | "crystal" | "twin" | "ember" | "glob" | "orb" | "net" | "rocket" | "lob" | "glaive" | "shard";
 export type PathMotif = "blades" | "vortex" | "rings";
 export interface PathVisual {

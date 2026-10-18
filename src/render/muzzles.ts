@@ -28,6 +28,7 @@ export const MUZZLES: Partial<Record<TurretStyle, MuzzleSpec>> = {
   launcher: { reach: (l) => 15 + l, recoil: 4, sides: [-4, 4], flash: "gun" },
   vat: { reach: (l) => 17 + l, recoil: 4, flash: "spray" },
   lens: { reach: (l) => 16 + l, recoil: 0, flash: "energy" },
+  battery: { reach: (l) => 15 + l, recoil: 3, sides: [-5.4, -1.8, 1.8, 5.4], flash: "heavy" },
 };
 /** Barrel tips in pixels for a turret at (`x`, `y`) aiming at `angle`; empty for turrets without a barrel. */
 export function muzzleTips(turret: TurretStyle, level: number, x: number, y: number, angle: number, kick = 0): Point[] {

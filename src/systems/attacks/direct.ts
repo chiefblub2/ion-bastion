@@ -1,9 +1,15 @@
-import type { DirectAttack } from "../../core/types";
-import { applyDamage, hitOf, plain } from "../damage";
+import type { DirectAttack, Enemy, Sim } from "../../core/types";
+import { applyDamage, hitOf, plain, type DamageSource } from "../damage";
 import { applyStatus } from "../status";
 import { layerOf } from "../traits";
 import { canAcquire, nearest } from "./targeting";
 import type { AttackModule } from "./types";
+/** Wingclip: a hit flyer that survived is slowed; slow immunity still holds. */
+export function wingclip(sim: Sim, src: DamageSource, enemy: Enemy) {
+  const special = src.special;
+  if (special?.kind === "wingclip" && enemy.hp > 0 && layerOf(sim, enemy) === "air")
+    applyStatus(sim, enemy, { kind: "slow", factor: 1 - special.slow, until: sim.state.time + special.duration });
+}
 export const direct: AttackModule<DirectAttack> = {
   aim: "enemy",
   projectile: "optional",
@@ -12,9 +18,7 @@ export const direct: AttackModule<DirectAttack> = {
     if (!enemy) return;
     applyDamage(sim, src, enemy, damage, false, hitOf("direct", src));
     const special = src.special;
-    // Wingclip: a hit flyer is slowed; slow immunity still holds.
-    if (special?.kind === "wingclip" && enemy.hp > 0 && layerOf(sim, enemy) === "air")
-      applyStatus(sim, enemy, { kind: "slow", factor: 1 - special.slow, until: sim.state.time + special.duration });
+    wingclip(sim, src, enemy);
     // Ricochet: a marked shot bounces once to the nearest other enemy the tower could aim at.
     if (special?.kind === "ricochet" && proc) {
       const [next] = nearest(sim, enemy, special.radius, 1, (c) => c !== enemy && canAcquire(sim, src.type, c));

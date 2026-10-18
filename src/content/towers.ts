@@ -93,6 +93,26 @@ export const TOWER_CONTENT = {
     projectile: { speed: 12 },
     visual: { icon: "⌖", turret: "twin", projectile: "twin", impact: "spark" },
   }),
+  skyburst: attackTower({
+    id: "skyburst",
+    name: "Skyburst",
+    role: "AIR AREA",
+    description: "Homing missiles burst among air targets and hit every flyer nearby. Slow and weak against a lone flyer, strong against swarms. Cannot hit ground units.",
+    cost: 140,
+    damage: 30,
+    range: 3.6,
+    interval: 1.5,
+    color: 0xfff0b0,
+    attack: { kind: "airburst", radius: 0.9 },
+    targets: ["air"],
+    projectile: { speed: 9 },
+    visual: { icon: "✷", turret: "battery", projectile: "rocket", impact: "burst" },
+  }, {
+    5: {
+      attack: { radius: 1.15 },
+      description: "Wide Fuse: a larger burst radius, plus much more damage.",
+    },
+  }),
   tesla: attackTower({
     id: "tesla",
     name: "Tesla",

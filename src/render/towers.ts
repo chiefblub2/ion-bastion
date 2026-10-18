@@ -400,6 +400,15 @@ const BASES: Record<TurretStyle, Drawing> = {
     base(ctx, { n: 3, rot: -Math.PI / 2 }, 25, 20);
     rivets(ctx.g, ctx.x, ctx.y, 19, 3, -Math.PI / 2, shade(ctx.definition.color, -0.4));
   },
+  // Chamfered square emplacement with a stud in each corner.
+  battery: (ctx) => {
+    const { g, x, y, definition: d } = ctx;
+    base(ctx, { cut: 0.3 }, 23, 18, "disc");
+    g.fillStyle(shade(d.color, -0.55));
+    for (const [sx, sy] of CORNERS) pip(g, x + sx * 16.5, y + sy * 16.5, 1.8);
+    g.fillStyle(shade(PLATE, 0.45), 0.8);
+    for (const [sx, sy] of CORNERS) pip(g, x + sx * 16.5 - 0.5, y + sy * 16.5 - 0.5, 0.7);
+  },
   // Square rack with crossed straps.
   launcher: (ctx) => {
     const { g, x, y, definition: d } = ctx;
@@ -949,6 +958,36 @@ const TURRETS: Record<TurretStyle, Drawing> = {
     }
     bolt(ctx, 2);
     muzzleGlow(ctx, end + 2, 4);
+  },
+  // A four-tube missile pod on a turntable with a search radar spinning at its rear; warhead noses return as it reloads.
+  battery: (ctx) => {
+    const { g, glow, x, y, tower: t, definition: d, level, clock, charge, tip } = ctx,
+      a = t.angle,
+      c = d.color,
+      ca = Math.cos(a),
+      sa = Math.sin(a),
+      { back, end } = reach(ctx, "battery"),
+      sides = MUZZLES.battery!.sides!;
+    boss(g, x, y, 10, shade(c, -0.55));
+    // Pod housing under the tubes, with its cast shadow.
+    strip(g, x + 0.6, y + 1, ca, sa, back - 6, end - 4, -8, 8, -8, 8, SHADOW, 0.45);
+    block(g, x, y, a, 8, 8.2, 2, shade(c, -0.5));
+    for (const side of sides) litBar(g, x, y, a, back - 2, end, 1.6, 1.6, shade(c, -0.1), { side, tip, bands: level >= 3 ? [0.5] : undefined });
+    // Warhead noses in the mouths, one per quarter of the reload.
+    sides.forEach((side, i) => {
+      const p = point(x, y, ca, sa, end - 1.2, side);
+      disc(g, p.x, p.y, 1.3, OUTLINE);
+      if (charge >= 0.25 * (i + 1)) disc(g, p.x - 0.2, p.y - 0.2, 0.9, shade(c, 0.45));
+    });
+    // Search radar: a dish turning on the rear of the pod.
+    const r = point(x, y, ca, sa, -8.5, 0),
+      spin = clock * 3 + t.id;
+    disc(g, r.x, r.y, 3.6, OUTLINE);
+    oval(g, r.x, r.y, 3.2, 1.2 + 1.8 * Math.abs(Math.cos(spin)), shade(c, 0.15), 1, spin);
+    disc(g, r.x, r.y, 0.9, shade(c, -0.4));
+    if (level >= 2) disc(glow, r.x, r.y, 2.6, c, 0.12 + 0.1 * Math.max(0, Math.sin(spin * 2)));
+    bolt(ctx, 2);
+    muzzleGlow(ctx, end + 1.5, 6);
   },
   // A gold coin turning slowly: its rim shows as it turns, and its face glints towards the viewer.
   beacon: (ctx) => {
