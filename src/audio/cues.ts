@@ -1,8 +1,7 @@
 import type { AttackSpec, ContentPack, GameEvent, GameState } from "../core/types";
-import { familyOf, type Family } from "./families";
 import { RECIPES, type CueId } from "./recipes";
-// Drained game events → effect cues. A shot gets its family's quiet transient at once; its music is the family's
-// instrument part on the beat (`Conductor`). Only heavy impacts make an effect sound.
+// Drained game events → effect cues. Shots are left to the shot mixer (`shots.ts`); of the impacts only the heavy
+// ones make a sound.
 
 export interface Cue {
   id: CueId;
@@ -11,30 +10,22 @@ export interface Cue {
   gain: number;
 }
 export type View = "menu" | "game";
-/** Each family's quiet transient, played the moment it fires. */
-const SHOT_CUE: Record<Family, CueId> = { rapid: "shotRapid", heavy: "shotHeavy", electric: "shotElectric", control: "shotControl", fire: "shotFire", traps: "shotTrap" };
 const BLASTS = new Set<AttackSpec["kind"]>(["splash", "mortar", "charge"]);
 const PLAIN: Partial<Record<GameEvent["type"], CueId>> = {
   kill: "kill", evade: "evade", overload: "overload", leak: "leak", build: "build", sell: "sell", upgrade: "upgrade",
   income: "income", repair: "repair", waveStart: "waveStart", waveEnd: "waveEnd",
 };
-/** Building rises to the fifth, upgrading to the top of the chord; other flow cues sit on the root. */
-const FLOW_VOICE: Partial<Record<CueId, number>> = { build: 2, upgrade: 3 };
 export const burstGain = (n: number) => Math.min(1.5, 1 + 0.1 * (n - 1));
 
 function cueOf(e: GameEvent, content: ContentPack): { id: CueId; voice: number } | null {
   switch (e.type) {
-    case "shot": {
-      const family = familyOf(content.towers[e.tower]);
-      return family ? { id: SHOT_CUE[family], voice: 0 } : null;
-    }
     case "impact":
       return BLASTS.has(content.towers[e.tower].attack.kind) ? { id: "blast", voice: 0 } : null;
     case "end":
       return { id: e.result, voice: 0 };
     default: {
       const id = PLAIN[e.type];
-      return id ? { id, voice: FLOW_VOICE[id] ?? 0 } : null;
+      return id ? { id, voice: 0 } : null;
     }
   }
 }

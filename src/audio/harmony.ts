@@ -1,6 +1,5 @@
-import { fnv } from "../core/hash";
 import type { DroneId } from "./mood";
-// Key, tempo and a 4-bar chord loop per theme. The defense widens the chords; a dark mood adds a tension note.
+// Key, tempo and a 4-bar chord loop per theme. The mission's progress widens the chords; a dark mood adds a tension note.
 
 export const MODES = {
   ionian: [0, 2, 4, 5, 7, 9, 11],
@@ -13,7 +12,7 @@ export const MODES = {
 } as const;
 export type Mode = keyof typeof MODES;
 export type Groove = "none" | "straight" | "half" | "broken";
-/** The mood from the balance between threat and defense. */
+/** The mood from the danger to the reactor: bright while safe, dark when close to losing. */
 export type Color = "bright" | "drive" | "dark";
 /** Chord size: triad, 7th or 9th. */
 export type Extent = 3 | 4 | 5;
@@ -59,8 +58,8 @@ export function chordOf(music: ThemeMusic, bar: number, extent: Extent = 3): num
     return music.root + scale[i % 7] + 12 * Math.floor(i / 7);
   });
 }
-/** The defense builds the harmony: triads, then 7ths from a quarter, 9ths from half. */
-export const extentFor = (defense: number): Extent => (defense >= 0.5 ? 5 : defense >= 0.25 ? 4 : 3);
+/** The mission's progress builds the harmony: triads, then 7ths from a fifth of the waves, 9ths from half. */
+export const extentFor = (arc: number): Extent => (arc >= 0.5 ? 5 : arc >= 0.2 ? 4 : 3);
 /** The pad's chord; under tension the minor ninth replaces the 9th (or, without one, the 5th), never clustering next to it. */
 export function padChord(chord: readonly number[], tense: boolean) {
   if (!tense) return [...chord];
@@ -68,10 +67,14 @@ export function padChord(chord: readonly number[], tense: boolean) {
   out[chord.length >= 5 ? 4 : 2] = chord[0] + 13;
   return out;
 }
-/** MIDI note per drone voice: the bass on the root, then the chord's colour first (3rd, 7th or 5th, 9th, 5th), an octave up. */
-export function padVoicing(chord: readonly number[], voices: number) {
-  const upper = [1, 3, 4, 2].filter((i) => i < chord.length);
-  return Array.from({ length: voices }, (_, k) => (k === 0 ? chord[0] : chord[upper[(k - 1) % upper.length]] + 12));
+/**
+ * MIDI notes of the pad: the sub on the root, then four voices two octaves up in close position. A 9th chord drops the
+ * root (the sub and bass carry it), a 7th chord plays all four tones, a triad adds its 5th an octave below.
+ */
+export function padVoicing(chord: readonly number[]) {
+  const up = (n: number) => n + 24,
+    upper = chord.length >= 5 ? chord.slice(1, 5).map(up) : chord.length === 4 ? chord.map(up) : [chord[2] + 12, ...chord.map(up)];
+  return [chord[0], ...upper];
 }
 export const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
 /** Chord tone `index` (wrapping) in the octave whose pitch lies nearest `targetHz`. */
@@ -96,5 +99,3 @@ export function rooted(targetHz: number, chord: readonly number[], index: number
     target = 69 + 12 * Math.log2(targetHz / 440);
   return hz(chord[((index % n) + n) % n] + 12 * Math.round((target - chord[0]) / 12));
 }
-/** A stable chord-tone index per tower, so each tower keeps its own voice. */
-export const voiceOf = (tower: string) => fnv(`voice:${tower}`) % 4;

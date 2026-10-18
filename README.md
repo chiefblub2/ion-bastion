@@ -64,7 +64,7 @@ Every sector has its own terrain. In the Circuit (bottom right) there is no reac
 | `F` or ⛶ | Fullscreen. On phones it also works without browser support (iPhone) and fits board and towers side by side; phones play in landscape only, and a selected tower shows its upgrades in place of the tower list; "Add to Home Screen" launches the game without browser bars. |
 | Arrow keys + Enter | Keyboard control on the focused battlefield |
 
-Switching tabs pauses a solo game automatically. Sound is off by default: turn it on with the Sound button (top bar or home page), where four sliders set the volumes. The choice is remembered. The sounds play as music: every tower family is an instrument that plays its part while it fires, the enemies drive the drums, and a stronger defense makes the harmony richer.
+Switching tabs pauses a solo game automatically. Sound is off by default: turn it on with the Sound button (top bar or home page), where four sliders set the volumes. The choice is remembered. The music is a procedural synthwave soundtrack that follows the game, not your towers: the enemies drive the drum machine and the bass, danger to the reactor darkens the mood, later waves fill out the harmony, and a boss or a crowded field brings in the lead. Towers have their own quiet shot sounds, kept level however many fire.
 
 ## Multiplayer (2–4 players)
 

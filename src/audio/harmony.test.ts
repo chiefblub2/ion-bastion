@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { chordOf, climb, extentFor, rooted, hz, MUSIC, padChord, padVoicing, snap, type Extent } from "./harmony";
 
 describe("harmony", () => {
-  it("builds the bar's chord from the theme's scale, as wide as the defense allows", () => {
+  it("builds the bar's chord from the theme's scale, as wide as the mission's progress allows", () => {
     expect(chordOf(MUSIC.outpost, 0)).toEqual([33, 36, 40]); // A minor
     expect(chordOf(MUSIC.outpost, 0, 4)).toEqual([33, 36, 40, 43]); // + 7th
     expect(chordOf(MUSIC.outpost, 0, 5)).toEqual([33, 36, 40, 43, 47]); // + 9th
@@ -16,10 +16,11 @@ describe("harmony", () => {
     expect(padChord([33, 36, 40], true)).toEqual([33, 36, 46]);
     expect(padChord([33, 36, 40], false)).toEqual([33, 36, 40]);
   });
-  it("voices the bass on the root and the pad colour first", () => {
-    // Root, then the colour first: 3rd, 7th (or 5th), 9th, an octave up.
-    expect(padVoicing([33, 36, 40, 43, 47], 4)).toEqual([33, 48, 55, 59]);
-    expect(padVoicing([33, 36, 40], 4)).toEqual([33, 48, 52, 48]);
+  it("voices the sub on the root and four close voices two octaves up", () => {
+    // A 9th chord drops the root, a 7th chord plays all four tones, a triad adds its 5th an octave below.
+    expect(padVoicing([33, 36, 40, 43, 47])).toEqual([33, 60, 64, 67, 71]);
+    expect(padVoicing([33, 36, 40, 43])).toEqual([33, 57, 60, 64, 67]);
+    expect(padVoicing([33, 36, 40])).toEqual([33, 52, 57, 60, 64]);
   });
   it("snaps to a chord tone in the octave nearest the target", () => {
     expect(hz(69)).toBe(440);

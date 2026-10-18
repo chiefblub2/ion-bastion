@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { silent } from "./activity";
 import { chordOf, MUSIC, padChord } from "./harmony";
 import { schedule, Sequencer, stepsIn, type Parts } from "./sequencer";
 
 const clock = { origin: 0, bpm: 120 }; // 1/16 = 0.125 s
-const parts: Parts = { drums: ["kick"], arp: false, extent: 3, color: "drive", activity: silent(), escalate: false, threat: 0 };
+const parts: Parts = { drums: ["kick"], bass: null, arp: 0, lead: null, extent: 3, color: "drive", escalate: false, threat: 0 };
 describe("stepsIn", () => {
   it("lists the 1/16 steps inside the half-open window", () => {
     expect(stepsIn(clock, 0.1, 0.375)).toEqual([
@@ -17,19 +16,29 @@ describe("schedule", () => {
   it("changes the chord on the bar line and plays the groove's hits", () => {
     expect(schedule(clock, MUSIC.outpost, parts, 0, 0.25)).toEqual([
       { kind: "chord", notes: chordOf(MUSIC.outpost, 0), at: 0 },
-      { kind: "hit", drum: "kick", at: 0 },
+      { kind: "hit", drum: "kick", at: 0, step: 0 },
     ]);
   });
-  it("plays the arpeggio in 8ths through a widened, darkened chord", () => {
-    expect(schedule(clock, MUSIC.outpost, { ...parts, drums: [], arp: true, extent: 4, color: "dark" }, 0, 0.25)).toEqual([
+  it("plays the arpeggio through a widened, darkened chord", () => {
+    expect(schedule(clock, MUSIC.outpost, { ...parts, drums: [], arp: 3, extent: 4, color: "dark" }, 0, 0.25)).toEqual([
       { kind: "chord", notes: padChord(chordOf(MUSIC.outpost, 0, 4), true), at: 0 },
       { kind: "arp", voice: 3, at: 0 },
     ]);
   });
-  it("plays an active family's part", () => {
-    expect(schedule(clock, MUSIC.outpost, { ...parts, drums: [], activity: { ...silent(), rapid: 1 } }, 0, 0.25)).toEqual([
-      { kind: "chord", notes: chordOf(MUSIC.outpost, 0), at: 0 },
-      { kind: "part", family: "rapid", voice: 0, velocity: 1, at: 0 },
+  it("plays the bass line with its tension notes", () => {
+    const bass = schedule(clock, MUSIC.outpost, { ...parts, drums: [], bass: "octave", threat: 0.6 }, 0, 1).filter((b) => b.kind === "bass");
+    expect(bass.map((b) => b.kind === "bass" && [b.octave, b.offset])).toEqual([
+      [0, 0],
+      [1, 0],
+      [0, 0],
+      [1, 6],
+    ]);
+  });
+  it("plays the lead's motif on the phrase's 8ths", () => {
+    const lead = schedule(clock, MUSIC.outpost, { ...parts, drums: [], lead: "rise" }, 0, 1).filter((b) => b.kind === "lead");
+    expect(lead).toEqual([
+      { kind: "lead", voice: 2, eighths: 3, at: 0 },
+      { kind: "lead", voice: 1, eighths: 1, at: 0.75 },
     ]);
   });
 });
@@ -44,8 +53,8 @@ describe("Sequencer", () => {
     seq.tick();
     expect(windows).toHaveLength(2);
     [
-      [0, 0.1],
-      [0.1, 0.15],
+      [0, 0.2],
+      [0.2, 0.25],
     ].forEach(([from, to], i) => {
       expect(windows[i][0]).toBeCloseTo(from);
       expect(windows[i][1]).toBeCloseTo(to);
@@ -66,7 +75,7 @@ describe("Sequencer", () => {
     expect(pad({ escalate: true })).toEqual({ kind: "chord", notes: padChord(chordOf(MUSIC.outpost, 0), true), at: 0 });
   });
   it("plays the arpeggio in dotted 8ths against the 8th-note layers", () => {
-    const arp = schedule(clock, MUSIC.outpost, { ...parts, drums: [], arp: true }, 0, 0.5).filter((b) => b.kind === "arp");
+    const arp = schedule(clock, MUSIC.outpost, { ...parts, drums: [], arp: 3 }, 0, 0.5).filter((b) => b.kind === "arp");
     expect(arp.map((b) => b.at)).toEqual([0, 0.375]);
   });
   it("clears kick and stomp in the second half of an escalated phrase's last bar", () => {

@@ -12,11 +12,13 @@ export interface Note {
   gain: number;
   /** Audio time to start at. */
   at: number;
+  /** Stereo position, −1 left … 1 right; centre when absent. */
+  pan?: number;
 }
 export class Score {
   clock: Clock = { origin: 0, bpm: MUSIC.menu.bpm };
   music: ThemeMusic = MUSIC.menu;
-  /** Chord size from the defense (`extentFor`). */
+  /** Chord size from the mission's progress (`extentFor`). */
   extent: Extent = 3;
   private drone: DroneId | null = null;
   private kills = 0;

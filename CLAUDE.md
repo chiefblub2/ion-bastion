@@ -51,10 +51,11 @@ npx vite-node scripts/audit-enemy-art.ts [-- --write|--fix]
                                           # enemy PNG audit without a browser: coverage of content/registry/files, alpha, visible bounds and centre,
                                           # residue islands, edges; `--write` regenerates src/render/enemy-art-bounds.ts
 /gallery.html?sound                       # with `npm run dev` running: the sound board (`src/sound-board.ts`, dev-only): every effect, stinger and
-                                          # instrument, a live music test through the Conductor (tower mix, shots/s, threat, defense, clear time, heavy, boss)
+                                          # instrument, a live music test through the Conductor (phase, threat, danger, mission progress, heavy, boss) with a
+                                          # shot storm through the ShotMixer (towers × shots/s)
                                           # and a review sheet copied out as a markdown table
 npx vite-node scripts/render-music.ts [-- --theme <id>]
-                                          # with `npm run dev` running: 8-bar music clips per tower mix and fire rate, rendered offline
+                                          # with `npm run dev` running: 8-bar clips per phase and threat plus shot storms (3/15/40 towers, music off), rendered offline
                                           # (`/gallery.html?render`, `src/music-render.ts`) into visual-check/music/ with peak/RMS and an index.html
 npx vite-node scripts/enemy-art-review.ts [-- --batch 6 --tiles 0,2,4 | --ids a,b | --stress 400 [--canvas]]
                                           # with `npm run dev` running: screenshots of the dev-only art QA page `/gallery.html?art`
@@ -83,7 +84,7 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 | `src/render/` | Phaser scene (`scene.ts`, `Battlefield`, `LocalDriver`), draw registries (`towers.ts`, `enemies.ts`, `projectiles.ts`, `effects.ts`, `terrain.ts`), shared primitives (`shapes.ts`) and lighting helpers (`material.ts`), barrel geometry (`muzzles.ts`) and the projectile trail memory (`trails.ts`) |
 | `src/ui/` | DOM HUD (`interface.ts`, all markup is one template string), messages, tooltips, wave forecast, live units, multiplayer HUD (`players.ts`) |
 | `src/app/` | Input (`input.ts`), dialogs, multiplayer lobby/session (`coop.ts`), audio adapter (`audio.ts`), fullscreen, WebMCP tools (`webmcp.ts`) |
-| `src/audio/` | Sound, render side only: pure `cues` (events → cues), `mixer` (voice admission), `mood`/`drones` (ambience), `recipes` (ZzFX arrays), `settings`; music: `clock` (beat grid), `harmony` (`MUSIC` per theme, chords, voicing), `intensity` (threat, defense, clear time), `grooves`, `sequencer` (lookahead), `score` (places cues on the grid at chord tones), `families`, `activity`, `parts`, `instruments`, `stingers`, `conductor`, `wav`; Web Audio in `engine` and `ambience`; the vendored ZzFX generator in `zzfx.ts`; click/hover sounds in `ui-sounds.ts` |
+| `src/audio/` | Sound, render side only: pure `cues` (events → cues), `shots` (shot budget and levelling), `mixer` (voice admission), `mood`/`drones` (pad level and per-theme flavour), `recipes` (ZzFX arrays), `settings`; music: `clock` (beat grid), `harmony` (`MUSIC` per theme, chords, voicing), `intensity` (threat, danger, mission progress), `grooves` (drums, bass lines, motifs), `sequencer` (lookahead), `score` (places cues on the grid at chord tones), `families`, `instruments`, `stingers`, `conductor`, `wav`; Web Audio in `engine` and `ambience`; the vendored ZzFX generator in `zzfx.ts`; click/hover sounds in `ui-sounds.ts` |
 | `src/net/` | `protocol.ts` (messages, `MAX_PLAYERS`, `PLAYER_COLORS`), `client.ts` (`RelayClient`, `relayUrl`), `lockstep.ts` (`LockstepDriver`, `coopSim`) |
 | `server/` | `room.ts` (socket-free lockstep room, tested) and `relay.ts` (WebSocket server) |
 | `src/main.ts` | Wiring: state → view → UI → battlefield → input |
@@ -99,10 +100,40 @@ To see a change in the real app, run `npm run dev` (and `npm run server` for mul
 
 ## Sound
 
-- Render side only: `app/audio.ts` reads the drained events once per frame (`Audio.frame`) and never changes state. `audio/cues.ts` turns the few events that are effects (heavy blasts, kills, flow and alerts) into cues; shots get a quiet per-family transient (`SHOT_CUES`) and feed the families' activity (see Music below). A new `GameEvent` type gets a cue there or stays silent on purpose.
-- Recipes are ZzFX parameter arrays (`audio/recipes.ts`), tuned in the ZzFX designer and on `/gallery.html?sound`. `zzfx.ts` is a port of ZzFX's `buildSamples` (the npm package creates an `AudioContext` on import); randomness is applied as playback-rate jitter.
-- A new `MapTheme` needs a drone in `audio/drones.ts` (`tsc` enforces it).
-- Music: shots never play notes; they raise their tower family's activity (`families.ts`, `activity.ts`), which unlocks steps of the family's composed part (`parts.ts`) played on synthesized instruments (`instruments.ts`; reverb, compressor and limiter in `engine.ts`). Enemies set the drums (threat), defense the harmony and arpeggio, the clear time the mood (`intensity.ts`, read-only, every 0.5 s); musical flow cues are instrument stingers (`stingers.ts`), the remaining effects ZzFX. `Conductor` (`conductor.ts`) ties it together and is driven by the game adapter, the sound board and the offline renderer alike; `sequencer.ts` schedules 100 ms ahead on the audio clock ("A Tale of Two Clocks"). Enemies play an industrial kit (`thud`, `clank`, `tick`, `slam`, `grit`, `metal` in `instruments.ts`, saturation via `driveCurve`) whose bass turns dissonant with the threat (`tensionOffset`); above threat 0.85 or with a boss the music escalates (phrase marks, 16th ticks, octave-doubled lead, energy gain). Towers and enemies play into their own sub-mixes (`engine.balance`: threat over defense pulls the towers down; `energy` lifts only the enemies). Shots get a quiet per-family transient (`SHOT_CUES`), and towers pulse with their family's notes through the battlefield hook `pulses` (`Conductor.ages`). A new attack kind needs a family in `families.ts`, a new theme an entry in `MUSIC` (`tsc` enforces both). Only sounds wait for the beat; the simulation never does.
+- Render side only: `app/audio.ts` reads the drained events once per frame (`Audio.frame`) and never changes state. `audio/cues.ts` turns the few events that are effects (heavy blasts, kills, tower actions, flow and alerts) into cues. Shots go to the shot mixer instead (see below). A new `GameEvent` type gets a cue there or stays silent on purpose.
+- Recipes are ZzFX parameter arrays (`audio/recipes.ts`), tuned in the ZzFX designer and on `/gallery.html?sound`. `zzfx.ts` is a port of ZzFX's `buildSamples` (the npm package creates an `AudioContext` on import); randomness is applied as playback-rate jitter. Shot recipes stay tonal or low-passed: a positive ZzFX `filter` (high-pass) on noise is hiss, and `recipes.test.ts` rejects it.
+- **Towers never feed the music.** They have build, sell and upgrade effects and one quiet shot transient per family (`families.ts`). `audio/shots.ts` (`ShotMixer`, pure) keeps a busy field pleasant:
+  - a per-family voice budget per real second (`BUDGET`);
+  - a frame's shots of one family merge into one voice;
+  - each voice's gain falls as 1/√(the family's voice rate), so the summed power stays about level from 3 to 40 towers (`shots.test.ts`);
+  - pan comes from the tower's column, and each tower type keeps a stable pitch offset (`rateOf`).
+
+  Shots play on their own sub-bus in `engine.ts`, with a high shelf that closes with the shot density (`shotDensity`) and a gentle compressor.
+- **Music** is a synthwave soundtrack driven only by game state. `Conductor` (`conductor.ts`) takes a `Measure` from `intensity.ts` (read-only, every 0.5 s, never reads towers):
+  - **phase:** menu, build, wave, paused, over;
+  - **threat:** enemy weight × progress;
+  - **danger:** front line² and reactor damage, or the crowd against the limit on circle missions;
+  - **arc:** waves started / waves.
+
+  How these drive the music:
+  - Phase sets the arrangement. Menu: pad and a slow arpeggio. Build: pad, held bass and a soft arpeggio. Wave: the drum machine and bass build with the threat. Paused: pad only.
+  - Threat, with a floor from the arc, sets the drums (`layersFor`: kick, gated snare, offbeat hats) and the bass line (`bassFor`: held whole notes, then 8ths, then the theme's `BassStyle`, then 16ths). The bass turns dissonant with the threat (`tensionOffset`).
+  - At threat 0.85 or with a boss the music escalates: phrase marks (crash, riser, tom fill), 16th hats, and the theme's lead motif (`MOTIFS`).
+  - Danger sets the mood colour: arpeggio direction and the pad's tension note.
+  - Arc sets the chord size (`extentFor`) and opens the pad's filter.
+
+  Supporting pieces:
+  - `sequencer.ts` schedules 200 ms ahead on the audio clock ("A Tale of Two Clocks").
+  - The engine drops a layer note more than 30 ms late instead of flamming. Stingers are never dropped.
+  - `stingers.ts` holds the game's turning points (wave start and end, won, lost, boss), never tower actions.
+  - Only sounds wait for the beat; the simulation never does.
+- Sound palette (`instruments.ts`): one shared palette for every theme.
+  - **Pad** (`ambience.ts`): two detuned saws per voice, a sub sine, a stereo chorus, and a filter re-strike on each chord change. No noise source.
+  - **Instruments:** `synthBass`, `arp`, `lead`, FM `bell`, `swell`, and a Linn-style kit: `kick`, gated `snare`, `hat`, `tom`, `crash`, `riser`.
+  - **Engine buses:** the pad and bass layers pump with every kick (`pump`, the sidechain). Arpeggio and lead feed a dotted-8th ping-pong delay (`tempo`). One darkening convolution reverb is shared.
+  - **Voice handling:** panners are cached per destination and position, voices free their nodes `onended`, and `MUSIC_VOICES` caps all music notes.
+- Themes differ by key, tempo, mode, progression and groove (`MUSIC` in `harmony.ts`) and by a `PadFlavor` in `audio/drones.ts`: cutoff, spread, chorus, breath, sub, bass style, lead motif. A new `MapTheme` needs both (`tsc` enforces it).
+- Towers pulse on the beat through the battlefield hook `pulses`. `Conductor.ages` gives the time since the last kick (or quarter note) for every family, in a wave only.
 - No `AudioContext` before a gesture: a saved "on" starts on the first pointer or key press (`armAutoStart`); a hidden tab suspends the context.
 
 ## Rendering

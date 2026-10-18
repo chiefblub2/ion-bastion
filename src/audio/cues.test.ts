@@ -11,9 +11,9 @@ const at = { x: 0, y: 0 };
 const kill: GameEvent = { type: "kill", at, color: 0, reward: 1 };
 
 describe("cuesFor", () => {
-  it("answers a shot with its family's quiet transient and voices only heavy impacts", () => {
+  it("leaves shots to the shot mixer and voices only heavy impacts", () => {
     const shot: GameEvent = { type: "shot", tower: direct, from: at, to: at, color: 0 };
-    expect(cuesFor([shot, shot], DEFAULT_CONTENT, "game")).toEqual([{ id: "shotRapid", voice: 0, gain: burstGain(2) }]);
+    expect(cuesFor([shot, shot], DEFAULT_CONTENT, "game")).toEqual([]);
     expect(cuesFor([{ type: "impact", tower: splash, at, color: 0 }], DEFAULT_CONTENT, "game")).toEqual([{ id: "blast", voice: 0, gain: 1 }]);
     expect(cuesFor([{ type: "impact", tower: direct, at, color: 0 }], DEFAULT_CONTENT, "game")).toEqual([]);
   });
@@ -22,10 +22,10 @@ describe("cuesFor", () => {
     expect(burstGain(1)).toBe(1);
     expect(burstGain(50)).toBe(1.5);
   });
-  it("gives building and upgrading their own chord tones", () => {
+  it("answers building and upgrading with their own effects", () => {
     const build: GameEvent = { type: "build", at, tower: direct, color: 0 },
       upgrade: GameEvent = { type: "upgrade", at, tower: direct, color: 0 };
-    expect(cuesFor([build, upgrade], DEFAULT_CONTENT, "game").map((c) => c.voice)).toEqual([2, 3]);
+    expect(cuesFor([build, upgrade], DEFAULT_CONTENT, "game").map((c) => c.id)).toEqual(["build", "upgrade"]);
   });
   it("keeps only flow cues while the menu is open", () => {
     const events: GameEvent[] = [kill, { type: "leak", at, amount: 1 }, { type: "end", result: "lost" }];

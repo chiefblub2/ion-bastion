@@ -1,41 +1,56 @@
 import type { DroneId } from "./mood";
-// The ambient drone per map theme: a few detuned oscillators through a breathing low-pass, plus filtered noise.
+// The synthwave bed's flavour per map theme. Every theme shares one sound (detuned saw pad with chorus, a sub, the
+// synth bass); key, tempo and chords come from `MUSIC`, these values only shade it.
 
-export interface DroneSpec {
-  /** Hz. */
-  root: number;
-  /** Semitones above the root. */
-  intervals: readonly number[];
-  wave: OscillatorType;
-  /** Low-pass centre in Hz; an LFO moves it by ±35 %. */
+/** The bass line while a wave runs (`BASS` in grooves.ts). */
+export type BassStyle = "octave" | "pulse" | "offbeat";
+/** The lead's 4-bar motif when a fight escalates (`MOTIFS` in grooves.ts). */
+export type LeadMotif = "rise" | "call" | "fall" | "pulse";
+export interface PadFlavor {
+  /** Pad low-pass in Hz. */
   cutoff: number;
-  /** Gain of the band-passed noise layer. */
-  noise: number;
+  /** Cents between the two saws of a pad voice. */
+  spread: number;
+  /** Chorus depth, 0–1. */
+  chorus: number;
+  /** Share of the cutoff the slow filter LFO moves, at most 0.1. */
+  breath: number;
   /** LFO rate in Hz. */
   lfo: number;
-  /** Cents between the two oscillators of an interval. */
-  detune: number;
+  /** Level of the sub sine on the root, 0–1. */
+  sub: number;
+  bass: BassStyle;
+  lead: LeadMotif;
 }
-const d = (root: number, intervals: number[], wave: OscillatorType, cutoff: number, noise: number, lfo: number, detune = 6): DroneSpec => ({ root, intervals, wave, cutoff, noise, lfo, detune });
+const p = (cutoff: number, spread: number, chorus: number, breath: number, lfo: number, sub: number, bass: BassStyle, lead: LeadMotif): PadFlavor => ({
+  cutoff,
+  spread,
+  chorus,
+  breath,
+  lfo,
+  sub,
+  bass,
+  lead,
+});
 
-export const DRONES: Record<DroneId, DroneSpec> = {
-  menu: d(55, [0, 7, 12, 19], "sine", 900, 0.03, 0.04),
-  outpost: d(55, [0, 7, 12, 15], "triangle", 600, 0.05, 0.05),
-  lock: d(58.27, [0, 7, 10, 15], "sawtooth", 500, 0.04, 0.07),
-  shard: d(61.74, [0, 5, 12, 19], "sine", 1400, 0.03, 0.09),
-  ember: d(49, [0, 7, 12, 15], "sawtooth", 450, 0.12, 0.06),
-  core: d(55, [0, 12, 15, 19], "triangle", 700, 0.05, 0.1),
-  frost: d(65.41, [0, 7, 14, 19], "sine", 1800, 0.08, 0.04),
-  toxic: d(51.91, [0, 6, 12, 15], "sawtooth", 520, 0.06, 0.11),
-  orbit: d(73.42, [0, 7, 12, 16], "sine", 1200, 0.02, 0.03),
-  ruin: d(46.25, [0, 3, 7, 12], "triangle", 400, 0.07, 0.05),
-  rift: d(41.2, [0, 1, 7, 12], "sawtooth", 380, 0.05, 0.13),
-  dune: d(55, [0, 5, 7, 12], "triangle", 650, 0.1, 0.04),
-  abyss: d(36.71, [0, 7, 12, 15], "sine", 300, 0.06, 0.03),
-  storm: d(49, [0, 7, 10, 14], "sawtooth", 700, 0.15, 0.12),
-  jungle: d(61.74, [0, 4, 7, 11], "triangle", 900, 0.09, 0.06),
-  volcano: d(43.65, [0, 7, 12, 15], "sawtooth", 420, 0.14, 0.08),
-  geode: d(69.3, [0, 7, 12, 17], "sine", 1600, 0.03, 0.07),
-  gear: d(58.27, [0, 7, 12, 15], "square", 500, 0.05, 0.15),
-  tide: d(51.91, [0, 5, 9, 12], "sine", 800, 0.12, 0.05),
+export const DRONES: Record<DroneId, PadFlavor> = {
+  menu: p(1500, 10, 0.8, 0.08, 0.05, 0.5, "pulse", "rise"),
+  outpost: p(1700, 12, 0.6, 0.06, 0.07, 0.6, "octave", "rise"),
+  lock: p(1500, 10, 0.5, 0.05, 0.09, 0.6, "octave", "call"),
+  shard: p(2400, 14, 0.7, 0.07, 0.11, 0.5, "offbeat", "pulse"),
+  ember: p(1300, 12, 0.5, 0.06, 0.08, 0.7, "octave", "fall"),
+  core: p(1800, 10, 0.6, 0.06, 0.1, 0.6, "pulse", "call"),
+  frost: p(2500, 16, 0.9, 0.08, 0.05, 0.4, "offbeat", "rise"),
+  toxic: p(1400, 14, 0.6, 0.08, 0.12, 0.7, "pulse", "fall"),
+  orbit: p(2200, 12, 0.9, 0.07, 0.04, 0.4, "offbeat", "rise"),
+  ruin: p(1300, 10, 0.5, 0.05, 0.06, 0.7, "octave", "fall"),
+  rift: p(1200, 16, 0.7, 0.09, 0.13, 0.8, "pulse", "call"),
+  dune: p(1700, 10, 0.5, 0.05, 0.05, 0.6, "octave", "rise"),
+  abyss: p(1200, 12, 0.8, 0.07, 0.04, 0.8, "pulse", "fall"),
+  storm: p(1800, 14, 0.6, 0.08, 0.12, 0.6, "octave", "pulse"),
+  jungle: p(1900, 12, 0.6, 0.06, 0.07, 0.5, "offbeat", "call"),
+  volcano: p(1300, 12, 0.5, 0.07, 0.09, 0.8, "octave", "fall"),
+  geode: p(2400, 14, 0.8, 0.07, 0.08, 0.4, "offbeat", "pulse"),
+  gear: p(1600, 8, 0.4, 0.05, 0.1, 0.6, "pulse", "call"),
+  tide: p(1800, 12, 0.9, 0.08, 0.05, 0.5, "offbeat", "rise"),
 };

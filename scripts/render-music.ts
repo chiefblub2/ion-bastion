@@ -10,14 +10,19 @@ const BASE = "http://localhost:4173",
   OUT = "visual-check/music",
   theme = (process.argv.includes("--theme") ? process.argv[process.argv.indexOf("--theme") + 1] : "outpost") as Scenario["theme"],
   ALL: Family[] = ["rapid", "heavy", "electric", "control", "fire", "traps"],
-  base = { theme, threat: 0.6, defense: 0.5, clear: 6, heavies: 0, bars: 8 };
+  base: Scenario = { theme, phase: "wave", threat: 0.6, danger: 0.3, arc: 0.4, heavies: 0, bosses: 0, towers: 0, families: ALL, rate: 1.5, music: true, bars: 8 };
 const SCENES: [string, Scenario][] = [
-  ...[5, 10, 20, 40, 80].map((rate): [string, Scenario] => [`rapid-${rate}`, { ...base, families: ["rapid"], rate }]),
-  ...[5, 10, 20, 40, 80].map((rate): [string, Scenario] => [`mixed-${rate}`, { ...base, families: ALL, rate }]),
-  ["heavy-20", { ...base, families: ["heavy"], rate: 20 }],
-  ["calm", { ...base, families: ["rapid", "control"], rate: 6, threat: 0.1, defense: 0.2, clear: 2 }],
-  ["enemies", { ...base, families: [], rate: 0, threat: 0.95, heavies: 2 }],
-  ["climax", { ...base, families: ALL, rate: 40, threat: 0.95, defense: 0.9, clear: 12, heavies: 2 }],
+  ["menu", { ...base, phase: "menu", threat: 0, danger: 0, arc: 0 }],
+  ["build", { ...base, phase: "build", threat: 0, danger: 0.1 }],
+  ["wave-low", { ...base, threat: 0.3, danger: 0.1, arc: 0.1 }],
+  ["wave-mid", { ...base }],
+  ["wave-danger", { ...base, danger: 0.8 }],
+  ["escalated", { ...base, threat: 0.95, heavies: 2, danger: 0.6, arc: 0.8 }],
+  ["boss", { ...base, threat: 0.5, heavies: 1, bosses: 1 }],
+  ["wave-12-towers", { ...base, towers: 12 }],
+  // The shot storm alone (music off): the level should barely move from 3 to 40 towers.
+  ...[3, 15, 40].map((towers): [string, Scenario] => [`shots-${towers}`, { ...base, towers, music: false }]),
+  ["shots-rapid-40", { ...base, towers: 40, families: ["rapid"], music: false }],
 ];
 
 mkdirSync(OUT, { recursive: true });

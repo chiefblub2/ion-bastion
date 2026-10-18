@@ -1,24 +1,27 @@
-import { Conductor } from "../audio/conductor";
+import { Conductor, type Phase } from "../audio/conductor";
 import { cuesFor, newlyEliminated, ReactorWatch } from "../audio/cues";
 import { AudioEngine } from "../audio/engine";
 import { bossSpawned, intensityOf } from "../audio/intensity";
 import { moodOf } from "../audio/mood";
 import type { CueId } from "../audio/recipes";
+import { ShotMixer } from "../audio/shots";
 import { Sequencer } from "../audio/sequencer";
 import { loadSettings, saveSettings, type SoundSettings } from "../audio/settings";
 import { unlockOnGesture } from "../audio/unlock";
 import type { Game } from "../core/game";
 import type { Match } from "../core/match";
 import type { GameEvent } from "../core/types";
-// Render-side sound: reads drained events and state once per frame, never changes them. The conductor turns them
-// into music; the sequencer schedules it ahead on the audio clock.
+// Render-side sound: reads drained events and state once per frame, never changes them. The conductor turns the
+// game's state (never the towers) into music, the sequencer schedules it ahead on the audio clock, and the shot mixer
+// keeps the towers' shots level however many fire.
 
-/** Seconds of audio time between two measurements of threat, defense and clear time. */
+/** Seconds of audio time between two measurements of threat, danger and the mission's progress. */
 const MEASURE = 0.5;
 interface Sound {
   ctx: AudioContext;
   engine: AudioEngine;
   conductor: Conductor;
+  shots: ShotMixer;
 }
 export class Audio {
   settings: SoundSettings = loadSettings();
@@ -39,7 +42,7 @@ export class Audio {
       const ctx = new AudioContext(),
         engine = new AudioEngine(ctx),
         conductor = new Conductor(engine);
-      this.sound = { ctx, engine, conductor };
+      this.sound = { ctx, engine, conductor, shots: new ShotMixer() };
       engine.volumes(this.settings);
       new Sequencer(() => ctx.currentTime, (from, to) => this.live()?.conductor.window(from, to)).start();
       document.addEventListener("visibilitychange", () => {
@@ -67,7 +70,7 @@ export class Audio {
     this.sound?.engine.volumes(this.settings);
     if (!this.on) await this.sound?.ctx.suspend();
   }
-  /** Seconds since each tower family's latest music note began; empty while sound is off. */
+  /** Seconds since the music's latest beat began, per tower family (the same for all); empty while sound is off or outside a wave. */
   pulses() {
     const s = this.live();
     return s ? s.conductor.ages(s.ctx.currentTime) : {};
@@ -85,10 +88,13 @@ export class Audio {
       mood = moodOf({ view, theme: game.map.theme ?? "outpost", status: state.status, paused: state.paused, enemies: state.enemies.length });
     s.engine.ambience.set(mood);
     s.conductor.theme(mood.drone, now);
-    s.conductor.shots(events, game.content, now);
     if (now >= this.measured + MEASURE) {
       this.measured = now;
-      s.conductor.measure({ ...intensityOf(state, game.content, game.map.path.length), drums: state.status === "wave", playing: view === "game" && !state.paused });
+      s.conductor.measure({ ...intensityOf(state, game.content, game.mission), phase: phaseOf(view, state) });
+    }
+    if (view === "game") {
+      for (const v of s.shots.frame(events, game.content, game.map.columns, now)) s.engine.play({ id: v.id, rate: v.rate, gain: v.gain, at: now, pan: v.pan });
+      s.engine.shotDensity(s.shots.fired);
     }
     s.conductor.play(cuesFor(events, game.content, view), now);
     if (bossSpawned(events, state, game.content)) this.cue("boss");
@@ -96,4 +102,10 @@ export class Audio {
     if (match && newlyEliminated(this.eliminated, match.eliminatedAt, match.fields.indexOf(game)).length) this.cue("eliminated");
     this.eliminated = match ? [...match.eliminatedAt] : [];
   }
+}
+function phaseOf(view: "menu" | "game", state: Game["state"]): Phase {
+  if (view === "menu") return "menu";
+  if (state.status === "won" || state.status === "lost") return "over";
+  if (state.paused) return "paused";
+  return state.status === "wave" ? "wave" : "build";
 }

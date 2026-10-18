@@ -15,17 +15,18 @@ describe("cue recipes", () => {
         expect(n, id).toBeLessThan(3 * 8000);
       }
   });
-  it("keeps interface feedback instant and thins kills and blasts to about one per beat", () => {
-    for (const id of ["reject", "click", "hover"] as const) expect(TIMING[id].grid, id).toBe(0);
+  it("keeps interface feedback and tower actions instant and thins kills and blasts to about one per beat", () => {
+    for (const id of ["reject", "click", "hover", "build", "sell", "upgrade"] as const) expect(TIMING[id].grid, id).toBe(0);
     expect(RECIPES.kill.gap).toBeGreaterThanOrEqual(0.5);
     expect(RECIPES.blast.gap).toBeGreaterThanOrEqual(0.5);
   });
-  it("keeps per-shot transients instant, quiet and sparse", () => {
+  it("keeps per-shot transients instant, quiet, lowest in priority and free of high-passed hiss", () => {
     for (const id of SHOT_CUES) {
       expect(TIMING[id].grid, id).toBe(0);
-      expect(RECIPES[id].gap, id).toBeGreaterThanOrEqual(0.2);
-      expect(RECIPES[id].cap, id).toBe(1);
+      expect(RECIPES[id].priority, id).toBe(0);
       expect(RECIPES[id].params[0], id).toBeLessThanOrEqual(0.045);
+      // A positive ZzFX filter is a high-pass: on noise it is pure hiss.
+      expect(RECIPES[id].params[20] ?? 0, id).toBeLessThanOrEqual(0);
     }
   });
 });

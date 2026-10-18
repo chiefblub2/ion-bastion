@@ -15,15 +15,13 @@ describe("moodOf", () => {
   });
 });
 describe("DRONES", () => {
-  it("keep every drone low, filtered and quiet", () => {
+  it("keep every pad warm, gently moving and inside the synthwave range", () => {
     for (const [id, d] of Object.entries(DRONES)) {
-      expect(d.root, id).toBeGreaterThan(30);
-      expect(d.root, id).toBeLessThan(120);
-      expect(d.cutoff, id).toBeGreaterThan(d.root * 2);
-      expect(d.noise, id).toBeLessThanOrEqual(0.2);
+      expect(d.cutoff, id).toBeGreaterThanOrEqual(1000);
+      expect(d.cutoff, id).toBeLessThanOrEqual(3000);
+      expect(d.breath, id).toBeLessThanOrEqual(0.1);
+      expect(d.spread, id).toBeLessThanOrEqual(20);
+      for (const v of [d.chorus, d.sub]) expect(v, id).toBeLessThanOrEqual(1);
     }
-  });
-  it("gives every drone at least four voices, so the pad can keep the third", () => {
-    for (const [id, d] of Object.entries(DRONES)) expect(d.intervals.length, id).toBeGreaterThanOrEqual(4);
   });
 });

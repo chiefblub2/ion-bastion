@@ -1,5 +1,5 @@
-import type { AttackSpec, ContentPack, GameEvent, TowerDefinition } from "../core/types";
-// Tower families: each plays one instrument part of the music; shots raise the family's activity instead of playing notes.
+import type { AttackSpec, TowerDefinition } from "../core/types";
+// Tower families: each has its own quiet shot transient (`shots.ts`). Towers play no part in the music.
 
 export const FAMILIES = ["rapid", "heavy", "electric", "control", "fire", "traps"] as const;
 export type Family = (typeof FAMILIES)[number];
@@ -14,13 +14,3 @@ const BY_KIND: Record<AttackSpec["kind"], Family | null> = {
   aura: null, income: null, detect: null, bounty: null, repair: null, mark: null,
 };
 export const familyOf = (d: TowerDefinition): Family | null => (d.placement === "path" ? "traps" : BY_KIND[d.attack.kind]);
-/** Shots per family in a batch of drained events. */
-export function shotsByFamily(events: readonly GameEvent[], content: ContentPack) {
-  const out: Partial<Record<Family, number>> = {};
-  for (const e of events) {
-    if (e.type !== "shot") continue;
-    const f = familyOf(content.towers[e.tower]);
-    if (f) out[f] = (out[f] ?? 0) + 1;
-  }
-  return out;
-}
