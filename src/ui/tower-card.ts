@@ -9,9 +9,12 @@ import { escape, number } from "./format";
 import { PRIORITY_LABELS } from "./messages";
 // The action card beside a selected tower: upgrade (or the path choice), target priority and sell.
 // Pure HTML from the state; `tower-card-view.ts` shows and places it, `app/input.ts` handles its buttons.
-/** The tower the card is about: the selected one while it exists and the mission still runs. */
-export function cardTower(state: GameState, selected: number | null): Tower | undefined {
-  if (selected === null || state.status === "won" || state.status === "lost") return undefined;
+/**
+ * The tower the card is about: the selected one while it exists and the mission still runs. `over`: a versus
+ * match has a result while this field may still be running; the result overlay then owns the board.
+ */
+export function cardTower(state: GameState, selected: number | null, over = false): Tower | undefined {
+  if (over || selected === null || state.status === "won" || state.status === "lost") return undefined;
   return state.towers.find((t) => t.id === selected);
 }
 export interface CardChoice {
@@ -70,7 +73,8 @@ export function towerCardHtml(tower: Tower, towers: readonly Tower[], options: C
         .join("")
     : '<button class="card-upgrade" disabled>Max level</button>';
   const active = tower.priority ?? "first";
-  const target = isSupport(definition.attack)
+  // Support towers and traps have no target priority to choose.
+  const target = isSupport(definition.attack) || definition.placement === "path"
     ? ""
     : options.slim
       ? `<button class="card-target" data-priority-cycle${locked}>Target: ${PRIORITY_LABELS[active]} ⟳</button>`

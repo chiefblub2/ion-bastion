@@ -25,6 +25,9 @@ describe("tower card content", () => {
     expect(towerCardHtml(tower("pulse", [...LEVELS, "ricochet-1", "ricochet-2", "ricochet-3"]), [], options())).toContain("Max level");
     expect(towerCardHtml(tower("refinery"), [], options())).not.toContain("data-priority");
   });
+  it("offers no targeting on a trap", () => {
+    expect(towerCardHtml(tower("spikes"), [], options())).not.toContain("data-priority");
+  });
   it("slim mode cycles the target with one button", () => {
     const html = towerCardHtml(tower("pulse"), [], options({ slim: true }));
     expect(html).toContain("data-priority-cycle");
@@ -43,5 +46,9 @@ describe("card subject", () => {
     expect(cardTower(state, 99)).toBeUndefined();
     expect(cardTower({ ...state, status: "won" }, 3)).toBeUndefined();
     expect(cardTower(state, null)).toBeUndefined();
+  });
+  it("hides once a versus match has a result, even while the field still runs", () => {
+    const state = { ...initialState(MISSIONS[0]), towers: [{ ...tower("pulse"), id: 3 }] };
+    expect(cardTower(state, 3, true)).toBeUndefined();
   });
 });

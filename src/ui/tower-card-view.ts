@@ -30,7 +30,7 @@ export class TowerCard {
   }
   refresh() {
     const s = this.game.state,
-      t = cardTower(s, this.view.selected),
+      t = cardTower(s, this.view.selected, this.over()),
       inGame = document.documentElement.dataset.view === "game";
     this.el.hidden = !t || !inGame;
     if (!t || !inGame) {
@@ -50,9 +50,13 @@ export class TowerCard {
     }
     this.place();
   }
+  /** A versus match with a result: its overlay covers the board. */
+  private over() {
+    return !!this.session()?.match?.result;
+  }
   /** Beside the tower where it covers the least path, else above or below it, else docked to a board edge. */
   private place() {
-    const t = cardTower(this.game.state, this.view.selected);
+    const t = cardTower(this.game.state, this.view.selected, this.over());
     if (!t || this.el.hidden) return;
     const { map } = this.game;
     this.el.classList.remove("dock-top", "dock-bottom");
