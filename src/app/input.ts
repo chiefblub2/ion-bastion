@@ -271,6 +271,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
   /** The home page's primary button: begin on the first campaign mission, return to the game in memory, or replay the remembered mission from wave 1. */
   function runPrimary() {
     if (primary.kind === "resume") return screens.show(GAME);
+    // Reachable after a won or lost playtest: the home button then offers "restart" with the playtest mission.
     if (primary.kind === "restart" && isPlaytest(primary.mission)) {
       execute({ type: "restart" });
       return screens.show(GAME);

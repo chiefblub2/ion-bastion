@@ -11,6 +11,7 @@ import type {
   MissionDefinition,
   TowerId,
   WaveDefinition,
+  WaveGroup,
 } from "../core/types";
 import { validateMission } from "../core/validation";
 
@@ -135,4 +136,59 @@ export function compileDraft(d: EditorDraft, content: ContentPack = DEFAULT_CONT
   } catch (e) {
     return { ok: false, errors: [e instanceof Error ? e.message : String(e)] };
   }
+}
+
+/** One change to a draft's wave list; indices out of range leave the list as it is. */
+export type WaveEdit =
+  | { kind: "add-wave" }
+  | { kind: "remove-wave"; wave: number }
+  | { kind: "duplicate-wave"; wave: number }
+  | { kind: "move-wave"; wave: number; by: -1 | 1 }
+  | { kind: "add-group"; wave: number }
+  | { kind: "remove-group"; wave: number; group: number }
+  | { kind: "set-wave"; wave: number; field: "bonus" | "hpMultiplier"; value: number | undefined }
+  | { kind: "set-group"; wave: number; group: number; patch: Partial<WaveGroup> };
+
+const FALLBACK_GROUP: WaveGroup = { type: "drone", count: 6, interval: 1, delay: 0 };
+
+/** Returns a new wave list; the input is never changed. New waves and groups copy the last one before them. */
+export function editWaves(waves: readonly WaveDefinition[], e: WaveEdit): WaveDefinition[] {
+  const list = copyWaves(waves);
+  if (e.kind === "add-wave") {
+    const last = list[list.length - 1];
+    return [...list, last ? copyWaves([last])[0] : { groups: [{ ...FALLBACK_GROUP }], bonus: 30 }];
+  }
+  const w = list[e.wave];
+  if (!w) return list;
+  switch (e.kind) {
+    case "remove-wave":
+      list.splice(e.wave, 1);
+      break;
+    case "duplicate-wave":
+      list.splice(e.wave + 1, 0, copyWaves([w])[0]);
+      break;
+    case "move-wave": {
+      const to = e.wave + e.by;
+      if (to < 0 || to >= list.length) break;
+      [list[e.wave], list[to]] = [list[to], list[e.wave]];
+      break;
+    }
+    case "add-group":
+      list[e.wave] = { ...w, groups: [...w.groups, { ...(w.groups[w.groups.length - 1] ?? FALLBACK_GROUP) }] };
+      break;
+    case "remove-group":
+      list[e.wave] = { ...w, groups: w.groups.filter((_, i) => i !== e.group) };
+      break;
+    case "set-wave": {
+      const { hpMultiplier: _, ...rest } = w;
+      if (e.field === "bonus") list[e.wave] = { ...w, bonus: e.value ?? w.bonus };
+      else list[e.wave] = e.value === undefined ? rest : { ...w, hpMultiplier: e.value };
+      break;
+    }
+    case "set-group":
+      if (!w.groups[e.group]) break;
+      list[e.wave] = { ...w, groups: w.groups.map((g, i) => (i === e.group ? { ...g, ...e.patch } : g)) };
+      break;
+  }
+  return list;
 }

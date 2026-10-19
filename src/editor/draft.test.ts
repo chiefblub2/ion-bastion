@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import { parseMap } from "../content/maps";
 import { MISSIONS, playableMissions } from "../content/missions";
-import { blankDraft, compileDraft, draftFromMission, paint, resize, sketchOf } from "./draft";
+import { blankDraft, compileDraft, draftFromMission, editWaves, paint, resize, sketchOf } from "./draft";
 
 const ok = (c: ReturnType<typeof compileDraft>) => {
   if (!c.ok) throw new Error(c.errors.join("; "));
@@ -75,5 +75,23 @@ describe("editor draft", () => {
     const stealthy = { ...d, availableTowers: ["pulse" as const], waves: [{ bonus: 10, groups: [{ type: "phantom", count: 1, interval: 1, delay: 0 }] }] };
     const c = ok(compileDraft(stealthy as never));
     expect(c.warnings.some((w) => /detect/i.test(w))).toBe(true);
+  });
+
+  it("editWaves copies, moves and clears without touching the input", () => {
+    const waves = blankDraft().waves.slice(0, 2);
+    const before = JSON.stringify(waves);
+    const dup = editWaves(waves, { kind: "duplicate-wave", wave: 0 });
+    expect(dup).toHaveLength(3);
+    expect(dup[1]).toEqual(waves[0]);
+    expect(dup[1].groups[0]).not.toBe(waves[0].groups[0]);
+    expect(editWaves(waves, { kind: "move-wave", wave: 1, by: -1 })[0]).toEqual(waves[1]);
+    expect(editWaves(waves, { kind: "move-wave", wave: 1, by: 1 })).toEqual(waves);
+    const hp = editWaves(waves, { kind: "set-wave", wave: 0, field: "hpMultiplier", value: 2 });
+    expect(editWaves(hp, { kind: "set-wave", wave: 0, field: "hpMultiplier", value: undefined })[0]).not.toHaveProperty("hpMultiplier");
+    const grown = editWaves(waves, { kind: "add-group", wave: 1 });
+    expect(grown[1].groups.at(-1)).toEqual(waves[1].groups.at(-1));
+    expect(editWaves(grown, { kind: "set-group", wave: 1, group: 0, patch: { count: 3 } })[1].groups[0].count).toBe(3);
+    expect(editWaves([], { kind: "add-wave" })[0].groups).toHaveLength(1);
+    expect(JSON.stringify(waves)).toBe(before);
   });
 });
