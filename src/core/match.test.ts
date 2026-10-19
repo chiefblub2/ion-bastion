@@ -5,6 +5,7 @@ import { READY_COUNTDOWN, sendCost, type ModeId } from "./modes";
 import { makeEnemy } from "./test-helpers";
 import { applyDamage } from "../systems/damage";
 import { MISSIONS } from "../content/missions";
+import { asPlaytest, blankDraft, compileDraft } from "../editor/draft";
 import type { MissionDefinition } from "./types";
 function match(mode: ModeId, players = 2, mission: MissionDefinition = MISSIONS[0]) {
   const m = new Match(mode, players, 0, new Game());
@@ -24,6 +25,12 @@ function readyAll(m: Match) {
   m.tick();
 }
 describe("versus match", () => {
+  it("rejects playtest", () => {
+    const c = compileDraft(blankDraft());
+    if (!c.ok) throw new Error(c.errors.join("; "));
+    const m = match("race");
+    expect(m.command({ type: "playtest", mission: asPlaytest(c.mission), player: 0 })).toMatchObject({ ok: false, code: "playtest-solo" });
+  });
   it("gives every player an own field with the full starting credits", () => {
     const m = match("race", 3);
     expect(m.fields).toHaveLength(3);

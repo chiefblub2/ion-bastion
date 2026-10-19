@@ -1036,11 +1036,15 @@ export type Command = (
   | { type: "pause" }
   | { type: "restart" }
   | { type: "mission"; id: string }
+  | { type: "playtest"; mission: MissionDefinition }
 ) & { player?: number };
 /** Language-neutral result; `ui/messages.ts` turns it into text. */
 export type MessageCode =
   | "restarted"
   | "mission-loaded"
+  | "playtest-loaded"
+  | "playtest-solo"
+  | "playtest-invalid"
   | "mission-unknown"
   | "mission-over"
   | "paused"

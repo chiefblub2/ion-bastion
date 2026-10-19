@@ -161,7 +161,8 @@ export function renderTowerCodexPage(game: Game, page = 0) {
 }
 export function nextMission(game: Game) {
   const missions = game.content.missions;
-  return missions[missions.findIndex((m) => m.id === game.mission.id) + 1];
+  const at = missions.findIndex((m) => m.id === game.mission.id);
+  return at < 0 ? undefined : missions[at + 1];
 }
 function text(id: string, value: string) {
   const e = document.getElementById(id)!;

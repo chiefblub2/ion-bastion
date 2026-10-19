@@ -92,6 +92,18 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
       return ok("mission-loaded", { number: missionNumber(m, g.content.missions), name: m.name });
     },
   },
+  playtest: {
+    run: (g, c) => {
+      if (g.players > 1) return fail("playtest-solo");
+      // loadMission validates before assigning, so a failure leaves the loaded mission untouched.
+      try {
+        g.loadMission(c.mission);
+      } catch {
+        return fail("playtest-invalid");
+      }
+      return ok("playtest-loaded", { name: c.mission.name });
+    },
+  },
   pause: {
     // Between waves only while the countdown to the next one runs.
     allowedIn: PLAYING,

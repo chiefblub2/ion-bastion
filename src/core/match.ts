@@ -96,6 +96,8 @@ export class Match {
       }
       case "pause":
         return fail("pause-versus");
+      case "playtest":
+        return fail("playtest-solo");
       case "start":
       case "ready":
         return this.markReady(player);
