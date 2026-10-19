@@ -20,8 +20,12 @@ describe("screen URLs", () => {
     expect(screenFromUrl("", "#turmakte", MISSIONS)).toEqual({ view: "menu", page: "towers" });
     expect(screenFromUrl("", "#unbekannt", MISSIONS)).toEqual(HOME);
   });
+  it("opens the hidden editor from its hash, with or without a draft param", () => {
+    expect(screenFromUrl("", "#editor", MISSIONS)).toEqual({ view: "menu", page: "editor" });
+    expect(screenFromUrl("?draft=abc", "#editor", MISSIONS)).toEqual({ view: "menu", page: "editor" });
+  });
   it("round-trips every screen", () => {
-    for (const screen of [HOME, GAME, ...(["missions", "coop", "codex", "towers", "help"] as const).map((page) => ({ view: "menu" as const, page }))]) {
+    for (const screen of [HOME, GAME, ...(["missions", "coop", "codex", "towers", "help", "editor"] as const).map((page) => ({ view: "menu" as const, page }))]) {
       const url = new URL(urlOf(screen, id, "/game/"), "http://localhost");
       expect(url.pathname).toBe("/game/");
       expect(screenFromUrl(url.search, url.hash, MISSIONS)).toEqual(screen);
