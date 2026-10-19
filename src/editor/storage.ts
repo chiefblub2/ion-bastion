@@ -26,11 +26,20 @@ export function saveDraft(d: EditorDraft) {
   write(DRAFTS_KEY, rest);
 }
 
-/** True when the draft differs from its saved copy (same id), or has none and is not an untouched blank of its size. */
-export function hasUnsavedWork(d: EditorDraft, saved: readonly EditorDraft[]): boolean {
-  const json = JSON.stringify(d),
-    copy = saved.find((x) => x.id === d.id);
-  return copy ? JSON.stringify(copy) !== json : JSON.stringify(blankDraft(d.sketch[0].length, d.sketch.length)) !== json;
+/**
+ * The draft to auto-save before `displaced` is replaced by `incoming`, or undefined when there is nothing to keep
+ * (equal to its saved copy, or an untouched blank). Never overwrites a different saved entry: on an id clash
+ * (a differing saved copy, or the incoming draft sharing the id) it takes the first free `<id>-2`, `-3`, ….
+ */
+export function keepTarget(displaced: EditorDraft, incoming: EditorDraft, saved: readonly EditorDraft[]): EditorDraft | undefined {
+  const json = JSON.stringify(displaced),
+    copy = saved.find((x) => x.id === displaced.id);
+  if (copy ? JSON.stringify(copy) === json : JSON.stringify(blankDraft(displaced.sketch[0].length, displaced.sketch.length)) === json) return undefined;
+  if (!copy && incoming.id !== displaced.id) return displaced;
+  const taken = new Set([incoming.id, ...saved.map((x) => x.id)]);
+  let n = 2;
+  while (taken.has(`${displaced.id}-${n}`)) n++;
+  return { ...displaced, id: `${displaced.id}-${n}`, name: `${displaced.name} (${n})` };
 }
 
 export function deleteDraft(id: string) {

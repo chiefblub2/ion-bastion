@@ -14,7 +14,7 @@ import { decodeDraft, shareUrl } from "./codec";
 import { blankDraft, type Compiled, compileDraft, draftFromMission, type EditorDraft, editWaves, LIMITS, paint, resize, type Tile } from "./draft";
 import { exportTypeScript } from "./export";
 import { asPlaytest } from "./playtest-id";
-import { currentDraft, deleteDraft, hasUnsavedWork, rememberDraft, saveDraft, savedDrafts } from "./storage";
+import { currentDraft, deleteDraft, keepTarget, rememberDraft, saveDraft, savedDrafts } from "./storage";
 import { waveClickEdit, waveInputEdit, wavesHtml } from "./wave-panel";
 
 /** What the mission editor may do in the app; implemented by `app/input.ts`. */
@@ -101,18 +101,19 @@ function remember(now = false) {
 
 /** Replaces the whole draft (new, loaded, from a mission) and redraws every region. */
 function replaceDraft(next: EditorDraft, message: string) {
-  const kept = keepUnsaved();
+  const kept = keepUnsaved(next);
   draft = next;
   remember();
   renderAll();
   say(kept ? `${message} ${kept}` : message);
 }
 
-/** Saves the open draft first when it holds work no saved copy has; returns the note for the message line. */
-function keepUnsaved(): string {
-  if (!hasUnsavedWork(draft, savedDrafts())) return "";
-  saveDraft(draft);
-  return `Previous draft saved as "${draft.name}" (${draft.id}).`;
+/** Saves the open draft first when it holds work no saved copy has, never over another saved draft; returns the note for the message line. */
+function keepUnsaved(incoming: EditorDraft): string {
+  const keep = keepTarget(draft, incoming, savedDrafts());
+  if (!keep) return "";
+  saveDraft(keep);
+  return `Previous draft saved as "${keep.name}" (${keep.id}).`;
 }
 
 /** After a change: recompile, refresh status, trace and ring rules, and autosave. */
