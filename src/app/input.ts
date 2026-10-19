@@ -1,5 +1,5 @@
 import { isRunning, type Game } from "../core/game";
-import { isPlaytest } from "../editor/draft";
+import { isPlaytest } from "../editor/playtest-id";
 import type { EditorHost } from "../editor/editor-view";
 import type { CommandResult, EnemyId, TargetPriority, TowerId } from "../core/types";
 import { TARGET_PRIORITIES } from "../systems/combat";
@@ -265,7 +265,6 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       if (r.ok) screens.show(GAME);
     },
     canPlaytest: () => !coop.active(),
-    notice: (text) => ui.notice(text),
     base: location.origin + location.pathname,
   };
   /** The home page's primary button: begin on the first campaign mission, return to the game in memory, or replay the remembered mission from wave 1. */

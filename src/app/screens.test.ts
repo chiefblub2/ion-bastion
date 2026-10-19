@@ -24,6 +24,9 @@ describe("screen URLs", () => {
     expect(screenFromUrl("", "#editor", MISSIONS)).toEqual({ view: "menu", page: "editor" });
     expect(screenFromUrl("?draft=abc", "#editor", MISSIONS)).toEqual({ view: "menu", page: "editor" });
   });
+  it("sends a reload during a playtest to the editor", () => {
+    expect(screenFromUrl("?mission=playtest%3Amy-draft", "", MISSIONS)).toEqual({ view: "menu", page: "editor" });
+  });
   it("round-trips every screen", () => {
     for (const screen of [HOME, GAME, ...(["missions", "coop", "codex", "towers", "help", "editor"] as const).map((page) => ({ view: "menu" as const, page }))]) {
       const url = new URL(urlOf(screen, id, "/game/"), "http://localhost");

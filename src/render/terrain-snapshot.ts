@@ -9,7 +9,8 @@ import { drawAmbient, drawTerrain } from "./terrain";
  */
 let booting: Promise<Phaser.Scene> | null = null,
   queue: Promise<unknown> = Promise.resolve();
-const cache = new Map<string, Promise<string>>();
+// Keyed by the map object, not its id: a playtest or draft map may reuse a real map's id.
+const cache = new WeakMap<MapDefinition, Promise<string>>();
 function boot() {
   return (booting ??= new Promise<Phaser.Scene>((resolve) => {
     const host = document.createElement("div");
@@ -56,14 +57,14 @@ async function render(map: MapDefinition) {
     game.loop.sleep();
   }
 }
-/** An image URL of the map's terrain, cached per map; rejects where the canvas is unavailable (keep a fallback). */
+/** An image URL of the map's terrain, cached per map object; rejects where the canvas is unavailable (keep a fallback). */
 export function terrainImage(map: MapDefinition): Promise<string> {
-  let image = cache.get(map.id);
+  let image = cache.get(map);
   if (!image) {
     // One job at a time: the scene holds a single map.
     image = queue.then(() => render(map));
     queue = image.catch(() => undefined);
-    cache.set(map.id, image);
+    cache.set(map, image);
   }
   return image;
 }

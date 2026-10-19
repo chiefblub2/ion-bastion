@@ -1,3 +1,8 @@
+/**
+ * The hidden mission editor (`/#editor`): a toolbar, the paintable grid with the traced path, the settings panel
+ * and the wave list. The module keeps one `draft`; every change recompiles it, refreshes only the regions it
+ * touched and autosaves it after a short pause. The DOM is built once; later entries only re-render.
+ */
 import "./editor.css";
 import { copyText } from "../app/room-code";
 import { playableMissions } from "../content/missions";
@@ -6,9 +11,10 @@ import { THEMES } from "../render/terrain";
 import { escape } from "../ui/format";
 import { pageOf, TOWER_PAGES } from "../ui/tower-pages";
 import { decodeDraft, shareUrl } from "./codec";
-import { asPlaytest, blankDraft, type Compiled, compileDraft, draftFromMission, type EditorDraft, editWaves, LIMITS, paint, resize, type Tile } from "./draft";
+import { blankDraft, type Compiled, compileDraft, draftFromMission, type EditorDraft, editWaves, LIMITS, paint, resize, type Tile } from "./draft";
 import { exportTypeScript } from "./export";
-import { currentDraft, deleteDraft, rememberDraft, saveDraft, savedDrafts } from "./storage";
+import { asPlaytest } from "./playtest-id";
+import { currentDraft, deleteDraft, hasUnsavedWork, rememberDraft, saveDraft, savedDrafts } from "./storage";
 import { waveClickEdit, waveInputEdit, wavesHtml } from "./wave-panel";
 
 /** What the mission editor may do in the app; implemented by `app/input.ts`. */
@@ -18,16 +24,10 @@ export interface EditorHost {
   playtest(mission: MissionDefinition): void;
   /** False while a multiplayer room is active. */
   canPlaytest(): boolean;
-  notice(text: string): void;
   /** `location.origin + location.pathname`, for share links. */
   base: string;
 }
 
-/**
- * The hidden mission editor (`/#editor`): a toolbar, the paintable grid with the traced path, the settings panel
- * and the wave list. The module keeps one `draft`; every change recompiles it, refreshes only the regions it
- * touched and autosaves it after a short pause. The DOM is built once; later entries only re-render.
- */
 const TOOLS: readonly { tile: Tile; name: string }[] = [
   { tile: "S", name: "Entry" },
   { tile: "R", name: "Reactor" },
@@ -83,14 +83,8 @@ function readShareLink() {
   history.replaceState(history.state, "", url.pathname + url.search + url.hash);
   const shared = decodeDraft(code);
   if (shared) {
-    draft = shared;
-    remember();
-    say(`Loaded "${shared.name}" from the share link.`);
-  } else {
-    const text = "The share link could not be read. It may be cut off or from another version.";
-    say(text, "error");
-    host.notice(text);
-  }
+    replaceDraft(shared, `Loaded "${shared.name}" from the share link.`);
+  } else say("The share link could not be read. It may be cut off or from another version.", "error");
 }
 
 function say(text: string, tone: "ok" | "error" = "ok") {
@@ -107,10 +101,18 @@ function remember(now = false) {
 
 /** Replaces the whole draft (new, loaded, from a mission) and redraws every region. */
 function replaceDraft(next: EditorDraft, message: string) {
+  const kept = keepUnsaved();
   draft = next;
   remember();
   renderAll();
-  say(message);
+  say(kept ? `${message} ${kept}` : message);
+}
+
+/** Saves the open draft first when it holds work no saved copy has; returns the note for the message line. */
+function keepUnsaved(): string {
+  if (!hasUnsavedWork(draft, savedDrafts())) return "";
+  saveDraft(draft);
+  return `Previous draft saved as "${draft.name}" (${draft.id}).`;
 }
 
 /** After a change: recompile, refresh status, trace and ring rules, and autosave. */
@@ -393,10 +395,9 @@ async function onClick(e: MouseEvent) {
       renderDrafts();
       return say(`Saved "${draft.name}" under its id "${draft.id}".`);
     case "ed-share":
-      return say(
-        (await copyText(shareUrl(draft, host.base))) ? "Share link copied." : "Could not copy the share link: the clipboard is not available.",
-        "ok",
-      );
+      return (await copyText(shareUrl(draft, host.base)))
+        ? say("Share link copied.")
+        : say("Could not copy the share link: the clipboard is not available.", "error");
     case "ed-export":
       if (!compiled.ok) return say("Fix the errors before copying the TypeScript.", "error");
       return (await copyText(exportTypeScript(draft)))

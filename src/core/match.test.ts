@@ -5,7 +5,8 @@ import { READY_COUNTDOWN, sendCost, type ModeId } from "./modes";
 import { makeEnemy } from "./test-helpers";
 import { applyDamage } from "../systems/damage";
 import { MISSIONS } from "../content/missions";
-import { asPlaytest, blankDraft, compileDraft } from "../editor/draft";
+import { blankDraft, compileDraft } from "../editor/draft";
+import { asPlaytest } from "../editor/playtest-id";
 import type { MissionDefinition } from "./types";
 function match(mode: ModeId, players = 2, mission: MissionDefinition = MISSIONS[0]) {
   const m = new Match(mode, players, 0, new Game());

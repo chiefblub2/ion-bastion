@@ -1,3 +1,4 @@
+import { PLAYTEST_PREFIX } from "../editor/playtest-id";
 import { missionById } from "../content/missions";
 import type { MissionDefinition } from "../core/types";
 /** The start screen and its pages, or the game. Both views live in one document; only the URL and `data-view` change. */
@@ -17,6 +18,8 @@ const PAGES = Object.keys(SLUGS) as Exclude<MenuPage, "home">[];
 /** A valid `?mission=` opens the game (the deep link); otherwise the hash names a menu page, unknown ones the home page. */
 export function screenFromUrl(search: string, hash: string, missions: readonly MissionDefinition[]): Screen {
   const id = new URLSearchParams(search).get("mission");
+  // A reload during a playtest: the draft is autosaved, so the editor is the place to land.
+  if (id?.startsWith(PLAYTEST_PREFIX)) return { view: "menu", page: "editor" };
   if (id && missionById(id, missions)) return GAME;
   const slug = decodeURIComponent(hash.replace(/^#/, ""));
   return { view: "menu", page: PAGES.find((page) => SLUGS[page] === slug) ?? "home" };

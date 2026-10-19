@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { asPlaytest, blankDraft, compileDraft } from "../editor/draft";
+import { blankDraft, compileDraft } from "../editor/draft";
+import { asPlaytest } from "../editor/playtest-id";
 import { Game } from "./game";
 import { towerLevel } from "./upgrades";
 import { TOWERS } from "../content/towers";

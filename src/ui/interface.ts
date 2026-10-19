@@ -1,5 +1,5 @@
 import { Game, isRunning, SELL_REFUND } from "../core/game";
-import { isCircleSector, missionNumber, sectorOf } from "../content/missions";
+import { isCircleSector, missionNumber, nextMissionOf, sectorOf } from "../content/missions";
 import { upgradeOption } from "../core/upgrades";
 import { upgradeDiscount } from "../systems/workshop";
 import { towerDetails } from "./tower-details";
@@ -24,7 +24,7 @@ import { renderPlayers, renderSends, versusOutcome, type MultiplayerSession } fr
 export type { MultiplayerSession } from "./players";
 import type { ViewState } from "../render/scene";
 import { hotkeyTowers, isPaged, menuCollapsed, pageOf, TOWER_PAGES, towerOrder } from "./tower-pages";
-import { isPlaytest } from "../editor/draft";
+import { isPlaytest } from "../editor/playtest-id";
 const pad = (n: number) => String(n).padStart(2, "0");
 const plural = (n: number, word: string) => (n === 1 ? word : `${word}s`);
 /** Hotkeys for the towers of the open tab, from 1 again on every tab; more than ten continue with letters. */
@@ -162,9 +162,7 @@ export function renderTowerCodexPage(game: Game, page = 0) {
   panel.setAttribute("aria-labelledby", `tower-codex-tab-${page}`);
 }
 export function nextMission(game: Game) {
-  const missions = game.content.missions;
-  const at = missions.findIndex((m) => m.id === game.mission.id);
-  return at < 0 ? undefined : missions[at + 1];
+  return nextMissionOf(game.content.missions, game.mission.id);
 }
 function text(id: string, value: string) {
   const e = document.getElementById(id)!;

@@ -37,9 +37,6 @@ export interface EditorDraft {
 }
 
 export const LIMITS = { columns: [6, 24], rows: [5, 16] } as const;
-export const PLAYTEST_PREFIX = "playtest:";
-export const isPlaytest = (m: MissionDefinition) => m.id.startsWith(PLAYTEST_PREFIX);
-export const asPlaytest = (m: MissionDefinition): MissionDefinition => ({ ...m, id: PLAYTEST_PREFIX + m.id });
 
 const DEFAULT_RING: CircleRules = { interval: 20, limit: 30, earlyBonus: 3 };
 const clamp = (v: number, [lo, hi]: readonly [number, number] | readonly number[]) => Math.min(hi, Math.max(lo, v));

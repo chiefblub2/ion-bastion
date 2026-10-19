@@ -1,5 +1,5 @@
 import { parseDraft } from "./codec";
-import type { EditorDraft } from "./draft";
+import { blankDraft, type EditorDraft } from "./draft";
 
 // Drafts the editor keeps in this browser: all saved ones and an autosave of the open one.
 const DRAFTS_KEY = "ion-bastion:editor-drafts";
@@ -24,6 +24,13 @@ export function saveDraft(d: EditorDraft) {
   if (at >= 0) rest[at] = d;
   else rest.push(d);
   write(DRAFTS_KEY, rest);
+}
+
+/** True when the draft differs from its saved copy (same id), or has none and is not an untouched blank of its size. */
+export function hasUnsavedWork(d: EditorDraft, saved: readonly EditorDraft[]): boolean {
+  const json = JSON.stringify(d),
+    copy = saved.find((x) => x.id === d.id);
+  return copy ? JSON.stringify(copy) !== json : JSON.stringify(blankDraft(d.sketch[0].length, d.sketch.length)) !== json;
 }
 
 export function deleteDraft(id: string) {

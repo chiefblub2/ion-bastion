@@ -3,8 +3,8 @@ import { escape } from "../ui/format";
 import type { WaveEdit } from "./draft";
 
 /**
- * The editor's wave list: one card per wave with its group rows. Markup only; `waveEditOf` turns an input or a
- * button click inside it into a `WaveEdit` for `editWaves`, so the view keeps the single draft.
+ * The editor's wave list: one card per wave with its group rows. Markup only; `waveInputEdit` and `waveClickEdit` turn an
+ * input or a button click inside it into a `WaveEdit` for `editWaves`, so the view keeps the single draft.
  */
 const num = (field: string, value: number | undefined, label: string, attrs: string, step = "any") =>
   `<label class="ed-num"><span>${label}</span><input type="number" inputmode="decimal" step="${step}" ${attrs} data-field="${field}" value="${value ?? ""}"></label>`;
