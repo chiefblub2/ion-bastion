@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { asPlaytest } from "../editor/playtest-id";
 import { MISSIONS } from "../content/missions";
 import { homeAction, type HomeSession } from "./home-action";
 const fresh: HomeSession = { mission: MISSIONS[0], wave: 0, status: "ready", inProgress: false, multiplayer: false };
@@ -28,6 +29,14 @@ describe("home action", () => {
       const a = homeAction(MISSIONS, undefined, { ...fresh, mission: MISSIONS[1], wave: 4, status, inProgress: true });
       expect(a.kind).toBe("restart");
       expect(a.mission).toBe(MISSIONS[1]);
+    }
+  });
+  it("offers a restart with the playtest mission for a finished playtest", () => {
+    const playtest = asPlaytest(MISSIONS[0]);
+    for (const status of ["won", "lost"] as const) {
+      const a = homeAction(MISSIONS, undefined, { ...fresh, mission: playtest, wave: 3, status, inProgress: true });
+      expect(a.kind).toBe("restart");
+      expect(a.mission).toBe(playtest);
     }
   });
   it("always resumes in multiplayer", () => {

@@ -94,6 +94,11 @@ export const MISSIONS: readonly MissionDefinition[] = SECTORS.flatMap((s) => s.m
 export function missionById(id: string, missions: readonly MissionDefinition[] = MISSIONS) {
   return missions.find((m) => m.id === id);
 }
+/** The mission after `id` in the list; undefined for an unknown id (a playtest) or the last mission. */
+export function nextMissionOf(missions: readonly MissionDefinition[], id: string) {
+  const at = missions.findIndex((m) => m.id === id);
+  return at < 0 ? undefined : missions[at + 1];
+}
 /** A campaign or Circuit mission, or the pack's Training mission (which is not in `missions`). */
 export function findMission(id: string, content: Pick<ContentPack, "missions" | "training">) {
   return missionById(id, content.missions) ?? (content.training?.id === id ? content.training : undefined);

@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { blankDraft, compileDraft } from "../editor/draft";
+import { asPlaytest } from "../editor/playtest-id";
 import { Game } from "./game";
 import { towerLevel } from "./upgrades";
 import { TOWERS } from "../content/towers";
@@ -322,5 +324,32 @@ describe("wave break timer", () => {
     finishWave(g);
     expect(g.state.status).toBe("won");
     expect(g.state.nextWave).toBeUndefined();
+  });
+});
+describe("playtest command", () => {
+  const compiled = () => {
+    const c = compileDraft(blankDraft());
+    if (!c.ok) throw new Error(c.errors.join("; "));
+    return asPlaytest(c.mission);
+  };
+  it("loads an ad-hoc mission", () => {
+    const g = new Game();
+    const r = g.command({ type: "playtest", mission: compiled() });
+    expect(r.ok).toBe(true);
+    expect(r.code).toBe("playtest-loaded");
+    expect(g.mission.id.startsWith("playtest:")).toBe(true);
+    expect(g.state.wave).toBe(0);
+  });
+  it("is solo only", () => {
+    const g = new Game();
+    g.setPlayers(2);
+    expect(g.command({ type: "playtest", mission: compiled() })).toMatchObject({ ok: false, code: "playtest-solo" });
+  });
+  it("fails cleanly for an invalid mission and keeps the previous one", () => {
+    const g = new Game();
+    const before = g.mission;
+    const r = g.command({ type: "playtest", mission: { ...compiled(), waves: [] } });
+    expect(r).toMatchObject({ ok: false, code: "playtest-invalid" });
+    expect(g.mission).toBe(before);
   });
 });
