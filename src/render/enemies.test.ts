@@ -85,7 +85,7 @@ describe("enemy render stages", () => {
     const hidden = stages(GROUND, { traits: { stealth: true }, status: { burning: true } });
     expect(hidden.under).toEqual([]);
     expect(hidden.body).toEqual([]);
-    expect(new Set(hidden.over.map(([name]) => name))).toEqual(new Set(["lineStyle", "beginPath", "arc", "strokePath"]));
+    expect(new Set(hidden.over.map(([name]) => name))).toEqual(new Set(["lineStyle", "beginPath", "moveTo", "lineTo", "strokePath"]));
     const revealed = stages(GROUND, { traits: { stealth: true, revealed: true } });
     expect(revealed.body.length).toBeGreaterThan(0);
     expect(revealed.over.some(([name]) => name === "lineBetween")).toBe(true);

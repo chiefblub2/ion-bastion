@@ -10,6 +10,7 @@ import { installEnemyArtFallback } from "./ui/enemy-art-icon";
 import { Audio } from "./app/audio";
 import { bindUiSounds } from "./audio/ui-sounds";
 import { bindSoundPanel } from "./ui/sound-panel";
+import { saveGraphics } from "./render/graphics-settings";
 import { bindFullscreen } from "./app/fullscreen";
 import { createInput } from "./app/input";
 import { registerTools } from "./app/webmcp";
@@ -99,7 +100,13 @@ const input = createInput({
   isFullscreen: fullscreen.isActive,
   coach,
 });
-bindSoundPanel(audio, (text) => ui.notice(text, true));
+bindSoundPanel(audio, (text) => ui.notice(text, true), {
+  on: battlefield.bloom,
+  set: (on) => {
+    battlefield.setGlow(on);
+    saveGraphics({ glow: on });
+  },
+});
 bindUiSounds(audio);
 new Phaser.Game({
   type: Phaser.AUTO,

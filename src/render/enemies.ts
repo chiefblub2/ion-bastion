@@ -1,7 +1,7 @@
 import type { Enemy, EnemyDefinition, EnemyVisual } from "../core/types";
 import type { StatusFlags } from "../systems/status";
 import type { TraitFlags } from "../systems/traits";
-import { oval, polygon, star, type Ink } from "./shapes";
+import { arcPath, chamferRect, fillRound, oval, polygon, star, strokeRound, type Ink } from "./shapes";
 import { drawOilCoat } from "./trap-effects";
 import { drawTranceMarks } from "./trance";
 import { shrinkScale } from "./control-marks";
@@ -123,15 +123,15 @@ const SHAPES: { [K in EnemyVisual["shape"]]: Shape<Extract<EnemyVisual, { shape:
         color = c.definition.color,
         cy = lift(c);
       g.fillStyle(color, 0.22);
-      g.fillCircle(x, cy, r * 1.25);
+      fillRound(g, x, cy, r * 1.25);
       g.fillStyle(color);
-      g.fillCircle(x, cy, r * 0.8);
+      fillRound(g, x, cy, r * 0.8);
       g.fillStyle(0xffffff, 0.45);
-      g.fillCircle(x - r * 0.25, cy - r * 0.25, r * 0.25);
+      fillRound(g, x - r * 0.25, cy - r * 0.25, r * 0.25);
       for (let i = 0; i < visual.moons; i++) {
         const a = clock * 2 + (i * Math.PI * 2) / visual.moons;
         g.fillStyle(0xffffff, 0.85);
-        g.fillCircle(x + Math.cos(a) * r * 1.35, cy + Math.sin(a) * r * 1.35, Math.max(2, r * 0.17));
+        fillRound(g, x + Math.cos(a) * r * 1.35, cy + Math.sin(a) * r * 1.35, Math.max(2, r * 0.17));
       }
     },
   },
@@ -151,12 +151,12 @@ const SHAPES: { [K in EnemyVisual["shape"]]: Shape<Extract<EnemyVisual, { shape:
       for (let i = visual.segments - 1; i >= 0; i--) {
         const s = wormSegment(c, cy, visual.segments, i);
         g.fillStyle(0x0c1417, 0.9);
-        g.fillCircle(s.x, s.y, s.rad + 1.5);
+        fillRound(g, s.x, s.y, s.rad + 1.5);
         g.fillStyle(c.definition.color);
-        g.fillCircle(s.x, s.y, s.rad);
+        fillRound(g, s.x, s.y, s.rad);
       }
       g.fillStyle(0x442e36);
-      g.fillCircle(x + Math.cos(heading) * r * 0.3, cy + Math.sin(heading) * r * 0.3, r * 0.25);
+      fillRound(g, x + Math.cos(heading) * r * 0.3, cy + Math.sin(heading) * r * 0.3, r * 0.25);
     },
   },
   // Flying: always the faint, distant shadow, and an arrow pointing along the path (never lifted).
@@ -178,12 +178,12 @@ export const TRAIT_COLORS = { shield: 0x6fb8ff, leader: 0xf5c542, healer: 0x6dff
 function field(g: Ink, x: number, y: number, radius: number, cell: number, color: number, clock: number, dashes: number, speed: number) {
   const rad = radius * cell;
   g.fillStyle(color, 0.04);
-  g.fillCircle(x, y, rad);
+  fillRound(g, x, y, rad);
   g.lineStyle(1, color, 0.35);
   for (let i = 0; i < dashes; i++) {
     const a = (i * Math.PI * 2) / dashes + clock * speed;
     g.beginPath();
-    g.arc(x, y, rad, a, a + (Math.PI * 2) / dashes * 0.45);
+    arcPath(g, x, y, rad, a, a + (Math.PI * 2) / dashes * 0.45);
     g.strokePath();
   }
 }
@@ -193,14 +193,14 @@ function traitsBelow(g: Ink, c: EnemyDrawContext) {
     color = c.definition.color;
   if (t.leader) {
     g.lineStyle(1, TRAIT_COLORS.leader, 0.22);
-    g.strokeCircle(x, y, t.leader * cell);
+    strokeRound(g, x, y, t.leader * cell);
   }
   if (t.healer) {
     const pulse = (clock * 0.8) % 1;
     g.fillStyle(TRAIT_COLORS.healer, 0.05);
-    g.fillCircle(x, y, t.healer * cell);
+    fillRound(g, x, y, t.healer * cell);
     g.lineStyle(1, TRAIT_COLORS.healer, 0.35 * (1 - pulse));
-    g.strokeCircle(x, y, t.healer * cell * pulse);
+    strokeRound(g, x, y, t.healer * cell * pulse);
   }
   // Area traits: faint fields, told apart by colour and dash count.
   if (t.link) field(g, x, y, t.link, cell, TRAIT_COLORS.link, clock, 24, 0);
@@ -228,7 +228,7 @@ function traitsBelow(g: Ink, c: EnemyDrawContext) {
   if (t.swift)
     for (let i = 1; i <= 2; i++) {
       g.fillStyle(color, 0.22 / i);
-      g.fillCircle(x + back.x * r * 0.9 * i, y + back.y * r * 0.9 * i, r * (1 - 0.25 * i));
+      fillRound(g, x + back.x * r * 0.9 * i, y + back.y * r * 0.9 * i, r * (1 - 0.25 * i));
     }
   if (t.sprinting) {
     g.lineStyle(1.5, 0xffffff, 0.6);
@@ -250,7 +250,7 @@ function traitsBelow(g: Ink, c: EnemyDrawContext) {
   // Swarming: a glow whose strength follows the damage reduction, with link spokes.
   if (t.swarm > 0) {
     g.fillStyle(TRAIT_COLORS.swarm, 0.1 + 0.25 * t.swarm);
-    g.fillCircle(x, y, r + 5);
+    fillRound(g, x, y, r + 5);
     g.lineStyle(1, TRAIT_COLORS.swarm, 0.2 + 0.6 * t.swarm);
     for (let i = 0; i < 4; i++) {
       const a = (i * Math.PI) / 2 + clock * 0.5;
@@ -261,26 +261,26 @@ function traitsBelow(g: Ink, c: EnemyDrawContext) {
   if (t.rage > 0) {
     const pulse = 0.5 + 0.5 * Math.sin(clock * 8);
     g.fillStyle(TRAIT_COLORS.rage, (0.08 + 0.2 * t.rage) * (0.6 + 0.4 * pulse));
-    g.fillCircle(x, y, r + 4 + 4 * t.rage);
+    fillRound(g, x, y, r + 4 + 4 * t.rage);
     g.lineStyle(1.5 + t.rage, TRAIT_COLORS.rage, (0.25 + 0.6 * t.rage) * (0.6 + 0.4 * pulse));
-    g.strokeCircle(x, y, r + 3 + 5 * t.rage * pulse);
+    strokeRound(g, x, y, r + 3 + 5 * t.rage * pulse);
   }
   // Leaping (on the other layer): a small arc under the body, like a hop.
   if (t.leaping) {
     g.lineStyle(2, TRAIT_COLORS.leap, 0.7);
     g.beginPath();
-    g.arc(x, y + r * 0.9, r * 1.1, Math.PI * 0.15, Math.PI * 0.85);
+    arcPath(g, x, y + r * 0.9, r * 1.1, Math.PI * 0.15, Math.PI * 0.85);
     g.strokePath();
   }
   // Dampening: a violet dashed field of its radius.
   if (t.dampen) {
     g.fillStyle(TRAIT_COLORS.dampen, 0.05);
-    g.fillCircle(x, y, t.dampen * cell);
+    fillRound(g, x, y, t.dampen * cell);
     g.lineStyle(1, TRAIT_COLORS.dampen, 0.4);
     for (let i = 0; i < 16; i++) {
       const a = (i * Math.PI) / 8 + clock * 0.2;
       g.beginPath();
-      g.arc(x, y, t.dampen * cell, a, a + 0.22);
+      arcPath(g, x, y, t.dampen * cell, a, a + 0.22);
       g.strokePath();
     }
   }
@@ -324,7 +324,7 @@ function traitsBelow(g: Ink, c: EnemyDrawContext) {
   if (t.evade) {
     const o = Math.sin(clock * 6) * r * 0.6;
     g.fillStyle(color, 0.18);
-    g.fillCircle(x - Math.sin(heading) * o, y + Math.cos(heading) * o, r * 0.85);
+    fillRound(g, x - Math.sin(heading) * o, y + Math.cos(heading) * o, r * 0.85);
   }
   // Slow-immune: a dashed ice ring, unlike the solid slowed ring.
   if (t.slowImmune) {
@@ -332,13 +332,13 @@ function traitsBelow(g: Ink, c: EnemyDrawContext) {
     for (let i = 0; i < 6; i++) {
       const a = (i * Math.PI) / 3;
       g.beginPath();
-      g.arc(x, y, r + 4, a, a + 0.6);
+      arcPath(g, x, y, r + 4, a, a + 0.6);
       g.strokePath();
     }
   }
   if (t.unstoppable) {
     g.lineStyle(3.5, 0x0b0f14, 0.95);
-    g.strokeCircle(x, y, r + 2);
+    strokeRound(g, x, y, r + 2);
   }
   // Burrowed: a sand mound with a dust ring spreading around it.
   if (t.burrowed) {
@@ -355,9 +355,9 @@ function traitsBelow(g: Ink, c: EnemyDrawContext) {
 function traitsAbove(g: Ink, { x, y, r, heading, traits: t, clock }: EnemyDrawContext) {
   if (t.shield > 0) {
     g.fillStyle(TRAIT_COLORS.shield, 0.1 * t.shield);
-    g.fillCircle(x, y, r + 6);
+    fillRound(g, x, y, r + 6);
     g.lineStyle(1.5, TRAIT_COLORS.shield, 0.25 + 0.6 * t.shield);
-    g.strokeCircle(x, y, r + 6);
+    strokeRound(g, x, y, r + 6);
   }
   if (t.leader) {
     g.fillStyle(TRAIT_COLORS.leader);
@@ -378,7 +378,7 @@ function traitsAbove(g: Ink, { x, y, r, heading, traits: t, clock }: EnemyDrawCo
     for (let i = 0; i < 4; i++) {
       const a = (i * Math.PI) / 2 + 0.335;
       g.beginPath();
-      g.arc(x, y, r + 2, a, a + 0.9);
+      arcPath(g, x, y, r + 2, a, a + 0.9);
       g.strokePath();
     }
   }
@@ -388,7 +388,7 @@ function traitsAbove(g: Ink, { x, y, r, heading, traits: t, clock }: EnemyDrawCo
     for (let i = 0; i < 6; i++) {
       const a = (i * Math.PI) / 3 + 0.2;
       g.beginPath();
-      g.arc(x, y, r + 3.5, a, a + 0.7);
+      arcPath(g, x, y, r + 3.5, a, a + 0.7);
       g.strokePath();
     }
   }
@@ -406,7 +406,7 @@ function traitsAbove(g: Ink, { x, y, r, heading, traits: t, clock }: EnemyDrawCo
     for (let i = 0; i < 8; i++) {
       const a = (i * Math.PI) / 4 + 0.1;
       g.beginPath();
-      g.arc(x, y, r + 3.5, a, a + 0.65);
+      arcPath(g, x, y, r + 3.5, a, a + 0.65);
       g.strokePath();
     }
   }
@@ -414,7 +414,7 @@ function traitsAbove(g: Ink, { x, y, r, heading, traits: t, clock }: EnemyDrawCo
   for (let i = 0; i < Math.min(4, t.laps); i++) {
     const px = x + (i - (Math.min(4, t.laps) - 1) / 2) * 6;
     g.lineStyle(1.5, TRAIT_COLORS.lap, 0.95);
-    g.strokeCircle(px, y - r - 7, 2);
+    strokeRound(g, px, y - r - 7, 2);
   }
   // Overload: small yellow crackling sparks around the body.
   if (t.overload) {
@@ -438,7 +438,7 @@ function traitsAbove(g: Ink, { x, y, r, heading, traits: t, clock }: EnemyDrawCo
   // Blastproof: a heavy sand-coloured outer ring.
   if (t.blastproof) {
     g.lineStyle(3, TRAIT_COLORS.blastproof, 0.85);
-    g.strokeCircle(x, y, r + 5);
+    strokeRound(g, x, y, r + 5);
   }
   // Insulated: a yellow ring with a crossed-out bolt.
   if (t.insulated) {
@@ -450,7 +450,7 @@ function traitsAbove(g: Ink, { x, y, r, heading, traits: t, clock }: EnemyDrawCo
   if (t.heatshield) {
     g.lineStyle(1.5, TRAIT_COLORS.heatshield, 0.8);
     g.beginPath();
-    g.arc(x, y, r + 4, Math.PI * 1.1, Math.PI * 1.9);
+    arcPath(g, x, y, r + 4, Math.PI * 1.1, Math.PI * 1.9);
     g.strokePath();
   }
   // Mirror: a bright highlight streak across the body.
@@ -467,9 +467,9 @@ function traitsAbove(g: Ink, { x, y, r, heading, traits: t, clock }: EnemyDrawCo
   // Taunt: a bright bullseye in the body.
   if (t.taunt) {
     g.lineStyle(1.5, TRAIT_COLORS.taunt, 0.9);
-    g.strokeCircle(x, y, r * 0.55);
+    strokeRound(g, x, y, r * 0.55);
     g.fillStyle(TRAIT_COLORS.taunt, 0.9);
-    g.fillCircle(x, y, r * 0.2);
+    fillRound(g, x, y, r * 0.2);
   }
   // Retaliate: small thorns pointing outwards.
   if (t.retaliate) {
@@ -488,12 +488,12 @@ function traitsAbove(g: Ink, { x, y, r, heading, traits: t, clock }: EnemyDrawCo
   // Phase: a ring that is dashed in the air and solid on the ground.
   if (t.phase) {
     g.lineStyle(1.5, TRAIT_COLORS.phase, 0.9);
-    if (t.phase === "ground") g.strokeCircle(x, y, r + 3);
+    if (t.phase === "ground") strokeRound(g, x, y, r + 3);
     else
       for (let i = 0; i < 8; i++) {
         const a = (i * Math.PI) / 4 + clock;
         g.beginPath();
-        g.arc(x, y, r + 3, a, a + 0.4);
+        arcPath(g, x, y, r + 3, a, a + 0.4);
         g.strokePath();
       }
   }
@@ -502,7 +502,7 @@ function traitsAbove(g: Ink, { x, y, r, heading, traits: t, clock }: EnemyDrawCo
     g.fillStyle(TRAIT_COLORS.split);
     for (let i = 0; i < 3; i++) {
       const a = -Math.PI / 2 + (i * 2 * Math.PI) / 3;
-      g.fillCircle(x + Math.cos(a) * r * 0.45, y + Math.sin(a) * r * 0.45, 1.6);
+      fillRound(g, x + Math.cos(a) * r * 0.45, y + Math.sin(a) * r * 0.45, 1.6);
     }
   }
   if (t.regen) {
@@ -526,18 +526,18 @@ function traitsAbove(g: Ink, { x, y, r, heading, traits: t, clock }: EnemyDrawCo
 function statusBelow(g: Ink, { x, y, r, heading, status, clock, enemy: e }: EnemyDrawContext) {
   if (status.vulnerable) {
     g.fillStyle(STATUS_COLORS.vulnerable, 0.18);
-    g.fillCircle(x, y, r + 8);
+    fillRound(g, x, y, r + 8);
   }
   if (status.slowed) {
     g.lineStyle(2, STATUS_COLORS.slowed, 0.7);
-    g.strokeCircle(x, y, r + 5);
+    strokeRound(g, x, y, r + 5);
   }
   // Disrupted: sparks flickering around the body.
   if (status.disrupted) {
     for (let i = 0; i < 4; i++) {
       const a = clock * 7 + i * 1.9 + e.id;
       g.fillStyle(STATUS_COLORS.disrupted, 0.5 + 0.5 * Math.sin(clock * 23 + i));
-      g.fillCircle(x + Math.cos(a) * (r + 4), y + Math.sin(a) * (r + 4), 1.6);
+      fillRound(g, x + Math.cos(a) * (r + 4), y + Math.sin(a) * (r + 4), 1.6);
     }
   }
   // Bleeding: drops falling off behind the enemy.
@@ -545,7 +545,7 @@ function statusBelow(g: Ink, { x, y, r, heading, status, clock, enemy: e }: Enem
     for (let i = 0; i < 3; i++) {
       const k = (clock * 1.5 + i / 3 + e.id * 0.1) % 1;
       g.fillStyle(STATUS_COLORS.bleeding, 1 - k);
-      g.fillCircle(x - Math.cos(heading) * (r + 2 + k * 6) + (i - 1) * 2, y - Math.sin(heading) * (r + 2 + k * 6) + k * 3, 1.6);
+      fillRound(g, x - Math.cos(heading) * (r + 2 + k * 6) + (i - 1) * 2, y - Math.sin(heading) * (r + 2 + k * 6) + k * 3, 1.6);
     }
   }
   if (status.oiled) drawOilCoat(g, x, y, r, heading, clock, e.id);
@@ -553,7 +553,7 @@ function statusBelow(g: Ink, { x, y, r, heading, status, clock, enemy: e }: Enem
   if (status.pulled) {
     g.lineStyle(2, STATUS_COLORS.pulled, 0.85);
     g.beginPath();
-    g.arc(x, y, r + 4, heading + Math.PI - 1.1, heading + Math.PI + 1.1);
+    arcPath(g, x, y, r + 4, heading + Math.PI - 1.1, heading + Math.PI + 1.1);
     g.strokePath();
   }
   // Stunned: a broken ring.
@@ -562,7 +562,7 @@ function statusBelow(g: Ink, { x, y, r, heading, status, clock, enemy: e }: Enem
     for (let i = 0; i < 6; i++) {
       const a = (i * Math.PI) / 3;
       g.beginPath();
-      g.arc(x, y, r + 3, a, a + 0.6);
+      arcPath(g, x, y, r + 3, a, a + 0.6);
       g.strokePath();
     }
   }
@@ -592,7 +592,7 @@ function statusAbove(g: Ink, { x, y, r, status, clock }: EnemyDrawContext) {
   // Netted: a mesh drawn over the body.
   if (status.netted) {
     g.lineStyle(1.2, STATUS_COLORS.netted, 0.9);
-    g.strokeCircle(x, y, r + 2);
+    strokeRound(g, x, y, r + 2);
     for (const o of [-0.5, 0, 0.5]) {
       g.lineBetween(x - r, y + o * r * 2 - r * 0.5, x + r, y + o * r * 2 + r * 0.5);
       g.lineBetween(x - r, y + o * r * 2 + r * 0.5, x + r, y + o * r * 2 - r * 0.5);
@@ -601,14 +601,14 @@ function statusAbove(g: Ink, { x, y, r, status, clock }: EnemyDrawContext) {
   // Haftladung: a bomb stuck on top, its light blinking.
   if (status.charged) {
     g.fillStyle(0x1a1a1a);
-    g.fillCircle(x + r * 0.5, y - r * 0.5, 3.5);
+    fillRound(g, x + r * 0.5, y - r * 0.5, 3.5);
     g.fillStyle(STATUS_COLORS.charged, Math.sin(clock * 18) > 0 ? 1 : 0.25);
-    g.fillCircle(x + r * 0.5, y - r * 0.5 - 2.5, 1.4);
+    fillRound(g, x + r * 0.5, y - r * 0.5 - 2.5, 1.4);
   }
   // Embers scale down on small bodies (r under 14 px), so three of them never cover a runner or an ant.
   if (status.burning) {
     g.fillStyle(STATUS_COLORS.burning, 0.9);
-    for (const [dx, dy] of [[-0.6, -0.2], [0.5, -0.5], [0.1, 0.4]]) g.fillCircle(x + dx * r, y + dy * r, Math.min(2.2, r * 0.16));
+    for (const [dx, dy] of [[-0.6, -0.2], [0.5, -0.5], [0.1, 0.4]]) fillRound(g, x + dx * r, y + dy * r, Math.min(2.2, r * 0.16));
   }
 }
 /**
@@ -642,7 +642,7 @@ export function drawEnemyOverlay(g: Ink, c: EnemyDrawContext) {
     for (let i = 0; i < 8; i++) {
       const a = clock + (i * Math.PI) / 4;
       g.beginPath();
-      g.arc(x, y, r, a, a + 0.45);
+      arcPath(g, x, y, r, a, a + 0.45);
       g.strokePath();
     }
     return;
@@ -651,8 +651,7 @@ export function drawEnemyOverlay(g: Ink, c: EnemyDrawContext) {
   statusAbove(g, c);
   drawTranceMarks(g, c);
   if (!c.hpBar) return;
-  g.fillStyle(0x050c12);
-  g.fillRoundedRect(x - r - 1, y - r - 9, r * 2 + 2, 5, 2);
+  chamferRect(g, x, y - r - 6.5, r + 1, 2.5, 1, 0x050c12);
   g.fillStyle(e.hp / e.maxHp > 0.4 ? 0x93f5b8 : 0xff738a);
   g.fillRect(x - r, y - r - 8, Math.max(0, (r * 2 * e.hp) / e.maxHp), 3);
 }
