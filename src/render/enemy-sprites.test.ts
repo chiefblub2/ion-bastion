@@ -71,9 +71,9 @@ class StubImage {
     this.tintCalls++;
     return this;
   }
-  setTintFill(color: number) {
-    this.tint = { color, fill: true };
-    this.tintCalls++;
+  /** `Phaser.TintModes`: 1 is FILL, 0 MULTIPLY. */
+  setTintMode(mode: number) {
+    if (this.tint) this.tint.fill = mode === 1;
     return this;
   }
   clearTint() {

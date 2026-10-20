@@ -26,6 +26,7 @@ import { halo } from "./material";
 import { arcBand, CELL, disc, px, ring, type Pen } from "./shapes";
 import { pathCoverage, towerReach } from "./coverage";
 import { drawAmbient, drawTerrain, themeAccent, themeGlow } from "./terrain";
+import { FrameStats } from "./frame-stats";
 import { drawTower } from "./towers";
 import { Trails } from "./trails";
 export { CELL } from "./shapes";
@@ -152,6 +153,9 @@ export class Battlefield extends Phaser.Scene {
   /** Canvas pixels per world pixel; text renders at this resolution so it stays sharp when the board is scaled up. */
   private textResolution = 1;
   private observer?: ResizeObserver;
+  /** Dev builds only: frame timings for `scripts/frame-bench.ts`; render hooks are added once per game. */
+  private stats = import.meta.env.DEV ? new FrameStats() : undefined;
+  private statsHooked = false;
   constructor(
     private sim: Game,
     private view: ViewState,
@@ -234,6 +238,18 @@ export class Battlefield extends Phaser.Scene {
     this.hooks.refresh();
     // Dev builds only: the sprite manager for QA scripts (live and dying counts); stripped from `vite build`.
     if (import.meta.env.DEV) (window as unknown as { __enemySprites: EnemySprites }).__enemySprites = this.enemySprites;
+    if (this.stats && !this.statsHooked) {
+      const stats = this.stats;
+      let start = 0;
+      this.game.events.on(Phaser.Core.Events.PRE_RENDER, () => (start = performance.now()));
+      this.game.events.on(Phaser.Core.Events.POST_RENDER, () => {
+        const now = performance.now();
+        stats.add("render", now - start);
+        stats.tick(now);
+      });
+      (window as unknown as { __frameStats: FrameStats }).__frameStats = stats;
+      this.statsHooked = true;
+    }
   }
   /** Refits the canvas after its container changed size, e.g. entering full screen or leaving the start screen. */
   fit() {
@@ -294,7 +310,8 @@ export class Battlefield extends Phaser.Scene {
     // The map labels are Text: render them at the texture's resolution too.
     this.textResolution = Math.max(1, zoom);
     this.sharpenText();
-    texture.draw(this.terrainParts);
+    // Phaser 4 queues draws until `render()`.
+    texture.draw(this.terrainParts).render();
     this.terrain = texture;
   }
   private sharpenText() {
@@ -312,7 +329,9 @@ export class Battlefield extends Phaser.Scene {
   update(_time: number, delta: number) {
     const dt = Math.min(delta / 1000, 0.2);
     this.clock += dt;
+    const simStart = performance.now();
     this.driver.advance(dt);
+    const drawStart = performance.now();
     const s = this.sim.state;
     if (s !== this.tracked) {
       this.tracked = s;
@@ -341,6 +360,10 @@ export class Battlefield extends Phaser.Scene {
     if (!s.paused) for (const f of this.effects) f.age += dt;
     for (const f of this.effects) if (f.label && (f.event.type === "income" || f.event.type === "repair")) this.placeLabel(f.label, f.event.at, f.age);
     this.draw();
+    if (this.stats) {
+      this.stats.add("sim", drawStart - simStart);
+      this.stats.add("draw", performance.now() - drawStart);
+    }
     this.lastUI += dt;
     if (this.lastUI > 0.1) {
       this.hooks.refresh();

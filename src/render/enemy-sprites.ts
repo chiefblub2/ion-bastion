@@ -8,10 +8,13 @@ import { ART_FILL, artEdge, artFor, type EnemyArt } from "./enemy-art";
 import { drawEnemyAccents, type EnemyFeedback } from "./enemy-feedback";
 import { bodyLift, drawEnemyBody, drawEnemyOverlay, drawEnemyUnderlay, type ArtFootprint, type EnemyDrawContext } from "./enemies";
 import { hash01, type Ink } from "./shapes";
+/** `Phaser.TintModes.MULTIPLY` and `FILL`; the manager stays free of Phaser's runtime (pure tests). */
+const TINT_MULTIPLY = 0,
+  TINT_FILL = 1;
 /** The parts of a Phaser Image the manager uses; an animated body is an Image whose spritesheet frame changes. */
 export type SpriteImage = Pick<
   Phaser.GameObjects.Image,
-  "setOrigin" | "setDepth" | "setPosition" | "setRotation" | "setDisplaySize" | "setFlip" | "setVisible" | "setTint" | "setTintFill" | "clearTint" | "setTexture" | "setFrame" | "destroy"
+  "setOrigin" | "setDepth" | "setPosition" | "setRotation" | "setDisplaySize" | "setFlip" | "setVisible" | "setTint" | "setTintMode" | "clearTint" | "setTexture" | "setFrame" | "destroy"
 >;
 /** The scene side: texture lookups and image creation (Phaser in the game, a stub in tests). */
 export interface SpriteHost {
@@ -270,8 +273,8 @@ export class EnemySprites {
     if (code === sprite.tint) return;
     sprite.tint = code;
     if (!tint) sprite.image.clearTint();
-    else if (tint.fill) sprite.image.setTintFill(tint.color);
-    else sprite.image.setTint(tint.color);
+    // Phaser 4 keeps the tint mode apart from the colour, and it persists: set both every time.
+    else sprite.image.setTint(tint.color).setTintMode(tint.fill ? TINT_FILL : TINT_MULTIPLY);
   }
   private create(id: number, type: EnemyId, look: Look, track?: AnimationTrack) {
     const image = this.host.createImage(look.texture, look.frame).setOrigin(0.5, 0.5).setDepth(DEPTH.enemySprites),

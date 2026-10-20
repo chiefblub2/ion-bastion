@@ -2,11 +2,11 @@
  * Visual check in the real app: screenshots the terrain and the first wave of each target enemy.
  *
  *   npm run dev   # in the background, on :4173
- *   npx vite-node scripts/visual-check.ts -- <missionId>... [--out <dir>] [--enemies a,b] [--url http://localhost:4173]
+ *   npx vite-node scripts/visual-check.ts -- <missionId>... [--out <dir>] [--enemies a,b] [--canvas] [--url http://localhost:4173]
  *
  * Targets default to the enemies that first appear in that mission across the campaign.
  * Drives headless system Chrome (playwright-core, channel "chrome") through the app's optional
- * WebMCP tools (`app/webmcp.ts`): opens each target wave directly (`?mission=<id>&wave=<n>`), builds the
+ * WebMCP tools (`app/webmcp.ts`), WebGL by default (SwiftShader, `--canvas` for Phaser's canvas renderer): opens each target wave directly (`?mission=<id>&wave=<n>`), builds the
  * strategy A towers the starting credits afford so enemies take damage, starts the wave and screenshots it.
  */
 import { mkdirSync } from "node:fs";
@@ -14,7 +14,7 @@ import { resolve } from "node:path";
 import type { Page } from "playwright-core";
 import { MISSIONS, missionById } from "../src/content/missions";
 import type { EnemyId, MissionDefinition } from "../src/core/types";
-import { buildAffordable, call, fail, launch, open as openApp, prepare } from "./browser";
+import { WEBGL_ARGS, buildAffordable, call, fail, launch, open as openApp, prepare } from "./browser";
 
 const args = process.argv.slice(2).filter((a) => a !== "--");
 const flag = (name: string) => {
@@ -24,6 +24,8 @@ const flag = (name: string) => {
 const out = resolve(flag("--out") ?? "visual-check");
 const base = flag("--url") ?? "http://localhost:4173";
 const only = flag("--enemies")?.split(",") as EnemyId[] | undefined;
+const canvas = args.includes("--canvas");
+if (canvas) args.splice(args.indexOf("--canvas"), 1);
 const missions = args.map((id) => missionById(id) ?? fail(`Unknown mission '${id}'.`));
 if (!missions.length) fail("Usage: npx vite-node scripts/visual-check.ts -- <missionId>... [--out <dir>] [--enemies a,b]");
 
@@ -80,7 +82,7 @@ async function check(page: Page, mission: MissionDefinition) {
   return { files, errors };
 }
 
-const browser = await launch(base);
+const browser = await launch(base, canvas ? [] : WEBGL_ARGS);
 mkdirSync(out, { recursive: true });
 try {
   const results = await Promise.all(
