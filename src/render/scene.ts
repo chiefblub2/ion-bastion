@@ -23,11 +23,14 @@ import { drawSupportFx } from "./support-fx";
 import { drawStrikes } from "./strikes";
 import { familyOf, type Family } from "../audio/families";
 import { halo } from "./material";
-import { arcBand, CELL, disc, px, ring, type Pen } from "./shapes";
+import { arcBand, CELL, disc, fillRound, px, ring, strokeRound, type Pen } from "./shapes";
 import { pathCoverage, towerReach } from "./coverage";
 import { drawAmbient, drawTerrain, themeAccent, themeGlow } from "./terrain";
 import { FrameStats } from "./frame-stats";
-import { drawTower } from "./towers";
+import { drawTower, type TowerBadges } from "./towers";
+import { TowerBodies } from "./tower-bodies";
+import { ScreenFx } from "./screen-fx";
+import { loadGraphics } from "./graphics-settings";
 import { Trails } from "./trails";
 export { CELL } from "./shapes";
 /** Upper bound for the canvas's longer side in pixels, so a huge 4K full screen stays cheap to fill. */
@@ -141,7 +144,20 @@ export class Battlefield extends Phaser.Scene {
   private ink!: Phaser.GameObjects.Graphics;
   private glow!: Phaser.GameObjects.Graphics;
   private effects: Effect[] = [];
+  /** Muzzles that flashed in this frame's batch of events; a salvo flashes once per barrel. */
+  private flashed = new Set<string>();
   private trails = new Trails();
+  /** Still tower bodies baked into textures; only turrets, lamps and light are drawn per frame. */
+  private bodies = new TowerBodies(this);
+  /**
+   * Badges per tower id, recomputed only when a tower is built, sold or upgraded (`key`): they need the upgrade
+   * resolution and the aura query, too costly to run for every tower in every frame.
+   */
+  private looks = { key: "", byId: new Map<number, TowerBadges>() };
+  /** Bloom, reactor-hit flash and strike shake (WebGL only), switched by the Bloom setting. */
+  private screenFx = new ScreenFx(this, () => this.still.matches);
+  /** The Bloom setting; `main.ts` changes it through `setGlow`. */
+  bloom = loadGraphics().glow;
   /** Effect time: advances only while the game is not paused, like the age of effects. */
   private fxClock = 0;
   /** State the trails and effects belong to; a restart swaps it without restarting the scene. */
@@ -178,6 +194,8 @@ export class Battlefield extends Phaser.Scene {
     const cleanup = () => {
       this.enemySprites.reset();
       this.enemyFeedback.reset();
+      this.bodies.reset();
+      this.screenFx.reset();
       // A resize between shutdown and the next `create` must not bake the destroyed terrain of the old mission.
       this.terrainParts = [];
       this.terrain = undefined;
@@ -213,6 +231,8 @@ export class Battlefield extends Phaser.Scene {
     this.enemyOverlay = this.add.graphics().setDepth(DEPTH.enemyOverlay);
     this.ink = this.add.graphics().setDepth(DEPTH.foreground);
     this.glow = this.add.graphics().setDepth(DEPTH.foreground).setBlendMode(Phaser.BlendModes.ADD).setAlpha(glow);
+    this.screenFx.setEnabled(this.bloom);
+    for (const layer of [this.towerGlow, this.glow]) this.screenFx.bloom(layer, this.cameras.main.zoomX);
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
       // A finger has no hover; its preview is the pending cell.
       if (isTouch(p)) return;
@@ -287,10 +307,13 @@ export class Battlefield extends Phaser.Scene {
       width = Math.max(1, Math.round(worldWidth * zoom)),
       height = Math.max(1, Math.round(worldHeight * zoom));
     if (width !== this.scale.gameSize.width || height !== this.scale.gameSize.height) this.scale.setGameSize(width, height);
-    this.cameras.main.setOrigin(0, 0).setSize(width, height).setZoom(width / worldWidth, height / worldHeight);
+    // Zoomed about its centre and centred on the board: Phaser's filter cameras (bloom) assume the default origin.
+    this.cameras.main.setSize(width, height).setZoom(width / worldWidth, height / worldHeight).centerOn(worldWidth / 2, worldHeight / 2);
     this.textResolution = Math.max(1, zoom);
     this.sharpenText();
     this.bakeTerrain();
+    this.bodies.setZoom(Math.max(width / worldWidth, height / worldHeight));
+    this.screenFx.setZoom(width / worldWidth);
   }
   /** Draws the terrain's source objects into a texture of the canvas's pixel size, shown at world size. */
   private bakeTerrain() {
@@ -339,24 +362,30 @@ export class Battlefield extends Phaser.Scene {
       // Enemy ids restart with the new state; no old image may stand in for a new unit.
       this.enemySprites.reset();
       this.enemyFeedback.reset();
+      this.bodies.reset();
+      this.looks.key = "";
       for (const f of this.effects) f.label?.destroy();
       this.effects = [];
     }
     if (!s.paused) this.fxClock += dt;
     this.trails.sync(s.projectiles, s.towers, this.sim.content, this.fxClock);
-    const events = this.sim.drainEvents(),
-      flashed = new Set<string>();
+    const events = this.sim.drainEvents();
+    this.flashed.clear();
     this.hooks.events(events);
     // Damage events drive the hit flashes and hurt clips; they are not effects (`isVisual`), and the batch stays as it is for them.
     this.enemyFeedback.consume(events, this.fxClock);
+    this.screenFx.consume(events, this.fxClock);
+    this.screenFx.update(this.fxClock);
     // Killed units with a death clip play it where they were last drawn; the kill effect plays as before.
     this.enemySprites.retire(killedEnemies(events), this.fxClock, (type) => this.sim.content.enemies[type].color);
-    for (const event of events) if (isVisual(event)) this.addEffect(event, flashed);
-    this.effects = this.effects.filter((f) => {
-      if (f.age < effectLifetime(f.event, this.sim.content)) return true;
-      f.label?.destroy();
-      return false;
-    });
+    for (const event of events) if (isVisual(event)) this.addEffect(event, this.flashed);
+    // Drops expired effects in place, without a new array per frame.
+    let kept = 0;
+    for (const f of this.effects) {
+      if (f.age < effectLifetime(f.event, this.sim.content)) this.effects[kept++] = f;
+      else f.label?.destroy();
+    }
+    this.effects.length = kept;
     if (!s.paused) for (const f of this.effects) f.age += dt;
     for (const f of this.effects) if (f.label && (f.event.type === "income" || f.event.type === "repair")) this.placeLabel(f.label, f.event.at, f.age);
     this.draw();
@@ -503,6 +532,7 @@ export class Battlefield extends Phaser.Scene {
       towerPen: Pen = { g: this.towerInk, glow: this.towerGlow },
       pen: Pen = { g: this.ink, glow: this.glow };
     for (const layer of [this.towerInk, this.towerGlow, this.hints, this.ghost, this.enemyUnderlay, this.enemyBody, this.enemyOverlay, this.ink, this.glow]) layer.clear();
+    for (const layer of [this.towerGlow, this.glow]) this.screenFx.prime(layer, this.sim.map.columns * CELL, this.sim.map.rows * CELL);
     this.ambient.clear();
     drawAmbient(this.ambient, this.sim.map, this.clock);
     const selected = s.towers.find((t) => t.id === this.view.selected),
@@ -576,36 +606,34 @@ export class Battlefield extends Phaser.Scene {
         g.lineStyle(1.5, color, 0.35);
         g.lineBetween(px(preview.x), px(preview.y), px(target.x), px(target.y));
         g.lineStyle(2, color, 0.8);
-        g.strokeCircle(px(target.x), px(target.y), 27);
+        strokeRound(g, px(target.x), px(target.y), 27);
       }
     }
     if (s.zones) drawZones(this.hints, this.towerGlow, s.zones, s.time, this.clock, content);
     drawSupportFx({ g: this.hints, glow: this.towerGlow }, this.sim, this.clock);
     if (s.strikes) drawStrikes(this.hints, this.towerGlow, s.strikes, s.time, this.clock, content);
-    const pulses = this.hooks.pulses?.() ?? {};
+    const pulses = this.hooks.pulses?.() ?? {},
+      looks = this.towerLooks();
     for (const t of s.towers) {
       const d = towers[t.type],
-        aura = d.attack.kind === "aura";
-      drawTower(towerPen, px(t.x), px(t.y), t, d, this.clock, {
-        markers: aura ? t.upgrades.length : towerLevel(t, content),
-        maxed: isFullyUpgraded(t, content),
-        color: towerColor(t, content),
-        path: towerPath(t, content),
-        boosted: Object.values(effectiveTowerStats(t, s.towers, content).bonuses).some(Boolean),
-      });
+        badges = looks.get(t.id)!,
+        x = px(t.x),
+        y = px(t.y);
+      drawTower(towerPen, x, y, t, d, this.clock, badges, this.bodies.place(t, d, badges, x, y));
       const family = familyOf(d),
         age = family ? pulses[family] : undefined;
       // The music visibly comes from the towers: a soft halo when their family's note sounds.
-      if (age !== undefined && age < PULSE && !this.still.matches) halo(this.towerGlow, px(t.x), px(t.y), CELL * 0.6, towerColor(t, content), 0.6 * (1 - age / PULSE));
+      if (age !== undefined && age < PULSE && !this.still.matches) halo(this.towerGlow, x, y, CELL * 0.6, badges.color, 0.6 * (1 - age / PULSE));
       // Co-op: a corner mark in the owner's colour.
       if (this.sim.players > 1) {
         const color = PLAYER_COLORS[t.owner] ?? 0xffffff;
         g.fillStyle(0x050b10, 0.8);
-        g.fillCircle(px(t.x) - CELL / 2 + 7, px(t.y) - CELL / 2 + 7, 5.5);
+        fillRound(g, x - CELL / 2 + 7, y - CELL / 2 + 7, 5.5);
         g.fillStyle(color, 1);
-        g.fillCircle(px(t.x) - CELL / 2 + 7, px(t.y) - CELL / 2 + 7, 3.5);
+        fillRound(g, x - CELL / 2 + 7, y - CELL / 2 + 7, 3.5);
       }
     }
+    this.bodies.sweep();
     this.enemyLook.now = this.fxClock;
     const units = s.enemies.map((e) =>
       enemyContext(px(e.x), px(e.y), CELL, e, enemies[e.type], this.heading(e.distance), statusFlags(e, s.time), traitFlags(this.sim, e), this.clock),
@@ -617,7 +645,7 @@ export class Battlefield extends Phaser.Scene {
     if (marked && !isHidden(this.sim, marked)) {
       const r = enemies[marked.type].size * CELL + 6 + Math.sin(this.clock * 6);
       ink.lineStyle(2, 0xffffff, 0.85);
-      ink.strokeCircle(px(marked.x), px(marked.y), r);
+      strokeRound(ink, px(marked.x), px(marked.y), r);
     }
     this.trails.draw(pen, this.fxClock);
     for (const f of this.effects) drawEffect(pen, f.event, f.age, content, f.origin);
@@ -626,6 +654,31 @@ export class Battlefield extends Phaser.Scene {
       end = circle ? this.sim.map.path[0] : this.sim.map.path.at(-1)!,
       critical = circle ? s.enemies.length >= circle.limit * 0.8 : s.lives <= 5;
     ink.lineStyle(1, critical ? 0xff647c : themeAccent(this.sim.map), 0.35 + 0.2 * Math.sin(this.clock * 3));
-    ink.strokeCircle(px(end.x), px(end.y), 26 + Math.sin(this.clock * 2) * 2);
+    strokeRound(ink, px(end.x), px(end.y), 26 + Math.sin(this.clock * 2) * 2);
+  }
+  /** Turns the bloom and the screen effects on or off (the Bloom setting). */
+  setGlow(on: boolean) {
+    this.bloom = on;
+    this.screenFx.setEnabled(on);
+  }
+  /** Badges of every tower, rebuilt only when a tower was built, sold or upgraded. */
+  private towerLooks() {
+    const s = this.sim.state,
+      content = this.sim.content;
+    let key = "";
+    for (const t of s.towers) key += `${t.id}:${t.upgrades.length},`;
+    if (key !== this.looks.key) {
+      this.looks.key = key;
+      this.looks.byId.clear();
+      for (const t of s.towers)
+        this.looks.byId.set(t.id, {
+          markers: content.towers[t.type].attack.kind === "aura" ? t.upgrades.length : towerLevel(t, content),
+          maxed: isFullyUpgraded(t, content),
+          color: towerColor(t, content),
+          path: towerPath(t, content),
+          boosted: Object.values(effectiveTowerStats(t, s.towers, content).bonuses).some(Boolean),
+        });
+    }
+    return this.looks.byId;
   }
 }

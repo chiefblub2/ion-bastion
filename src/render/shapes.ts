@@ -49,6 +49,30 @@ export const sides = (r: number) => Math.min(40, Math.max(8, Math.round(6 + r)))
 export function disc(g: Ink, x: number, y: number, r: number, color: number, alpha = 1) {
   if (r > 0 && alpha > 0) polygon(g, x, y, r, sides(r), color, 0, alpha);
 }
+// Phaser spends 100 segments on every `arc`, however short, and on each corner of `fillRoundedRect`. The three
+// helpers below keep the current fill or line style, so they replace `fillCircle`, `strokeCircle` and `arc` one for one.
+function round(x: number, y: number, r: number) {
+  const n = sides(r);
+  for (let i = 0; i < n; i++) set(i, x + Math.cos((i * Math.PI * 2) / n) * r, y + Math.sin((i * Math.PI * 2) / n) * r);
+  return n;
+}
+/** Circle in the current fill style; use it instead of `fillCircle`. */
+export function fillRound(g: Ink, x: number, y: number, r: number) {
+  if (r > 0) g.fillPoints(POINTS, true, false, round(x, y, r));
+}
+/** Circle outline in the current line style; use it instead of `strokeCircle`. */
+export function strokeRound(g: Ink, x: number, y: number, r: number) {
+  if (r > 0) g.strokePoints(POINTS, true, true, round(x, y, r));
+}
+/** Arc from `a0` to `a1` into the open path (about 4 px per segment); use it instead of `arc` between `beginPath` and `strokePath`. */
+export function arcPath(g: Ink, x: number, y: number, r: number, a0: number, a1: number) {
+  const n = Math.min(48, Math.max(2, Math.ceil((Math.abs(a1 - a0) * r) / 4)));
+  g.moveTo(x + Math.cos(a0) * r, y + Math.sin(a0) * r);
+  for (let i = 1; i <= n; i++) {
+    const a = a0 + ((a1 - a0) * i) / n;
+    g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+  }
+}
 /** Filled ellipse with the radii `rx` and `ry`, turned by `rotation`; use it instead of `fillEllipse` (which takes diameters). */
 export function oval(g: Ink, x: number, y: number, rx: number, ry: number, color: number, alpha = 1, rotation = 0) {
   if (rx <= 0 || ry <= 0 || alpha <= 0) return;

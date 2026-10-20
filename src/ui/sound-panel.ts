@@ -1,6 +1,6 @@
 import type { Audio } from "../app/audio";
 import { BUSES, type Bus } from "../audio/settings";
-// The sound popover: on/off and four volumes, opened from the topbar or the home page.
+// The sound popover: on/off and four volumes, opened from the topbar or the home page; it also holds the Bloom switch.
 
 const GAP = 8,
   GUTTER = 16;
@@ -10,9 +10,10 @@ export function panelTop(button: { top: number; bottom: number }, height: number
   if (below + height <= viewport - GUTTER) return below;
   return Math.max(GUTTER, button.top - GAP - height);
 }
-export function bindSoundPanel(audio: Audio, notice: (text: string) => void) {
+export function bindSoundPanel(audio: Audio, notice: (text: string) => void, glow: { on: boolean; set(on: boolean): void }) {
   const panel = document.getElementById("sound-panel")!,
     toggle = panel.querySelector<HTMLInputElement>("#sound-on")!,
+    bloom = panel.querySelector<HTMLInputElement>("#glow-on")!,
     triggers = [...document.querySelectorAll<HTMLButtonElement>(".sound-trigger")],
     slider = (bus: Bus) => panel.querySelector<HTMLInputElement>(`[data-bus="${bus}"]`)!;
   let opener: HTMLButtonElement | null = null;
@@ -47,6 +48,8 @@ export function bindSoundPanel(audio: Audio, notice: (text: string) => void) {
       else close();
     });
   toggle.addEventListener("change", () => void apply({ muted: !toggle.checked }));
+  bloom.checked = glow.on;
+  bloom.addEventListener("change", () => glow.set(bloom.checked));
   panel.addEventListener("input", (e) => {
     const bus = (e.target as HTMLElement).dataset.bus as Bus | undefined;
     if (bus) void apply({ [bus]: Number((e.target as HTMLInputElement).value) / 100 });

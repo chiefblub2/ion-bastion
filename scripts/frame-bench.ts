@@ -2,7 +2,7 @@
  * Frame-time benchmark of a busy wave in the real app (dev build only: reads the scene's `window.__frameStats`).
  *
  *   npm run dev   # in the background, on :4173
- *   npx vite-node scripts/frame-bench.ts [-- <missionId>] [--wave <n>] [--seconds 10] [--url http://localhost:4173]
+ *   npx vite-node scripts/frame-bench.ts [-- <missionId>] [--wave <n>] [--seconds 10] [--fill <n>] [--no-bloom] [--url http://localhost:4173]
  *
  * Without a mission it takes the campaign mission whose last wave is the largest, at its last wave. Opens it via
  * `&wave=<n>&credits=<n>`, builds every strategy A tower and levels each to L5 (no specializations), starts the wave
@@ -21,6 +21,11 @@ const flag = (name: string) => {
 const base = flag("--url") ?? "http://localhost:4173";
 const seconds = Number(flag("--seconds") ?? 10);
 const waveFlag = flag("--wave");
+/** Extra towers (the strategy's own types in turn) on free cells, for a crowded late-game board. */
+const fill = Number(flag("--fill") ?? 0);
+/** Measures with the Bloom setting off (`render/graphics-settings.ts`); on by default on a desktop. */
+const noBloom = args.includes("--no-bloom");
+if (noBloom) args.splice(args.indexOf("--no-bloom"), 1);
 const size = (m: (typeof MISSIONS)[number], w: number) => m.waves[w].groups.reduce((n, g) => n + g.count, 0);
 const mission = args[0]
   ? (missionById(args[0]) ?? fail(`Unknown mission '${args[0]}'.`))
@@ -32,8 +37,18 @@ const browser = await launch(base, WEBGL_ARGS);
 try {
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
   const errors = await prepare(page);
+  if (noBloom) await page.addInitScript(() => localStorage.setItem("ion-bastion:graphics", JSON.stringify({ glow: false })));
   await open(page, base, { mission: mission.id, wave, credits: 1_000_000 });
   await buildAffordable(page, mission, { i: 0 });
+  const types = [...new Set((STRATEGIES[mission.id]?.A.builds ?? []).map((b) => b.tower))];
+  for (let y = 0, built = 0; y < mission.map.rows && built < fill; y++)
+    for (let x = 0; x < mission.map.columns && built < fill; x++)
+      try {
+        await call(page, "build_defense_tower", { tower: types[built % types.length], x, y });
+        built++;
+      } catch {
+        // Path, obstacle or taken cell.
+      }
   for (let round = 0; round < 4; round++) {
     const { towers } = await call<{ towers: Tower[] }>(page, "read_defense_state");
     for (const t of towers) {
@@ -53,7 +68,7 @@ try {
   await page.waitForTimeout(seconds * 1000);
   const state = await call<{ towers: unknown[]; remainingEnemies: number; status: string }>(page, "read_defense_state");
   const summary = await page.evaluate(() => (window as unknown as { __frameStats: { summary(): object } }).__frameStats.summary());
-  console.log(`${mission.id} wave ${wave}: ${state.towers.length} towers, ${state.remainingEnemies} enemies left, status ${state.status}, canvas ${renderer}`);
+  console.log(`${mission.id} wave ${wave}: ${state.towers.length} towers, ${state.remainingEnemies} enemies left, status ${state.status}, canvas ${renderer}, bloom ${noBloom ? "off" : "on"}`);
   console.log(JSON.stringify(summary, null, 2));
   for (const e of errors) console.log(`ERROR ${e}`);
 } finally {
