@@ -390,6 +390,7 @@ export class Interface {
         document.getElementById("overlay-missions")!.hidden = !host;
       }
     } else overlay.hidden = !s.paused && !terminal;
+    overlay.classList.toggle("paused", !overlay.hidden && !terminal && !match);
     const rated = !match && s.status === "won" && this.result?.state === s ? this.result : null,
       stars = document.getElementById("overlay-stars")!;
     stars.hidden = !rated;
@@ -419,7 +420,7 @@ export class Interface {
             ? `More than ${circle.limit} enemies circled at once. You reached wave ${s.wave} and defeated ${s.kills} ${s.kills === 1 ? "enemy" : "enemies"}. Only call waves when the ring is emptier.`
           : s.status === "lost"
             ? `You reached wave ${s.wave} and defeated ${s.kills} ${s.kills === 1 ? "enemy" : "enemies"}. Try more upgrades and Cryo support.`
-            : "You can keep building. Use the pause button to continue.",
+            : "Build and upgrade freely. Space or ▶ resumes.",
       );
       const next = s.status === "won" ? nextMission(this.game) : undefined;
       document.getElementById("overlay-next")!.hidden = !next;
