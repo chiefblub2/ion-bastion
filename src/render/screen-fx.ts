@@ -8,7 +8,7 @@ const LEAK_GAP = 0.6;
  * Phaser 4 filters on top of the drawn board, render only and WebGL only (the canvas renderer has no filters, so it
  * keeps the plain look): a bloom that spreads the additive light of the glow layers into a soft falloff, a red,
  * desaturated flash when the reactor is hit and a short shake under an orbital strike. Each costs full-screen passes,
- * so `setEnabled(false)` (the Glow effects setting) turns them all off.
+ * so `setEnabled(false)` (the Bloom setting) turns them all off.
  */
 export class ScreenFx {
   private blooms: { layer: Phaser.GameObjects.Graphics; filters: Phaser.Filters.ParallelFilters; blur: Phaser.Filters.Blur }[] = [];
