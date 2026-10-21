@@ -1080,7 +1080,9 @@ export type MessageCode =
   | "send-unavailable"
   | "send-locked"
   | "target-set"
-  | "priority-unknown";
+  | "priority-unknown"
+  /** A malformed or unknown command (only ever from the network). */
+  | "bad-command";
 export interface CommandResult {
   ok: boolean;
   code: MessageCode;

@@ -182,6 +182,13 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
   },
 };
 
+/** Every command type the simulation knows; the relay checks names only, it holds no game logic. */
+export const COMMAND_TYPES: readonly string[] = Object.keys(HANDLERS);
+/** A plain object whose `type` is a known command. */
+export function isCommand<C extends { type: string } = Command>(c: unknown, extra: readonly string[] = []): c is C {
+  const type = typeof c === "object" && c !== null ? (c as { type?: unknown }).type : undefined;
+  return typeof type === "string" && (Object.hasOwn(HANDLERS, type) || extra.includes(type));
+}
 export class Game implements Sim {
   state!: GameState;
   mission!: MissionDefinition;
@@ -244,6 +251,8 @@ export class Game implements Sim {
     return !!this.map.loop || x !== end.x || y !== end.y;
   }
   command(c: Command): CommandResult {
+    // Network commands are untrusted: an unknown type (or a prototype key like "toString") is rejected, never looked up.
+    if (!isCommand(c)) return fail("bad-command");
     const handler = HANDLERS[c.type] as Handler<Command>,
       status = this.state.status;
     if (handler.allowedIn && !handler.allowedIn.includes(status))

@@ -16,6 +16,7 @@ const MESSAGES: Record<MessageCode, (p: Params) => string> = {
   restarted: () => "New mission. Build your first defense.",
   "mission-loaded": (p) => (p.number ? `Mission ${String(p.number).padStart(2, "0")}: ${p.name}. Build your first defense.` : `${p.name}: follow the steps to learn the basics.`),
   "mission-unknown": () => "Unknown mission.",
+  "bad-command": () => "Invalid command ignored.",
   "mission-over": () => "The mission is over. Start a new round.",
   paused: () => "Game paused.",
   resumed: () => "Game resumed.",

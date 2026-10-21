@@ -1,5 +1,5 @@
 import { missionById } from "../content/missions";
-import { Game } from "./game";
+import { Game, isCommand } from "./game";
 import { stateHash, fnv } from "./hash";
 import { balance } from "./economy";
 import { MODES, READY_COUNTDOWN, SEND_DELAY, SEND_SPACING, sendCost, type ModeId } from "./modes";
@@ -27,6 +27,8 @@ const fail = (code: MessageCode, params?: CommandResult["params"]): CommandResul
  * Versus session: one solo `Game` per player, all simulated on every client.
  * Waves start for every field at once; `fields[local]` is the game the app renders.
  */
+/** Commands only versus knows, on top of the `Game` handlers. */
+export const VERSUS_COMMANDS: readonly string[] = ["ready", "send"];
 export class Match {
   readonly fields: Game[];
   /** Players who want the next wave now. */
@@ -83,6 +85,7 @@ export class Match {
     return [...all].map((enemy) => ({ enemy, cost: sendCost(field.content.enemies[enemy]), unlocked: seen.has(enemy) }));
   }
   command(c: MatchCommand): CommandResult {
+    if (!isCommand<MatchCommand>(c, VERSUS_COMMANDS)) return fail("bad-command");
     const player = c.player ?? 0;
     switch (c.type) {
       case "mission":

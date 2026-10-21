@@ -150,3 +150,18 @@ describe("lockstep", () => {
       expect(clients[0].hashes).toEqual(clients[2].hashes);
     });
 });
+describe("untrusted commands", () => {
+  const junk = [{ type: "nope" }, { type: "toString" }, {}, { type: "build", tower: "toString", x: 1, y: 1 }, { type: "upgrade", id: 999, upgrade: null }] as never[];
+  for (const mode of ["coop", "race"] as ModeId[])
+    it(`rejects malformed commands on every client alike in ${mode}`, () => {
+      const { room, clients, step } = session(2, mode);
+      room.launch("outpost-07", mode);
+      step();
+      for (const c of junk) room.queue(1, c);
+      expect(step).not.toThrow();
+      const results = clients.map((c) => c.applied.slice(-junk.length).map((a) => a.result.ok));
+      expect(results[0]).toEqual(results[1]);
+      expect(results[0].every((ok) => !ok)).toBe(true);
+      expect(clients[0].sim.hash()).toBe(clients[1].sim.hash());
+    });
+});
