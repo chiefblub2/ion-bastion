@@ -14,7 +14,7 @@ import { drawEffect, effectLifetime, INCOME_LIFETIME, isVisual, type EffectOrigi
 import { DEPTH } from "./depths";
 import { enemyContext } from "./enemies";
 import { killedEnemies } from "./enemy-animator";
-import { missionAnimationTypes } from "./enemy-animations";
+import { missionAnimationTypes, missionEnemyTypes } from "./enemy-animations";
 import { queueEnemyAnimations, queueEnemyArt, sceneSpriteHost } from "./enemy-art-scene";
 import { EnemyFeedback } from "./enemy-feedback";
 import { drawEnemyLayers, EnemySprites } from "./enemy-sprites";
@@ -183,13 +183,11 @@ export class Battlefield extends Phaser.Scene {
     super("battlefield");
     this.driver = new LocalDriver(sim, view);
   }
-  /** Queues the enemy art once per game; a scene restart finds it in the texture cache. */
-  preload() {
-    queueEnemyArt(this);
-  }
   create() {
     // The mission's animation sheets (about 2 MB each) load in the background: on a slow host, waiting for them in
     // `preload` left the board blank after a mission change. Until a sheet arrives its enemies show their static art.
+    // The static art follows the same plan: only the mission's own types, the others released.
+    queueEnemyArt(this, missionEnemyTypes(this.sim.mission, this.sim.content));
     queueEnemyAnimations(this, missionAnimationTypes(this.sim.mission, this.sim.content));
     this.load.start();
     this.effects = [];

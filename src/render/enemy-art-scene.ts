@@ -10,9 +10,16 @@ import type { SpriteHost } from "./enemy-sprites";
 
 /** Art textures that failed to load: never queued again (their enemies stay procedural) and warned about once. */
 const failedArt = new Set<string>();
-/** Queues the enemy art in a scene's `preload`, once per game; a scene restart finds it in the texture cache. */
-export function queueEnemyArt(scene: Phaser.Scene) {
-  const queued = Object.values(ENEMY_ART).filter((art) => !scene.textures.exists(art.texture) && !failedArt.has(art.texture));
+/**
+ * Queues the static enemy art. With `types` (the battlefield passes `missionEnemyTypes`, from `create`, loading in
+ * the background like the sheets) only those textures load and the loaded art of every other type is released, so a
+ * mission holds its own few textures instead of all of them; without (review pages, in `preload`) everything loads.
+ * Until a texture arrives its enemies keep the procedural body. A texture already loaded is reused.
+ */
+export function queueEnemyArt(scene: Phaser.Scene, types?: ReadonlySet<EnemyId>) {
+  const wanted = types && new Set([...types].flatMap((type) => (ENEMY_ART[type] ? [ENEMY_ART[type].texture] : [])));
+  if (wanted) for (const art of Object.values(ENEMY_ART)) if (!wanted.has(art.texture) && scene.textures.exists(art.texture)) scene.textures.remove(art.texture);
+  const queued = Object.values(ENEMY_ART).filter((art) => (!wanted || wanted.has(art.texture)) && !scene.textures.exists(art.texture) && !failedArt.has(art.texture));
   for (const art of queued) scene.load.image(art.texture, artUrl(art));
   // A missing file and an undecodable one both end without a texture (only the first raises FILE_LOAD_ERROR).
   if (queued.length)

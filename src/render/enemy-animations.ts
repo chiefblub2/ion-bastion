@@ -99,11 +99,10 @@ export const allClips = (): AnimationClip[] => Object.values(ENEMY_ANIMATIONS).f
 /** One sheet per animated type, for loading: its texture, file and cell size (the first clip's). */
 export const allSheets = () => [...new Map(allClips().map((c) => [c.texture, { texture: c.texture, path: c.path, frameWidth: c.frameWidth, frameHeight: c.frameHeight }])).values()];
 /**
- * The animated types a mission can field: its wave groups plus every type they lay or split into (any trait naming
- * a `type`: `splitOnDeath`, `brood`), followed transitively. Versus sends come from the same waves. A type missed here
- * would only show its static art.
+ * The types a mission can field: its wave groups plus every type they lay or split into (any trait naming a `type`:
+ * `splitOnDeath`, `brood`), followed transitively. Versus sends come from the same waves.
  */
-export function missionAnimationTypes(mission: Pick<MissionDefinition, "waves">, content: Pick<ContentPack, "enemies">): Set<EnemyId> {
+export function missionEnemyTypes(mission: Pick<MissionDefinition, "waves">, content: Pick<ContentPack, "enemies">): Set<EnemyId> {
   const found = new Set<EnemyId>(),
     queue: EnemyId[] = mission.waves.flatMap((w) => w.groups.map((g) => g.type));
   while (queue.length) {
@@ -112,8 +111,11 @@ export function missionAnimationTypes(mission: Pick<MissionDefinition, "waves">,
     found.add(type);
     for (const t of content.enemies[type].traits ?? []) if ("type" in t && typeof t.type === "string") queue.push(t.type as EnemyId);
   }
-  return new Set([...found].filter((type) => ENEMY_ANIMATIONS[type]));
+  return found;
 }
+/** The animated types among `missionEnemyTypes`; a type missed here would only show its static art. */
+export const missionAnimationTypes = (mission: Pick<MissionDefinition, "waves">, content: Pick<ContentPack, "enemies">): Set<EnemyId> =>
+  new Set([...missionEnemyTypes(mission, content)].filter((type) => ENEMY_ANIMATIONS[type]));
 /**
  * Which sheets a scene loads and which it releases: with `types`, the sheets of those types that are not loaded yet
  * (`has`) and the loaded sheets of every other type; without, every sheet not loaded yet, releasing none.
