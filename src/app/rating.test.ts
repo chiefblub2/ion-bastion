@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MISSIONS } from "../content/missions";
 import { Game } from "../core/game";
 import { missionStars, PeakTracker, starText } from "./rating";
-import { mergeRecord, parseRecord } from "./progress";
+import { mergeRecord, parseRecord, storedRecord } from "./progress";
 
 const reactor = MISSIONS.find((m) => !m.circle)!,
   ring = MISSIONS.find((m) => m.circle)!,
@@ -46,6 +46,10 @@ describe("campaign record", () => {
     expect(parseRecord("{nope")).toEqual({});
     expect(parseRecord("[1]")).toEqual({});
     expect(parseRecord('{"a":3,"b":7,"c":"2"}')).toEqual({ a: 3 });
+  });
+  it("reads the versioned record and the bare legacy map", () => {
+    expect(parseRecord(storedRecord({ a: 2 }))).toEqual({ a: 2 });
+    expect(parseRecord('{"a":3}')).toEqual({ a: 3 });
   });
   it("draws the star row", () => expect(starText(2)).toBe("★★☆"));
 });

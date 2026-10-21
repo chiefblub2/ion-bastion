@@ -5,25 +5,41 @@ import { blankDraft, type EditorDraft } from "./draft";
 const DRAFTS_KEY = "ion-bastion:editor-drafts";
 const CURRENT_KEY = "ion-bastion:editor-current";
 
-/** Saved drafts; corrupt JSON is an empty list and invalid entries are dropped. */
-export function savedDrafts(): EditorDraft[] {
+/** The stored list as is; corrupt JSON is an empty list. */
+function storedEntries(): unknown[] {
   try {
     const raw = localStorage.getItem(DRAFTS_KEY);
     const data: unknown = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(data)) return [];
-    return data.map(parseDraft).filter((d): d is EditorDraft => d !== undefined);
+    return Array.isArray(data) ? data : [];
   } catch {
     return [];
   }
 }
 
+/** Saved drafts; entries that do not parse (corrupt, or from a newer draft version) are skipped, not lost. */
+export function savedDrafts(): EditorDraft[] {
+  return storedEntries()
+    .map(parseDraft)
+    .filter((d): d is EditorDraft => d !== undefined);
+}
+
+const entryId = (e: unknown) => (typeof e === "object" && e !== null ? (e as { id?: unknown }).id : undefined);
+
+/**
+ * The stored list with `d` added or replacing the entry with its id. Entries this version cannot read stay as they
+ * are, so a draft saved by a newer build survives a save from an older one.
+ */
+export function withDraft(entries: readonly unknown[], d: EditorDraft): unknown[] {
+  const at = entries.findIndex((e) => entryId(e) === d.id);
+  return at >= 0 ? entries.map((e, i) => (i === at ? d : e)) : [...entries, d];
+}
+
+/** The stored list without the entry with this id; unreadable entries stay. */
+export const withoutDraft = (entries: readonly unknown[], id: string) => entries.filter((e) => entryId(e) !== id);
+
 /** Adds the draft, or replaces the saved one with the same id. */
 export function saveDraft(d: EditorDraft) {
-  const rest = savedDrafts();
-  const at = rest.findIndex((x) => x.id === d.id);
-  if (at >= 0) rest[at] = d;
-  else rest.push(d);
-  write(DRAFTS_KEY, rest);
+  write(DRAFTS_KEY, withDraft(storedEntries(), d));
 }
 
 /**
@@ -43,7 +59,7 @@ export function keepTarget(displaced: EditorDraft, incoming: EditorDraft, saved:
 }
 
 export function deleteDraft(id: string) {
-  write(DRAFTS_KEY, savedDrafts().filter((d) => d.id !== id));
+  write(DRAFTS_KEY, withoutDraft(storedEntries(), id));
 }
 
 export function currentDraft(): EditorDraft | undefined {
