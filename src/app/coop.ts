@@ -150,8 +150,15 @@ export function createCoop({ game, view, ui, pickMission, applied, setDriver }: 
         ui.notice("Teammate disconnected. The game is stopped.", true);
         break;
       case "desync":
-        ui.notice(`Game states diverged (frame ${m.frame}). Restart the mission.`, true);
-        return;
+        // Playing on would only show each player a different game: drop the driver (later frames are ignored)
+        // and stop like after a leave, so the host can relaunch.
+        driver = null;
+        setDriver({ advance: () => undefined });
+        stopped = true;
+        status = "";
+        error = `Game states diverged (frame ${m.frame}). The host can relaunch the mission.`;
+        ui.notice("Desync detected. The game is stopped.", true);
+        break;
       case "error":
         error = ERRORS[m.reason];
         status = "";

@@ -292,4 +292,4 @@ Whole mission packs (new sectors, themes, enemies) follow the project skill `.cl
   - Put its rules in `Match` (versus) or behind the `Game` handlers (shared map).
   - Show its HUD in `ui/players.ts`.
   - Extend the parametrised lockstep test so every client stays in sync.
-- **Desync safety:** new per-player or per-match state must be included in `stateHash` or `Match.hash`, otherwise desyncs go undetected.
+- **Desync safety:** `stateHash` walks the whole `GameState` (except `events`) through `stable`, so new state fields are hashed automatically (`core/hash.test.ts` checks the coverage). New per-match state on `Match` must be added to `Match.hash`. A detected desync stops the session on every client (`app/coop.ts`); the host can relaunch.

@@ -1,6 +1,6 @@
 import { missionById } from "../content/missions";
 import { Game, isCommand } from "./game";
-import { stateHash, fnv } from "./hash";
+import { stable, stateHash, fnv } from "./hash";
 import { balance } from "./economy";
 import { MODES, READY_COUNTDOWN, SEND_DELAY, SEND_SPACING, sendCost, type ModeId } from "./modes";
 import type { Command, CommandResult, EnemyId, MessageCode, Spawn } from "./types";
@@ -139,7 +139,7 @@ export class Match {
         this.ready.join(","),
         this.countdown,
         this.eliminatedAt.join(","),
-        this.pending.map((p) => p.length).join(","),
+        stable(this.pending),
         this.frame,
       ].join("|"),
     );
