@@ -349,7 +349,7 @@ export class Battlefield extends Phaser.Scene {
   private heading(distance: number) {
     return headingOnPath(this.sim.map.path, distance, this.sim.map.loop);
   }
-  update(_time: number, delta: number) {
+  override update(_time: number, delta: number) {
     const dt = Math.min(delta / 1000, 0.2);
     this.clock += dt;
     const simStart = performance.now();
