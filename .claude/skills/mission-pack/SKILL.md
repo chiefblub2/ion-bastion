@@ -129,8 +129,7 @@ Run the expensive checks once, after all edits. Agents' final balance runs count
    - `content/missions.ts`: add `import { <CONST> } from "./sectors/<id>";` and put the constant in `SECTORS` before `KREISLAUF`.
    - `core/strategies/index.ts`: add `import { <ID>_STRATEGIES } from "./<id>";` and `...<ID>_STRATEGIES,` in `STRATEGIES`.
 2. Text work, all before the test run:
-   - `npx vite-node scripts/mission-table.ts --write` updates the README mission table and intro counts and keeps the existing short focus texts. Shorten the focus of the rows it lists by hand (style: "Only 10 reactor energy", "Finale: three Titans").
-   - README enemy table: one row per new sector, each enemy as `<img src="docs/images/enemies/<id>.png" width="24" height="24" alt=""> Name (…)`. With `npm run dev` running, `npx vite-node scripts/readme-images.ts -- --only enemies` writes the icons.
+   - `npx vite-node scripts/mission-table.ts --write` updates the README intro counts (the README has no mission or enemy tables).
    - CLAUDE.md: the trait list under "Enemy", plus special rules of the new traits (e.g. an `isHidden` extension).
    - Player texts, all English (mission `focus`, README) use the in-game tower names (`name` in `content/towers.ts`: Cryo, Ember, Tar Pit, Stasis, Bear Trap …), never ids like frost or inferno. `grep -n "Frost\|Inferno\|Stase" src/content/sectors/<id>.ts` catches the usual slips.
 3. One `npm test` (about 1 s; content rules, no campaign simulations — the agents' balance runs are the win/loss check).

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Notes for agents working on ION BASTION. The player-facing overview (rules, missions, towers, multiplayer usage) is in README.md.
+Notes for agents working on ION BASTION. The player-facing overview (rules, controls, multiplayer usage) is in README.md; per-mission, tower and enemy details live in the game's Sector Atlas and codices, not in the README.
 
 ## Stack and commands
 
@@ -19,11 +19,11 @@ npx vite-node scripts/balance.ts -- src/content/sectors/frost.ts src/core/strate
                                           # balance check for one sector (optional `--curve credits=680-780,waves=17-20[,growth=1.1-1.2]` adds WARNs); sector I: -- src/content/missions.ts src/core/strategies/index.ts 0
                                           # flags: --mission <id> (one mission), --why (leaks per enemy type, kills per tower),
                                           # --tune (HP factor window in which A/B win and thin/Nova/empty defenses lose, plus the hpGrowth range)
-npx vite-node scripts/mission-table.ts    # README mission table from the content (stdout)
+npx vite-node scripts/mission-table.ts    # mission table from the content (stdout)
 npx vite-node scripts/mission-table.ts --enemies
                                           # markdown reference table of all enemies (stats, traits) for designing new ones
 npx vite-node scripts/mission-table.ts --write
-                                          # rewrite the README table and intro counts in place (keeps shortened focus texts by mission name; prints "Shorten focus: <name>" for new missions)
+                                          # update the README intro counts (missions, sectors, enemy types) in place
 npx vite-node scripts/visual-check.ts -- <missionId>... [--enemies a,b] [--out dir]
                                           # with `npm run dev` running: headless system Chrome (playwright-core) builds strategy A via the WebMCP
                                           # tools, opens the first wave of each new (or given) enemy directly via `&wave=<n>` and saves terrain + wave PNGs (about 2 s per mission; never play through to a wave, always skip to it); SwiftShader WebGL unless `--canvas`)
@@ -201,7 +201,7 @@ The mission editor (`src/editor/`) is a hidden page: `/#editor` (`MenuPage` `"ed
 
 ## Adding content
 
-New towers and enemies need a README image: run `scripts/readme-images.ts -- --only towers` (or `enemies`) and add the `<img>` in front of the name in the README table, like the existing rows.
+New towers need an icon for the Tower Codex: run `scripts/readme-images.ts -- --only towers` (it writes `docs/images/towers/<id>.png`). New missions or enemies only need `scripts/mission-table.ts --write` for the README intro counts.
 
 Whole mission packs (new sectors, themes, enemies) follow the project skill `.claude/skills/mission-pack/SKILL.md`: foundation agent, parallel sector and theme agents, integration checklist. New enemies or traits for the existing campaign follow `.claude/skills/enemy-pack/SKILL.md`. Supplied enemy animation sheets follow `.claude/skills/animation-pack/SKILL.md`.
 

@@ -108,9 +108,8 @@ Stat proposals: apply them yourself in `content/enemies.ts` and re-run the loop 
 Run the expensive checks once, after all edits. `git status` first: files outside this pack mean another session works in the same tree; leave them alone and name them in the report.
 
 1. Text work, before the final test run:
-   - `npx vite-node scripts/mission-table.ts --write` (enemy count in the README intro, mission table if waves changed).
-   - README "Enemies": add the enemies to their sector's row (`<img src="docs/images/enemies/<id>.png" width="24" height="24" alt=""> Name (short trait)`), or a sentence below the table if they join several sectors. With `npm run dev` running, `npx vite-node scripts/readme-images.ts -- --only enemies` writes the icons (`docs/images/enemies/`).
-   - Pitfall, if a new enemy is under a pit threshold: the level descriptions in `content/towers.ts` and the README trap row both name the swallowed enemies.
+   - `npx vite-node scripts/mission-table.ts --write` (enemy count in the README intro).
+   - Pitfall, if a new enemy is under a pit threshold: the level descriptions in `content/towers.ts` name the swallowed enemies.
    - CLAUDE.md: the trait list under "Enemy", plus special rules of new traits (an `isHidden` extension, a new `Enemy` field in `stateHash`, DISRUPTABLE).
    - Player texts (English) use the in-game tower names (`name` in `content/towers.ts`: Cryo, Ember, Tar Pit …), never ids like frost or inferno.
 2. One `npm test` (about 1 s) and one `npm run build` (it already runs `tsc`). Later edits to texts, README or CLAUDE.md need no new run.
