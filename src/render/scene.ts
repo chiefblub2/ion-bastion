@@ -9,6 +9,7 @@ import { headingOnPath } from "../systems/path";
 import { enemyAt } from "./pick";
 import type { GameEvent, GameState, Point, Tower, TowerId } from "../core/types";
 import { PLAYER_COLORS } from "../net/protocol";
+import { evictFor } from "./effect-budget";
 import { drawEffect, effectLifetime, INCOME_LIFETIME, isVisual, type EffectOrigin, type VisualEvent } from "./effects";
 import { DEPTH } from "./depths";
 import { enemyContext } from "./enemies";
@@ -419,6 +420,7 @@ export class Battlefield extends Phaser.Scene {
       const arrival = this.trails.landed(event.tower, event.at);
       if (arrival) origin = { heading: arrival.angle, radius: arrival.radius };
     }
+    evictFor(this.effects, event.type)?.label?.destroy();
     this.effects.push({ event, age: 0, origin, label: this.incomeLabel(event) });
   }
   private incomeLabel(e: VisualEvent) {
