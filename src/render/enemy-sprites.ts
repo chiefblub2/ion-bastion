@@ -14,7 +14,7 @@ const TINT_MULTIPLY = 0,
 /** The parts of a Phaser Image the manager uses; an animated body is an Image whose spritesheet frame changes. */
 export type SpriteImage = Pick<
   Phaser.GameObjects.Image,
-  "setOrigin" | "setDepth" | "setPosition" | "setRotation" | "setDisplaySize" | "setFlip" | "setVisible" | "setTint" | "setTintMode" | "clearTint" | "setTexture" | "setFrame" | "destroy"
+  "setOrigin" | "setDepth" | "setPosition" | "setRotation" | "setDisplaySize" | "setFlip" | "setVisible" | "setTint" | "setTintMode" | "clearTint" | "setTexture" | "setFrame" | "setAlpha" | "destroy"
 >;
 /** The scene side: texture lookups and image creation (Phaser in the game, a stub in tests). */
 export interface SpriteHost {
@@ -24,7 +24,15 @@ export interface SpriteHost {
   createImage(key: string, frame?: number): SpriteImage;
   /** Whether image tints render (WebGL); Phaser's canvas renderer ignores them. Absent means they do. */
   canTint?(): boolean;
+  /** Whether painted bodies get a light rim (`RIM`); it needs fill tints, so never on the canvas renderer. Absent means no. */
+  rims?(): boolean;
 }
+/**
+ * A silhouette rim behind each painted body: the same frame, a little larger and filled in one light colour, so dark
+ * painted units read on dark or same-coloured ground and sit closer to the lit vector towers. One extra quad of the
+ * same texture per enemy, so it batches with the bodies (a per-sprite filter would cost a render pass each).
+ */
+export const RIM = { color: 0xe4f3ff, alpha: 0.42, scale: 1.07 } as const;
 /** Time and hit feedback for tints, idle motion and accents; without it bodies stand still in their own colours. */
 export interface EnemyLook {
   /** The scene's effect clock: stops while paused. */
@@ -98,6 +106,8 @@ const NO_TINT = -1,
 interface Sprite {
   type: EnemyId;
   image: SpriteImage;
+  /** The light rim behind the body, when the host draws rims. */
+  rim?: SpriteImage;
   tint: number;
   /** Texture and spritesheet frame shown; `frame` is undefined for static art. */
   texture: string;
@@ -179,6 +189,7 @@ export class EnemySprites {
       // Hidden: only the overlay's shimmer. Burrowed: the faint procedural shape on its mound. A cached image waits hidden.
       if (hidden) {
         sprite?.image.setVisible(false);
+        sprite?.rim?.setVisible(false);
         continue;
       }
       sprite ??= this.create(id, type, shown, track);
@@ -186,6 +197,7 @@ export class EnemySprites {
       // Everything is derived anew from the context each frame, so no size, offset or tint carries over.
       const at = placeArt(c, shown.art, look ? bodyMotion(c, look.now) : undefined, sprite.left);
       sprite.image.setPosition(at.x, at.y).setRotation(at.rotation).setDisplaySize(at.size, at.size).setFlip(at.flipX, at.flipY).setVisible(true);
+      sprite.rim?.setPosition(at.x, at.y).setRotation(at.rotation).setDisplaySize(at.size * RIM.scale, at.size * RIM.scale).setFlip(at.flipX, at.flipY).setVisible(true);
       sprite.footprint = at.footprint;
       sprite.placed = at;
       sprite.left = at.left;
@@ -211,6 +223,7 @@ export class EnemySprites {
       if (colorOf(sprite.type) !== kill.color || !this.host.hasTexture(death.texture) || this.dying.length >= MAX_DYING) continue;
       this.sprites.delete(id);
       this.shown.delete(id);
+      sprite.rim?.destroy();
       // The same Image plays on: its last position, heading, mirroring and size stay; status tints end with the unit.
       sprite.image.setTexture(death.texture, sheetFrame(death, 0)).setDisplaySize(sprite.placed.size, sprite.placed.size).clearTint();
       this.dying.push({ image: sprite.image, clip: death, since: now, frame: 0 });
@@ -262,8 +275,9 @@ export class EnemySprites {
   }
   /** Switches the texture or frame only when it changed (a static texture has no frame). */
   private show(sprite: Sprite, look: Look) {
-    if (sprite.texture !== look.texture) look.frame === undefined ? sprite.image.setTexture(look.texture) : sprite.image.setTexture(look.texture, look.frame);
-    else if (sprite.frame !== look.frame && look.frame !== undefined) sprite.image.setFrame(look.frame);
+    for (const image of sprite.rim ? [sprite.image, sprite.rim] : [sprite.image])
+      if (sprite.texture !== look.texture) look.frame === undefined ? image.setTexture(look.texture) : image.setTexture(look.texture, look.frame);
+      else if (sprite.frame !== look.frame && look.frame !== undefined) image.setFrame(look.frame);
     sprite.texture = look.texture;
     sprite.frame = look.frame;
   }
@@ -277,13 +291,17 @@ export class EnemySprites {
     else sprite.image.setTint(tint.color).setTintMode(tint.fill ? TINT_FILL : TINT_MULTIPLY);
   }
   private create(id: number, type: EnemyId, look: Look, track?: AnimationTrack) {
-    const image = this.host.createImage(look.texture, look.frame).setOrigin(0.5, 0.5).setDepth(DEPTH.enemySprites),
-      sprite: Sprite = { type, image, tint: NO_TINT, left: false, texture: look.texture, frame: look.frame, track };
+    const rim = this.host.rims?.()
+        ? this.host.createImage(look.texture, look.frame).setOrigin(0.5, 0.5).setDepth(DEPTH.enemyRims).setTint(RIM.color).setTintMode(TINT_FILL).setAlpha(RIM.alpha)
+        : undefined,
+      image = this.host.createImage(look.texture, look.frame).setOrigin(0.5, 0.5).setDepth(DEPTH.enemySprites),
+      sprite: Sprite = { type, image, rim, tint: NO_TINT, left: false, texture: look.texture, frame: look.frame, track };
     this.sprites.set(id, sprite);
     return sprite;
   }
   private drop(id: number, sprite: Sprite) {
     sprite.image.destroy();
+    sprite.rim?.destroy();
     this.sprites.delete(id);
   }
 }

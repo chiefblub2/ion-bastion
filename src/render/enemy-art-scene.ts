@@ -64,6 +64,7 @@ export const sceneSpriteHost = (scene: Phaser.Scene): SpriteHost => ({
   hasTexture: (key) => !failedArt.has(key) && scene.textures.exists(key),
   createImage: (key, frame) => scene.add.image(0, 0, key, frame),
   canTint: () => scene.sys.game.renderer.type === Phaser.WEBGL,
+  rims: () => scene.sys.game.renderer.type === Phaser.WEBGL,
 });
 /**
  * WebGL texture filtering for the game config. The art is 256 px (the boss 512 px) and is shown at 20 to 60 world

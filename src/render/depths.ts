@@ -15,6 +15,8 @@ export const DEPTH = {
   enemyUnderlay: 3,
   /** Procedural bodies (Graphics). */
   enemyBody: 4,
+  /** Light rims behind the painted bodies (`EnemySprites`, WebGL only), below every painted body. */
+  enemyRims: 4.5,
   /** Painted bodies (one Image per enemy), above the procedural ones and below every marker. */
   enemySprites: 5,
   /** Markers and HP bars. */

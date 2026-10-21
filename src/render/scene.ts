@@ -98,6 +98,8 @@ interface Hooks {
   /** Seconds since each tower family's latest music note (sound on); towers pulse with it. */
   pulses?: () => Partial<Record<Family, number>>;
 }
+/** CSS pixels a tap may miss an enemy's body by and still pick it; the mouse keeps 6 world pixels. */
+const TOUCH_SLACK = 16;
 interface Effect {
   event: VisualEvent;
   age: number;
@@ -251,7 +253,7 @@ export class Battlefield extends Phaser.Scene {
         touch = isTouch(p),
         w = this.cameras.main.getWorldPoint(p.x, p.y);
       if (touch) this.view.hover = null;
-      const enemy = this.view.build ? undefined : enemyAt(this.sim, w.x, w.y, CELL);
+      const enemy = this.view.build ? undefined : enemyAt(this.sim, w.x, w.y, CELL, touch ? this.touchSlack() : undefined);
       if (enemy) return this.hooks.chooseEnemy(enemy.id);
       this.hooks.chooseCell(Math.floor(w.x / CELL), Math.floor(w.y / CELL), shift, touch);
     });
@@ -349,6 +351,13 @@ export class Battlefield extends Phaser.Scene {
   /** Direction of travel at a path distance, for oriented flying units. */
   private heading(distance: number) {
     return headingOnPath(this.sim.map.path, distance, this.sim.map.loop);
+  }
+  /**
+   * Pick slack for a finger in world pixels: `TOUCH_SLACK` CSS pixels around a unit's body, through the canvas's CSS
+   * scale (`displayScale`: canvas pixels per CSS pixel) and the camera zoom, never less than the mouse's 6.
+   */
+  private touchSlack() {
+    return Math.max(6, (TOUCH_SLACK * this.scale.displayScale.x) / this.cameras.main.zoomX);
   }
   override update(_time: number, delta: number) {
     const dt = Math.min(delta / 1000, 0.2);
