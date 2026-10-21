@@ -20,8 +20,9 @@ export function stable(v: unknown): string {
  * on its own schedule. Hashed every `HASH_INTERVAL` frames, so the full walk is cheap.
  */
 export function stateHash(s: GameState) {
-  const { events: _events, ...rest } = s;
-  return fnv(stable(rest));
+  const { events: _events, towers, ...rest } = s;
+  // A tower's `angle` comes from `Math.atan2`, which engines may round differently; only the renderer reads it.
+  return fnv(stable({ ...rest, towers: towers.map(({ angle: _angle, ...t }) => t) }));
 }
 /** 32-bit FNV-1a of a string. */
 export function fnv(parts: string) {

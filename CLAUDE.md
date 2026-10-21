@@ -101,7 +101,7 @@ The mission editor (`src/editor/`) is a hidden page: `/#editor` (`MenuPage` `"ed
 ## Rules that must hold
 
 - **All state changes go through `Game.command`** (or `Match.command` in versus). Each `HANDLERS` entry has an optional `allowedIn` status guard. Render and UI code only read state.
-- **The simulation is deterministic:** fixed step `FIXED_STEP = 1/30`, no `Math.random`, no wall-clock time, and stable iteration order. Multiplayer relies on it; `net/lockstep.test.ts` compares state hashes across clients every frame. The only randomness is `roomCode` on the server.
+- **The simulation is deterministic:** fixed step `FIXED_STEP = 1/30`, no `Math.random`, no wall-clock time, and stable iteration order. Lengths use `len`/`dist` (`systems/path.ts`, `Math.sqrt`, correctly rounded in every engine), never `Math.hypot`; transcendental functions (`atan2`, `sin`, …) may differ between browsers, so their results must not drive simulation decisions (`Tower.angle` is render-only and left out of `stateHash`). Multiplayer relies on it; `net/lockstep.test.ts` compares state hashes across clients every frame. The only randomness is `roomCode` on the server.
 - **Graphics never change the simulation.** Events (`GameEvent` union) are drained after each render frame. Render-side memory (`render/trails.ts`) only reads the state.
 - **Solo play is the baseline.** New optional fields on state, enemies or spawns must stay `undefined` in solo, so solo state and balance stay unchanged (example: `sentBy`).
 - **Content is separate from runtime instances.** Upgrades never mutate definitions, and `Tower.upgrades: string[]` is the only source of upgrade progress.

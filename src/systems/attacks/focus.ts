@@ -1,3 +1,4 @@
+import { len } from "../path";
 import type { Enemy, FocusAttack, Point, Sim, TowerId } from "../../core/types";
 import { applyDamage, hitOf, plain } from "../damage";
 import { canAcquire } from "./targeting";
@@ -6,7 +7,7 @@ import type { AttackModule } from "./types";
 function behind(sim: Sim, type: TowerId, from: Point, target: Enemy, reach: number, width: number): Enemy | undefined {
   const dx = target.x - from.x,
     dy = target.y - from.y,
-    length = Math.hypot(dx, dy) || 1,
+    length = len(dx, dy) || 1,
     ux = dx / length,
     uy = dy / length;
   return sim.state.enemies
