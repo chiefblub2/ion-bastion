@@ -98,6 +98,13 @@ interface Hooks {
   /** Seconds since each tower family's latest music note (sound on); towers pulse with it. */
   pulses?: () => Partial<Record<Family, number>>;
 }
+/** Four L-shaped brackets inside the box (x0, y0)–(x1, y1), arms `arm` long and `w` thick, in the current fill. */
+function cornerBrackets(g: Phaser.GameObjects.Graphics, x0: number, y0: number, x1: number, y1: number, arm: number, w: number) {
+  for (const [cx, cy, dx, dy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) {
+    g.fillRect(dx > 0 ? cx : cx - arm, dy > 0 ? cy : cy - w, arm, w);
+    g.fillRect(dx > 0 ? cx : cx - w, dy > 0 ? cy : cy - arm, w, arm);
+  }
+}
 /** CSS pixels a tap may miss an enemy's body by and still pick it; the mouse keeps 6 world pixels. */
 const TOUCH_SLACK = 16;
 interface Effect {
@@ -476,10 +483,7 @@ export class Battlefield extends Phaser.Scene {
       g.fillStyle(color, 0.08 * breath);
       g.fillRect(x0 + inset, y0 + inset, CELL - 2 * inset, CELL - 2 * inset);
       g.fillStyle(color, 0.5 * breath);
-      for (const [cx, cy, dx, dy] of [[x0 + inset, y0 + inset, 1, 1], [x1 - inset, y0 + inset, -1, 1], [x0 + inset, y1 - inset, 1, -1], [x1 - inset, y1 - inset, -1, -1]]) {
-        g.fillRect(dx > 0 ? cx : cx - tick, dy > 0 ? cy : cy - 1.5, tick, 1.5);
-        g.fillRect(dx > 0 ? cx : cx - 1.5, dy > 0 ? cy : cy - tick, 1.5, tick);
-      }
+      cornerBrackets(g, x0 + inset, y0 + inset, x1 - inset, y1 - inset, tick, 1.5);
     }
   }
   /** The Training coach's cell: a breathing fill and corner brackets that reach out from the cell. */
@@ -497,10 +501,7 @@ export class Battlefield extends Phaser.Scene {
     g.fillStyle(color, 0.12 + 0.12 * breath);
     g.fillRect(x * CELL + 3, y * CELL + 3, CELL - 6, CELL - 6);
     g.fillStyle(color, 0.95);
-    for (const [cx, cy, dx, dy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) {
-      g.fillRect(dx > 0 ? cx : cx - arm, dy > 0 ? cy : cy - w, arm, w);
-      g.fillRect(dx > 0 ? cx : cx - w, dy > 0 ? cy : cy - arm, w, arm);
-    }
+    cornerBrackets(g, x0, y0, x1, y1, arm, w);
   }
   /**
    * Every attack tower's range, faint enough that overlaps build up into a heat map, and a strip along the path:
