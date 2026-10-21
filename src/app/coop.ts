@@ -24,6 +24,8 @@ const ERRORS: Record<Extract<ServerMessage, { type: "error" }>["reason"], string
   "not-in-room": "You are not in a room.",
   "players-mode": "The player count does not fit this mode.",
   "bad-message": "Invalid message to the relay server.",
+  "rate-limited": "Too many messages to the relay server. Slow down.",
+  "server-full": "The relay server is full. Try again later.",
 };
 /** Multiplayer: lobby page, mode choice, relay connection and the switch to lockstep frames. */
 export function createCoop({ game, view, ui, pickMission, applied, setDriver }: CoopDeps) {

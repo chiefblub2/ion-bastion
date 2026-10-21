@@ -50,8 +50,9 @@ describe("lockstep", () => {
     expect(clients[0].game.state.wave).toBe(3);
     expect(clients[0].hashes).toEqual(clients[1].hashes);
     expect(clients[0].hashes.every(([f]) => f % HASH_INTERVAL === 0)).toBe(true);
-    expect(room.reportHash(0, 30, clients[0].hashes[0][1])).toBe("pending");
-    expect(room.reportHash(1, 30, clients[1].hashes[0][1])).toBe("ok");
+    const [frame, hash] = clients[0].hashes.at(-1)!;
+    expect(room.reportHash(0, frame, hash)).toBe("pending");
+    expect(room.reportHash(1, frame, clients[1].hashes.at(-1)![1])).toBe("ok");
   });
   it("keeps co-op clients identical on a ring mission with timed waves", () => {
     const { room, clients, step } = session(3);

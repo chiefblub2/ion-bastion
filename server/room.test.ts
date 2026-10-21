@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Room, roomCode } from "./room";
+import { HASH_WINDOW, isCommandShape, rateLimiter, Room, roomCode } from "./room";
 describe("relay room", () => {
   it("seats four players and refuses a fifth", () => {
     const room = new Room("ABCD");
@@ -58,6 +58,8 @@ describe("relay room", () => {
     const room = new Room("ABCD");
     room.join();
     room.join();
+    room.launch("outpost-07");
+    for (let i = 0; i < 30; i++) room.step();
     expect(room.reportHash(0, 30, 1)).toBe("pending");
     expect(room.reportHash(1, 30, 2)).toBe("desync");
   });
@@ -65,5 +67,34 @@ describe("relay room", () => {
     const values = [0, 0, 0, 0, 0.99, 0.99, 0.99, 0.99];
     const code = roomCode((c) => c === "AAAA", () => values.shift()!);
     expect(code).toBe("ZZZZ");
+  });
+});
+describe("relay limits", () => {
+  it("ignores hash reports outside the window and prunes old ones", () => {
+    const room = new Room("ABCD");
+    room.join();
+    room.join();
+    room.launch("outpost-07");
+    for (let i = 0; i < 60; i++) room.step();
+    expect(room.reportHash(0, 30, 1)).toBe("pending");
+    expect(room.reportHash(0, 9000, 1)).toBe("pending");
+    expect(room.reportHash(0, 31, 1)).toBe("pending");
+    expect(room.reportHash(1, 9000, 2)).toBe("pending");
+    for (let i = 0; i < HASH_WINDOW + 30; i++) room.step();
+    // The stale frame-30 report is gone: a late second report cannot complete it.
+    expect(room.reportHash(1, 30, 2)).toBe("pending");
+    expect(room.reportHash(0, room.frame - (room.frame % 30), 5)).toBe("pending");
+    expect(room.reportHash(1, room.frame - (room.frame % 30), 5)).toBe("ok");
+  });
+  it("checks only the shape of a command", () => {
+    expect(isCommandShape({ type: "build" })).toBe(true);
+    expect([null, "build", [], { type: 3 }, { type: "x".repeat(40) }].some(isCommandShape)).toBe(false);
+  });
+  it("limits the message rate per socket", () => {
+    let t = 0;
+    const allow = rateLimiter(10, 3, () => t);
+    expect([allow(), allow(), allow(), allow()]).toEqual([true, true, true, false]);
+    t += 100;
+    expect(allow()).toBe(true);
   });
 });

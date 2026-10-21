@@ -35,4 +35,4 @@ export type ServerMessage =
   | { type: "speed"; value: Speed }
   | { type: "peer-left" }
   | { type: "desync"; frame: number }
-  | { type: "error"; reason: "room-unknown" | "room-full" | "not-host" | "not-in-room" | "players-mode" | "bad-message" };
+  | { type: "error"; reason: "room-unknown" | "room-full" | "not-host" | "not-in-room" | "players-mode" | "bad-message" | "rate-limited" | "server-full" };
