@@ -71,7 +71,7 @@ export class AnimReview extends Phaser.Scene {
     this.layout();
     (window as unknown as { __animReview: object }).__animReview = { ready: true, sel };
   }
-  update(_time: number, delta: number) {
+  override update(_time: number, delta: number) {
     if (sel.playing) {
       sel.elapsed += (delta / 1000) * sel.speed;
       this.frames();

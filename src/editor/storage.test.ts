@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { blankDraft } from "./draft";
-import { keepTarget } from "./storage";
+import { keepTarget, withDraft, withoutDraft } from "./storage";
 
 const edited = { ...blankDraft(10, 8), name: "Mine" };
 const other = { ...blankDraft(10, 8), id: "other", name: "Other" };
@@ -26,5 +26,15 @@ describe("keepTarget", () => {
   });
   it("suffixes when the incoming draft has the same id", () => {
     expect(keepTarget(edited, { ...other, id: edited.id }, [])).toEqual({ ...edited, id: `${edited.id}-2`, name: "Mine (2)" });
+  });
+});
+
+describe("stored draft list", () => {
+  const future = { version: 2, id: "future", name: "From a newer build" };
+  it("keeps entries it cannot read when saving and deleting", () => {
+    const saved = withDraft([future], edited);
+    expect(saved).toEqual([future, edited]);
+    expect(withDraft(saved, { ...edited, name: "Renamed" })).toEqual([future, { ...edited, name: "Renamed" }]);
+    expect(withoutDraft(saved, edited.id)).toEqual([future]);
   });
 });

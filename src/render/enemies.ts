@@ -650,10 +650,30 @@ export function drawEnemyOverlay(g: Ink, c: EnemyDrawContext) {
   traitsAbove(g, c);
   statusAbove(g, c);
   drawTranceMarks(g, c);
-  if (!c.hpBar) return;
-  chamferRect(g, x, y - r - 6.5, r + 1, 2.5, 1, 0x050c12);
-  g.fillStyle(e.hp / e.maxHp > 0.4 ? 0x93f5b8 : 0xff738a);
-  g.fillRect(x - r, y - r - 8, Math.max(0, (r * 2 * e.hp) / e.maxHp), 3);
+  drawHpBar(g, c);
+}
+/** Bosses keep their bar at full health; everyone else shows it once hurt or shielded, which thins out a fresh wave. */
+const ALWAYS_BAR = new Set(["boss"]);
+/** HP colour steps: healthy, hurt, critical. */
+export const HP_COLORS = { high: 0x93f5b8, mid: 0xffc94a, low: 0xff738a } as const;
+/**
+ * A 4 px bar in a dark frame above the unit, coloured in three steps, with the remaining shield as a thin strip on
+ * top. Hidden at full health without a shield, except on bosses.
+ */
+function drawHpBar(g: Ink, c: EnemyDrawContext) {
+  const { x, y, r, enemy: e, traits } = c,
+    share = Math.max(0, e.hp / e.maxHp),
+    shield = traits.shield;
+  if (!c.hpBar || (share >= 1 && shield <= 0 && !ALWAYS_BAR.has(c.definition.id))) return;
+  const top = y - r - 10,
+    strip = shield > 0 ? 2 : 0;
+  chamferRect(g, x, top + 2 - strip / 2, r + 1.5, 3 + strip / 2, 1, 0x050c12, 0.9);
+  g.fillStyle(share > 0.6 ? HP_COLORS.high : share > 0.3 ? HP_COLORS.mid : HP_COLORS.low);
+  g.fillRect(x - r, top, r * 2 * share, 4);
+  if (strip) {
+    g.fillStyle(TRAIT_COLORS.shield);
+    g.fillRect(x - r, top - strip - 0.5, r * 2 * Math.min(1, shield), strip);
+  }
 }
 /** One enemy with all three stages into a single Graphics (gallery); the battlefield draws the stages on their own layers. */
 export function drawEnemy(

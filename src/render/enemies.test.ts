@@ -76,8 +76,9 @@ describe("enemy render stages", () => {
     expect(fills(over, 0x93f5b8)).toBe(1);
   });
 
-  it("colours a low HP bar and leaves the bar out on request", () => {
+  it("colours the HP bar in three steps, hides it at full health, and leaves it out on request", () => {
     expect(fills(stages(GROUND, { hp: 200 }).over, 0xff738a)).toBe(1);
+    expect(stages(GROUND).over.some(([name]) => name === "fillRect")).toBe(false);
     expect(stages(GROUND, { hpBar: false }).over.some(([name]) => name === "fillRect")).toBe(false);
   });
 

@@ -9,11 +9,12 @@ import { headingOnPath } from "../systems/path";
 import { enemyAt } from "./pick";
 import type { GameEvent, GameState, Point, Tower, TowerId } from "../core/types";
 import { PLAYER_COLORS } from "../net/protocol";
+import { evictFor } from "./effect-budget";
 import { drawEffect, effectLifetime, groundLight, INCOME_LIFETIME, isVisual, type EffectOrigin, type VisualEvent } from "./effects";
 import { DEPTH } from "./depths";
 import { enemyContext } from "./enemies";
 import { killedEnemies } from "./enemy-animator";
-import { missionAnimationTypes } from "./enemy-animations";
+import { missionAnimationTypes, missionEnemyTypes } from "./enemy-animations";
 import { queueEnemyAnimations, queueEnemyArt, sceneSpriteHost } from "./enemy-art-scene";
 import { EnemyFeedback } from "./enemy-feedback";
 import { drawEnemyLayers, EnemySprites } from "./enemy-sprites";
@@ -101,6 +102,15 @@ interface Hooks {
   /** Seconds since each tower family's latest music note (sound on); towers pulse with it. */
   pulses?: () => Partial<Record<Family, number>>;
 }
+/** Four L-shaped brackets inside the box (x0, y0)–(x1, y1), arms `arm` long and `w` thick, in the current fill. */
+function cornerBrackets(g: Phaser.GameObjects.Graphics, x0: number, y0: number, x1: number, y1: number, arm: number, w: number) {
+  for (const [cx, cy, dx, dy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) {
+    g.fillRect(dx > 0 ? cx : cx - arm, dy > 0 ? cy : cy - w, arm, w);
+    g.fillRect(dx > 0 ? cx : cx - w, dy > 0 ? cy : cy - arm, w, arm);
+  }
+}
+/** CSS pixels a tap may miss an enemy's body by and still pick it; the mouse keeps 6 world pixels. */
+const TOUCH_SLACK = 16;
 interface Effect {
   event: VisualEvent;
   age: number;
@@ -189,13 +199,11 @@ export class Battlefield extends Phaser.Scene {
     super("battlefield");
     this.driver = new LocalDriver(sim, view);
   }
-  /** Queues the enemy art once per game; a scene restart finds it in the texture cache. */
-  preload() {
-    queueEnemyArt(this);
-  }
   create() {
     // The mission's animation sheets (about 2 MB each) load in the background: on a slow host, waiting for them in
     // `preload` left the board blank after a mission change. Until a sheet arrives its enemies show their static art.
+    // The static art follows the same plan: only the mission's own types, the others released.
+    queueEnemyArt(this, missionEnemyTypes(this.sim.mission, this.sim.content));
     queueEnemyAnimations(this, missionAnimationTypes(this.sim.mission, this.sim.content));
     this.load.start();
     this.effects = [];
@@ -261,7 +269,7 @@ export class Battlefield extends Phaser.Scene {
         touch = isTouch(p),
         w = this.cameras.main.getWorldPoint(p.x, p.y);
       if (touch) this.view.hover = null;
-      const enemy = this.view.build ? undefined : enemyAt(this.sim, w.x, w.y, CELL);
+      const enemy = this.view.build ? undefined : enemyAt(this.sim, w.x, w.y, CELL, touch ? this.touchSlack() : undefined);
       if (enemy) return this.hooks.chooseEnemy(enemy.id);
       this.hooks.chooseCell(Math.floor(w.x / CELL), Math.floor(w.y / CELL), shift, touch);
     });
@@ -360,7 +368,14 @@ export class Battlefield extends Phaser.Scene {
   private heading(distance: number) {
     return headingOnPath(this.sim.map.path, distance, this.sim.map.loop);
   }
-  update(_time: number, delta: number) {
+  /**
+   * Pick slack for a finger in world pixels: `TOUCH_SLACK` CSS pixels around a unit's body, through the canvas's CSS
+   * scale (`displayScale`: canvas pixels per CSS pixel) and the camera zoom, never less than the mouse's 6.
+   */
+  private touchSlack() {
+    return Math.max(6, (TOUCH_SLACK * this.scale.displayScale.x) / this.cameras.main.zoomX);
+  }
+  override update(_time: number, delta: number) {
     const dt = Math.min(delta / 1000, 0.2);
     this.clock += dt;
     const simStart = performance.now();
@@ -437,6 +452,7 @@ export class Battlefield extends Phaser.Scene {
       const arrival = this.trails.landed(event.tower, event.at);
       if (arrival) origin = { heading: arrival.angle, radius: arrival.radius };
     }
+    evictFor(this.effects, event.type)?.label?.destroy();
     this.effects.push({ event, age: 0, origin, label: this.incomeLabel(event) });
   }
   private incomeLabel(e: VisualEvent) {
@@ -485,10 +501,7 @@ export class Battlefield extends Phaser.Scene {
       g.fillStyle(color, 0.08 * breath);
       g.fillRect(x0 + inset, y0 + inset, CELL - 2 * inset, CELL - 2 * inset);
       g.fillStyle(color, 0.5 * breath);
-      for (const [cx, cy, dx, dy] of [[x0 + inset, y0 + inset, 1, 1], [x1 - inset, y0 + inset, -1, 1], [x0 + inset, y1 - inset, 1, -1], [x1 - inset, y1 - inset, -1, -1]]) {
-        g.fillRect(dx > 0 ? cx : cx - tick, dy > 0 ? cy : cy - 1.5, tick, 1.5);
-        g.fillRect(dx > 0 ? cx : cx - 1.5, dy > 0 ? cy : cy - tick, 1.5, tick);
-      }
+      cornerBrackets(g, x0 + inset, y0 + inset, x1 - inset, y1 - inset, tick, 1.5);
     }
   }
   /** The Training coach's cell: a breathing fill and corner brackets that reach out from the cell. */
@@ -506,10 +519,7 @@ export class Battlefield extends Phaser.Scene {
     g.fillStyle(color, 0.12 + 0.12 * breath);
     g.fillRect(x * CELL + 3, y * CELL + 3, CELL - 6, CELL - 6);
     g.fillStyle(color, 0.95);
-    for (const [cx, cy, dx, dy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) {
-      g.fillRect(dx > 0 ? cx : cx - arm, dy > 0 ? cy : cy - w, arm, w);
-      g.fillRect(dx > 0 ? cx : cx - w, dy > 0 ? cy : cy - arm, w, arm);
-    }
+    cornerBrackets(g, x0, y0, x1, y1, arm, w);
   }
   /**
    * Every attack tower's range, faint enough that overlaps build up into a heat map, and a strip along the path:

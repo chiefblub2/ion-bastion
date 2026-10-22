@@ -2,7 +2,7 @@ import { resolveUpgrades } from "../core/upgrades";
 import type { DamageSource, Enemy, Point, Sim, SpecializationSpec, TargetPriority, Tower } from "../core/types";
 import { attackModule, canAcquire, canTarget, isSupport } from "./attacks";
 import { effectiveTowerStats, isAuraSource } from "./auras";
-import { dist } from "./path";
+import { dist, len } from "./path";
 import { isDefused, taunters } from "./traits";
 import { critFactor, overclockRate, synergyFactor } from "./support";
 /** Homing projectiles whose target died look for a new one within this radius. */
@@ -146,7 +146,7 @@ export function moveProjectiles(sim: Sim, dt: number) {
       p.ty = target.y;
     }
     const step = d.projectile!.speed * dt,
-      remaining = Math.hypot(p.tx - p.x, p.ty - p.y);
+      remaining = len(p.tx - p.x, p.ty - p.y);
     if (remaining > step) {
       p.x += ((p.tx - p.x) / remaining) * step;
       p.y += ((p.ty - p.y) / remaining) * step;

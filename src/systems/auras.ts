@@ -1,3 +1,4 @@
+import { dist } from "./path";
 import { DEFAULT_CONTENT } from "../content";
 import { resolveUpgrades, type UpgradeProgress } from "../core/upgrades";
 import { isSupport } from "./attacks";
@@ -24,7 +25,7 @@ export function isInAura(
 ): boolean {
   return isAuraSource(source, content) &&
     !isSupport(content.towers[target.type].attack) &&
-    Math.hypot(source.x - target.x, source.y - target.y) <= content.towers[source.type].range;
+    dist(source, target) <= content.towers[source.type].range;
 }
 
 export function receivedAuraBonuses(

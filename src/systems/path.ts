@@ -27,4 +27,9 @@ export function headingOnPath(path: readonly Point[], distance: number, loop?: b
     b = path[(i + 1) % n];
   return Math.atan2(b.y - a.y, b.x - a.x);
 }
-export const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
+/**
+ * Euclidean length. `Math.sqrt` is correctly rounded in every engine, `Math.hypot` is not, and lockstep clients on
+ * different browsers must agree to the last bit.
+ */
+export const len = (dx: number, dy: number) => Math.sqrt(dx * dx + dy * dy);
+export const dist = (a: Point, b: Point) => len(a.x - b.x, a.y - b.y);

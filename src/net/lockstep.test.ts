@@ -50,8 +50,9 @@ describe("lockstep", () => {
     expect(clients[0].game.state.wave).toBe(3);
     expect(clients[0].hashes).toEqual(clients[1].hashes);
     expect(clients[0].hashes.every(([f]) => f % HASH_INTERVAL === 0)).toBe(true);
-    expect(room.reportHash(0, 30, clients[0].hashes[0][1])).toBe("pending");
-    expect(room.reportHash(1, 30, clients[1].hashes[0][1])).toBe("ok");
+    const [frame, hash] = clients[0].hashes.at(-1)!;
+    expect(room.reportHash(0, frame, hash)).toBe("pending");
+    expect(room.reportHash(1, frame, clients[1].hashes.at(-1)![1])).toBe("ok");
   });
   it("keeps co-op clients identical on a ring mission with timed waves", () => {
     const { room, clients, step } = session(3);
@@ -148,5 +149,20 @@ describe("lockstep", () => {
       expect(clients[2].match!.fields[1].state.towers[0]).toMatchObject({ type: "blast", priority: "strong" });
       if (mode === "siege") expect(clients[0].applied.some((a) => a.command.type === "send" && a.result.ok)).toBe(true);
       expect(clients[0].hashes).toEqual(clients[2].hashes);
+    });
+});
+describe("untrusted commands", () => {
+  const junk = [{ type: "nope" }, { type: "toString" }, {}, { type: "build", tower: "toString", x: 1, y: 1 }, { type: "upgrade", id: 999, upgrade: null }] as never[];
+  for (const mode of ["coop", "race"] as ModeId[])
+    it(`rejects malformed commands on every client alike in ${mode}`, () => {
+      const { room, clients, step } = session(2, mode);
+      room.launch("outpost-07", mode);
+      step();
+      for (const c of junk) room.queue(1, c);
+      expect(step).not.toThrow();
+      const results = clients.map((c) => c.applied.slice(-junk.length).map((a) => a.result.ok));
+      expect(results[0]).toEqual(results[1]);
+      expect(results[0].every((ok) => !ok)).toBe(true);
+      expect(clients[0].sim.hash()).toBe(clients[1].sim.hash());
     });
 });

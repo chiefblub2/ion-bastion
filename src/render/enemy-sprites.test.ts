@@ -10,7 +10,7 @@ import { artEdge, artFor, artScale, ENEMY_ART, type EnemyArt } from "./enemy-art
 import { bodyMotion, TINTS } from "./enemy-appearance";
 import { EnemyFeedback } from "./enemy-feedback";
 import { allClips, animationArt, animationsFor, clipDuration, ENEMY_ANIMATIONS, sheetKey, type EnemyAnimationState } from "./enemy-animations";
-import { drawEnemyLayers, EnemySprites, MAX_DYING, placeArt, type EnemyLook, type SpriteImage } from "./enemy-sprites";
+import { drawEnemyLayers, EnemySprites, MAX_DYING, placeArt, RIM, type EnemyLook, type SpriteImage } from "./enemy-sprites";
 import { bodyLift, enemyContext, type EnemyDrawContext } from "./enemies";
 import type { Ink } from "./shapes";
 
@@ -86,6 +86,11 @@ class StubImage {
     this.flip = [x, y];
     return this;
   }
+  alpha = 1;
+  setAlpha(alpha: number) {
+    this.alpha = alpha;
+    return this;
+  }
   setVisible(visible: boolean) {
     this.visible = visible;
     return this;
@@ -95,12 +100,13 @@ class StubImage {
   }
 }
 /** A Phaser stand-in: `loaded` holds the textures in the cache. */
-function host(loaded = Object.values(ENEMY_ART).map((a) => a!.texture), canTint = true) {
+function host(loaded = Object.values(ENEMY_ART).map((a) => a!.texture), canTint = true, rims = false) {
   const images: StubImage[] = [],
     textures = new Set(loaded);
   const sprites = new EnemySprites({
     hasTexture: (key) => textures.has(key),
     canTint: () => canTint,
+    rims: () => rims,
     createImage: (key, frame) => {
       const image = new StubImage(key, frame);
       images.push(image);
@@ -114,7 +120,9 @@ const sim = new Game();
 const UNPAINTED = "unpainted" as EnemyId;
 function unit(id: number, type: EnemyId, at: { x?: number; y?: number; heading?: number; traits?: Partial<TraitFlags>; status?: Partial<StatusFlags> } = {}): EnemyDrawContext {
   if (type === UNPAINTED) return { ...unit(id, "warpdrone", at), enemy: { ...makeEnemy(id, "warpdrone", 2, 3), type: UNPAINTED } };
-  const e = makeEnemy(id, type, 2, 3);
+  // Slightly hurt, as in a running wave: a unit at full health draws no HP bar.
+  const e = { ...makeEnemy(id, type, 2, 3) };
+  e.hp = e.maxHp * 0.9;
   return enemyContext(at.x ?? 100, at.y ?? 120, 56, e, DEFAULT_CONTENT.enemies[type], at.heading ?? 0, { ...statusFlags(e, 0), ...at.status }, { ...traitFlags(sim, e), ...at.traits }, 0.5);
 }
 /** World position of the centre of an image's visible art: the image centre plus the rotated bounds offset. */
@@ -662,5 +670,23 @@ describe("animated bodies", () => {
     sprites.reset();
     expect(live()).toHaveLength(0);
     expect(sprites.dyingCount).toBe(0);
+  });
+});
+
+describe("rims", () => {
+  it("puts a light, slightly larger copy of the frame behind each painted body and drops it with the unit", () => {
+    const { sprites, images, live } = host(undefined, true, true);
+    sprites.sync([unit(1, "tank")]);
+    const [rim, body] = images;
+    expect(images).toHaveLength(2);
+    expect(rim.depth).toBe(DEPTH.enemyRims);
+    expect(rim.depth).toBeLessThan(body.depth);
+    expect(rim.texture).toBe(body.texture);
+    expect(rim.width).toBeCloseTo(body.width * RIM.scale);
+    expect([rim.tint, rim.alpha]).toEqual([{ color: RIM.color, fill: true }, RIM.alpha]);
+    sprites.sync([unit(1, "tank", { traits: { stealth: true } })]);
+    expect(rim.visible).toBe(false);
+    sprites.sync([]);
+    expect(live()).toHaveLength(0);
   });
 });

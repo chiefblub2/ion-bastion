@@ -1,3 +1,4 @@
+import { dist } from "./path";
 import { DEFAULT_CONTENT } from "../content";
 import { resolveUpgrades } from "../core/upgrades";
 import type { ContentPack, GameEvent, Point, Tower } from "../core/types";
@@ -12,7 +13,7 @@ export function upgradeDiscount(tower: Placed, towers: readonly Tower[], content
   let best = 0;
   for (const t of towers) {
     const r = resolveUpgrades(t, content);
-    if (r.attack.kind !== "discount" || Math.hypot(t.x - tower.x, t.y - tower.y) > r.stats.range) continue;
+    if (r.attack.kind !== "discount" || dist(t, tower) > r.stats.range) continue;
     best = Math.max(best, r.attack.amount);
   }
   return best;
@@ -25,7 +26,7 @@ export function discountEvent(tower: Placed, towers: readonly Tower[], saved: nu
   if (saved <= 0 || discount <= 0) return undefined;
   const source = towers.find((t) => {
     const r = resolveUpgrades(t, content);
-    return r.attack.kind === "discount" && r.attack.amount === discount && Math.hypot(t.x - tower.x, t.y - tower.y) <= r.stats.range;
+    return r.attack.kind === "discount" && r.attack.amount === discount && dist(t, tower) <= r.stats.range;
   })!;
   return { type: "discount", from: { x: source.x, y: source.y }, at: { x: tower.x, y: tower.y }, amount: saved, color: content.towers[source.type].color };
 }

@@ -59,6 +59,11 @@ describe("validated player commands", () => {
   });
 });
 describe("command guards", () => {
+  it("rejects unknown command types without looking them up", () => {
+    const game = new Game();
+    for (const c of [{ type: "nope" }, { type: "toString" }, { type: "__proto__" }, {}, null])
+      expect(game.command(c as never)).toEqual({ ok: false, code: "bad-command", params: undefined });
+  });
   it("pauses only during a wave and reports why otherwise", () => {
     const g = new Game();
     expect(g.command({ type: "pause" })).toMatchObject({ ok: false, code: "pause-unavailable" });

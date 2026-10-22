@@ -40,12 +40,23 @@ export class LockstepDriver {
   receive(frames: Frame[]) {
     this.pending.push(...frames);
   }
+  /**
+   * A command that throws (malformed fields from a modified client) is rejected on every client alike, so the
+   * room stays in step instead of crashing. The tick is never guarded: a simulation bug must surface.
+   */
+  private apply(c: MatchCommand): CommandResult {
+    try {
+      return this.sim.command(c);
+    } catch {
+      return { ok: false, code: "bad-command" };
+    }
+  }
   /** Applies every received frame; the relay clock sets the pace. */
   advance() {
     for (const f of this.pending.splice(0)) {
       for (const { player, command } of f.commands) {
         const c = { ...command, player };
-        this.hooks.applied({ command: c, result: this.sim.command(c), player });
+        this.hooks.applied({ command: c, result: this.apply(c), player });
       }
       this.sim.tick();
       this.frame = f.frame;

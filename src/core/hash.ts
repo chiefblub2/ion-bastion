@@ -1,79 +1,28 @@
-import type { Enemy, GameState, Tower } from "./types";
+import type { GameState } from "./types";
 const round = (n: number) => Math.round(n * 1e6);
-/** One tower's hash part; optional fields add a suffix only when present, so solo hashes stay unchanged. */
-const towerPart = (t: Tower) =>
-  [
-    `${t.id}:${t.owner}:${t.upgrades.join("+")}:${t.kills}`,
-    t.priority ? `:${t.priority}` : "",
-    t.focus ? `:f${t.focus.target}/${t.focus.stacks}` : "",
-    t.specialShots !== undefined ? `:s${t.specialShots}` : "",
-    // ── new towers: g1 (Attack+Control A) ──
-    // ── end g1 ──
-    // ── new towers: g2 (Control B) ──
-    // ── end g2 ──
-    // ── new towers: g3 (Traps) ──
-    t.wall !== undefined ? `:gw${round(t.wall)}` : "",
-    // ── end g3 ──
-    // ── new towers: g4 (Support A) ──
-    t.critCount !== undefined ? `:cr${t.critCount}` : "",
-    // ── end g4 ──
-    // ── new towers: g5 (Support B) ──
-    t.barrier !== undefined ? `:sg${t.barrier}` : "",
-    // ── end g5 ──
-  ].join("");
-/** One enemy's hash part, like `towerPart`. */
-const enemyPart = (e: Enemy) =>
-  [
-    `${e.id}:${round(e.hp)}:${round(e.distance)}`,
-    e.brood !== undefined ? `:b${e.brood}` : "",
-    // ── new towers: g1 (Attack+Control A) ──
-    // ── end g1 ──
-    // ── new towers: g2 (Control B) ──
-    // ── end g2 ──
-    // ── new towers: g3 (Traps) ──
-    e.warped !== undefined ? ":gp" : "",
-    // ── end g3 ──
-    // ── new towers: g4 (Support A) ──
-    // ── end g4 ──
-    // ── new towers: g5 (Support B) ──
-    // ── end g5 ──
-  ].join("");
-/** FNV-1a over the parts of the state that must match between co-op clients; floats are rounded. */
+/**
+ * Stable text of any plain value: object keys sorted, `undefined` fields skipped (so an absent field and an unset one
+ * hash alike), floats rounded. Fields added to the state later are covered without touching this file.
+ */
+export function stable(v: unknown): string {
+  if (typeof v === "number") return String(round(v));
+  if (v === null || typeof v !== "object") return String(v);
+  if (Array.isArray(v)) return `[${v.map(stable).join(",")}]`;
+  const o = v as Record<string, unknown>;
+  return `{${Object.keys(o)
+    .filter((k) => o[k] !== undefined)
+    .sort()
+    .map((k) => `${k}:${stable(o[k])}`)
+    .join(",")}}`;
+}
+/**
+ * FNV-1a over everything co-op clients must agree on: the whole state except `events`, which the renderer drains
+ * on its own schedule. Hashed every `HASH_INTERVAL` frames, so the full walk is cheap.
+ */
 export function stateHash(s: GameState) {
-  const parts = [
-    s.status,
-    s.paused,
-    s.wave,
-    s.lives,
-    s.kills,
-    s.nextId,
-    round(s.time),
-    s.wallets.map(round).join(","),
-    s.towers.map(towerPart).join(";"),
-    s.enemies.map(enemyPart).join(";"),
-    s.projectiles.length,
-    // Circle missions only, so reactor missions keep their hashes.
-    ...(s.circle ? [round(s.circle.next), s.queue.length] : []),
-    ...(s.nextWave !== undefined ? [`n${round(s.nextWave)}`] : []),
-    // Aftershock waves still to come; absent without them, so older hashes stay unchanged.
-    ...(s.pending ? [s.pending.map((p) => `${round(p.due)}@${round(p.at.x)},${round(p.at.y)}r${round(p.radius)}d${round(p.damage)}t${p.source.tower}`).join(";")] : []),
-    // Plasma pools on the ground; absent without them.
-    ...(s.zones ? [s.zones.map((z) => `${z.source.tower}@${round(z.at.x)},${round(z.at.y)}r${round(z.radius)}d${round(z.dps)}u${round(z.until)}n${round(z.next)}`).join(";")] : []),
-    // Optional state of new towers: each part is absent (an empty spread) while unused, so older hashes stay unchanged.
-    // ── new towers: g1 (Attack+Control A) ──
-    // Orbital strikes on their way down; absent without them.
-    ...(s.strikes ? [`o${s.strikes.map((k) => `${k.source.tower}@${round(k.at.x)},${round(k.at.y)}r${round(k.radius)}d${round(k.damage)}u${round(k.due)}`).join(";")}`] : []),
-    // ── end g1 ──
-    // ── new towers: g2 (Control B) ──
-    // ── end g2 ──
-    // ── new towers: g3 (Traps) ──
-    // ── end g3 ──
-    // ── new towers: g4 (Support A) ──
-    // ── end g4 ──
-    // ── new towers: g5 (Support B) ──
-    // ── end g5 ──
-  ].join("|");
-  return fnv(parts);
+  const { events: _events, towers, ...rest } = s;
+  // A tower's `angle` comes from `Math.atan2`, which engines may round differently; only the renderer reads it.
+  return fnv(stable({ ...rest, towers: towers.map(({ angle: _angle, ...t }) => t) }));
 }
 /** 32-bit FNV-1a of a string. */
 export function fnv(parts: string) {

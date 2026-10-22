@@ -1002,7 +1002,7 @@ export const THEMES: Record<MapTheme, Theme> = {
     backdrop: 0x1a1206,
     ground: [0x2a1f10, 0x261c0e],
     grid: 0x4a3818,
-    path: { edge: 0xc98a3a, bed: 0x3a2a12, line: 0xffc46b, arrow: 0xffd48a },
+    path: { edge: 0xc98a3a, bed: 0x524331, line: 0xffc46b, arrow: 0xffd48a },
     accent: 0xffc46b,
     obstacle: (g, x, y, rand) => {
       const kind = rand();

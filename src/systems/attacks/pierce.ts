@@ -1,3 +1,4 @@
+import { len } from "../path";
 import type { Enemy, PierceAttack, Point, Sim, TowerId } from "../../core/types";
 import { applyDamage, hitOf } from "../damage";
 import { canTarget } from "./targeting";
@@ -6,7 +7,7 @@ import type { AttackModule } from "./types";
 function line(sim: Sim, type: TowerId, from: Point, target: Enemy, reach: number, width: number) {
   const dx = target.x - from.x,
     dy = target.y - from.y,
-    length = Math.hypot(dx, dy) || 1,
+    length = len(dx, dy) || 1,
     ux = dx / length,
     uy = dy / length,
     end = Math.max(reach, length);
