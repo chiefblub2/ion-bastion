@@ -8,7 +8,7 @@ import { isSupport } from "../systems/attacks";
 import { openUpgrades } from "../core/upgrades";
 import type { MatchCommand } from "../core/match";
 import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderMission, renderTowerCodexPage, TOWER_KEYS } from "../ui/interface";
-import { type AtlasOptions, renderAtlas, selectMission as featureMission, selectSector, stepMission, stepRail, syncRailSteps } from "../ui/sector-atlas";
+import { type AtlasOptions, renderAtlas, selectMission as featureMission, selectSector, stepRail, syncRailSteps } from "../ui/sector-atlas";
 import { terrainImage } from "../render/terrain-snapshot";
 import { describeResult } from "../ui/messages";
 import { playerName } from "../ui/players";
@@ -119,7 +119,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     /** What the home page's primary button does right now. */
     primary: HomeAction;
   /** The Sector Atlas picks for a multiplayer room while the page was opened from there or from a lobby. */
-  const atlas = (): AtlasOptions => ({ lobby: forRoom || coop.inLobby(), image: terrainImage, record: campaignRecord() });
+  const atlas = (): AtlasOptions => ({ lobby: forRoom || coop.inLobby(), image: terrainImage, record: campaignRecord(), playing: inProgress() });
   const sectorRail = document.getElementById("sector-tabs")!;
   sectorRail.addEventListener("scroll", syncRailSteps, { passive: true });
   new ResizeObserver(syncRailSteps).observe(sectorRail);
@@ -347,7 +347,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
   document.getElementById("mission-list")!.addEventListener("keydown", (e) => {
     const nodes = [...document.querySelectorAll<HTMLElement>("#mission-list [data-pick]")],
       current = nodes.indexOf((e.target as HTMLElement).closest<HTMLElement>("[data-pick]")!);
-    const next = { ArrowRight: current + 1, ArrowLeft: current - 1, Home: 0, End: nodes.length - 1 }[e.key];
+    const next = { ArrowRight: current + 1, ArrowDown: current + 1, ArrowLeft: current - 1, ArrowUp: current - 1, Home: 0, End: nodes.length - 1 }[e.key];
     if (next === undefined || !nodes.length) return;
     e.preventDefault();
     const node = nodes[(next + nodes.length) % nodes.length];
@@ -396,7 +396,6 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     if (!b) return;
     if (b.dataset.back !== undefined) return screens.back();
     if (b.dataset.railStep) return stepRail(Number(b.dataset.railStep));
-    if (b.dataset.missionStep) return stepMission(game, Number(b.dataset.missionStep), atlas());
     if (b.dataset.tower) return choose(b.dataset.tower as TowerId);
     if (b.dataset.mission) return selectMission(b.dataset.mission);
     if (b.dataset.pick) return pickMission(b.dataset.pick);

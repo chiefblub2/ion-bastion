@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import { isCircleSector, missionNumber } from "../content/missions";
-import { atlasPick, atlasSectors, atlasStep, progressOf } from "./sector-atlas";
+import { atlasNext, atlasPick, atlasSectors, progressOf } from "./sector-atlas";
 const { missions, sectors = [] } = DEFAULT_CONTENT;
 describe("sector atlas", () => {
   const campaign = atlasSectors(DEFAULT_CONTENT, false),
@@ -18,29 +18,33 @@ describe("sector atlas", () => {
       expect([s.first, s.last]).toEqual([missionNumber(members[0], missions), missionNumber(members[members.length - 1], missions)]);
     }
   });
-  it("marks the sector of the loaded mission", () => {
-    const id = sectors[1].missions[2].id;
-    expect(atlasSectors(DEFAULT_CONTENT, false, id).filter((s) => s.current).map((s) => s.index)).toEqual([1]);
+  it("marks the one sector that holds the next mission", () => {
+    const record = Object.fromEntries([...sectors[0].missions, sectors[1].missions[0]].map((m) => [m.id, 2] as const));
+    expect(atlasSectors(DEFAULT_CONTENT, false, record).filter((s) => s.next).map((s) => s.index)).toEqual([1]);
+    expect(atlasSectors(DEFAULT_CONTENT, false).filter((s) => s.next).map((s) => s.index)).toEqual([0]);
   });
   it("counts won missions and best stars per sector", () => {
     const [a, b] = sectors[0].missions,
       ring = sectors.find(isCircleSector)!.missions[0],
       record = { [a.id]: 3, [b.id]: 1, [ring.id]: 2 } as const,
-      cards = atlasSectors(DEFAULT_CONTENT, false, undefined, record);
+      cards = atlasSectors(DEFAULT_CONTENT, false, record);
     expect(cards.map((s) => [s.won, s.stars])).toEqual(cards.map((s) => (s.index === 0 ? [2, 4] : [0, 0])));
-    expect(atlasSectors(DEFAULT_CONTENT, true, undefined, record).reduce((n, s) => n + s.stars, 0)).toBe(2);
+    expect(atlasSectors(DEFAULT_CONTENT, true, record).reduce((n, s) => n + s.stars, 0)).toBe(2);
     expect(progressOf(missions, record)).toEqual({ won: 3, stars: 6, count: missions.length });
   });
-  it("features the picked mission, else the loaded one, else the first", () => {
+  it("finds the first unwon mission as the next one", () => {
     const list = sectors[0].missions;
-    expect(atlasPick(list, list[3].id, list[1].id)).toBe(list[3]);
-    expect(atlasPick(list, "elsewhere", list[1].id)).toBe(list[1]);
-    expect(atlasPick(list, undefined, "elsewhere")).toBe(list[0]);
+    expect(atlasNext(list, {})).toBe(list[0]);
+    expect(atlasNext(list, { [list[0].id]: 3, [list[2].id]: 1 })).toBe(list[1]);
+    expect(atlasNext(list, Object.fromEntries(list.map((m) => [m.id, 1] as const)))).toBeUndefined();
   });
-  it("steps through a sector's missions and wraps around", () => {
-    const list = sectors[0].missions;
-    expect(atlasStep(list, list[1].id, 1)).toBe(list[2]);
-    expect(atlasStep(list, list[0].id, -1)).toBe(list[list.length - 1]);
-    expect(atlasStep(list, list[list.length - 1].id, 1)).toBe(list[0]);
+  it("features the picked mission, else the one being played, else the next, else the first", () => {
+    const list = sectors[0].missions,
+      record = { [list[0].id]: 3 } as const,
+      all = Object.fromEntries(list.map((m) => [m.id, 1] as const));
+    expect(atlasPick(list, record, list[3].id, list[2].id)).toBe(list[3]);
+    expect(atlasPick(list, record, "elsewhere", list[2].id)).toBe(list[2]);
+    expect(atlasPick(list, record, undefined, "elsewhere")).toBe(list[1]);
+    expect(atlasPick(list, all)).toBe(list[0]);
   });
 });
