@@ -244,7 +244,7 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
       const n = missionNumber(m, missions),
         loaded = m.id === game.mission.id,
         best = options.record?.[m.id];
-      return `<button class="mission-node" data-pick="${m.id}" aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${best ? ' data-won="true"' : ""} title="${escape(m.focus)}"><span class="node-thumb" aria-hidden="true">${mapPreviewSvg(m.map).replace("<svg ", `<svg preserveAspectRatio="xMidYMid slice" `)}<img alt="" data-map="${m.map.id}"></span><span class="node-copy"><span class="node-number">${pad(n)}</span><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (current)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}</small></span></button>`;
+      return `<button class="mission-node" data-pick="${m.id}" aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${best ? ' data-won="true"' : ""} title="${escape(m.focus)}"><span class="node-copy"><span class="node-number">${pad(n)}</span><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (current)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}</small></span></button>`;
     })
     .join("");
   // Restarts the entry animation of the rail.
@@ -299,12 +299,8 @@ export function renderFeatured(game: Game, m: MissionDefinition | undefined, { l
     fillImage(img, m.map, image, () => {
       layer.classList.remove("is-loading");
       coverImages();
-      fillImages($("mission-list"), content, image);
     });
-  } else {
-    coverImages();
-    fillImages($("mission-list"), content, image);
-  }
+  } else coverImages();
   // Briefing.
   const s = game.state,
     loaded = m.id === game.mission.id,
