@@ -22,7 +22,7 @@ export function unbuildable(m: MissionDefinition, strategy: Pick<Strategy, "buil
 }
 
 /** Enemies that exist but no mission uses yet; remove an id once a mission places it. */
-export const RESERVE_ENEMIES: ReadonlySet<string> = new Set(["wisp"]);
+export const RESERVE_ENEMIES: ReadonlySet<string> = new Set<string>();
 
 export const isTutorial = (m: MissionDefinition) => MISSIONS[0]?.id === m.id;
 

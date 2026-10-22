@@ -203,7 +203,7 @@ export const GEWITTERFRONT: MissionSector = {
     {
       id: "auge-des-sturms",
       name: "Eye of the Storm",
-      focus: "Finale: gusts, Stormbirds, Phantoms and three Titans in the eye of the storm front",
+      focus: "Finale: gusts, Stormbirds, Phantoms, Wisps and three Titans in the eye of the storm front",
       map: AUGE_MAP,
       waves: [
         wave(35, g("drone", 6, 0.8), g("gale", 2, 1.2, 4)),
@@ -216,11 +216,11 @@ export const GEWITTERFRONT: MissionSector = {
         wave(70, g("gale", 6, 0.9), g("tank", 2, 1.2, 3), g("phantom", 2, 0.7, 9)),
         wave(75, g("drone", 10, 0.27), g("stormbird", 3, 0.6, 3), g("staticloud", 3, 0.9, 8), g("splitter", 2, 0.8, 12)),
         wave(80, g("gale", 6, 0.8), g("aegis", 2, 1.1, 3), g("tank", 2, 1.1, 8), g("warlord", 1, 1, 14)),
-        wave(85, g("runner", 8, 0.3), g("phantom", 2, 0.55, 3), g("stormbird", 6, 0.55, 6)),
+        wave(85, g("runner", 8, 0.3), g("phantom", 2, 0.55, 3), g("stormbird", 6, 0.55, 6), g("wisp", 3, 0.6, 9)),
         wave(90, g("insulator", 3, 0.95), g("bulwark", 2, 0.95, 3), g("glider", 6, 0.4, 6), g("mender", 2, 0.8, 10)),
         wave(95, g("berserker", 2, 1.0, 3), g("gale", 8, 0.7, 7), g("phantom", 2, 0.5, 12)),
         wave(100, g("drone", 9, 0.25), g("gale", 6, 0.7, 3), g("tank", 2, 0.9, 8), g("stormbird", 5, 0.45, 12), g("airship", 2, 1.4, 14)),
-        wave(105, g("runner", 9, 0.28), g("blinker", 3, 0.4, 3), g("phantom", 3, 0.5, 6), g("gale", 6, 0.65, 11)),
+        wave(105, g("runner", 9, 0.28), g("blinker", 3, 0.4, 3), g("phantom", 3, 0.5, 6), g("wisp", 4, 0.5, 8), g("gale", 6, 0.65, 11)),
         wave(110, g("insulator", 3, 0.85), g("aegis", 2, 0.85, 3), g("staticloud", 3, 0.7, 6), g("warlord", 1, 1, 14)),
         wave(115, g("gale", 6, 0.6), g("bulwark", 2, 0.9, 3), g("glider", 7, 0.38, 8), g("berserker", 2, 0.9, 14)),
         { ...wave(160, g("tank", 3, 1.0, 8), g("gale", 6, 0.8, 4)), hpMultiplier: 22 },

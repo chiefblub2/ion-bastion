@@ -1,6 +1,6 @@
 # ION BASTION
 
-Tower defense in the browser, built with TypeScript, Phaser 4 and Vite. <!-- counts:start -->73 missions in 15 sectors<!-- counts:end --> with their own maps, waves and terrain styles, sixty towers and <!-- counts:start -->71 enemy types<!-- counts:end --> on the ground and in the air. Play solo or with 2–4 players in co-op or versus mode.
+Tower defense in the browser, built with TypeScript, Phaser 4 and Vite. <!-- counts:start -->73 missions in 15 sectors<!-- counts:end --> with their own maps, waves and terrain styles, sixty towers and <!-- counts:start -->72 enemy types<!-- counts:end --> on the ground and in the air. Play solo or with 2–4 players in co-op or versus mode.
 
 ![Mission 54 Ember Chamber in the Volcano Chain sector, first wave: Ember Runners in the windings and the first towers](docs/images/screens/glutkammer.png)
 
