@@ -1,16 +1,17 @@
 import { missionById } from "../content/missions";
 import type { MissionDefinition } from "../core/types";
 import { isPlaytest } from "../editor/playtest-id";
+import { isRunMission } from "../run/run-id";
 import type { CampaignRecord } from "./progress";
 /**
  * What the home page's primary button does: begin, return to the game in memory, move on to the next unwon mission,
  * or replay the remembered one.
  */
 export type HomeAction = {
-  kind: "start" | "resume" | "continue" | "restart";
+  kind: "start" | "resume" | "continue" | "restart" | "run";
   title: string;
   subtitle: string;
-  /** The mission the button shows on the preview map and, for "continue" and "restart", loads. */
+  /** The mission the button shows on the preview map and, for "continue" and "restart", loads; "run" opens the Run page. */
   mission: MissionDefinition;
 };
 export interface HomeSession {
@@ -57,6 +58,9 @@ export function homeAction(
       mission: session.mission,
     };
   const remembered = session.inProgress ? session.mission : missionById(last ?? "", missions);
+  // A finished run mission is never replayed: the run goes on (or is summed up) on its own page.
+  if (remembered && isRunMission(remembered))
+    return { kind: "run", title: "Continue Run", subtitle: `${remembered.name} · Back to the run`, mission: remembered };
   if (remembered && isPlaytest(remembered))
     return { kind: "restart", title: "Restart Playtest", subtitle: `${remembered.name} · Starts from wave 1`, mission: remembered };
   if (remembered) {

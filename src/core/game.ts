@@ -104,6 +104,17 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
       return ok("playtest-loaded", { name: c.mission.name });
     },
   },
+  run: {
+    run: (g, c) => {
+      if (g.players > 1) return fail("run-solo");
+      try {
+        g.loadMission(c.mission, c.content);
+      } catch {
+        return fail("run-invalid");
+      }
+      return ok("run-loaded", { name: c.mission.name });
+    },
+  },
   pause: {
     // Between waves only while the countdown to the next one runs.
     allowedIn: PLAYING,
@@ -192,14 +203,20 @@ export function isCommand<C extends { type: string } = Command>(c: unknown, extr
 export class Game implements Sim {
   state!: GameState;
   mission!: MissionDefinition;
-  readonly content: ContentPack;
+  /** The pack the game was built with; every mission except a Run mission plays with it. */
+  readonly baseContent: ContentPack;
+  private pack: ContentPack;
   /** 1 in single-player, 2 in co-op. */
   players = 1;
   private path = new Set<string>();
   private blocked = new Set<string>();
   constructor(mission?: MissionDefinition, content: ContentPack = DEFAULT_CONTENT) {
-    this.content = content;
+    this.baseContent = this.pack = content;
     this.loadMission(mission ?? content.missions[0]);
+  }
+  /** The active pack: `baseContent`, or the relic-derived pack of a Run mission. */
+  get content() {
+    return this.pack;
   }
   get map() {
     return this.mission.map;
@@ -207,9 +224,10 @@ export class Game implements Sim {
   get waves() {
     return this.mission.waves;
   }
-  /** Validates and switches to a mission with a fresh state. */
-  loadMission(mission: MissionDefinition) {
-    validateMission(mission, this.content);
+  /** Validates and switches to a mission with a fresh state; `content` replaces the pack until the next load. */
+  loadMission(mission: MissionDefinition, content = this.baseContent) {
+    validateMission(mission, content);
+    this.pack = content;
     this.mission = mission;
     this.state = initialState(mission, this.players);
     this.path = new Set(mission.map.path.map((p) => `${p.x},${p.y}`));

@@ -115,7 +115,7 @@ In all modes the host decides mission, restart and speed. Dialogs and tab switch
 
 ## Missions
 
-The start screen leads to Campaign and Circuit (the Sector Atlas: pick a sector, then a mission, then "Start Mission"), Multiplayer, Training with the rules beside it, Enemy Codex and Tower Codex. Every win earns 1–3 stars (90 % reactor energy left for three, 50 % for two; on a ring, never more than half, or 80 %, of the limit alive at once); the atlas shows the best per mission. Every mission stays open regardless.
+The start screen leads to Campaign and Circuit (the Sector Atlas: pick a sector, then a mission, then "Start Mission"), Run, Multiplayer, Training with the rules beside it, Enemy Codex and Tower Codex. Every win earns 1–3 stars (90 % reactor energy left for three, 50 % for two; on a ring, never more than half, or 80 %, of the limit alive at once); the atlas shows the best per mission. Every mission stays open regardless.
 
 ### Circuit
 
@@ -127,6 +127,16 @@ Circuit is its own game mode with its own tab in the mission picker, separate fr
 - With "Wave ▶" or `N` you call the next wave early. Every second saved pays credits; the button shows the bonus.
 - Wave bonus and Refinery income arrive when the next wave starts.
 - The mission is won when all waves have started and all enemies are defeated.
+
+### Run
+
+Run is a single-player roguelite mode on the home page: five missions in a row on campaign maps, each one harder and from later sectors.
+
+- You start by picking one of three starter packs of three towers. Only your roster can be built.
+- Before every mission you pick one of two routes. An elite route has tougher enemies but always pays a relic; the fifth mission is a longer finale with Titans.
+- Waves are generated from the map's own enemies, so the mix stays familiar but never repeats. Enemies your roster cannot fight (flyers without anti-air, stealth without a Detector, burrowers without traps or area damage) are swapped out.
+- After every win you draft one of three towers, and after elite routes and every second mission a relic: cheaper towers or upgrades, more damage, range or fire rate, more reactor energy, credits or bounty.
+- A lost mission ends the run, and there is no restart. Every run has a six-character seed; typing it in plays the same offers and waves again.
 
 ## Towers
 

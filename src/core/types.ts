@@ -949,6 +949,8 @@ export type Command = (
   | { type: "restart" }
   | { type: "mission"; id: string }
   | { type: "playtest"; mission: MissionDefinition }
+  /** A Run mission (`run/`): generated mission plus the content pack its relics derived; solo only. */
+  | { type: "run"; mission: MissionDefinition; content: ContentPack }
 ) & { player?: number };
 /** Language-neutral result; `ui/messages.ts` turns it into text. */
 export type MessageCode =
@@ -957,6 +959,9 @@ export type MessageCode =
   | "playtest-loaded"
   | "playtest-solo"
   | "playtest-invalid"
+  | "run-loaded"
+  | "run-solo"
+  | "run-invalid"
   | "mission-unknown"
   | "mission-over"
   | "paused"

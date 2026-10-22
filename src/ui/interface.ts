@@ -27,6 +27,9 @@ export type { MultiplayerSession } from "./players";
 import type { ViewState } from "../render/scene";
 import { hotkeyTowers, isPaged, menuCollapsed, pageOf, TOWER_PAGES, towerOrder } from "./tower-pages";
 import { isPlaytest } from "../editor/playtest-id";
+import { isRunMission, runStepOf } from "../run/run-id";
+import { RUN_LENGTH } from "../run/run";
+import { runRecord } from "../run/storage";
 const pad = (n: number) => String(n).padStart(2, "0");
 const plural = (n: number, word: string) => (n === 1 ? word : `${word}s`);
 /** Hotkeys for the towers of the open tab, from 1 again on every tab; more than ten continue with letters. */
@@ -44,9 +47,10 @@ export function mountUI(game: Game) {
   const TOWERS = game.content.towers;
   document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div id="start-screen" class="start-screen">
-  <section class="menu-page menu-home" data-page="home" tabindex="-1" aria-labelledby="menu-title"><div class="home-grid"><div class="home-main"><p class="home-label">TACTICAL TOWER DEFENSE</p><h1 id="menu-title" class="menu-title"><span class="brand-mark">${BRAND_MARK}</span><span>ION<span class="brand-light">BASTION</span></span></h1><p class="menu-tagline">Hold the line. Protect the reactor.</p><p class="home-dev" role="note"><b>IN DEVELOPMENT</b> Missions, balance and art still change, and bugs are expected.</p><button id="menu-primary" class="home-primary" data-action="start"><span class="home-primary-copy"><strong id="menu-primary-title">Start Playing</strong><small id="menu-primary-sub">Begin your defense campaign</small></span><span class="home-primary-icon" aria-hidden="true">▶</span></button><div class="home-learn"><button id="menu-training" class="home-training"><strong>Training</strong><span>New here? Learn the basics in 3 minutes.</span></button><button id="menu-help" class="home-rules">Rules <span aria-hidden="true">?</span></button></div><nav aria-label="Game modes"><ul class="home-modes"><li><button id="menu-campaign" class="home-mode"><strong><i aria-hidden="true">◈</i>Campaign</strong><span id="menu-campaign-info"></span></button></li><li><button id="menu-circle" class="home-mode" data-mode="circle"><strong><i aria-hidden="true">⟳</i>Circuit</strong><span id="menu-circle-info"></span></button></li><li><button id="menu-coop" class="home-mode"><strong><i aria-hidden="true">⇄</i>Multiplayer</strong><span>2–4 players · ${MODE_IDS.map((id) => MODES[id].name).join(" · ")}</span></button></li></ul></nav><div class="home-utility"><button id="menu-codex" class="quiet">Enemy Codex <span>◆</span></button><button id="menu-towers" class="quiet">Tower Codex <span>▣</span></button><button id="menu-sound-btn" class="quiet sound-trigger" aria-expanded="false" aria-controls="sound-panel">Sound off</button></div></div><aside id="home-map" class="home-map" aria-label="Operation preview"></aside></div></section>
+  <section class="menu-page menu-home" data-page="home" tabindex="-1" aria-labelledby="menu-title"><div class="home-grid"><div class="home-main"><p class="home-label">TACTICAL TOWER DEFENSE</p><h1 id="menu-title" class="menu-title"><span class="brand-mark">${BRAND_MARK}</span><span>ION<span class="brand-light">BASTION</span></span></h1><p class="menu-tagline">Hold the line. Protect the reactor.</p><p class="home-dev" role="note"><b>IN DEVELOPMENT</b> Missions, balance and art still change, and bugs are expected.</p><button id="menu-primary" class="home-primary" data-action="start"><span class="home-primary-copy"><strong id="menu-primary-title">Start Playing</strong><small id="menu-primary-sub">Begin your defense campaign</small></span><span class="home-primary-icon" aria-hidden="true">▶</span></button><div class="home-learn"><button id="menu-training" class="home-training"><strong>Training</strong><span>New here? Learn the basics in 3 minutes.</span></button><button id="menu-help" class="home-rules">Rules <span aria-hidden="true">?</span></button></div><nav aria-label="Game modes"><ul class="home-modes"><li><button id="menu-campaign" class="home-mode"><strong><i aria-hidden="true">◈</i>Campaign</strong><span id="menu-campaign-info"></span></button></li><li><button id="menu-circle" class="home-mode" data-mode="circle"><strong><i aria-hidden="true">⟳</i>Circuit</strong><span id="menu-circle-info"></span></button></li><li><button id="menu-run" class="home-mode" data-mode="run"><strong><i aria-hidden="true">✧</i>Run</strong><span id="menu-run-info"></span></button></li><li><button id="menu-coop" class="home-mode"><strong><i aria-hidden="true">⇄</i>Multiplayer</strong><span>2–4 players · ${MODE_IDS.map((id) => MODES[id].name).join(" · ")}</span></button></li></ul></nav><div class="home-utility"><button id="menu-codex" class="quiet">Enemy Codex <span>◆</span></button><button id="menu-towers" class="quiet">Tower Codex <span>▣</span></button><button id="menu-sound-btn" class="quiet sound-trigger" aria-expanded="false" aria-controls="sound-panel">Sound off</button></div></div><aside id="home-map" class="home-map" aria-label="Operation preview"></aside></div></section>
   <section id="mission-page" class="menu-page atlas" tabindex="-1" data-page="missions" aria-labelledby="missions-title" hidden><header class="atlas-head"><button class="quiet menu-back" data-back>← Back</button><div class="atlas-title"><h1 id="missions-title"><span id="atlas-mode">Campaign</span> <span class="atlas-slash" aria-hidden="true">/</span> Sector Atlas</h1><p id="atlas-context" class="atlas-context"></p></div><div id="mission-modes" class="mode-tabs" role="tablist" aria-label="Game mode" hidden></div><a class="brand" href="/" aria-label="ION BASTION home"><span class="brand-mark">${BRAND_MARK}</span><span>ION<span class="brand-light">BASTION</span></span></a></header><div class="atlas-gallery"><button class="atlas-step" data-rail-step="-1" aria-label="Scroll sectors left" aria-controls="sector-tabs"><span aria-hidden="true">‹</span></button><div id="sector-tabs" class="sector-rail" role="tablist" aria-label="Sectors" aria-orientation="horizontal"></div><button class="atlas-step" data-rail-step="1" aria-label="Scroll sectors right" aria-controls="sector-tabs"><span aria-hidden="true">›</span></button></div><p id="mode-rules" class="mode-rules" hidden>Rings without a reactor: enemies circle until they fall. Waves start on a timer, calling one early earns credits, and too many enemies in the ring loses the mission.</p><nav class="atlas-missions" aria-labelledby="missions-label"><header class="missions-head"><h2 id="missions-label">Missions</h2><p id="missions-progress" class="missions-progress"></p></header><div id="mission-list" class="mission-rail"></div></nav><div class="atlas-card"><figure id="atlas-preview" class="atlas-preview"><div id="preview-stage" class="preview-stage"><span id="preview-legend" class="preview-legend" aria-hidden="true"></span></div></figure><section id="mission-brief" class="atlas-brief" aria-labelledby="brief-title"><div id="brief-body" class="brief-body"></div><div id="brief-actions" class="brief-actions"></div></section><div id="brief-intel" class="atlas-intel"></div></div></section>
   <section class="menu-page menu-editor" data-page="editor" tabindex="-1" aria-label="Mission editor" hidden><div id="editor-root"></div></section>
+  <section id="run-page" class="menu-page menu-run" data-page="run" tabindex="-1" aria-labelledby="run-title" hidden>${pageHead("ROGUELITE RUN", "Five missions. One roster.", "run-title")}<div id="run-root"></div></section>
   <section id="coop-page" class="menu-page" tabindex="-1" data-page="coop" aria-labelledby="coop-title" hidden>${pageHead("MULTIPLAYER · 2–4 PLAYERS", "Together or against each other.", "coop-title")}<div id="coop-hosting" class="notice notice-warn" role="note" hidden><strong>No multiplayer server on this site.</strong> This copy is a static page (GitHub Pages) and cannot run the relay that connects players. Host one yourself: run <code>npm run server</code> from the source code on a machine everyone can reach, behind TLS (<code>wss://</code>) because this page uses https. Then every player opens this page with <code>?server=wss://&lt;relay-host&gt;</code>. Solo play works without it.</div><p id="coop-error" class="notice notice-error" role="alert" hidden></p><p id="coop-status" class="notice" role="status"></p><div id="coop-choose" class="coop-choose"><button id="coop-create" class="choice-card"><span class="choice-index">01</span><strong>Create Room</strong><span>Host a game, share the four-letter code and pick mode and mission.</span></button><button id="coop-show-join" class="choice-card"><span class="choice-index">02</span><strong>Join Room</strong><span>Enter the code your host gave you.</span></button></div><div id="coop-join-panel" class="coop-panel" hidden><h2>Join a room</h2><form id="coop-join-form" class="coop-join"><label for="coop-code">Room code</label><div class="coop-join-row"><input id="coop-code" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD" aria-describedby="coop-code-help"><button id="coop-join" class="primary" type="submit">Join <span aria-hidden="true">▶</span></button></div><p id="coop-code-help" class="field-help">Four letters, for example ABCD. Capitals and spaces do not matter.</p></form><button id="coop-join-back" class="quiet">← Other options</button></div><div id="coop-room" class="coop-room" hidden><div class="lobby-grid"><section class="coop-panel lobby-code" aria-labelledby="lobby-code-label"><span id="lobby-code-label" class="stat-label">ROOM CODE</span><div class="code-row"><input id="coop-room-code" class="room-code" readonly aria-labelledby="lobby-code-label" value="…" size="4"><button id="coop-copy" class="quiet">Copy code</button></div><p id="coop-copy-status" class="field-help" role="status"></p></section><section class="coop-panel" aria-labelledby="lobby-players-label"><span id="lobby-players-label" class="stat-label">PLAYERS</span><p class="lobby-count"><strong id="coop-count">1/4</strong> <span id="coop-role"></span></p><ul id="coop-seats" class="seats"></ul></section></div><div id="coop-host" class="coop-panel host-panel"><span class="host-tag">HOST CONTROLS</span><fieldset id="coop-modes" class="coop-modes"><legend>Mode</legend>${MODE_IDS.map((id) => `<label><input type="radio" name="coop-mode" value="${id}"${id === "coop" ? " checked" : ""}><span>${MODES[id].name}</span></label>`).join("")}</fieldset><p id="coop-rules" class="coop-rules">${MODES.coop.rules}</p><div class="coop-mission"><div><span class="stat-label">MISSION</span><strong id="coop-mission"></strong></div><button id="coop-pick" class="quiet">Change Mission</button></div></div><p id="coop-wait" class="coop-wait" hidden></p><div class="coop-actions"><button id="coop-leave" class="quiet">Leave Room</button><button id="coop-launch" class="primary" hidden>Start Mission <span aria-hidden="true">▶</span></button></div></div></section>
   <section id="codex-page" class="menu-page" tabindex="-1" data-page="codex" aria-labelledby="codex-title" hidden>${pageHead("ENEMY CODEX", "Know your enemy.", "codex-title")}<p>All enemy types in the order the campaign introduces them. HP and speed apply to wave 1; later waves have more HP.</p><div id="codex-tabs" class="codex-tabs" role="tablist" aria-label="Enemy Codex"></div><div id="codex-list" class="codex-list" role="tabpanel"></div></section>
   <section id="towers-page" class="menu-page" tabindex="-1" data-page="towers" aria-labelledby="towers-title" hidden>${pageHead("TOWER CODEX", "Know your arsenal.", "towers-title")}<p>Every tower by build-menu category: cost, targets, levels 1–5 and the paths beyond. Values are base values before Aura bonuses.</p><div id="tower-codex-tabs" class="codex-tabs" role="tablist" aria-label="Tower categories"></div><div id="tower-codex-list" class="codex-list tower-codex-list" role="tabpanel"></div></section>
@@ -75,7 +79,8 @@ export function mountUI(game: Game) {
 export function renderMission(game: Game) {
   const m = game.mission,
     total = game.waves.length,
-    number = missionNumber(m, game.content.missions);
+    // A Run mission counts its step instead of a campaign number.
+    number = isRunMission(m) ? (runStepOf(m.id) ?? 0) + 1 : missionNumber(m, game.content.missions);
   const board = document.getElementById("board")!;
   board.style.aspectRatio = `${m.map.columns}/${m.map.rows}`;
   // Used by the full-screen layout to fit the board into the available height.
@@ -90,8 +95,12 @@ export function renderMission(game: Game) {
     cards = [...list.querySelectorAll<HTMLButtonElement>("[data-tower]")];
   for (const id of order) list.append(cards.find((c) => c.dataset.tower === id)!);
   for (const card of cards) {
-    const id = card.dataset.tower as TowerId;
+    const id = card.dataset.tower as TowerId,
+      d = game.content.towers[id];
     if (!order.includes(id)) card.hidden = true;
+    // A Run's relics change prices; the cards were built from the game's own pack.
+    card.querySelector(".tower-cost b")!.textContent = `◇ ${d.cost}`;
+    card.setAttribute("aria-label", `${d.name}, ${d.role}, ${d.cost} credits`);
     card.querySelector("kbd")!.textContent = towerKey(hotkeyTowers(game, pageOf(game.content.towers[id])).indexOf(id));
   }
   const tabs = document.getElementById("tower-tabs")!;
@@ -102,7 +111,9 @@ export function renderMission(game: Game) {
   }).join("");
   const sectors = game.content.sectors ?? [],
     sector = sectorOf(m, sectors);
-  text("mission-sector", sector ? `SECTOR ${roman(sectors.indexOf(sector))} · ${sector.name.toUpperCase()}` : m.manualWaves ? "BASIC TRAINING" : isPlaytest(m) ? "PLAYTEST" : "DEFENSE");
+  text("mission-sector", sector ? `SECTOR ${roman(sectors.indexOf(sector))} · ${sector.name.toUpperCase()}` : m.manualWaves ? "BASIC TRAINING" : isPlaytest(m) ? "PLAYTEST" : isRunMission(m) ? `ROGUELITE RUN · ${number} OF ${RUN_LENGTH}` : "DEFENSE");
+  // A Run allows no restart: a lost mission ends the run.
+  document.getElementById("restart-btn")!.hidden = isRunMission(m);
   text("sector-label", m.map.name);
   text("difficulty", `${total} ${plural(total, "wave")} · ◇ ${m.startingCredits} starting credits`);
   // A ring has no reactor; the HUD counts the enemies in it against the limit instead.
@@ -134,6 +145,7 @@ const PREVIEW_LABEL: Record<HomeAction["kind"], string> = {
   resume: "IN PROGRESS",
   continue: "NEXT MISSION",
   restart: "LAST PLAYED",
+  run: "RUN",
 };
 /**
  * Fills the start screen's home page: the primary button for `action`, the modes with the player's progress from
@@ -159,6 +171,8 @@ export function renderMenu(game: Game, action: HomeAction, record: CampaignRecor
   );
   document.getElementById("menu-circle")!.parentElement!.hidden = !rings.length;
   text("menu-circle-info", progressInfo(rings, record) ?? `${missionCount(rings)} ${plural(missionCount(rings), "mission")}`);
+  const runs = runRecord();
+  text("menu-run-info", runs.runs ? `Best ${runs.best}/${RUN_LENGTH} · ${runs.wins} completed` : `${RUN_LENGTH} missions · draft your roster`);
   const stat = (label: string, value: string, glyph = "") =>
     `<div><span class="stat-label">${label}</span><strong>${glyph ? `<i aria-hidden="true">${glyph}</i>` : ""}${value}</strong></div>`;
   const place = number ? `MISSION ${pad(number)}` : "TRAINING",
@@ -428,7 +442,8 @@ export class Interface {
     }
     if (!overlay.hidden && !match) {
       text("overlay-icon", terminal ? (s.status === "won" ? "✦" : "◇") : "Ⅱ");
-      text("overlay-kicker", terminal ? "MISSION OVER" : "TACTICAL PAUSE");
+      const run = isRunMission(this.game.mission);
+      text("overlay-kicker", terminal ? (run && s.status === "lost" ? "RUN OVER" : "MISSION OVER") : "TACTICAL PAUSE");
       text(
         "overlay-title",
         s.status === "won"
@@ -446,18 +461,19 @@ export class Interface {
           : s.status === "lost" && circle
             ? `More than ${circle.limit} enemies circled at once. You reached wave ${s.wave} and defeated ${s.kills} ${s.kills === 1 ? "enemy" : "enemies"}. Only call waves when the ring is emptier.`
           : s.status === "lost"
-            ? `You reached wave ${s.wave} and defeated ${s.kills} ${s.kills === 1 ? "enemy" : "enemies"}. Try more upgrades and Cryo support.`
+            ? `You reached wave ${s.wave} and defeated ${s.kills} ${s.kills === 1 ? "enemy" : "enemies"}. ${run ? "The run ends here." : "Try more upgrades and Cryo support."}`
             : "Build and upgrade freely. Space or ▶ resumes.",
       );
-      const next = s.status === "won" ? nextMission(this.game) : undefined;
+      // A Run goes on from its own page: the reward after a win, the summary after a loss.
+      const next = s.status === "won" ? (run ? this.game.mission : nextMission(this.game)) : undefined;
       document.getElementById("overlay-next")!.hidden = !next;
-      const nextLabel = `${this.game.mission.manualWaves ? "Begin campaign" : "Next mission"} <span>→</span>`,
+      const nextLabel = `${this.game.mission.manualWaves ? "Begin campaign" : run ? "Continue run" : "Next mission"} <span>→</span>`,
         nextButton = document.getElementById("overlay-next")!;
       if (nextButton.innerHTML !== nextLabel) nextButton.innerHTML = nextLabel;
-      document.getElementById("overlay-restart")!.hidden = !terminal || !!next;
+      document.getElementById("overlay-restart")!.hidden = !terminal || !!next || run;
       text("overlay-restart", s.status === "won" ? "Play again" : "Restart");
       document.getElementById("overlay-missions")!.hidden = !terminal;
-      text("overlay-missions", isPlaytest(this.game.mission) ? "Editor" : "Missions");
+      text("overlay-missions", isPlaytest(this.game.mission) ? "Editor" : run ? (s.status === "lost" ? "Run summary" : "Run") : "Missions");
     }
     if (this.view.hover)
       text(

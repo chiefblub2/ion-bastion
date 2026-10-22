@@ -101,6 +101,8 @@ export class Match {
         return fail("pause-versus");
       case "playtest":
         return fail("playtest-solo");
+      case "run":
+        return fail("run-solo");
       case "start":
       case "ready":
         return this.markReady(player);

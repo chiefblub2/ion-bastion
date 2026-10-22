@@ -16,6 +16,8 @@ import { createInput } from "./app/input";
 import { registerTools } from "./app/webmcp";
 import { screenFromUrl } from "./app/screens";
 import { markTrainingDone, recordWin } from "./app/progress";
+import { isRunMission } from "./run/run-id";
+import { settleRun } from "./run/session";
 import { missionStars, PeakTracker } from "./app/rating";
 import { Coach } from "./ui/coach-view";
 import { TowerCard } from "./ui/tower-card-view";
@@ -65,7 +67,10 @@ const battlefield = new Battlefield(game, view, {
     audio.frame(e, game, input.match());
     if (e.some((event) => event.type === "income")) ui.flashCredits();
     peak.observe(game.mission, game.state);
-    if (!e.some((event) => event.type === "end" && event.result === "won")) return;
+    const end = e.find((event) => event.type === "end");
+    // A Run mission moves its run on: the reward after a win, the end of the run after a loss.
+    if (end && isRunMission(game.mission)) settleRun(game.mission.id, end.result === "won", game.baseContent);
+    if (end?.result !== "won") return;
     if (game.mission.manualWaves) markTrainingDone();
     // Only real campaign wins count: no versus field and no `&wave=`/`&credits=` run (those are other mission objects).
     else if (!input.match() && game.mission === findMission(game.mission.id, game.content)) {

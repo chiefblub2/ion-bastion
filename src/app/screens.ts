@@ -1,8 +1,9 @@
 import { PLAYTEST_PREFIX } from "../editor/playtest-id";
+import { RUN_PREFIX } from "../run/run-id";
 import { missionById } from "../content/missions";
 import type { MissionDefinition } from "../core/types";
 /** The start screen and its pages, or the game. Both views live in one document; only the URL and `data-view` change. */
-export type MenuPage = "home" | "missions" | "coop" | "codex" | "towers" | "help" | "editor";
+export type MenuPage = "home" | "missions" | "coop" | "codex" | "towers" | "help" | "editor" | "run";
 export type Screen = { view: "menu"; page: MenuPage } | { view: "game" };
 export const HOME: Screen = { view: "menu", page: "home" };
 export const GAME: Screen = { view: "game" };
@@ -13,6 +14,7 @@ const SLUGS: Record<Exclude<MenuPage, "home">, string> = {
   towers: "turmakte",
   help: "spielhilfe",
   editor: "editor",
+  run: "run",
 };
 const PAGES = Object.keys(SLUGS) as Exclude<MenuPage, "home">[];
 /** A valid `?mission=` opens the game (the deep link); otherwise the hash names a menu page, unknown ones the home page. */
@@ -20,6 +22,8 @@ export function screenFromUrl(search: string, hash: string, missions: readonly M
   const id = new URLSearchParams(search).get("mission");
   // A reload during a playtest: the draft is autosaved, so the editor is the place to land.
   if (id?.startsWith(PLAYTEST_PREFIX)) return { view: "menu", page: "editor" };
+  // A reload during a run mission: the run is stored, its page deploys the mission again.
+  if (id?.startsWith(RUN_PREFIX)) return { view: "menu", page: "run" };
   if (id && missionById(id, missions)) return GAME;
   const slug = decodeURIComponent(hash.replace(/^#/, ""));
   return { view: "menu", page: PAGES.find((page) => SLUGS[page] === slug) ?? "home" };

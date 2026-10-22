@@ -477,6 +477,9 @@
 .home-mode[data-mode="circle"] {
   --accent: var(--m-ring);
 }
+.home-mode[data-mode="run"] {
+  --accent: #ffb347;
+}
 .home-mode strong {
   display: flex;
   align-items: baseline;

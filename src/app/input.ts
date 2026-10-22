@@ -1,6 +1,8 @@
 import { isRunning, type Game } from "../core/game";
 import { isPlaytest } from "../editor/playtest-id";
 import type { EditorHost } from "../editor/editor-view";
+import type { RunHost } from "../ui/run-view";
+import { isRunMission } from "../run/run-id";
 import type { CommandResult, EnemyId, TargetPriority, TowerId } from "../core/types";
 import { TARGET_PRIORITIES } from "../systems/combat";
 import { hasPage, hotkeyTowers, isPaged, pageOf, towerOrder } from "../ui/tower-pages";
@@ -65,7 +67,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
   function applied({ command: c, result, player }: Applied) {
     const own = player === view.player,
       versus = !!coop.match(),
-      shared = c.type === "mission" || c.type === "restart" || c.type === "playtest" || (!versus && (c.type === "start" || c.type === "pause"));
+      shared = c.type === "mission" || c.type === "restart" || c.type === "playtest" || c.type === "run" || (!versus && (c.type === "start" || c.type === "pause"));
     // In versus, the others' commands act on their own fields; only a send aimed at us is news.
     if (versus && !own && !shared) {
       if (c.type === "send" && result.ok && result.params?.target === view.player + 1) {
@@ -77,7 +79,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     }
     if (own || (shared && result.ok)) ui.notice(`${own ? "" : `${playerName(player)}: `}${describeResult(result)}`, own && !result.ok);
     if (own && !result.ok) audio.cue("reject");
-    if ((c.type === "restart" || c.type === "mission" || c.type === "playtest") && result.ok) {
+    if ((c.type === "restart" || c.type === "mission" || c.type === "playtest" || c.type === "run") && result.ok) {
       view.selected = null;
       view.enemy = null;
       view.pending = undefined;
@@ -88,9 +90,9 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       if (game.mission.manualWaves) view.build = null;
       coach.reset();
     }
-    if ((c.type === "mission" || c.type === "playtest") && result.ok) {
+    if ((c.type === "mission" || c.type === "playtest" || c.type === "run") && result.ok) {
       // "Restart Last Mission" stays about the campaign; Training has its own button.
-      // Playtests are never remembered.
+      // Playtests and run missions are never remembered.
       if (c.type === "mission" && !game.mission.manualWaves) rememberMission(c.id);
       resumeAfterMenu = false;
       renderMission(game);
@@ -167,6 +169,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     }
     if (to.page === "coop") coop.render();
     if (to.page === "editor") void import("../editor/editor-view").then((m) => m.openEditor(editorHost));
+    if (to.page === "run") void import("../ui/run-view").then((m) => m.openRun(runHost));
     // Any page change ends a codex animation preview; opening the codex renders it closed.
     closeCodexPreview();
     if (to.page === "codex") renderCodex(game);
@@ -269,9 +272,22 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     canPlaytest: () => !coop.active(),
     base: location.origin + location.pathname,
   };
+  /** What the lazily loaded Run page may do in the app. */
+  const runHost: RunHost = {
+    content: game.baseContent,
+    launch(mission, content) {
+      const r = execute({ type: "run", mission, content });
+      if (r.ok) screens.show(GAME);
+    },
+    canRun: () => !coop.active(),
+    playing: () => (isRunMission(game.mission) && inProgress() && (game.state.status === "ready" || game.state.status === "wave") ? game.mission.id : undefined),
+    resume: () => screens.show(GAME),
+    image: terrainImage,
+  };
   /** The home page's primary button: begin on the first campaign mission, return to the game in memory, move on to the next unwon mission, or replay the remembered one from wave 1. */
   function runPrimary() {
     if (primary.kind === "resume") return screens.show(GAME);
+    if (primary.kind === "run") return screens.show(page("run"));
     // Reachable after a won or lost playtest: the home button then offers "restart" with the playtest mission.
     if (primary.kind === "restart" && isPlaytest(primary.mission)) {
       execute({ type: "restart" });
@@ -452,8 +468,11 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       case "menu-circle":
         chooseMode(true);
         break;
+      case "menu-run":
+        screens.show(page("run"));
+        break;
       case "menu-btn":
-        screens.show(isPlaytest(game.mission) ? page("editor") : HOME);
+        screens.show(isPlaytest(game.mission) ? page("editor") : isRunMission(game.mission) ? page("run") : HOME);
         break;
       case "menu-primary":
         runPrimary();
@@ -478,9 +497,13 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
         screens.show(page("towers"));
         break;
       case "overlay-missions":
-        screens.show(page(isPlaytest(game.mission) ? "editor" : "missions"));
+        screens.show(page(isPlaytest(game.mission) ? "editor" : isRunMission(game.mission) ? "run" : "missions"));
         break;
       case "overlay-next": {
+        if (isRunMission(game.mission)) {
+          screens.show(page("run"));
+          break;
+        }
         const next = nextMission(game);
         if (next) selectMission(next.id);
         break;
