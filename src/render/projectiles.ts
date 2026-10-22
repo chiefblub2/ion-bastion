@@ -1,6 +1,6 @@
 import type { ProjectileStyle, TowerDefinition } from "../core/types";
 import { facing, halo, SHADOW } from "./material";
-import { arcBand, disc, hash01, oval, polygon, ring, shade, strip, type Ink, type Pen } from "./shapes";
+import { arcBand, disc, hash01, oval, polygon, ring, shade, star, strip, type Ink, type Pen } from "./shapes";
 import type { Pose, TrailView } from "./trails";
 const WHITE = 0xffffff,
   SMOKE = 0x8a9096;
@@ -25,6 +25,8 @@ export interface ProjectileLook {
   /** Drawing when it lands; absent: the tower's `visual.impact` look. */
   impact?: ImpactDrawing;
 }
+/** Fade from 1 to 0 over `k` in [0, 1] that holds a moment and ends softly (smoothstep), so effects never pop out. */
+export const fadeOut = (k: number) => (k <= 0 ? 1 : k >= 1 ? 0 : 1 - k * k * (3 - 2 * k));
 /** Point at distance `d` along and `l` across the angle with cosine `c` and sine `s` (positive `l` at the angle + π/2). */
 const along = (x: number, y: number, c: number, s: number, d: number, l: number) => [x + c * d - s * l, y + s * d + c * l] as const;
 /**
@@ -68,7 +70,7 @@ function puffs(g: Ink, t: TrailView, life: number, r0: number, r1: number, color
 const wisps = (pen: Pen, t: TrailView, _c: number, busy: boolean) => puffs(pen.g, t, 0.3, 1.2, 2.8, SMOKE, 0.3, 3, busy);
 /** Short-lived white flash and a coloured glow at the impact point. */
 function flash({ g, glow }: Pen, x: number, y: number, age: number, color: number, size = 1) {
-  const f = Math.max(0, 1 - age / 0.08);
+  const f = fadeOut(age / 0.08);
   if (f <= 0) return;
   disc(g, x, y, (1 + 3.5 * f) * size, WHITE, f);
   halo(glow, x, y, 11 * size, color, 0.5 * f);
@@ -77,9 +79,10 @@ function flash({ g, glow }: Pen, x: number, y: number, age: number, color: numbe
 function sparks(pen: Pen, x: number, y: number, age: number, color: number, seed: number, heading: number | undefined, count: number, tint = shade(color, 0.45)) {
   const k = age / 0.35;
   if (k >= 1) return;
+  const fade = fadeOut(k);
   flash(pen, x, y, age, color);
-  halo(pen.glow, x, y, 7, color, 0.22 * (1 - k));
-  pen.g.lineStyle(1.2, tint, 1 - k);
+  halo(pen.glow, x, y, 7, color, 0.22 * fade);
+  pen.g.lineStyle(1.2, tint, fade);
   for (let i = 0; i < count; i++) {
     const a = heading === undefined ? ((i + hash01(seed, i)) / count) * Math.PI * 2 : heading + Math.PI + (hash01(seed, i) - 0.5) * 2.4,
       d = (60 + 50 * hash01(seed, i, 1)) * age * (1 - 0.45 * k),
@@ -516,6 +519,16 @@ export const PROJECTILES: Record<ProjectileStyle, ProjectileLook> = {
       g.lineBetween(corners[1].x, corners[1].y, corners[3].x, corners[3].y);
       for (const q of corners) disc(g, q.x, q.y, 1.4, shade(c, -0.45));
     },
+    // Two cords trailing from the weights, and a faint shimmer of the mesh.
+    trail: {
+      life: 0.16,
+      step: 5,
+      draw: ({ g, glow }, t, c) => {
+        streak(g, t, 16, 0.5, shade(c, -0.2), 0.55, -4);
+        streak(g, t, 16, 0.5, shade(c, -0.2), 0.55, 4);
+        streak(glow, t, 12, 3, c, 0.14);
+      },
+    },
     impact: {
       life: 0.45,
       // The net snaps open over the target, then pulls tight.
@@ -531,6 +544,259 @@ export const PROJECTILES: Record<ProjectileStyle, ProjectileLook> = {
         g.lineBetween(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
         g.lineBetween(corners[1].x, corners[1].y, corners[3].x, corners[3].y);
         halo(glow, x, y, 10, c, 0.3 * (1 - k));
+      },
+    },
+  },
+  // Plasma: a blob of plasma lobbed on an arc, sputtering; it lands as a molten splat that becomes its pool.
+  plasma: {
+    arc: true,
+    body: ({ g, glow }, p, c) => {
+      const s = 1 + 0.15 * p.lift,
+        w = Math.sin(p.age * 22 + p.seed);
+      oval(g, p.gx + 1, p.gy + 2, 4.2 * (1 - 0.45 * p.lift), 2.1 * (1 - 0.45 * p.lift), SHADOW, 0.4 - 0.2 * p.lift);
+      halo(glow, p.x, p.y, 9 * s, c, 0.3);
+      oval(g, p.x, p.y, (4.4 + 0.5 * w) * s, (3.6 - 0.4 * w) * s, shade(c, -0.35), 1, p.angle);
+      oval(g, p.x, p.y - 0.3, (3.3 + 0.4 * w) * s, (2.6 - 0.3 * w) * s, c, 1, p.angle);
+      disc(g, p.x - 0.6, p.y - 0.8, 1.4 * s, 0xe8fbff);
+      for (let i = 0; i < 3; i++) {
+        const a = p.age * 9 + p.seed + (i * Math.PI * 2) / 3;
+        disc(glow, p.x + Math.cos(a) * 5 * s, p.y + Math.sin(a) * 4 * s, 1.6, shade(c, 0.4), 0.25);
+      }
+    },
+    trail: {
+      life: 0.3,
+      step: 5,
+      draw: ({ g, glow }, t, c, busy) => {
+        streak(glow, t, 20, 3, c, 0.3);
+        for (let i = 2; i < t.count; i += busy ? 4 : 2) {
+          const k = t.age(i) / 0.3;
+          if (k >= 1) break;
+          disc(g, t.x(i) + (hash01(t.x(i), i) - 0.5) * 4, t.y(i) + 8 * k * k, 1.3 * (1 - 0.5 * k), shade(c, 0.3), fadeOut(k) * t.fade);
+        }
+      },
+    },
+    impact: {
+      life: 0.7,
+      // Flash, a molten splat spreading towards the pool's edge, thrown droplets and bubbles bursting on the surface.
+      draw: ({ g, glow }, x, y, age, c, seed, _heading, radius) => {
+        const R = radius > 0 ? radius : 26,
+          fade = fadeOut(age / 0.7),
+          spread = 1 - Math.pow(1 - Math.min(1, age / 0.22), 3);
+        if (age < 0.1) {
+          disc(glow, x, y, 8 + 10 * (age / 0.1), WHITE, 0.3 * fadeOut(age / 0.1));
+          halo(glow, x, y, R * 0.6, c, 0.3 * fadeOut(age / 0.1));
+        }
+        oval(g, x, y + 1, R * 0.75 * spread, R * 0.5 * spread, shade(c, -0.5), 0.5 * fade);
+        oval(g, x, y, R * 0.6 * spread, R * 0.4 * spread, c, 0.55 * fade);
+        oval(glow, x, y, R * 0.7 * spread, R * 0.45 * spread, c, 0.18 * fade);
+        const dk = Math.min(1, age / 0.4);
+        if (dk < 1)
+          for (let i = 0; i < 7; i++) {
+            const a = ((i + hash01(seed, i)) / 7) * Math.PI * 2,
+              d = R * (0.5 + 0.35 * hash01(seed, i, 1)) * dk;
+            disc(g, x + Math.cos(a) * d, y + Math.sin(a) * d * 0.7 - 14 * dk + 18 * dk * dk, 1.8 * (1 - 0.5 * dk), shade(c, 0.35), fadeOut(dk));
+          }
+        for (let i = 0; i < 3; i++) {
+          const b = (age - 0.15 - i * 0.12) / 0.2;
+          if (b <= 0 || b >= 1) continue;
+          const bx = x + (hash01(seed, i, 5) - 0.5) * R * 0.7,
+            by = y + (hash01(seed, i, 6) - 0.5) * R * 0.4;
+          ring(g, bx, by, 1.5 + 2.5 * b, 0.9, shade(c, 0.5), fadeOut(b));
+        }
+      },
+    },
+  },
+  // Amber: a drop of glowing resin, stretched by its flight; it sets into amber shards on the target.
+  resin: {
+    body: ({ g, glow }, p, c) => {
+      const co = Math.cos(p.angle),
+        si = Math.sin(p.angle);
+      halo(glow, p.x, p.y, 7, c, 0.25);
+      strip(g, p.x + 0.6, p.y + 1, co, si, -6, 2.5, -0.6, 0.6, -3.2, 3.2, shade(c, -0.45));
+      oval(g, p.x + co * 0.5, p.y + si * 0.5, 3.4, 3, shade(c, -0.45), 1, p.angle);
+      strip(g, p.x, p.y, co, si, -5.5, 2, -0.4, 0.4, -2.6, 2.6, c);
+      oval(g, p.x + co * 0.5, p.y + si * 0.5, 2.8, 2.5, c, 1, p.angle);
+      disc(g, p.x - 1, p.y - 1, 1, 0xfff4c8, 0.8);
+    },
+    trail: {
+      life: 0.4,
+      step: 7,
+      // Thin strings of resin sagging behind the drop.
+      draw: ({ g, glow }, t, c) => {
+        streak(glow, t, 14, 2, c, 0.22);
+        for (let i = 3; i < t.count; i += 3) {
+          const k = t.age(i) / 0.4;
+          if (k >= 1) break;
+          disc(g, t.x(i), t.y(i) + 10 * k * k, 1.1 * (1 - 0.4 * k), shade(c, -0.15), fadeOut(k) * t.fade);
+        }
+      },
+    },
+    impact: {
+      life: 0.5,
+      // A honey-gold flash, a hexagon of amber setting around the target and shards of it chipping off.
+      draw: ({ g, glow }, x, y, age, c, seed) => {
+        const k = age / 0.5;
+        if (k >= 1) return;
+        const fade = fadeOut(k),
+          set = 1 - Math.pow(1 - Math.min(1, age / 0.12), 2),
+          spin = hash01(seed) * Math.PI;
+        if (age < 0.1) halo(glow, x, y, 14, c, 0.3 * fadeOut(age / 0.1));
+        polygon(g, x, y, 11 * set, 6, c, spin, 0.25 * fade);
+        g.lineStyle(1.5, shade(c, 0.4), 0.9 * fade);
+        g.strokePoints(Array.from({ length: 6 }, (_, i) => ({ x: x + Math.cos(spin + (i * Math.PI) / 3) * 11 * set, y: y + Math.sin(spin + (i * Math.PI) / 3) * 11 * set })), true);
+        g.fillStyle(shade(c, 0.25), fade);
+        for (let i = 0; i < 5; i++) {
+          const a = ((i + hash01(seed, i)) / 5) * Math.PI * 2,
+            co = Math.cos(a),
+            si = Math.sin(a),
+            d = 8 + 12 * (1 - Math.pow(1 - k, 2));
+          g.fillTriangle(...along(x, y, co, si, d + 4, 0), ...along(x, y, co, si, d, 1.5), ...along(x, y, co, si, d - 1, -1.2));
+        }
+      },
+    },
+  },
+  // Hex: a spinning rune tile with a glowing glyph, shedding faint sigils.
+  hex: {
+    body: ({ g, glow }, p, c) => {
+      const spin = p.age * 6 + p.seed;
+      halo(glow, p.x, p.y, 8, c, 0.35);
+      polygon(g, p.x, p.y, 5.2, 4, shade(c, -0.55), spin);
+      polygon(g, p.x, p.y, 4, 4, shade(c, -0.2), spin);
+      g.lineStyle(1.1, shade(c, 0.6), 0.95);
+      const P = (r: number, a: number) => ({ x: p.x + Math.cos(spin + a) * r, y: p.y + Math.sin(spin + a) * r });
+      g.strokePoints([P(2.6, 0), P(2.6, (Math.PI * 2) / 3), P(2.6, (Math.PI * 4) / 3)], true);
+      disc(g, p.x, p.y, 0.8, WHITE, 0.9);
+    },
+    trail: {
+      life: 0.3,
+      step: 7,
+      draw: ({ glow }, t, c, busy) => {
+        for (let i = 1; i < t.count; i += busy ? 3 : 2) {
+          const k = t.age(i) / 0.3;
+          if (k >= 1) break;
+          polygon(glow, t.x(i), t.y(i) - 4 * k, 2.4 * (1 - 0.5 * k), 3, shade(c, 0.3), k * 4 + i, 0.3 * fadeOut(k) * t.fade);
+        }
+      },
+    },
+    impact: {
+      life: 0.45,
+      // A rune circle flares around the target, its triangle turning as it fades.
+      draw: ({ g, glow }, x, y, age, c, seed) => {
+        const k = age / 0.45;
+        if (k >= 1) return;
+        const fade = fadeOut(k),
+          r = 6 + 8 * (1 - Math.pow(1 - Math.min(1, age / 0.15), 2)),
+          spin = hash01(seed) * Math.PI + age * 4;
+        ring(g, x, y, r, 1.2, c, 0.9 * fade);
+        ring(glow, x, y, r, 4, c, 0.22 * fade);
+        g.lineStyle(1.3, shade(c, 0.5), fade);
+        g.strokePoints([0, 1, 2].map((i) => ({ x: x + Math.cos(spin + (i * Math.PI * 2) / 3) * r, y: y + Math.sin(spin + (i * Math.PI * 2) / 3) * r })), true);
+        for (let i = 0; i < 6; i++) {
+          const a = spin * -1 + (i * Math.PI) / 3;
+          disc(g, x + Math.cos(a) * (r + 3), y + Math.sin(a) * (r + 3), 0.9, shade(c, 0.4), fade);
+        }
+      },
+    },
+  },
+  // Mesmer: a hypnotic orb with a turning two-armed spiral, trailing a wavering ribbon.
+  hypno: {
+    body: ({ g, glow }, p, c) => {
+      const spin = p.age * 10 + p.seed;
+      halo(glow, p.x, p.y, 9, c, 0.35);
+      disc(g, p.x, p.y, 4.6, shade(c, -0.6));
+      for (let i = 0; i < 2; i++) {
+        const a = spin + i * Math.PI;
+        arcBand(g, p.x, p.y, 1.6, 1, a, a + 1.8, shade(c, 0.45));
+        arcBand(g, p.x, p.y, 3.3, 1.1, a + 1.2, a + 3, c);
+      }
+      disc(g, p.x, p.y, 0.9, WHITE);
+    },
+    trail: {
+      life: 0.28,
+      step: 4,
+      draw: ({ g, glow }, t, c) => {
+        if (t.count < 2) return;
+        const pts = Array.from({ length: t.count }, (_, i) => {
+          const k = t.age(i) / 0.28,
+            n = Math.sin(i * 0.9 + t.age(0) * 30) * 2.5 * Math.min(1, i / 3);
+          return { x: t.x(i), y: t.y(i) + n, k };
+        }).filter((q) => q.k < 1);
+        if (pts.length < 2) return;
+        glow.lineStyle(3, c, 0.22 * t.fade);
+        glow.strokePoints(pts, false);
+        g.lineStyle(0.8, shade(c, 0.45), 0.6 * t.fade);
+        g.strokePoints(pts, false);
+      },
+    },
+    impact: {
+      life: 0.5,
+      // Rings ripple out while two arcs swirl around the target.
+      draw: ({ g, glow }, x, y, age, c, seed) => {
+        const k = age / 0.5;
+        if (k >= 1) return;
+        const fade = fadeOut(k),
+          spin = hash01(seed) * Math.PI * 2 + age * 9;
+        for (let i = 0; i < 2; i++) {
+          const rk = Math.min(1, Math.max(0, (age - i * 0.1) / 0.35));
+          if (rk > 0 && rk < 1) ring(g, x, y, 4 + 14 * rk, 1.2, c, 0.8 * fadeOut(rk));
+        }
+        for (let i = 0; i < 2; i++) arcBand(g, x, y, 9, 1.8, spin + i * Math.PI, spin + i * Math.PI + 1.4, shade(c, 0.4), fade);
+        halo(glow, x, y, 10, c, 0.3 * fade);
+      },
+    },
+  },
+  // Skyburst: a star shell climbing on a sparkler tail, bursting into a crown of light at its fuse point.
+  starshell: {
+    body: ({ g, glow }, p, c) => {
+      const co = Math.cos(p.angle),
+        si = Math.sin(p.angle),
+        flicker = hash01(p.seed, Math.floor(p.age * 30));
+      halo(glow, p.x, p.y, 7 + 2 * flicker, c, 0.35);
+      strip(g, p.x, p.y, co, si, -4, 2, -1.8, 1.8, -1.8, 1.8, shade(c, -0.5));
+      g.fillStyle(shade(c, -0.1));
+      g.fillTriangle(...along(p.x, p.y, co, si, 2, -1.8), ...along(p.x, p.y, co, si, 2, 1.8), ...along(p.x, p.y, co, si, 5, 0));
+      disc(g, ...along(p.x, p.y, co, si, -4.6, 0), 1.6 + flicker, WHITE);
+    },
+    trail: {
+      life: 0.35,
+      step: 4,
+      // Sparkler: a hot streak and glittering points that drift down and wink out.
+      draw: ({ g, glow }, t, c, busy) => {
+        streak(glow, t, 16, 2, c, 0.4);
+        for (let i = 1; i < t.count; i += busy ? 3 : 1) {
+          const k = t.age(i) / 0.35;
+          if (k >= 1) break;
+          const n = hash01(t.x(i), t.y(i), i);
+          if (n < 0.45) continue;
+          disc(g, t.x(i) + (n - 0.7) * 10 * k, t.y(i) + 9 * k * k, 0.9 * (1 - 0.5 * k), n > 0.8 ? WHITE : shade(c, 0.3), fadeOut(k) * t.fade);
+        }
+      },
+    },
+    impact: {
+      life: 0.7,
+      // Flash, a star of rays out to the burst radius, and glitter falling from their ends.
+      draw: ({ g, glow }, x, y, age, c, seed, _heading, radius) => {
+        const R = radius > 0 ? radius : 30,
+          k = Math.min(1, age / 0.25),
+          reach = R * (1 - Math.pow(1 - k, 3)),
+          rays = 10;
+        if (age < 0.12) {
+          const f = fadeOut(age / 0.12);
+          star(glow, x, y, 10 + 6 * (1 - f), 4, 6, WHITE, hash01(seed) * Math.PI, 0.3 * f);
+          halo(glow, x, y, R * 0.5, c, 0.3 * f);
+        }
+        if (k < 1) ring(glow, x, y, reach, 3, c, 0.2 * fadeOut(k));
+        const fade = fadeOut(age / 0.7);
+        g.lineStyle(1.2, shade(c, 0.3), fade);
+        for (let i = 0; i < rays; i++) {
+          const a = ((i + hash01(seed, i) * 0.4) / rays) * Math.PI * 2,
+            co = Math.cos(a),
+            si = Math.sin(a),
+            d = reach * (0.75 + 0.25 * hash01(seed, i, 1)),
+            fall = 18 * Math.max(0, age - 0.2) ** 2 * 4;
+          g.lineBetween(x + co * d * 0.55, y + si * d * 0.55 + fall * 0.5, x + co * d, y + si * d + fall);
+          disc(g, x + co * d, y + si * d + fall, 1.2, i % 3 ? shade(c, 0.5) : WHITE, fade);
+        }
       },
     },
   },

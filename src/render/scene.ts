@@ -9,7 +9,7 @@ import { headingOnPath } from "../systems/path";
 import { enemyAt } from "./pick";
 import type { GameEvent, GameState, Point, Tower, TowerId } from "../core/types";
 import { PLAYER_COLORS } from "../net/protocol";
-import { drawEffect, effectLifetime, INCOME_LIFETIME, isVisual, type EffectOrigin, type VisualEvent } from "./effects";
+import { drawEffect, effectLifetime, groundLight, INCOME_LIFETIME, isVisual, type EffectOrigin, type VisualEvent } from "./effects";
 import { DEPTH } from "./depths";
 import { enemyContext } from "./enemies";
 import { killedEnemies } from "./enemy-animator";
@@ -25,18 +25,22 @@ import { familyOf, type Family } from "../audio/families";
 import { halo } from "./material";
 import { arcBand, CELL, disc, fillRound, px, ring, strokeRound, type Pen } from "./shapes";
 import { pathCoverage, towerReach } from "./coverage";
-import { drawAmbient, drawTerrain, themeAccent, themeGlow } from "./terrain";
+import { drawAmbient, drawGates, drawTerrain, themeAccent, themeGlow } from "./terrain";
 import { FrameStats } from "./frame-stats";
 import { drawTower, type TowerBadges } from "./towers";
 import { TowerBodies } from "./tower-bodies";
 import { ScreenFx } from "./screen-fx";
 import { loadGraphics } from "./graphics-settings";
 import { Trails } from "./trails";
+import { TurretAim } from "./aim";
+import { Scorches } from "./decals";
 export { CELL } from "./shapes";
 /** Upper bound for the canvas's longer side in pixels, so a huge 4K full screen stays cheap to fill. */
 const MAX_CANVAS = 4096;
 /** Seconds a tower's pulse fades after its family's music note. */
 const PULSE = 0.25;
+/** Seconds the reactor flares red after a leak. */
+const LEAK_ALARM = 1.2;
 export interface ViewState {
   build: TowerId | null;
   selected: number | null;
@@ -146,7 +150,12 @@ export class Battlefield extends Phaser.Scene {
   private effects: Effect[] = [];
   /** Muzzles that flashed in this frame's batch of events; a salvo flashes once per barrel. */
   private flashed = new Set<string>();
+  /** `fxClock` of the last leak, for the reactor's alarm flare. */
+  private lastLeak = -Infinity;
   private trails = new Trails();
+  private aim = new TurretAim();
+  private scorches = new Scorches();
+  private angleOf = (t: Tower) => this.aim.angle(t);
   /** Still tower bodies baked into textures; only turrets, lamps and light are drawn per frame. */
   private bodies = new TowerBodies(this);
   /**
@@ -205,6 +214,8 @@ export class Battlefield extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
     this.trails.reset();
+    this.aim.reset();
+    this.scorches.reset();
     this.driver.reset?.();
     this.resize();
     // FIT never changes the game size on its own; follow every size change of the board (window, full screen, layout).
@@ -359,6 +370,9 @@ export class Battlefield extends Phaser.Scene {
     if (s !== this.tracked) {
       this.tracked = s;
       this.trails.reset();
+      this.aim.reset();
+      this.scorches.reset();
+      this.lastLeak = -Infinity;
       // Enemy ids restart with the new state; no old image may stand in for a new unit.
       this.enemySprites.reset();
       this.enemyFeedback.reset();
@@ -368,13 +382,16 @@ export class Battlefield extends Phaser.Scene {
       this.effects = [];
     }
     if (!s.paused) this.fxClock += dt;
-    this.trails.sync(s.projectiles, s.towers, this.sim.content, this.fxClock);
+    this.aim.sync(this.sim, s.paused ? 0 : dt);
+    this.trails.sync(s.projectiles, s.towers, this.sim.content, this.fxClock, this.angleOf);
     const events = this.sim.drainEvents();
     this.flashed.clear();
     this.hooks.events(events);
     // Damage events drive the hit flashes and hurt clips; they are not effects (`isVisual`), and the batch stays as it is for them.
     this.enemyFeedback.consume(events, this.fxClock);
     this.screenFx.consume(events, this.fxClock);
+    this.scorches.consume(events, this.sim.content, this.fxClock);
+    if (events.some((e) => e.type === "leak")) this.lastLeak = this.fxClock;
     this.screenFx.update(this.fxClock);
     // Killed units with a death clip play it where they were last drawn; the kill effect plays as before.
     this.enemySprites.retire(killedEnemies(events), this.fxClock, (type) => this.sim.content.enemies[type].color);
@@ -407,7 +424,8 @@ export class Battlefield extends Phaser.Scene {
     if (event.type === "shot" || event.type === "beam") {
       const { x, y } = event.from,
         tower = s.towers.find((t) => t.x === x && t.y === y);
-      if (tower) origin = { level: towerLevel(tower, content), angle: tower.angle };
+      // The drawn turret snapped onto the shot this frame, so this is the barrel the shot left.
+      if (tower) origin = { level: towerLevel(tower, content), angle: this.aim.angle(tower) };
       // A salvo flashes once per barrel, not once per target.
       if (event.type === "shot" && content.towers[event.tower].visual.muzzle !== "bolt") {
         if (flashed.has(`${x},${y}`)) return;
@@ -534,7 +552,8 @@ export class Battlefield extends Phaser.Scene {
     for (const layer of [this.towerInk, this.towerGlow, this.hints, this.ghost, this.enemyUnderlay, this.enemyBody, this.enemyOverlay, this.ink, this.glow]) layer.clear();
     for (const layer of [this.towerGlow, this.glow]) this.screenFx.prime(layer, this.sim.map.columns * CELL, this.sim.map.rows * CELL);
     this.ambient.clear();
-    drawAmbient(this.ambient, this.sim.map, this.clock);
+    this.scorches.draw({ g: this.hints, glow: this.towerGlow }, this.fxClock);
+    drawAmbient(this.ambient, this.towerGlow, this.sim.map, this.clock, this.still.matches);
     const selected = s.towers.find((t) => t.id === this.view.selected),
       hover = (this.view.build && this.view.pending) || this.view.hover,
       over = !this.view.build && hover ? s.towers.find((t) => t.x === hover.x && t.y === hover.y) : undefined,
@@ -618,8 +637,9 @@ export class Battlefield extends Phaser.Scene {
       const d = towers[t.type],
         badges = looks.get(t.id)!,
         x = px(t.x),
-        y = px(t.y);
-      drawTower(towerPen, x, y, t, d, this.clock, badges, this.bodies.place(t, d, badges, x, y));
+        y = px(t.y),
+        angle = this.aim.angle(t);
+      drawTower(towerPen, x, y, angle === t.angle ? t : { ...t, angle }, d, this.clock, badges, this.bodies.place(t, d, badges, x, y));
       const family = familyOf(d),
         age = family ? pulses[family] : undefined;
       // The music visibly comes from the towers: a soft halo when their family's note sounds.
@@ -648,13 +668,16 @@ export class Battlefield extends Phaser.Scene {
       strokeRound(ink, px(marked.x), px(marked.y), r);
     }
     this.trails.draw(pen, this.fxClock);
-    for (const f of this.effects) drawEffect(pen, f.event, f.age, content, f.origin);
-    // A ring has no reactor: its portal pulses instead and turns red close to the enemy limit.
+    for (const f of this.effects) {
+      // Shots and impacts light the ground below the enemies; the effect itself draws above them.
+      groundLight(this.towerGlow, f.event, f.age, content, f.origin);
+      drawEffect(pen, f.event, f.age, content, f.origin);
+    }
+    // Entry and reactor live below the enemies; the reactor (a ring's portal) flares red close to the end and after a leak.
     const circle = this.sim.mission.circle,
-      end = circle ? this.sim.map.path[0] : this.sim.map.path.at(-1)!,
-      critical = circle ? s.enemies.length >= circle.limit * 0.8 : s.lives <= 5;
-    ink.lineStyle(1, critical ? 0xff647c : themeAccent(this.sim.map), 0.35 + 0.2 * Math.sin(this.clock * 3));
-    strokeRound(ink, px(end.x), px(end.y), 26 + Math.sin(this.clock * 2) * 2);
+      critical = circle ? s.enemies.length >= circle.limit * 0.8 : s.lives <= 5,
+      alarm = Math.max(critical ? 1 : 0, 1 - (this.fxClock - this.lastLeak) / LEAK_ALARM);
+    drawGates({ g: this.ambient, glow: this.towerGlow }, this.sim.map, this.clock, this.still.matches, alarm);
   }
   /** Turns the bloom and the screen effects on or off (the Bloom setting). */
   setGlow(on: boolean) {

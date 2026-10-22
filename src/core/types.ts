@@ -388,6 +388,12 @@ export type ProjectileStyle =
   | "lob"
   | "glaive"
   | "shard"
+  // Own looks of towers that used to share one: Plasma, Amber, Hex, Mesmer, Skyburst.
+  | "plasma"
+  | "resin"
+  | "hex"
+  | "hypno"
+  | "starshell"
   // ── new towers: g1 (Attack+Control A) ──
   | "beacon-mark"
   // ── end g1 ──

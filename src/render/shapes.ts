@@ -64,6 +64,19 @@ export function fillRound(g: Ink, x: number, y: number, r: number) {
 export function strokeRound(g: Ink, x: number, y: number, r: number) {
   if (r > 0) g.strokePoints(POINTS, true, true, round(x, y, r));
 }
+function ellipse(x: number, y: number, w: number, h: number) {
+  const n = sides(Math.max(w, h) / 2);
+  for (let i = 0; i < n; i++) set(i, x + (Math.cos((i * Math.PI * 2) / n) * w) / 2, y + (Math.sin((i * Math.PI * 2) / n) * h) / 2);
+  return n;
+}
+/** Ellipse of width `w` and height `h` in the current fill style; use it instead of `fillEllipse` (same diameters). */
+export function fillOval(g: Ink, x: number, y: number, w: number, h: number) {
+  if (w > 0 && h > 0) g.fillPoints(POINTS, true, false, ellipse(x, y, w, h));
+}
+/** Ellipse outline in the current line style; use it instead of `strokeEllipse`. */
+export function strokeOval(g: Ink, x: number, y: number, w: number, h: number) {
+  if (w > 0 && h > 0) g.strokePoints(POINTS, true, true, ellipse(x, y, w, h));
+}
 /** Arc from `a0` to `a1` into the open path (about 4 px per segment); use it instead of `arc` between `beginPath` and `strokePath`. */
 export function arcPath(g: Ink, x: number, y: number, r: number, a0: number, a1: number) {
   const n = Math.min(48, Math.max(2, Math.ceil((Math.abs(a1 - a0) * r) / 4)));

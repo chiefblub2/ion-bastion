@@ -47,7 +47,8 @@ async function render(map: MapDefinition) {
     scene.cameras.resize(width, height);
     drawTerrain(scene, map, (x, y) => blocked.has(`${x},${y}`));
     // One still frame of the animated layer, so beacons, glows and landmark lights show too.
-    drawAmbient(scene.add.graphics(), map, 0);
+    const ambient = scene.add.graphics();
+    drawAmbient(ambient, ambient, map, 0);
     await new Promise((done) => game.events.once(Phaser.Core.Events.POST_RENDER, done));
     const blob = await new Promise<Blob | null>((done) => game.canvas.toBlob(done, "image/webp", 0.86));
     if (!blob) throw new Error(`No snapshot of map ${map.id}`);

@@ -27,16 +27,6 @@ export const pierce: AttackModule<PierceAttack> = {
     width: { label: "Beam width", valid: (v) => v > 0, unit: " cells" },
     falloff: { label: "Damage per pierce", valid: (v) => v > 0 && v <= 1, unit: " %", show: (v) => v * 100 },
   },
-  // Enemies trail along the path, not along the beam: aim where the line hits the most of them.
-  choose: (sim, type, from, reach, candidates, spec) => {
-    let best = candidates[0],
-      most = 0;
-    for (const c of candidates) {
-      const count = line(sim, type, from, c, reach, spec.width).hits.length;
-      if (count > most) [best, most] = [c, count];
-    }
-    return best;
-  },
   apply: (sim, src, { enemy, from, reach }, damage, spec) => {
     if (!enemy || !from) return;
     const { hits, to } = line(sim, src.type, from, enemy, reach ?? 0, spec.width);

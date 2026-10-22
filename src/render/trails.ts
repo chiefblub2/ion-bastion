@@ -69,8 +69,8 @@ class Trail implements TrailView {
     /** Tower centre the projectile started from, and the offset of the barrel tip from it. */
     private readonly cx: number,
     private readonly cy: number,
-    private readonly ox: number,
-    private readonly oy: number,
+    private ox: number,
+    private oy: number,
     /** Point-aimed shells: total distance to the fixed target. */
     private readonly total: number,
     private readonly born: number,
@@ -107,6 +107,13 @@ class Trail implements TrailView {
     this.ts[this.head] = t;
     this.stored = Math.min(SAMPLES, this.stored + 1);
   }
+  /** Still merging from the barrel tip into its true path (set by `update`). */
+  easing = true;
+  /** Moves the barrel tip the shot leaves from, while the turret it left is still turning. */
+  aimFrom(ox: number, oy: number) {
+    this.ox = ox;
+    this.oy = oy;
+  }
   /** Follows the simulation: eases out of the barrel, lifts arcing shells and records trail samples. */
   update(p: Projectile, now: number, busy: boolean) {
     const sx = px(p.x),
@@ -120,6 +127,7 @@ class Trail implements TrailView {
       remaining = Math.hypot(tx - sx, ty - sy),
       progress = this.total > 0 ? Math.min(1, travelled / this.total) : travelled / (travelled + remaining || 1),
       pose = this.pose;
+    this.easing = ease > 0;
     let angle = Math.atan2(ty - sy, tx - sx),
       lift = 0,
       height = 0;
@@ -168,6 +176,21 @@ class Trail implements TrailView {
 }
 /** Absolute angle between two directions, 0 to π. */
 const turn = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+/** Offset of the barrel tip a projectile leaves from, with the turret drawn at `angle`. */
+function barrelOffset(p: Projectile, tower: Tower, content: ContentPack, angle: number): Point {
+  const d = content.towers[p.type],
+    cx = px(tower.x),
+    cy = px(tower.y),
+    tips = muzzleTips(d.visual.turret, towerLevel(tower, content), cx, cy, angle),
+    flight = Math.atan2(p.ty - tower.y, p.tx - tower.x);
+  if (!tips.length) return { x: 0, y: 0 };
+  // Fanned barrels: the one pointing closest to this shot; parallel barrels: between them.
+  const off = (q: Point) => turn(Math.atan2(q.y - cy, q.x - cx), flight),
+    tip = MUZZLES[d.visual.turret]?.fan
+      ? tips.reduce((best, q) => (off(q) < off(best) ? q : best))
+      : { x: tips.reduce((s, q) => s + q.x, 0) / tips.length, y: tips.reduce((s, q) => s + q.y, 0) / tips.length };
+  return { x: tip.x - cx, y: tip.y - cy };
+}
 /**
  * Render-side memory of the projectiles in flight: where each one left its barrel, its recent positions for the
  * trail, and trails that fade out after it landed. Purely visual: it only reads the state.
@@ -183,7 +206,8 @@ export class Trails {
     this.orphans = [];
     this.arrivals = [];
   }
-  sync(projectiles: readonly Projectile[], towers: readonly Tower[], content: ContentPack, now: number) {
+  /** `angleOf` is the turret angle on screen (`TurretAim`), so a shot leaves the barrel that is drawn. */
+  sync(projectiles: readonly Projectile[], towers: readonly Tower[], content: ContentPack, now: number, angleOf = (t: Tower) => t.angle) {
     const frame = ++this.frame,
       busy = projectiles.length > BUSY;
     this.arrivals.length = 0;
@@ -195,10 +219,18 @@ export class Trails {
         t = undefined;
       }
       if (!t) {
-        t = this.start(p, towers, content, now);
+        t = this.start(p, towers, content, now, angleOf);
         this.live.set(p.id, t);
       }
       t.frame = frame;
+      // The turret may still be turning toward this shot: the shot keeps leaving the barrel as drawn.
+      if (t.easing) {
+        const tower = towers.find((q) => q.id === p.tower);
+        if (tower) {
+          const o = barrelOffset(p, tower, content, angleOf(tower));
+          t.aimFrom(o.x, o.y);
+        }
+      }
       t.update(p, now, busy);
     }
     for (const [id, t] of this.live)
@@ -215,27 +247,13 @@ export class Trails {
     this.orphans.push(t);
     if (this.orphans.length > MAX_ORPHANS) this.orphans.shift();
   }
-  private start(p: Projectile, towers: readonly Tower[], content: ContentPack, now: number) {
+  private start(p: Projectile, towers: readonly Tower[], content: ContentPack, now: number, angleOf: (t: Tower) => number) {
     const d = content.towers[p.type],
       look = PROJECTILES[d.visual.projectile ?? "tracer"],
       tower = towers.find((t) => t.id === p.tower),
       cx = tower ? px(tower.x) : px(p.x),
       cy = tower ? px(tower.y) : px(p.y);
-    let ox = 0,
-      oy = 0;
-    if (tower) {
-      const tips = muzzleTips(d.visual.turret, towerLevel(tower, content), cx, cy, tower.angle),
-        flight = Math.atan2(p.ty - tower.y, p.tx - tower.x);
-      if (tips.length) {
-        // Fanned barrels: the one pointing closest to this shot; parallel barrels: between them.
-        const off = (q: Point) => turn(Math.atan2(q.y - cy, q.x - cx), flight),
-          tip = MUZZLES[d.visual.turret]?.fan
-          ? tips.reduce((best, q) => (off(q) < off(best) ? q : best))
-          : { x: tips.reduce((s, q) => s + q.x, 0) / tips.length, y: tips.reduce((s, q) => s + q.y, 0) / tips.length };
-        ox = tip.x - cx;
-        oy = tip.y - cy;
-      }
-    }
+    const { x: ox, y: oy } = tower ? barrelOffset(p, tower, content, angleOf(tower)) : { x: 0, y: 0 };
     const total = p.target === null ? Math.hypot(px(p.tx) - cx, px(p.ty) - cy) : 0,
       radius = "radius" in p.attack ? p.attack.radius : 0;
     return new Trail(p.type, p.tower, look, d.color, cx, cy, ox, oy, total, now, p.id, radius);
