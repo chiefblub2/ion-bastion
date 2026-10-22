@@ -2393,7 +2393,8 @@ function turretContext(pen: Pen, x: number, y: number, tower: Tower, definition:
     maxed: badges.maxed,
     color: p,
     path: badges.path,
-    kick: Math.max(0, (tower.cooldown - 0.7) / 0.3),
+    // Snaps back at once and settles softly: the linear return over the first 30 % of the cycle, squared.
+    kick: Math.max(0, (tower.cooldown - 0.7) / 0.3) ** 2,
     charge: 1 - tower.cooldown,
     tip: attack && level >= 6 ? p : attack && level >= 5 ? shade(definition.color, 0.35) : undefined,
     energy: attack && level >= 5 ? 0.15 : 0,

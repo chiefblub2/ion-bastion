@@ -164,7 +164,7 @@ describe("newer attack mechanics", () => {
     expect(second).toBeCloseTo(d * f);
     expect([beside, behind]).toEqual([0, 0]);
   });
-  it("Lanze aims where its beam hits the most enemies, not at the frontmost one", () => {
+  it("Lanze aims at its priority target and pierces the enemies on that line", () => {
     // Frontmost enemy alone to the right; three trailing enemies in a column below the tower.
     const g = fire("lance", [
       { ...enemyAt(100, "drone", 9, 5), distance: 20 },
@@ -172,10 +172,10 @@ describe("newer attack mechanics", () => {
       { ...enemyAt(102, "drone", 7, 7), distance: 11 },
       { ...enemyAt(103, "drone", 7, 8), distance: 10 },
     ]);
-    expect(g.state.enemies.map((e) => e.hp < 1000)).toEqual([false, true, true, true]);
-    // With no better line it keeps the frontmost target.
-    const lone = fire("lance", [{ ...enemyAt(100, "drone", 9, 5), distance: 20 }, { ...enemyAt(101, "drone", 7, 7), distance: 12 }]);
-    expect(lone.state.enemies.map((e) => e.hp < 1000)).toEqual([true, false]);
+    expect(g.state.enemies.map((e) => e.hp < 1000)).toEqual([true, false, false, false]);
+    // On the frontmost enemy's line, the ones behind it are hit too.
+    const row = fire("lance", [{ ...enemyAt(100, "drone", 7, 8), distance: 20 }, { ...enemyAt(101, "drone", 7, 7), distance: 12 }]);
+    expect(row.state.enemies.map((e) => e.hp < 1000)).toEqual([true, true]);
   });
   it("Lanze fires instantly and leaves a beam to the end of its range", () => {
     const g = fire("lance", [enemyAt(100, "drone", 7, 7)]);
