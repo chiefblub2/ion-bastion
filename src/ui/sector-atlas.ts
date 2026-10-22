@@ -92,8 +92,8 @@ export interface AtlasOptions {
   /** A game is under way on the loaded mission, so the atlas opens on it instead of the next mission. */
   playing?: boolean;
 }
-/** Wide screens have room for the enemy list; narrow ones fold it away. */
-const intelOpen = () => matchMedia("(min-width: 1100px) and (min-height: 700px)").matches;
+/** From tablets up the card has room for the enemy list; phones fold it away. */
+const intelOpen = () => matchMedia("(min-width: 700px)").matches;
 const motion = () => !matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $ = (id: string) => document.getElementById(id)!;
 /** Sets an <img> once the terrain picture is ready; it fades in over the SVG placeholder. */
@@ -276,9 +276,10 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
 export function renderFeatured(game: Game, m: MissionDefinition | undefined, { lobby, image, record = {} }: AtlasOptions) {
   const preview = $("atlas-preview"),
     body = $("brief-body"),
-    actions = $("brief-actions");
+    actions = $("brief-actions"),
+    intel = $("brief-intel");
   if (!m) {
-    body.innerHTML = actions.innerHTML = "";
+    body.innerHTML = actions.innerHTML = intel.innerHTML = "";
     return;
   }
   const { content } = game,
@@ -288,29 +289,35 @@ export function renderFeatured(game: Game, m: MissionDefinition | undefined, { l
     numeral = sector ? roman(sectors.indexOf(sector)) : "";
   // Preview: a new layer over the old one, crossfaded; the SVG shows at once and the terrain picture fades in.
   preview.style.setProperty("--accent", hex(themeAccent(m.map)));
-  preview.style.setProperty("--map-ratio", String(m.map.columns / m.map.rows));
   $("preview-legend").innerHTML = m.map.loop
     ? '<span class="legend-portal">Portal</span><span>Closed ring</span>'
     : '<span class="legend-entry">Entry</span><span class="legend-reactor">Reactor</span>';
+  // Layers stack under the legend chip, which stays put while the picture changes.
   const stage = $("preview-stage"),
-    top = stage.lastElementChild as HTMLElement | null;
+    layers = () => [...stage.querySelectorAll<HTMLElement>(":scope > .preview-layer")],
+    top = layers().at(-1);
   if (top?.dataset.map !== m.map.id) {
     const layer = document.createElement("div");
     layer.className = "preview-layer is-loading";
     layer.dataset.map = m.map.id;
-    layer.innerHTML = `${mapPreviewSvg(m.map)}<img alt="Battlefield ${escape(m.map.name)}">`;
-    stage.append(layer);
+    // The fill is a blurred copy of the terrain behind the fitted map, so the frame keeps one size for every map.
+    layer.innerHTML = `<img class="preview-fill" alt="" aria-hidden="true">${mapPreviewSvg(m.map)}<img class="preview-map" alt="Battlefield ${escape(m.map.name)}">`;
+    stage.insertBefore(layer, $("preview-legend"));
     // Older layers fade out under the new one and leave once it is in.
-    for (const old of [...stage.children].slice(0, -1) as HTMLElement[]) {
+    for (const old of layers().slice(0, -1)) {
       old.classList.add("is-leaving");
       setTimeout(() => old.remove(), motion() ? 320 : 0);
     }
     void layer.offsetWidth;
     layer.classList.add("is-in");
-    const img = layer.querySelector("img")!;
+    const img = layer.querySelector<HTMLImageElement>(".preview-map")!,
+      fill = layer.querySelector<HTMLImageElement>(".preview-fill")!;
     fillImage(img, m.map, image, () => {
       layer.classList.remove("is-loading");
       coverImages();
+      if (!img.src) return;
+      fill.onload = () => fill.classList.add("is-ready");
+      fill.src = img.src;
     });
   } else coverImages();
   // Briefing.
@@ -332,7 +339,8 @@ export function renderFeatured(game: Game, m: MissionDefinition | undefined, { l
     ],
     foes = missionEnemies(m, content),
     fresh = foes.filter((f) => f.isNew).length;
-  body.innerHTML = `<p class="brief-kicker">MISSION ${pad(missionNumber(m, missions))}${sector ? ` <span aria-hidden="true">·</span> SECTOR ${numeral}` : ""}</p><h2 id="brief-title">${m.name}</h2><p class="brief-focus">${m.focus}</p><dl class="brief-stats">${stats.join("")}</dl>${rules.length ? `<ul class="brief-rules" aria-label="Special rules">${rules.map((r) => `<li>${r}</li>`).join("")}</ul>` : ""}<details class="brief-intel"${intelOpen() ? " open" : ""}><summary><span>Intel</span><small>${foes.length} enemy ${plural(foes.length, "type")}${fresh ? ` · ${fresh} new` : ""}</small></summary><ul class="brief-enemies">${foes.map(({ id, isNew }) => `<li>${enemyIcon(enemies[id].visual, enemies[id].color, id)}<span>${enemies[id].name}</span>${isNew ? '<b class="new-tag">NEW</b>' : ""}</li>`).join("")}</ul>${m.availableTowers ? `<h3>Restricted to these towers</h3><p class="brief-towers">${m.availableTowers.map((id) => towers[id].name).join(" · ")}</p>` : ""}</details>`;
+  body.innerHTML = `<p class="brief-kicker">MISSION ${pad(missionNumber(m, missions))}${sector ? ` <span aria-hidden="true">·</span> SECTOR ${numeral}` : ""}</p><h2 id="brief-title">${m.name}</h2><p class="brief-focus">${m.focus}</p><dl class="brief-stats">${stats.join("")}</dl>${rules.length ? `<ul class="brief-rules" aria-label="Special rules">${rules.map((r) => `<li>${r}</li>`).join("")}</ul>` : ""}`;
+  intel.innerHTML = `<details class="brief-intel"${intelOpen() ? " open" : ""}><summary><span>Intel</span><small>${foes.length} enemy ${plural(foes.length, "type")}${fresh ? ` · ${fresh} new` : ""}</small></summary><ul class="brief-enemies">${foes.map(({ id, isNew }) => `<li>${enemyIcon(enemies[id].visual, enemies[id].color, id)}<span>${enemies[id].name}</span>${isNew ? '<b class="new-tag">NEW</b>' : ""}</li>`).join("")}</ul>${m.availableTowers ? `<h3>Restricted to these towers</h3><p class="brief-towers">${m.availableTowers.map((id) => towers[id].name).join(" · ")}</p>` : ""}</details>`;
   actions.innerHTML = `${reset ? '<p class="mission-warning">Starting another mission resets your current defense and progress.</p>' : ""}<button class="primary atlas-start" data-mission="${m.id}">${lobby ? "Choose for Room" : "Start Mission"} <span aria-hidden="true">▶</span></button>`;
   body.scrollTop = 0;
   // Restarts the briefing's entry animation.

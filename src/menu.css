@@ -132,12 +132,12 @@
   box-shadow: 0 0 12px #3ef2ff99, 0 0 36px #3ef2ff44;
 }
 /* The briefing's Start follows the mode: cyan for the campaign, magenta for Circuit. */
-.atlas-brief .primary {
+.brief-actions .primary {
   background: var(--mode);
   border-color: var(--mode);
   box-shadow: 0 0 18px color-mix(in srgb, var(--mode) 35%, transparent);
 }
-.atlas-brief .primary:hover {
+.brief-actions .primary:hover {
   background: color-mix(in srgb, var(--mode) 70%, #fff);
   box-shadow: 0 0 12px color-mix(in srgb, var(--mode) 60%, transparent), 0 0 36px color-mix(in srgb, var(--mode) 27%, transparent);
 }
@@ -634,18 +634,18 @@
   font-size: 12px;
 }
 /* Sector atlas ----------------------------------------------------------------------------------------------- */
-/* The mission page (ui/sector-atlas.ts): header, a gallery of sector cards, then the sector's mission journey, the
-   whole battlefield and the briefing. Phones stack them; from 700 px the journey runs down the left beside the map
-   and the briefing; large screens show all three side by side in exactly one viewport. */
+/* The mission page (ui/sector-atlas.ts): header, a gallery of sector cards, then the sector's mission journey beside
+   one mission card (map, briefing with Start, Intel). Everything has its natural height; nothing stretches to fill
+   the viewport. From 1100 px the journey runs down the left of the card, below that it is a strip above it. */
 #mission-page[data-circle] {
   --mode: var(--m-ring);
 }
 .menu-page.atlas {
-  max-width: 1760px;
+  max-width: 1440px;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "head" "gallery" "rules" "preview" "missions" "brief" "actions";
-  gap: 14px;
+  grid-template-areas: "head" "gallery" "rules" "missions" "card";
+  gap: 16px;
 }
 .atlas-head {
   grid-area: head;
@@ -960,30 +960,39 @@
 .sector-card:active {
   transform: translateY(0);
 }
-/* Featured mission: the whole battlefield in its own shape (`--map-ratio`, set per map), nothing drawn over it;
-   the legend sits below (the terrain names the map itself). */
+/* Mission card: one panel for the picked mission. The map and the briefing sit side by side from 860 px, Intel spans
+   the bottom; only Intel changes height between missions, and nothing sits below it. */
+.atlas-card {
+  grid-area: card;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "preview" "brief" "intel";
+  gap: 18px 24px;
+  padding: 18px;
+  background: var(--m-glass);
+  border: 1px solid #ffffff14;
+  border-radius: 14px;
+  box-shadow: 0 24px 60px -30px #000;
+}
+/* The map frame: always 3:2, so it keeps its size for every map; the battlefield is fitted inside whole and a
+   blurred copy of its terrain fills any spare edge. */
 .atlas-preview {
   --accent: var(--m-accent);
   grid-area: preview;
   min-width: 0;
-  min-height: 0;
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
 }
 .preview-stage {
   position: relative;
   width: 100%;
-  aspect-ratio: var(--map-ratio, 1.6);
+  aspect-ratio: 3 / 2;
   overflow: hidden;
   background: #03050b;
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow:
-    0 28px 60px -24px #000,
     0 0 0 1px #ffffff14,
-    0 0 70px -30px var(--accent);
+    0 0 50px -24px var(--accent);
   transition: box-shadow 300ms ease-out;
 }
 .preview-layer {
@@ -1009,6 +1018,11 @@
   opacity: 0;
   transition: opacity 300ms ease-out;
 }
+.preview-layer .preview-fill {
+  object-fit: cover;
+  filter: blur(18px) brightness(0.45) saturate(0.8);
+  transform: scale(1.15);
+}
 .preview-layer img.is-ready {
   opacity: 1;
 }
@@ -1028,20 +1042,22 @@
     background-position: -150% 0;
   }
 }
-.preview-foot {
-  width: 100%;
+/* A small legend chip in the map's lower left corner. */
+.preview-legend {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 2;
   display: flex;
-  justify-content: flex-end;
-  padding: 0 4px;
-  font: 500 11px var(--mono);
+  gap: 14px;
+  padding: 5px 10px;
+  font: 500 10px var(--mono);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--m-text-2);
-}
-.preview-legend {
-  display: flex;
-  gap: 16px;
   white-space: nowrap;
+  color: var(--m-text-2);
+  background: #03050bcc;
+  border-radius: 6px;
 }
 .preview-legend span::before {
   content: "";
@@ -1060,22 +1076,15 @@
   background: var(--accent) !important;
   box-shadow: 0 0 8px var(--accent);
 }
-/* Briefing: title, stats and rules at a glance, the enemy list under Intel, Start right after it. */
+/* Briefing: as tall as the map beside it, with Start at its bottom, level with the map's lower edge. */
 .atlas-brief {
   grid-area: brief;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  min-height: 0;
 }
 .brief-body {
-  flex: 0 1 auto;
-  min-height: 0;
-  padding-right: 6px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--m-border) transparent;
+  min-width: 0;
 }
 .brief-kicker {
   margin: 0 0 8px;
@@ -1088,7 +1097,7 @@
 }
 #brief-title {
   margin: 0;
-  font: 800 clamp(28px, 2.5vw, 44px) / 1.05 var(--display);
+  font: 800 clamp(26px, 2.2vw, 38px) / 1.05 var(--display);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   overflow-wrap: anywhere;
@@ -1096,15 +1105,15 @@
 }
 .brief-focus {
   max-width: 46ch;
-  margin: 10px 0 18px;
+  margin: 8px 0 16px;
   font-size: 15px;
   line-height: 1.55;
   color: var(--m-text-2);
 }
-/* Stats as tiles: two by two, four in a row where the briefing is wide (700–1099 px). */
+/* Stats as one row of tiles (five on Circuit missions), two rows on narrow phones. */
 .brief-stats {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
   gap: 1px;
   margin: 0 0 14px;
   overflow: hidden;
@@ -1112,11 +1121,8 @@
   border: 1px solid #ffffff12;
   border-radius: 10px;
 }
-.brief-stats div:last-child:nth-child(odd) {
-  grid-column: 1 / -1;
-}
 .brief-stats div {
-  padding: 9px 14px 8px;
+  padding: 8px 12px 7px;
   background: color-mix(in srgb, var(--m-surface) 88%, transparent);
 }
 .brief-stats dt {
@@ -1127,7 +1133,8 @@
 }
 .brief-stats dd {
   margin: 0;
-  font: 700 26px / 1.15 "Rajdhani", sans-serif;
+  white-space: nowrap;
+  font: 700 23px / 1.15 "Rajdhani", sans-serif;
   color: var(--m-text);
 }
 .brief-best dd {
@@ -1156,9 +1163,14 @@
   border: 1px solid color-mix(in srgb, var(--mode) 30%, transparent);
   border-radius: 999px;
 }
-.brief-intel {
-  margin-top: 12px;
+/* Intel: the full width of the card under the map and the briefing. */
+.atlas-intel {
+  grid-area: intel;
+  min-width: 0;
   border-top: 1px solid #ffffff12;
+}
+.atlas-intel:empty {
+  display: none;
 }
 .brief-intel summary {
   display: flex;
@@ -1197,7 +1209,7 @@
 }
 .brief-enemies {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 6px;
   margin: 0 0 12px;
   padding: 0;
@@ -1246,17 +1258,24 @@
 }
 .brief-actions {
   display: grid;
-  gap: 10px;
-  padding-top: 14px;
+  justify-items: end;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+.brief-actions .mission-warning {
+  padding: 7px 10px;
+  font-size: 12px;
+  background: color-mix(in srgb, var(--m-warn) 14%, #03050bd9);
 }
 .start-screen .atlas-start {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  width: 100%;
-  min-height: 54px;
-  font-size: 19px;
+  width: min(100%, 280px);
+  min-height: 52px;
+  font-size: 18px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
@@ -1486,7 +1505,7 @@
     transform: translateY(6px);
   }
 }
-/* Phones: the Start button belongs to the page, so it stays at the bottom of the screen while scrolling. */
+/* Phones: Start belongs to the page and stays at the bottom of the screen while scrolling. */
 @media (max-width: 699px) {
   .atlas-head {
     flex-wrap: wrap;
@@ -1519,47 +1538,54 @@
   .sector-rail {
     scroll-padding-inline: 4px;
   }
-  .atlas-brief {
-    display: contents;
+  .start-screen:has(#mission-page:not([hidden])) {
+    padding-bottom: 120px;
   }
-  .brief-body {
-    grid-area: brief;
-    overflow: visible;
-    padding: 0;
+  .atlas-card {
+    padding: 12px;
+    gap: 14px;
+  }
+  .brief-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .brief-actions {
-    grid-area: actions;
-    position: sticky;
+    position: fixed;
+    left: 0;
+    right: 0;
     bottom: 0;
     z-index: 3;
-    margin: 0 -16px -48px;
+    justify-items: stretch;
     padding: 14px 16px max(14px, env(safe-area-inset-bottom));
     background: linear-gradient(180deg, transparent, var(--m-bg) 30%);
   }
+  .start-screen .atlas-start {
+    width: 100%;
+  }
 }
-/* From 700 px: the journey runs down the left column beside the map and the briefing. */
-@media (min-width: 700px) {
+/* Wide enough for the map and the briefing side by side. */
+@media (min-width: 860px) {
+  .atlas-card {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    grid-template-areas: "preview brief" "intel intel";
+    padding: 20px;
+  }
+}
+/* Large screens: the journey runs down the left of the card. */
+@media (min-width: 1100px) {
   .menu-page.atlas {
-    grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
-    grid-template-areas: "head head" "gallery gallery" "rules rules" "missions preview" "missions brief";
-    gap: 18px 24px;
+    grid-template-columns: minmax(200px, 250px) minmax(0, 1fr);
+    grid-template-areas: "head head" "gallery gallery" "rules rules" "missions card";
+    gap: 18px 28px;
   }
   .atlas-missions {
-    display: flex;
-    flex-direction: column;
+    align-self: start;
   }
   .mission-rail {
     --node: 62px;
     --gap: 6px;
-    flex: 1 1 auto;
-    min-height: 0;
     flex-direction: column;
     padding: 2px;
-    overflow-x: visible;
-    overflow-y: auto;
-    scroll-snap-type: y proximity;
-    scrollbar-width: thin;
-    scrollbar-color: var(--m-border) transparent;
+    overflow: visible;
   }
   .start-screen .mission-node {
     flex: 0 0 var(--node);
@@ -1598,74 +1624,6 @@
   }
   .node-tag {
     position: static;
-  }
-}
-@media (min-width: 700px) and (max-width: 1099px), (min-width: 700px) and (max-height: 699px) {
-  .brief-stats {
-    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
-  }
-  .brief-stats div:last-child:nth-child(odd) {
-    grid-column: auto;
-  }
-}
-/* Large and tall enough: exactly one viewport, three columns; the map fits its column whole, and only the briefing
-   scrolls inside itself, with Start right below it. */
-@media (min-width: 1100px) and (min-height: 700px) {
-  .start-screen:has(#mission-page:not([hidden])) {
-    height: 100vh;
-    height: 100dvh;
-    min-height: 0;
-    padding: 18px 32px 18px;
-    overflow: hidden;
-  }
-  .menu-page.atlas {
-    height: 100%;
-    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(320px, 400px);
-    grid-template-areas: "head head head" "gallery gallery gallery" "rules rules rules" "missions preview brief";
-    grid-template-rows: auto auto auto minmax(0, 1fr);
-    gap: 16px 28px;
-  }
-  /* The figure is the size container: the stage takes the largest size of the map's shape that fits above the foot. */
-  .atlas-preview {
-    container-type: size;
-  }
-  .preview-stage {
-    flex: none;
-    width: min(100cqw, calc((100cqh - 30px) * var(--map-ratio, 1.6)));
-  }
-  .preview-foot {
-    width: min(100cqw, calc((100cqh - 30px) * var(--map-ratio, 1.6)));
-  }
-}
-@media (min-width: 1100px) and (min-height: 700px) and (max-width: 1399px) {
-  .menu-page.atlas {
-    grid-template-columns: minmax(200px, 220px) minmax(0, 1fr) minmax(300px, 340px);
-    gap: 16px 22px;
-  }
-}
-/* Short screens: smaller cards and title, so the briefing keeps its stats and Start in view. */
-@media (min-width: 1100px) and (min-height: 700px) and (max-height: 849px) {
-  .start-screen:has(#mission-page:not([hidden])) {
-    padding-block: 14px;
-  }
-  .menu-page.atlas {
-    gap: 12px 22px;
-  }
-  .sector-card {
-    height: 80px;
-  }
-  .sector-copy span {
-    display: none;
-  }
-  #brief-title {
-    font-size: 30px;
-  }
-  .brief-focus {
-    margin: 6px 0 12px;
-    font-size: 14px;
-  }
-  .brief-stats dd {
-    font-size: 22px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
