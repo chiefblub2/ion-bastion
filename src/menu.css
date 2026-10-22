@@ -187,9 +187,8 @@
   font-size: 18px;
 }
 .menu-page-head .brand-mark {
-  width: 26px;
-  height: 30px;
-  font-size: 17px;
+  width: 28px;
+  height: 28px;
 }
 .menu-back {
   min-width: 44px;
@@ -277,11 +276,9 @@
   animation: title-boot 1.4s steps(1) 1 both;
 }
 .menu-home .menu-title .brand-mark {
-  width: 0.85em;
-  height: 1em;
-  font-size: 0.62em;
-  flex-shrink: 0;
-  box-shadow: inset 0 0 14px #3ef2ff55;
+  width: 0.95em;
+  height: 0.95em;
+  filter: drop-shadow(0 0 10px #3ef2ff88);
 }
 .menu-home .menu-title .brand-light {
   font-weight: 600;
@@ -316,16 +313,15 @@
   display: flex;
   align-items: baseline;
   gap: 10px;
-  margin: -16px 0 32px;
-  padding: 8px 12px;
-  border-left: 3px solid var(--m-warn);
-  background: color-mix(in srgb, var(--m-warn) 8%, var(--m-bg));
-  font-size: 13px;
+  margin: -22px 0 28px;
+  font-size: 12px;
   color: var(--m-text-2);
 }
 .home-dev b {
   flex: none;
-  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid color-mix(in srgb, var(--m-warn) 60%, transparent);
+  font-size: 10px;
   letter-spacing: 0.12em;
   color: var(--m-warn);
 }
@@ -368,31 +364,58 @@
   outline-offset: -6px;
   outline-color: var(--on-neon);
 }
-/* Training: a quiet line under the primary button, lit up for a player who has not won it yet. */
+/* Learning: Training and the rules (Field Manual) in one quiet line under the primary button, lit up for a
+   newcomer (`.fresh` on Training). */
+.home-learn {
+  display: flex;
+  margin-top: 10px;
+  background: var(--m-glass);
+  border: 1px dashed var(--m-border);
+}
+.home-learn:has(.fresh) {
+  border: 1px solid var(--m-warn);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--m-warn) 30%, transparent), 0 0 18px color-mix(in srgb, var(--m-warn) 25%, transparent);
+}
+.start-screen .home-learn button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--m-text);
+}
+.start-screen .home-learn button:hover {
+  background: var(--m-hover);
+}
 .home-training {
+  flex: 1;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  width: 100%;
-  margin-top: 10px;
+  min-width: 0;
   padding: 10px 16px;
   text-align: left;
-  color: var(--m-text);
-  background: var(--m-glass);
-  border: 1px dashed var(--m-border);
-  border-radius: 0;
 }
 .home-training span {
   color: var(--m-text-2);
   font-size: 0.85em;
 }
-.home-training:hover {
-  background: var(--m-hover);
-}
+/* With "· recommended" the line is too long beside Rules: the pitch goes under the title. */
 .home-training.fresh {
-  border: 1px solid var(--m-warn);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--m-warn) 30%, transparent), 0 0 18px color-mix(in srgb, var(--m-warn) 25%, transparent);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.start-screen .home-learn .home-rules {
+  flex: none;
+  padding: 10px 18px;
+  border-left: 1px dashed var(--m-border);
+  font: 600 14px "Rajdhani", sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.home-rules span {
+  margin-left: 4px;
+  color: var(--m-accent);
 }
 .home-training.fresh strong {
   color: var(--m-warn);
@@ -430,6 +453,11 @@
   display: grid;
   gap: 8px;
 }
+/* The manual pages' list padding (style.css) would indent the rows against the buttons above. */
+.home-modes li {
+  margin: 0;
+  padding: 0;
+}
 .home-mode {
   --accent: var(--m-accent);
   display: flex;
@@ -450,12 +478,21 @@
   --accent: var(--m-ring);
 }
 .home-mode strong {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
   font: 600 22px / 1.1 "Rajdhani", sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--accent);
   white-space: nowrap;
   text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.home-mode strong i {
+  width: 1em;
+  font-style: normal;
+  font-size: 0.8em;
+  text-align: center;
 }
 .home-mode span {
   font: 500 12px var(--mono);
@@ -489,6 +526,39 @@
   border-radius: 0;
   box-shadow: 0 0 40px #3ef2ff14, inset 0 0 40px #3ef2ff0a;
   backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition:
+    border-color var(--m-speed),
+    box-shadow var(--m-speed);
+}
+.home-map:hover {
+  border-color: var(--m-accent);
+  box-shadow: 0 0 48px #3ef2ff26, inset 0 0 40px #3ef2ff12;
+}
+/* The play mark over the map, shown on hover like a video poster. */
+.home-map-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  padding-left: 4px;
+  font-size: 24px;
+  color: var(--on-neon);
+  background: color-mix(in srgb, var(--m-accent) 85%, transparent);
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  transform: translate(-50%, -50%) scale(0.9);
+  opacity: 0;
+  transition:
+    opacity var(--m-speed),
+    transform var(--m-speed);
+  pointer-events: none;
+}
+.home-map:hover .home-map-play {
+  opacity: 1;
+  transform: translate(-50%, -50%);
 }
 .home-map::before,
 .home-map::after {
@@ -609,6 +679,25 @@
 .home-map-foot {
   margin-top: 14px;
 }
+.home-map-kind {
+  display: block;
+  margin-bottom: 4px;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.18em;
+  color: var(--m-accent);
+}
+.home-map-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+.home-map-stars {
+  font-size: 16px;
+  letter-spacing: 0.12em;
+  color: var(--m-star);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--m-star) 50%, transparent);
+}
 .home-map-foot strong {
   font: 700 22px / 1.2 var(--display);
   letter-spacing: 0.06em;
@@ -625,9 +714,16 @@
   gap: 8px 28px;
 }
 .home-map-stats strong {
-  font: 700 22px "Rajdhani", sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 22px / 1 "Rajdhani", sans-serif;
   color: var(--m-accent);
   text-shadow: 0 0 10px #3ef2ff55;
+}
+/* The ◇ and ♡ glyphs come from a fallback font with taller metrics; sized and centred, they sit on the number's line. */
+.home-map-stats strong i {
+  font: normal 0.75em / 1 sans-serif;
 }
 .home-map-stats .stat-label {
   margin-bottom: 2px;
@@ -682,9 +778,8 @@
   font-size: 17px;
 }
 .atlas-head .brand-mark {
-  width: 24px;
-  height: 28px;
-  font-size: 16px;
+  width: 26px;
+  height: 26px;
 }
 /* Campaign / Circuit: a small segmented control. */
 .mode-tabs {

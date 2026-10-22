@@ -5,6 +5,7 @@
  */
 import "./editor.css";
 import { copyText } from "../app/room-code";
+import { BRAND_MARK } from "../ui/brand";
 import { playableMissions } from "../content/missions";
 import type { ContentPack, MapTheme, MissionDefinition, TowerId } from "../core/types";
 import { THEMES } from "../render/terrain";
@@ -132,7 +133,7 @@ function build(root: HTMLElement) {
   ).join("");
   const field = (label: string, input: string, wide = false) => `<label class="ed-field${wide ? " wide" : ""}"><span>${label}</span>${input}</label>`;
   const n = (attrs: string) => `<input type="number" inputmode="decimal" ${attrs}>`;
-  root.innerHTML = `<header class="menu-page-head"><button class="quiet menu-back" data-back>← Back</button><a class="brand" href="/" aria-label="ION BASTION home"><span class="brand-mark">I</span><span>ION<span class="brand-light">BASTION</span></span></a></header>
+  root.innerHTML = `<header class="menu-page-head"><button class="quiet menu-back" data-back>← Back</button><a class="brand" href="/" aria-label="ION BASTION home"><span class="brand-mark">${BRAND_MARK}</span><span>ION<span class="brand-light">BASTION</span></span></a></header>
 <p class="eyebrow">DEVELOPER TOOL</p><h1>Mission Editor</h1>
 <div class="ed-toolbar" role="toolbar" aria-label="Editor actions">
   <div class="ed-tool-group"><label class="ed-size">${n(`id="ed-new-cols" min="${LIMITS.columns[0]}" max="${LIMITS.columns[1]}" value="18" aria-label="Columns of the new map"`)}</label><span aria-hidden="true">×</span><label class="ed-size">${n(`id="ed-new-rows" min="${LIMITS.rows[0]}" max="${LIMITS.rows[1]}" value="12" aria-label="Rows of the new map"`)}</label><button type="button" class="quiet" id="ed-new">New</button></div>

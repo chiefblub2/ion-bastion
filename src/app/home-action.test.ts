@@ -12,11 +12,37 @@ describe("home action", () => {
   it("ignores an invalid remembered mission", () => {
     expect(homeAction(MISSIONS, "gone", fresh).kind).toBe("start");
   });
-  it("restarts a remembered mission from wave 1 after a reload", () => {
+  it("retries an unwon remembered mission from wave 1 after a reload", () => {
     const a = homeAction(MISSIONS, MISSIONS[3].id, fresh);
     expect(a.kind).toBe("restart");
+    expect(a.title).toBe("Retry Mission");
     expect(a.mission).toBe(MISSIONS[3]);
-    expect(a.subtitle).toContain("Starts from wave 1");
+    expect(a.subtitle).toContain("From wave 1");
+  });
+  it("continues with the next unwon mission after a won one", () => {
+    const record = { [MISSIONS[3].id]: 2, [MISSIONS[4].id]: 3 } as const;
+    const a = homeAction(MISSIONS, MISSIONS[3].id, fresh, record);
+    expect(a.kind).toBe("continue");
+    expect(a.mission).toBe(MISSIONS[5]);
+    expect(a.subtitle).toBe(`Mission 06 · ${MISSIONS[5].name}`);
+  });
+  it("continues within the remembered mission's mode", () => {
+    const ring = MISSIONS.filter((m) => m.circle),
+      a = homeAction(MISSIONS, ring[0].id, fresh, { [ring[0].id]: 1 });
+    expect(a.mission).toBe(ring[1]);
+    expect(a.title).toBe("Continue Circuit");
+  });
+  it("continues the campaign when the last mission is forgotten but wins are recorded", () => {
+    const a = homeAction(MISSIONS, undefined, fresh, { [MISSIONS[0].id]: 3 });
+    expect(a.kind).toBe("continue");
+    expect(a.mission).toBe(MISSIONS[1]);
+  });
+  it("plays a won mission again once its whole mode is won", () => {
+    const campaign = MISSIONS.filter((m) => !m.circle),
+      record = Object.fromEntries(campaign.map((m) => [m.id, 3 as const])),
+      a = homeAction(MISSIONS, campaign[2].id, fresh, record);
+    expect(a.kind).toBe("restart");
+    expect(a.title).toBe("Play Again");
   });
   it("resumes a running or prepared game, paused or not", () => {
     const wave = homeAction(MISSIONS, MISSIONS[0].id, { ...fresh, mission: MISSIONS[2], wave: 6, status: "wave", inProgress: true });

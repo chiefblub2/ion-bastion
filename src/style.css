@@ -89,17 +89,18 @@ button:active:not(:disabled) {
   letter-spacing: 0.12em;
   text-shadow: 0 0 18px #3ef2ff44;
 }
+/* The hexagon mark (ui/brand.ts): a square holder, the SVG fills it. */
 .brand-mark {
-  width: 34px;
-  height: 39px;
-  border: 2px solid var(--mint);
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
   color: var(--mint);
-  display: grid;
-  place-items: center;
-  font: 600 23px var(--mono);
-  clip-path: polygon(0 0, 80% 0, 100% 20%, 100% 100%, 20% 100%, 0 80%);
-  background: color-mix(in srgb, var(--neon) 12%, transparent);
-  text-shadow: var(--glow);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--mint) 60%, transparent));
+}
+.brand-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .brand-light {
   font-weight: 500;
@@ -1063,9 +1064,8 @@ dialog::backdrop {
     gap: 8px;
   }
   .brand-mark {
-    width: 27px;
-    height: 32px;
-    font-size: 20px;
+    width: 30px;
+    height: 30px;
   }
   /* Five header buttons do not fit beside the brand; they wrap into rows below it. */
   .topbar {

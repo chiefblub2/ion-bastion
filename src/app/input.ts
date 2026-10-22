@@ -150,14 +150,16 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       if (!s.hidden) section = s;
     }
     if (to.page === "home") {
+      const record = campaignRecord();
       primary = homeAction(game.content.missions, lastMission(), {
         mission: game.mission,
         wave: game.state.wave,
         status: game.state.status,
         inProgress: inProgress(),
         multiplayer: coop.active(),
-      });
-      renderMenu(game, primary, terrainImage, !trainingDone());
+      }, record);
+      // A newcomer: no Training won, no mission won and none started yet.
+      renderMenu(game, primary, record, terrainImage, !trainingDone() && !Object.keys(record).length && !lastMission());
     }
     if (to.page !== "missions") forRoom = false;
     if (to.page === "missions") {
@@ -267,7 +269,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     canPlaytest: () => !coop.active(),
     base: location.origin + location.pathname,
   };
-  /** The home page's primary button: begin on the first campaign mission, return to the game in memory, or replay the remembered mission from wave 1. */
+  /** The home page's primary button: begin on the first campaign mission, return to the game in memory, move on to the next unwon mission, or replay the remembered one from wave 1. */
   function runPrimary() {
     if (primary.kind === "resume") return screens.show(GAME);
     // Reachable after a won or lost playtest: the home button then offers "restart" with the playtest mission.
@@ -275,7 +277,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       execute({ type: "restart" });
       return screens.show(GAME);
     }
-    if (primary.kind === "restart") return selectMission(primary.mission.id);
+    if (primary.kind === "restart" || primary.kind === "continue") return selectMission(primary.mission.id);
     const sectors = game.content.sectors ?? [],
       first = (modeGroups(sectors).campaign[0] ?? sectors[0]) as (typeof sectors)[number] | undefined;
     missionSector = first ? sectors.indexOf(first) : undefined;
@@ -392,6 +394,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       screens.show(HOME);
       return;
     }
+    // The home page's map preview is a pointer shortcut for the primary button, which stays the keyboard route.
+    if ((event.target as HTMLElement).closest("#home-map")) return runPrimary();
     const b = (event.target as HTMLElement).closest("button");
     if (!b) return;
     if (b.dataset.back !== undefined) return screens.back();
