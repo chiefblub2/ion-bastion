@@ -3,6 +3,7 @@ import { DEFAULT_CONTENT } from "./content";
 import { isFullyUpgraded, towerColor, towerLevel, towerPath, upgradeOptions } from "./core/upgrades";
 import { drawEffect, type EffectOrigin, type VisualEvent } from "./render/effects";
 import { MUZZLES } from "./render/muzzles";
+import { PROJECTILES } from "./render/projectiles";
 import { CELL, type Pen } from "./render/shapes";
 import { drawTower } from "./render/towers";
 import { Trails } from "./render/trails";
@@ -135,14 +136,14 @@ export class Showcase extends Phaser.Scene {
     heading(sections[0].title);
     row(shooters, WIDE.w, WIDE.h, 7, (pen, x, top, type, w, h) => {
       const d = content.towers[type],
-        arc = d.visual.projectile === "lob",
+        arc = !!(d.visual.projectile && PROJECTILES[d.visual.projectile].arc),
         ty = top + (arc ? h - 12 : h / 2),
         t = built(type, 1, undefined, 0.5, 0),
         trails = new Trails();
       t.x = grid(x + 24);
       t.y = grid(ty);
       tower(pen, x + 24, ty, t);
-      const p: Projectile = { id: 7, tower: 0, type, target: arc || d.visual.projectile === "rocket" ? null : 1, x: t.x, y: t.y, tx: grid(x + w - 8), ty: t.y, damage: 1, attack: d.attack },
+      const p: Projectile = { id: 7, tower: 0, type, target: arc || d.visual.projectile === "rocket" || d.visual.projectile === "starshell" ? null : 1, x: t.x, y: t.y, tx: grid(x + w - 8), ty: t.y, damage: 1, attack: d.attack },
         speed = d.projectile!.speed,
         stop = (p.tx - p.x) * (arc ? 0.5 : 0.62);
       for (let now = 0; p.x - t.x < stop; now += 1 / 60) {

@@ -2,18 +2,25 @@ import type { ContentPack, GameEvent, TurretStyle } from "../core/types";
 import { glowLine, halo, SHADOW } from "./material";
 import { MUZZLES, muzzleTips, type FlashStyle } from "./muzzles";
 import { drawFieldEffect } from "./field-effects";
-import { IMPACTS, impactOf } from "./projectiles";
+import { fadeOut, IMPACTS, impactOf } from "./projectiles";
 import { drawTrapEffect, TRAP_EFFECT_LIFE } from "./trap-effects";
 import { drawCrit } from "./support-fx";
 import { drawEconomyEffect } from "./economy-effects";
 import { controlBeam, controlChain, drawEcho } from "./control-marks";
-import { arcBand, CELL, disc, hash01, lightning, polygon, px, ring, shade, strip, type Pen } from "./shapes";
+import { arcBand, CELL, disc, hash01, lightning, oval, polygon, px, ring, shade, strip, type Ink, type Pen } from "./shapes";
 /** Seconds an effect stays visible. */
 export const EFFECT_LIFETIME = 0.45;
 /** Refinery payouts and dock repairs linger so their label can be read. */
 export const INCOME_LIFETIME = 1.6;
 /** Ground cracks of a quake stay a little longer. */
 const QUAKE_LIFETIME = 0.7;
+/** Seconds a muzzle keeps glowing after its flash. */
+const AFTERGLOW = 0.22;
+/** Seconds the ground stays lit after a shot and after an impact. */
+const SHOT_LIGHT = 0.12,
+  IMPACT_LIGHT = 0.3;
+/** Build, upgrade and sale animations. */
+const TOWER_ACTION_LIFETIME = 0.6;
 export type VisualEvent = Extract<
   GameEvent,
   {
@@ -91,6 +98,10 @@ export function effectLifetime(e: VisualEvent, content: ContentPack) {
     case "warp":
     case "breach":
       return TRAP_EFFECT_LIFE;
+    case "build":
+    case "upgrade":
+    case "sell":
+      return TOWER_ACTION_LIFETIME;
     case "pulse": {
       const turret = sourceOf(content, e.color);
       return turret === "hammer" ? QUAKE_LIFETIME : turret === "heavy" || turret === "limpet" ? IMPACTS.burst.life : EFFECT_LIFETIME;
@@ -188,6 +199,63 @@ function radialShot(pen: Pen, turret: TurretStyle, fx: number, fy: number, tx: n
       if (k < 1) glowLine(pen.glow, fx, fy, tx, ty, color, 1.5, 0.25 * (1 - k));
       return;
     }
+    // Magnetar and Cyclone: the core flares and a faint line marks the pull (the drag itself is a field effect).
+    case "magnet":
+    case "fan": {
+      const k = age / 0.25;
+      if (k >= 1) return;
+      halo(pen.glow, fx, fy, 14, color, 0.3 * (1 - k));
+      glowLine(pen.glow, fx, fy, tx, ty, color, 1.2, 0.2 * (1 - k));
+      return;
+    }
+  }
+}
+/** Build: four corner brackets snap in around the cell, a light pop and a ring settling onto the base. */
+function buildEffect({ g, glow }: Pen, x: number, y: number, color: number, age: number) {
+  const k = age / TOWER_ACTION_LIFETIME,
+    fade = Math.max(0, 1 - k) ** 1.5,
+    snap = grow(age, 0.22),
+    d = 34 - 12 * snap,
+    arm = 7;
+  halo(glow, x, y, 26, color, 0.3 * Math.max(0, 1 - age / 0.25));
+  ring(glow, x, y, 10 + 14 * grow(age, 0.3), 3, color, 0.3 * fade);
+  for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    const cx = x + sx * d,
+      cy = y + sy * d;
+    strip(g, cx, cy, -sx, 0, 0, arm, -1.1, 1.1, -1.1, 1.1, shade(color, 0.3), fade);
+    strip(g, cx, cy, 0, -sy, 0, arm, -1.1, 1.1, -1.1, 1.1, shade(color, 0.3), fade);
+  }
+}
+/** Upgrade: a column of light and two chevrons rising through the tower. */
+function upgradeEffect({ g, glow }: Pen, x: number, y: number, color: number, age: number) {
+  const k = age / TOWER_ACTION_LIFETIME,
+    fade = Math.max(0, 1 - k),
+    rise = grow(age, 0.45);
+  strip(glow, x, y + 10, 0, -1, 0, 18 + 34 * rise, -7, 7, -2, 2, color, 0.3 * fade);
+  strip(glow, x, y + 10, 0, -1, 0, 14 + 30 * rise, -2.5, 2.5, -0.8, 0.8, WHITE, 0.3 * fade);
+  for (let i = 0; i < 2; i++) {
+    const t = Math.min(1, Math.max(0, (age - i * 0.1) / 0.4));
+    if (t <= 0) continue;
+    const cy = y + 8 - 34 * (1 - (1 - t) ** 2),
+      a = (1 - t) * fade;
+    g.lineStyle(2.5, i ? color : shade(color, 0.45), a);
+    g.strokePoints([{ x: x - 8, y: cy + 5 }, { x, y: cy - 2 }, { x: x + 8, y: cy + 5 }], false);
+  }
+  ring(g, x, y, 19 + 3 * rise, 1.6, shade(color, 0.3), 0.8 * fade);
+}
+/** Sale: a ring closes in on the base while scrap flies off and falls. */
+function sellEffect({ g, glow }: Pen, x: number, y: number, color: number, age: number) {
+  const k = Math.min(1, age / TOWER_ACTION_LIFETIME),
+    fade = 1 - k,
+    close = grow(age, 0.35);
+  ring(g, x, y, 28 - 22 * close, 2, color, 0.9 * fade);
+  disc(glow, x, y, 10 * (1 - close) + 2, color, 0.25 * fade);
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + hash01(x, y, i) * 0.6,
+      v = 30 + 26 * hash01(y, x, i),
+      sx = x + Math.cos(a) * v * age,
+      sy = y + Math.sin(a) * v * age * 0.7 + 60 * age * age;
+    polygon(g, sx, sy, 2.4, 4, i % 3 ? 0x8e979c : color, age * 9 + i, fade);
   }
 }
 /** Lance: a white-hot rail beam in a wide glow, wound by a fading spiral. */
@@ -302,7 +370,7 @@ function chain(pen: Pen, turret: TurretStyle | undefined, fx: number, fy: number
 function pulse(pen: Pen, turret: TurretStyle | undefined, x: number, y: number, radius: number, color: number, age: number) {
   const { g, glow } = pen,
     R = radius * CELL,
-    alpha = Math.max(0, 1 - age / 0.4),
+    alpha = fadeOut(age / 0.4),
     r = R * (0.3 + 0.7 * grow(age, 0.25));
   switch (turret) {
     // Stasis: a hexagonal field that snaps open and holds.
@@ -390,6 +458,57 @@ function pulse(pen: Pen, turret: TurretStyle | undefined, x: number, y: number, 
     case "limpet":
       IMPACTS.burst.draw(pen, x, y, age, color, hash01(x, y), undefined, R);
       return;
+    // Catalyst reaction: a chemical splash, bubbles welling up and bursting across the field.
+    case "flask": {
+      disc(g, x, y, r, color, 0.08 * alpha);
+      ring(g, x, y, r, 1.8, color, 0.75 * alpha);
+      for (let i = 0; i < 9; i++) {
+        const t = (age - 0.03 * i) / 0.3;
+        if (t <= 0 || t >= 1) continue;
+        const a = hash01(x, y, i) * Math.PI * 2,
+          d = R * 0.85 * Math.sqrt(hash01(y, x, i)),
+          bx = x + Math.cos(a) * d,
+          by = y + Math.sin(a) * d - 6 * t;
+        ring(g, bx, by, 1.5 + 3.5 * t, 1, shade(color, 0.45), fadeOut(t));
+        if (t > 0.8) disc(glow, bx, by, 4, color, 0.25 * fadeOut((t - 0.8) / 0.2));
+      }
+      halo(glow, x, y, R * 0.5, color, 0.25 * alpha);
+      return;
+    }
+    // Plasma eruption: the pool bursts upwards as a column of fire inside a molten ring.
+    case "caster": {
+      const k = Math.min(1, age / EFFECT_LIFETIME),
+        fade = fadeOut(k),
+        rise = grow(age, 0.2);
+      oval(g, x, y, r, r * 0.65, shade(color, -0.5), 0.3 * fade);
+      ring(g, x, y, r, 2.2, color, 0.8 * fade);
+      strip(glow, x, y, 0, -1, -4, 10 + 30 * rise, -R * 0.35, R * 0.35, -2, 2, color, 0.3 * fade);
+      strip(glow, x, y, 0, -1, -2, 6 + 24 * rise, -3, 3, -0.6, 0.6, WHITE, 0.3 * fade);
+      for (let i = 0; i < 6; i++) {
+        const t = Math.min(1, age / 0.4),
+          sx = x + (hash01(x, i) - 0.5) * R * 0.8,
+          sy = y - (12 + 24 * hash01(y, i)) * t;
+        disc(g, sx, sy, 1.5 * (1 - 0.5 * t), shade(color, 0.4 - 0.5 * t), fade);
+      }
+      return;
+    }
+    // Snare: a mesh flashes over the trap and pulls tight.
+    case "snare": {
+      const s = R * (1.1 - 0.25 * grow(age, 0.3)),
+        fade = fadeOut(Math.min(1, age / EFFECT_LIFETIME)),
+        corners = [0, 1, 2, 3].map((i) => ({ x: x + Math.cos(Math.PI / 4 + (i * Math.PI) / 2) * s, y: y + Math.sin(Math.PI / 4 + (i * Math.PI) / 2) * s }));
+      if (age < 0.1) halo(glow, x, y, s, shade(color, 0.4), 0.3 * fadeOut(age / 0.1));
+      g.lineStyle(1.4, shade(color, 0.35), 0.9 * fade);
+      g.strokePoints(corners, true);
+      g.lineStyle(1, shade(color, 0.35), 0.7 * fade);
+      for (let i = 1; i < 4; i++) {
+        const f = i / 4;
+        g.lineBetween(corners[0].x + (corners[1].x - corners[0].x) * f, corners[0].y + (corners[1].y - corners[0].y) * f, corners[3].x + (corners[2].x - corners[3].x) * f, corners[3].y + (corners[2].y - corners[3].y) * f);
+        g.lineBetween(corners[0].x + (corners[3].x - corners[0].x) * f, corners[0].y + (corners[3].y - corners[0].y) * f, corners[1].x + (corners[2].x - corners[1].x) * f, corners[1].y + (corners[2].y - corners[1].y) * f);
+      }
+      for (const q of corners) disc(g, q.x, q.y, 1.6, shade(color, -0.4), fade);
+      return;
+    }
     // Any other field: a bright front ring over a fading band.
     default:
       disc(g, x, y, r, color, 0.06 * alpha);
@@ -397,11 +516,31 @@ function pulse(pen: Pen, turret: TurretStyle | undefined, x: number, y: number, 
       ring(g, x, y, r, 2.5, color, 0.8 * alpha);
   }
 }
+/**
+ * Light that shots and impacts throw on the ground: a soft oval at a firing tower (shifted along its aim) and one at
+ * each impact, sized by the blast radius. Meant for an additive layer below the enemies, so units are never lit.
+ */
+export function groundLight(glow: Ink, e: VisualEvent, age: number, content: ContentPack, origin: EffectOrigin = {}) {
+  if (e.type === "shot") {
+    if (age >= SHOT_LIGHT) return;
+    const d = content.towers[e.tower];
+    if (d.placement === "path") return;
+    const fx = px(e.from.x),
+      fy = px(e.from.y),
+      a = origin.angle ?? Math.atan2(px(e.to.y) - fy, px(e.to.x) - fx);
+    oval(glow, fx + Math.cos(a) * 10, fy + Math.sin(a) * 8 + 3, 24, 17, e.color, 0.12 * fadeOut(age / SHOT_LIGHT), a);
+  } else if (e.type === "impact") {
+    if (age >= IMPACT_LIGHT) return;
+    const d = content.towers[e.tower],
+      R = Math.max(14, (origin.radius ?? ("radius" in d.attack ? d.attack.radius : 0)) * CELL);
+    oval(glow, px(e.at.x), px(e.at.y) + 2, R * 0.95, R * 0.7, e.color, 0.16 * fadeOut(age / IMPACT_LIGHT));
+  }
+}
 /** Short-lived effects drawn from simulation events; they never affect the game. */
 export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: ContentPack, origin: EffectOrigin = {}) {
   if (drawFieldEffect(pen, e, age, content)) return;
   const { g, glow } = pen,
-    alpha = Math.max(0, 1 - age / 0.4);
+    alpha = fadeOut(age / 0.4);
   switch (e.type) {
     case "warp":
     case "breach":
@@ -509,8 +648,11 @@ export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: Conte
       if (!spec) return radialShot(pen, d.visual.turret, fx, fy, tx, ty, age, e.color);
       // The flash sits on every barrel tip, as the turret pointed when it fired.
       const angle = origin.angle ?? aim;
-      for (const tip of muzzleTips(d.visual.turret, origin.level ?? 1, fx, fy, angle))
+      for (const tip of muzzleTips(d.visual.turret, origin.level ?? 1, fx, fy, angle)) {
         FLASHES[spec.flash](pen, tip.x, tip.y, Math.atan2(tip.y - fy, tip.x - fx), age, e.color, d.visual.turret === "mortar");
+        // A soft afterglow lingers at the muzzle once the flash is gone.
+        if (age < AFTERGLOW) halo(glow, tip.x, tip.y, 7, e.color, 0.12 * fadeOut(age / AFTERGLOW));
+      }
       return;
     }
     case "impact": {
@@ -521,6 +663,12 @@ export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: Conte
       impactOf(d).draw(pen, x, y, age, e.color, hash01(e.at.x, e.at.y), origin.heading, radius);
       return;
     }
+    case "build":
+      return buildEffect(pen, px(e.at.x), px(e.at.y), e.color, age);
+    case "upgrade":
+      return upgradeEffect(pen, px(e.at.x), px(e.at.y), e.color, age);
+    case "sell":
+      return sellEffect(pen, px(e.at.x), px(e.at.y), e.color, age);
     case "crit":
       return drawCrit(pen, e, age);
     case "recycle": case "barrier": case "discount": // g5

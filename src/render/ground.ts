@@ -263,8 +263,9 @@ export function drawGround(g: Ink, map: MapDefinition, theme: GroundTheme, isBlo
   for (let y = 1; y < map.rows; y++) for (let x = 1; x < map.columns; x++) disc(g, x * CELL, y * CELL, 1.2, theme.grid, 0.5);
 }
 /**
- * Board light over the finished terrain: a soft pool from the upper left and a vignette towards the edges, both
- * weaker on light ground (`strength` from `themeGlow`).
+ * Board light over the finished terrain: a soft pool from the upper left, an eased falloff towards the edges and a
+ * bevelled rim (dark outer band, lit top and left lip, shaded bottom and right, corner brackets), all weaker on light
+ * ground (`strength` from `themeGlow`). It stays inside the board, below the labels.
  */
 export function drawBoardLight(g: Ink, map: MapDefinition, theme: GroundTheme, strength: number) {
   const width = map.columns * CELL,
@@ -272,16 +273,41 @@ export function drawBoardLight(g: Ink, map: MapDefinition, theme: GroundTheme, s
     mean = blend(theme.ground[0], theme.ground[1], 0.5),
     pool = shade(mean, 0.55);
   for (let k = 0; k < 6; k++) oval(g, width * 0.22, height * 0.18, width * (0.75 - k * 0.1), height * (0.8 - k * 0.11), pool, 0.012 * strength);
-  const steps = 14,
-    depth = CELL * 2;
+  // Falloff: thin bands with a smooth, eased alpha, so no step shows.
+  const steps = 28,
+    depth = CELL * 2.2,
+    w = depth / steps,
+    weight = 0.5 + strength / 2;
   for (let k = 0; k < steps; k++) {
-    const t = k / steps,
-      w = depth / steps,
-      alpha = 0.055 * (1 - t) * (1 - t) * (0.5 + strength / 2);
+    const t = 1 - k / steps,
+      alpha = 0.05 * t * t * weight;
     g.fillStyle(0x000000, alpha);
     g.fillRect(0, k * w, width, w);
     g.fillRect(0, height - (k + 1) * w, width, w);
     g.fillRect(k * w, 0, w, height);
     g.fillRect(width - (k + 1) * w, 0, w, height);
+  }
+  // Rim: a dark outer band, then a lit lip on the top and left and a shaded one on the bottom and right.
+  const rim = 5,
+    lit = shade(theme.grid, 0.35),
+    dark = shade(theme.backdrop, -0.5);
+  g.fillStyle(dark, 0.55 * weight);
+  g.fillRect(0, 0, width, rim);
+  g.fillRect(0, height - rim, width, rim);
+  g.fillRect(0, rim, rim, height - rim * 2);
+  g.fillRect(width - rim, rim, rim, height - rim * 2);
+  g.fillStyle(lit, 0.3 * weight);
+  g.fillRect(rim, rim, width - rim * 2, 1);
+  g.fillRect(rim, rim + 1, 1, height - rim * 2 - 1);
+  g.fillStyle(0x000000, 0.35 * weight);
+  g.fillRect(rim, height - rim - 1, width - rim * 2, 1);
+  g.fillRect(width - rim - 1, rim, 1, height - rim * 2);
+  // Corner brackets in the grid colour.
+  const arm = CELL * 0.45,
+    o = rim + 3;
+  g.fillStyle(lit, 0.45 * weight);
+  for (const [x, y, sx, sy] of [[o, o, 1, 1], [width - o, o, -1, 1], [o, height - o, 1, -1], [width - o, height - o, -1, -1]]) {
+    g.fillRect(sx > 0 ? x : x - arm, sy > 0 ? y : y - 2, arm, 2);
+    g.fillRect(sx > 0 ? x : x - 2, sy > 0 ? y : y - arm, 2, arm);
   }
 }

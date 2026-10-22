@@ -108,7 +108,7 @@ export const TOWER_CONTENT = {
     attack: { kind: "airburst", radius: 0.9 },
     targets: ["air"],
     projectile: { speed: 9 },
-    visual: { icon: "✷", turret: "battery", projectile: "rocket", impact: "burst" },
+    visual: { icon: "✷", turret: "battery", projectile: "starshell", impact: "burst" },
   }, {
     5: {
       attack: { radius: 1.15 },
@@ -481,7 +481,7 @@ export const TOWER_CONTENT = {
     attack: { kind: "pool", radius: 0.85, duration: 4 },
     targets: ["ground"],
     projectile: { speed: 5 },
-    visual: { icon: "◒", turret: "caster", projectile: "lob", impact: "burst" },
+    visual: { icon: "◒", turret: "caster", projectile: "plasma", impact: "burst" },
   }, {
     4: {
       attack: { radius: 1, duration: 5 },
@@ -530,7 +530,7 @@ export const TOWER_CONTENT = {
     attack: { kind: "confuse", duration: 1.5, recovery: 3 },
     targets: ["ground", "air"],
     projectile: { speed: 8 },
-    visual: { icon: "↺", turret: "spiral", projectile: "orb", impact: "spark" },
+    visual: { icon: "↺", turret: "spiral", projectile: "hypno", impact: "spark" },
   }, {
     4: {
       attack: { duration: 1.7 },
@@ -554,7 +554,7 @@ export const TOWER_CONTENT = {
     attack: { kind: "encase", duration: 1.6, bonus: 0.5, recovery: 3 },
     targets: ["ground", "air"],
     projectile: { speed: 7 },
-    visual: { icon: "◆", turret: "resin", projectile: "glob", impact: "spark" },
+    visual: { icon: "◆", turret: "resin", projectile: "resin", impact: "spark" },
   }, {
     4: {
       attack: { bonus: 0.65 },
@@ -672,7 +672,7 @@ export const TOWER_CONTENT = {
     attack: { kind: "echo", share: 0.4, delay: 3 },
     targets: ["ground", "air"],
     projectile: { speed: 8 },
-    visual: { icon: "⛤", turret: "sigil", projectile: "shard", impact: "spark" },
+    visual: { icon: "⛤", turret: "sigil", projectile: "hex", impact: "spark" },
   }, {
     4: {
       attack: { share: 0.45 },

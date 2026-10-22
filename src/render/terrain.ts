@@ -1,21 +1,32 @@
 import type Phaser from "phaser";
 import type { MapDefinition, MapTheme, Point } from "../core/types";
-import { CELL, disc, hash01, polygon, px, shade, type Ink } from "./shapes";
-import { drawBoardLight, drawGround, GROUND_FAMILY, groundRandom } from "./ground";
+import { arcBand, arcPath, CELL, disc, fillOval, fillRound, hash01, polygon, px, ring, shade, strokeOval, strokeRound, type Ink, type Pen } from "./shapes";
+import { blend, drawBoardLight, drawGround, GROUND_FAMILY, groundRandom } from "./ground";
 import { landmarkAt, landmarkSpots } from "./landmarks";
+import { obstaclePieces, type ObstaclePiece } from "./obstacle-pieces";
 import { contactShadow, drawLandmark, landmarkLight } from "./landmark-art";
+import { drawPathMaterial } from "./path-material";
+import { halo } from "./material";
 import { fnv } from "../core/hash";
 type Random = () => number;
 /** Draws into one cell, given by its top-left pixel corner. */
 type CellDrawing = (g: Ink, x: number, y: number, rand: Random) => void;
 interface AmbientContext {
   g: Ink;
+  /** Additive light layer below the units (bloomed with the towers' light): lamps, glows, lava, shafts. */
+  glow: Ink;
+  /** Light strength for `glow`, from `themeGlow`: weaker on light ground. */
+  lit: number;
   map: MapDefinition;
   /** Path cell centres in pixels. */
   path: readonly Point[];
   clock: number;
-  /** Stable value in [0, 1) per cell, for phases and offsets. */
+  /** Stable value in [0, 1) per cell, for phases and offsets; the first draw of `cellRandom`, so it names the obstacle variant. */
   hash: (x: number, y: number) => number;
+  /** Obstacle cells without the ones a landmark or a big piece replaced (big pieces get their own call, see `drawAmbient`). */
+  blocked: readonly Point[];
+  /** Reduced motion: the clock is frozen and full-board flashes are left out. */
+  still: boolean;
 }
 interface Theme {
   backdrop: number;
@@ -340,20 +351,20 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Chevrons drifting towards the reactor, beacons blinking on some crates.
-    ambient: ({ g, map, path, clock, hash }) => {
+    ambient: ({ g, map, path, clock, hash, blocked, glow, lit }) => {
       g.lineStyle(2, 0x93f5b8, 0.22);
       flow(path, clock, 3, 0.5, (p) => {
         for (const sign of [-1, 1])
           g.lineBetween(p.x + Math.cos(p.angle) * 4, p.y + Math.sin(p.angle) * 4, p.x - Math.cos(p.angle + sign * 0.7) * 6, p.y - Math.sin(p.angle + sign * 0.7) * 6);
       });
-      for (const b of map.blocked) {
+      for (const b of blocked) {
         const h = hash(b.x, b.y);
         if (h <= 0.7) continue;
         const on = Math.max(0, Math.sin(clock * 2.4 + h * 50));
-        g.fillStyle(0x93f5b8, 0.18 * on);
-        g.fillCircle(b.x * CELL + 40, b.y * CELL + 12, 7);
+        glow.fillStyle(0x93f5b8, 0.22 * on * lit);
+        fillRound(glow, b.x * CELL + 40, b.y * CELL + 12, 8);
         g.fillStyle(0x93f5b8, 0.3 + 0.7 * on);
-        g.fillCircle(b.x * CELL + 40, b.y * CELL + 12, 2);
+        fillRound(g, b.x * CELL + 40, b.y * CELL + 12, 2);
       }
     },
   },
@@ -424,7 +435,7 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Ripples flowing down the channel, shimmer on its walls, warning lamps on some bulkheads.
-    ambient: ({ g, map, path, clock, hash }) => {
+    ambient: ({ g, map, path, clock, hash, blocked, glow, lit }) => {
       g.lineStyle(1.5, 0x7fe3ff, 0.35);
       flow(path, clock, 0.75, 0.9, (p, k) => {
         const side = ((k % 3) - 1) * 9,
@@ -442,14 +453,14 @@ export const THEMES: Record<MapTheme, Theme> = {
           dy = Math.sin(p.angle) * 6;
         for (const sign of [-1, 1]) g.lineBetween(p.x + sign * nx - dx, p.y + sign * ny - dy, p.x + sign * nx + dx, p.y + sign * ny + dy);
       });
-      for (const b of map.blocked) {
+      for (const b of blocked) {
         const h = hash(b.x, b.y);
         if (h >= 0.5) continue;
         const s = 0.5 + 0.5 * Math.sin(clock * 3 + h * 30);
-        g.fillStyle(0xffb84a, 0.14 * s);
-        g.fillCircle(b.x * CELL + 37, b.y * CELL + 19, 8);
+        glow.fillStyle(0xffb84a, 0.2 * s * lit);
+        fillRound(glow, b.x * CELL + 37, b.y * CELL + 19, 9);
         g.fillStyle(0xffc857, 0.35 + 0.65 * s);
-        g.fillCircle(b.x * CELL + 37, b.y * CELL + 19, 2);
+        fillRound(g, b.x * CELL + 37, b.y * CELL + 19, 2);
       }
     },
   },
@@ -506,14 +517,14 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Glints on the crystals, each cell on its own phase, and motes drifting up from them.
-    ambient: ({ g, map, clock, hash }) => {
-      for (const b of map.blocked) {
+    ambient: ({ g, map, clock, hash, blocked }) => {
+      for (const b of blocked) {
         const h = hash(b.x, b.y),
           s = Math.max(0, Math.sin(clock * 1.1 + h * 40)) ** 12;
         if (h < 0.6) {
           const life = (clock * 0.3 + h * 9) % 1;
           g.fillStyle(0xd8ccff, 0.5 * (1 - life) * Math.min(1, life * 5));
-          g.fillCircle(b.x * CELL + 16 + h * 24 + Math.sin(life * 5 + h * 20) * 4, b.y * CELL + 36 - life * 34, 1.3);
+          fillRound(g, b.x * CELL + 16 + h * 24 + Math.sin(life * 5 + h * 20) * 4, b.y * CELL + 36 - life * 34, 1.3);
         }
         if (s < 0.05) continue;
         const gx = b.x * CELL + 18 + h * 20,
@@ -576,13 +587,13 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Rocks breathe heat and shed sparks; heat shimmers over the path.
-    ambient: ({ g, map, path, clock, hash }) => {
-      for (const b of map.blocked) {
+    ambient: ({ g, map, path, clock, hash, blocked, glow, lit }) => {
+      for (const b of blocked) {
         const h = hash(b.x, b.y),
           cx = px(b.x),
           cy = px(b.y);
-        g.fillStyle(0xff7a3a, 0.08 + 0.07 * Math.sin(clock * 1.6 + h * 20));
-        g.fillCircle(cx, cy, 9);
+        glow.fillStyle(0xff7a3a, (0.1 + 0.08 * Math.sin(clock * 1.6 + h * 20)) * lit);
+        fillRound(glow, cx, cy, 11);
         if (h > 0.35) continue;
         const life = (clock * 0.45 + h * 10) % 1;
         g.fillStyle(life < 0.5 ? 0xffd27a : 0xff7a3a, 1 - life);
@@ -670,24 +681,26 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Blinking status lights, energy pulses running to the reactor and a scan pulse from it.
-    ambient: ({ g, map, path, clock, hash }) => {
-      for (const b of map.blocked) {
+    ambient: ({ g, map, path, clock, hash, blocked, glow, lit }) => {
+      for (const b of blocked) {
         const h = hash(b.x, b.y),
           on = Math.floor(clock * 1.5 + h * 4) % 2 === 0;
         g.fillStyle(h < 0.7 ? 0x93f5b8 : 0xffc857, on ? 1 : 0.2);
-        g.fillCircle(b.x * CELL + 42, b.y * CELL + 14, 2);
+        fillRound(g, b.x * CELL + 42, b.y * CELL + 14, 2);
       }
       flow(path, clock, 4, 1.8, (p) => {
-        g.fillStyle(0xffc857, 0.18);
-        g.fillCircle(p.x, p.y, 6);
+        glow.fillStyle(0xffc857, 0.2 * lit);
+        fillRound(glow, p.x, p.y, 7);
         g.fillStyle(0xffe6a0, 0.6);
-        g.fillCircle(p.x, p.y, 2.5);
+        fillRound(g, p.x, p.y, 2.5);
       });
       const end = path[path.length - 1],
         reach = Math.hypot(map.columns, map.rows) * CELL,
         r = ((clock * 90) % reach) + 30;
-      g.lineStyle(2, 0xffc857, 0.14 * (1 - r / reach));
-      g.strokeCircle(end.x, end.y, r);
+      // A big piece's own call has no path and no board.
+      if (!end || !reach) return;
+      glow.lineStyle(2, 0xffc857, 0.16 * (1 - r / reach) * lit);
+      strokeRound(glow, end.x, end.y, r);
     },
   },
   frost: {
@@ -724,7 +737,7 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Snow drifting across the field, slightly faster along the path.
-    ambient: ({ g, map, path, clock, hash }) => {
+    ambient: ({ g, map, path, clock, hash, blocked, still }) => {
       const w = map.columns * CELL,
         h = map.rows * CELL;
       for (let k = 0; k < map.columns * 2; k++) {
@@ -732,10 +745,10 @@ export const THEMES: Record<MapTheme, Theme> = {
           fy = ((clock * (14 + s * 10) + s * h * 3) % (h + 20)) - 10,
           fx = (s * w * 7 + Math.sin(clock * 0.8 + k) * 12) % w;
         g.fillStyle(0xeaf7ff, 0.25 + s * 0.35);
-        g.fillCircle(fx, fy, 1 + s * 1.2);
+        fillRound(g, fx, fy, 1 + s * 1.2);
       }
       g.fillStyle(0xd6f2ff, 0.3);
-      flow(path, clock, 1.6, 1.1, (p, k) => g.fillCircle(p.x + ((k % 3) - 1) * 8, p.y + (((k + 1) % 3) - 1) * 8, 1.5));
+      flow(path, clock, 1.6, 1.1, (p, k) => fillRound(g, p.x + ((k % 3) - 1) * 8, p.y + (((k + 1) % 3) - 1) * 8, 1.5));
     },
   },
   toxic: {
@@ -771,17 +784,17 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Gas bubbles rise from the sludge pools and from the channel.
-    ambient: ({ g, map, path, clock, hash }) => {
-      for (const b of map.blocked) {
+    ambient: ({ g, map, path, clock, hash, blocked }) => {
+      for (const b of blocked) {
         const h = hash(b.x, b.y),
           life = (clock * 0.6 + h * 5) % 1;
         g.lineStyle(1.5, 0xb6f04a, 0.7 * (1 - life));
-        g.strokeCircle(b.x * CELL + 12 + h * 30, b.y * CELL + 40 - life * 26, 2 + life * 3);
+        strokeRound(g, b.x * CELL + 12 + h * 30, b.y * CELL + 40 - life * 26, 2 + life * 3);
       }
       flow(path, clock, 1.3, 0.5, (p, k) => {
         const pop = (clock * 0.9 + k * 0.37) % 1;
         g.fillStyle(0xc4f562, 0.45 * (1 - pop));
-        g.fillCircle(p.x + ((k % 3) - 1) * 9, p.y + (((k * 2) % 3) - 1) * 7, 1.5 + pop * 3);
+        fillRound(g, p.x + ((k % 3) - 1) * 9, p.y + (((k * 2) % 3) - 1) * 7, 1.5 + pop * 3);
       });
     },
   },
@@ -820,20 +833,20 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Twinkling stars, plus guide lights running along the path edges.
-    ambient: ({ g, map, path, clock, hash }) => {
+    ambient: ({ g, map, path, clock, hash, blocked }) => {
       for (let k = 0; k < map.columns * 2; k++) {
         const s = hash(k, 1),
           t = hash(1, k),
           tw = Math.max(0, Math.sin(clock * (0.8 + s) + t * 30));
         g.fillStyle(0xdbe6ff, tw * 0.7);
-        g.fillCircle(s * map.columns * CELL, t * map.rows * CELL, 1 + tw);
+        fillRound(g, s * map.columns * CELL, t * map.rows * CELL, 1 + tw);
       }
       flow(path, clock, 1, 2.2, (p) => {
         const nx = -Math.sin(p.angle) * 17,
           ny = Math.cos(p.angle) * 17;
         g.fillStyle(0x8fb0ff, 0.6);
-        g.fillCircle(p.x + nx, p.y + ny, 1.6);
-        g.fillCircle(p.x - nx, p.y - ny, 1.6);
+        fillRound(g, p.x + nx, p.y + ny, 1.6);
+        fillRound(g, p.x - nx, p.y - ny, 1.6);
       });
     },
   },
@@ -891,7 +904,7 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Ash drifting down, dust off the walls, fire in the barrels and stuttering headlights on some wrecks.
-    ambient: ({ g, map, clock, hash }) => {
+    ambient: ({ g, map, clock, hash, blocked, glow, lit }) => {
       const w = map.columns * CELL,
         height = map.rows * CELL;
       for (let k = 0; k < map.columns; k++) {
@@ -899,25 +912,25 @@ export const THEMES: Record<MapTheme, Theme> = {
           fy = ((clock * (8 + s * 6) + s * height * 3) % (height + 20)) - 10,
           fx = (s * w * 7 + clock * 6 + Math.sin(clock * 0.7 + k) * 10) % w;
         g.fillStyle(0xb8b0a4, 0.15 + s * 0.2);
-        g.fillCircle(fx, fy, 0.8 + s);
+        fillRound(g, fx, fy, 0.8 + s);
       }
-      for (const b of map.blocked) {
+      for (const b of blocked) {
         const h = hash(b.x, b.y),
           x = b.x * CELL,
           y = b.y * CELL;
         if (h < 0.4) {
           const life = (clock * 0.25 + h * 7) % 1;
           g.fillStyle(0xb8a07c, 0.1 * (1 - life));
-          g.fillCircle(x + 28 + life * 24, y + 14 - life * 18, 5 + life * 10);
+          fillRound(g, x + 28 + life * 24, y + 14 - life * 18, 5 + life * 10);
         } else if (h >= 0.8) {
           const fx = x + 40,
             fy = y + 10,
             f = 0.6 + 0.25 * Math.sin(clock * 9 + h * 30) + 0.15 * Math.sin(clock * 23 + h * 70),
             sway = Math.sin(clock * 7 + h * 9) * 2;
-          g.fillStyle(0xff8a3a, 0.12 * f);
-          g.fillCircle(fx, fy, 16);
+          glow.fillStyle(0xff8a3a, 0.16 * f * lit);
+          fillRound(glow, fx, fy, 18);
           g.fillStyle(0xff7a2a, 0.55 * f);
-          g.fillEllipse(fx, fy, 10, 4);
+          fillOval(g, fx, fy, 10, 4);
           g.fillStyle(0xffb44a, 0.8 * f);
           g.fillTriangle(fx - 4, fy, fx + 4, fy, fx + sway, fy - 6 - 4 * f);
           g.fillStyle(0xffe08a, 0.9 * f);
@@ -933,10 +946,10 @@ export const THEMES: Record<MapTheme, Theme> = {
             const l = wreckPoint(x, y, h, 21, hy),
               f0 = wreckPoint(x, y, h, 40, hy * 2.4),
               f1 = wreckPoint(x, y, h, 40, hy * 0.4);
-            g.fillStyle(0xfff0c8, 0.07 * on);
-            g.fillTriangle(l.x, l.y, f0.x, f0.y, f1.x, f1.y);
+            glow.fillStyle(0xfff0c8, 0.08 * on * lit);
+            glow.fillTriangle(l.x, l.y, f0.x, f0.y, f1.x, f1.y);
             g.fillStyle(0xfff0c8, 0.3 + 0.7 * on);
-            g.fillCircle(l.x, l.y, 1.8);
+            fillRound(g, l.x, l.y, 1.8);
           }
         }
       }
@@ -970,11 +983,11 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Pulsing fissures and a slow ripple running toward the reactor.
-    ambient: ({ g, map, path, clock, hash }) => {
-      for (const b of map.blocked) {
+    ambient: ({ g, map, path, clock, hash, blocked, glow, lit }) => {
+      for (const b of blocked) {
         const h = hash(b.x, b.y);
-        g.fillStyle(0xc060ff, 0.1 + 0.1 * Math.sin(clock * 2.2 + h * 25));
-        g.fillEllipse(px(b.x), b.y * CELL + 46, 30, 8);
+        glow.fillStyle(0xc060ff, (0.1 + 0.1 * Math.sin(clock * 2.2 + h * 25)) * lit);
+        fillOval(glow, px(b.x), b.y * CELL + 46, 32, 10);
       }
       flow(path, clock, 2.5, 1.4, (p) => {
         const nx = -Math.sin(p.angle) * 15,
@@ -1078,7 +1091,7 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Sand blowing across the field in streaks, heat shimmer rising off the path, glowing heat haze at the wrecks.
-    ambient: ({ g, map, path, clock, hash }) => {
+    ambient: ({ g, map, path, clock, hash, blocked, glow, lit }) => {
       const w = map.columns * CELL,
         h = map.rows * CELL;
       for (let k = 0; k < map.columns * 2; k++) {
@@ -1095,12 +1108,12 @@ export const THEMES: Record<MapTheme, Theme> = {
         g.lineStyle(1.5, 0xffd9a0, 0.16 * (1 - rise));
         g.lineBetween(p.x + wob - 5, p.y - 8 - rise * 10, p.x + wob + 5, p.y - 10 - rise * 10);
       });
-      for (const b of map.blocked) {
+      for (const b of blocked) {
         const o = hash(b.x, b.y);
         if (o < 0.55) continue;
         // Wrecks only: a sheen drifting over the hot plate.
-        g.fillStyle(0xffc46b, 0.05 + 0.04 * Math.sin(clock * 1.6 + o * 20));
-        g.fillEllipse(px(b.x), b.y * CELL + 30, 44, 18);
+        glow.fillStyle(0xffc46b, (0.05 + 0.04 * Math.sin(clock * 1.6 + o * 20)) * lit);
+        fillOval(glow, px(b.x), b.y * CELL + 30, 44, 18);
       }
     },
   },
@@ -1177,32 +1190,32 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Slow light rays from above, bubbles rising from vents and the channel, bioluminescent pulses at the obstacles.
-    ambient: ({ g, map, path, clock, hash }) => {
+    ambient: ({ g, map, path, clock, hash, blocked, glow, lit }) => {
       const h = map.rows * CELL;
       for (let k = 0; k < Math.ceil(map.columns / 2); k++) {
         const s = hash(k, 5),
           sway = Math.sin(clock * 0.25 + s * 20) * 14,
           x0 = s * map.columns * CELL + sway;
-        g.fillStyle(0x7af8ea, 0.025 + 0.015 * Math.sin(clock * 0.5 + s * 9));
-        g.fillPoints([{ x: x0, y: 0 }, { x: x0 + 22, y: 0 }, { x: x0 + 70, y: h }, { x: x0 + 30, y: h }], true);
+        glow.fillStyle(0x7af8ea, (0.025 + 0.015 * Math.sin(clock * 0.5 + s * 9)) * lit);
+        glow.fillPoints([{ x: x0, y: 0 }, { x: x0 + 22, y: 0 }, { x: x0 + 70, y: h }, { x: x0 + 30, y: h }], true);
       }
-      for (const b of map.blocked) {
+      for (const b of blocked) {
         const o = hash(b.x, b.y),
           bx = b.x * CELL,
           by = b.y * CELL,
           vent = o >= 0.55;
-        g.fillStyle(vent ? 0xff9a4a : 0x3df2e0, 0.06 + 0.06 * Math.sin(clock * 2 + o * 25));
-        g.fillCircle(px(b.x), by + 30, vent ? 20 : 26);
+        glow.fillStyle(vent ? 0xff9a4a : 0x3df2e0, (0.07 + 0.06 * Math.sin(clock * 2 + o * 25)) * lit);
+        fillRound(glow, px(b.x), by + 30, vent ? 20 : 26);
         for (let i = 0; i < (vent ? 3 : 1); i++) {
           const life = (clock * (vent ? 0.7 : 0.4) + o * 5 + i / 3) % 1;
           g.lineStyle(1.2, 0xbff8ff, 0.6 * (1 - life));
-          g.strokeCircle(bx + 24 + o * 12 + Math.sin(life * 7 + i) * 3, by + (vent ? 28 : 34) - life * 36, 1.5 + life * 2.5);
+          strokeRound(g, bx + 24 + o * 12 + Math.sin(life * 7 + i) * 3, by + (vent ? 28 : 34) - life * 36, 1.5 + life * 2.5);
         }
       }
       flow(path, clock, 1.7, 0.45, (p, k) => {
         const life = (clock * 0.5 + k * 0.31) % 1;
         g.lineStyle(1, 0xbff8ff, 0.4 * (1 - life));
-        g.strokeCircle(p.x + ((k % 3) - 1) * 9, p.y + 6 - life * 18, 1.5 + (k % 2));
+        strokeRound(g, p.x + ((k % 3) - 1) * 9, p.y + 6 - life * 18, 1.5 + (k % 2));
       });
     },
   },
@@ -1274,7 +1287,7 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Slanted rain, a rare strike at one rod, crackle along the channel.
-    ambient: ({ g, map, path, clock, hash }) => {
+    ambient: ({ g, map, path, clock, hash, blocked, still, glow, lit }) => {
       const w = map.columns * CELL,
         h = map.rows * CELL;
       g.lineStyle(1, 0x9fc8e8, 0.22);
@@ -1286,7 +1299,7 @@ export const THEMES: Record<MapTheme, Theme> = {
         g.lineBetween(x0, y0, x0 - 5, y0 + 12);
       }
       // One strike per slot at a hashed moment and rod, so strikes stay rare and never overlap.
-      const rods = map.blocked.filter((b) => hash(b.x, b.y) >= 0.55),
+      const rods = blocked.filter((b) => hash(b.x, b.y) >= 0.55),
         slot = Math.floor(clock / STRIKE_PERIOD),
         t = (clock % STRIKE_PERIOD) - hash(slot, 97) * (STRIKE_PERIOD - 1),
         b = rods[Math.floor(hash(slot, 98) * rods.length)];
@@ -1295,10 +1308,12 @@ export const THEMES: Record<MapTheme, Theme> = {
           flick = f * (0.6 + 0.4 * Math.sin(clock * 90)),
           tipX = px(b.x),
           tipY = b.y * CELL + 12;
-        g.fillStyle(0xcfeaff, 0.3 * flick);
-        g.fillCircle(tipX, tipY, 26);
-        g.fillStyle(0xffffff, 0.05 * flick);
-        g.fillRect(0, 0, w, h);
+        glow.fillStyle(0xcfeaff, 0.3 * flick * lit);
+        fillRound(glow, tipX, tipY, 26);
+        if (!still) {
+          g.fillStyle(0xffffff, 0.05 * flick);
+          g.fillRect(0, 0, w, h);
+        }
         g.lineStyle(2, 0xe6f6ff, 0.9 * flick);
         g.strokePoints([{ x: tipX, y: tipY - 40 }, { x: tipX + 6, y: tipY - 24 }, { x: tipX - 4, y: tipY - 12 }, { x: tipX, y: tipY }], false);
       }
@@ -1393,7 +1408,7 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Swaying leaf shadows, fireflies and a faint mist over the path.
-    ambient: ({ g, map, path, clock, hash }) => {
+    ambient: ({ g, map, path, clock, hash, blocked, glow, lit }) => {
       const w = map.columns * CELL,
         h = map.rows * CELL;
       for (let k = 0; k < Math.ceil(map.columns / 2); k++) {
@@ -1402,24 +1417,24 @@ export const THEMES: Record<MapTheme, Theme> = {
           cx = s * w + sway,
           cy = hash(k, 78) * h;
         g.fillStyle(0x020a04, 0.07);
-        g.fillEllipse(cx, cy, 70, 26);
-        g.fillEllipse(cx + 20 + sway * 0.5, cy + 14, 40, 16);
+        fillOval(g, cx, cy, 70, 26);
+        fillOval(g, cx + 20 + sway * 0.5, cy + 14, 40, 16);
       }
       flow(path, clock, 2.2, 0.25, (p, k) => {
         const swell = 0.5 + 0.5 * Math.sin(clock * 0.6 + k * 1.7);
         g.fillStyle(0xcfffd0, 0.035 + 0.03 * swell);
-        g.fillEllipse(p.x + Math.sin(clock * 0.4 + k) * 8, p.y + 4, 46, 18);
+        fillOval(g, p.x + Math.sin(clock * 0.4 + k) * 8, p.y + 4, 46, 18);
       });
       for (let k = 0; k < Math.ceil(map.columns * 1.2); k++) {
         const s = hash(k, 55),
           t = clock * (0.15 + s * 0.1) + s * 30,
           fx = ((s * 7.3) % 1) * w + Math.sin(t) * 22,
           fy = hash(k, 56) * h + Math.cos(t * 0.8) * 16,
-          glow = 0.5 + 0.5 * Math.sin(clock * 1.6 + s * 40);
-        g.fillStyle(0xd8ff7a, 0.1 * glow);
-        g.fillCircle(fx, fy, 6);
-        g.fillStyle(0xf4ffb0, 0.35 + 0.5 * glow);
-        g.fillCircle(fx, fy, 1.6);
+          on = 0.5 + 0.5 * Math.sin(clock * 1.6 + s * 40);
+        glow.fillStyle(0xd8ff7a, 0.16 * on * lit);
+        fillRound(glow, fx, fy, 7);
+        g.fillStyle(0xf4ffb0, 0.35 + 0.5 * on);
+        fillRound(g, fx, fy, 1.6);
       }
     },
   },
@@ -1495,23 +1510,23 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Ash flakes falling slowly, a lava glow pulsing along the path and vent plumes.
-    ambient: ({ g, map, path, clock, hash }) => {
+    ambient: ({ g, map, path, clock, hash, blocked, glow, lit }) => {
       const w = map.columns * CELL,
         h = map.rows * CELL;
       flow(path, clock, 2.4, 0.35, (p, k) => {
         const pulse = 0.5 + 0.5 * Math.sin(clock * 1.3 + k * 1.9);
-        g.fillStyle(0xff5a1a, 0.04 + 0.05 * pulse);
-        g.fillEllipse(p.x, p.y, 52, 30);
-        g.fillStyle(0xff8a3a, 0.05 + 0.06 * pulse);
-        g.fillCircle(p.x, p.y, 9);
+        glow.fillStyle(0xff5a1a, (0.05 + 0.06 * pulse) * lit);
+        fillOval(glow, p.x, p.y, 52, 30);
+        glow.fillStyle(0xff8a3a, (0.06 + 0.07 * pulse) * lit);
+        fillRound(glow, p.x, p.y, 10);
       });
-      for (const b of map.blocked) {
+      for (const b of blocked) {
         const o = hash(b.x, b.y);
         if (o < 0.55) continue;
         for (let i = 0; i < 3; i++) {
           const life = (clock * 0.25 + o * 7 + i / 3) % 1;
           g.fillStyle(0xd8d4c8, 0.12 * (1 - life));
-          g.fillCircle(b.x * CELL + 28 + Math.sin(life * 4 + o * 9) * 6 + life * 8, b.y * CELL + 30 - life * 30, 5 + life * 8);
+          fillRound(g, b.x * CELL + 28 + Math.sin(life * 4 + o * 9) * 6 + life * 8, b.y * CELL + 30 - life * 30, 5 + life * 8);
         }
       }
       for (let k = 0; k < Math.ceil(map.columns * 2.2); k++) {
@@ -1609,16 +1624,16 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Twinkling glints on the quartz and geodes, light caustics drifting along the path.
-    ambient: ({ g, map, path, clock, hash }) => {
-      for (const b of map.blocked) {
+    ambient: ({ g, map, path, clock, hash, blocked, glow, lit }) => {
+      for (const b of blocked) {
         const o = hash(b.x, b.y),
           quartz = o < 0.55,
           tw = Math.sin(clock * 2.2 + o * 40),
           gx = b.x * CELL + 20 + hash(b.y, b.x) * 18,
           gy = b.y * CELL + (quartz ? 14 : 26) + hash(b.x, b.y + 9) * 12;
         if (!quartz) {
-          g.fillStyle(0xa86cf0, 0.05 + 0.05 * (0.5 + 0.5 * tw));
-          g.fillCircle(b.x * CELL + 28, b.y * CELL + 34, 22);
+          glow.fillStyle(0xa86cf0, (0.06 + 0.06 * (0.5 + 0.5 * tw)) * lit);
+          fillRound(glow, b.x * CELL + 28, b.y * CELL + 34, 22);
         }
         if (tw < 0.4) continue;
         const r = 2 + 4 * tw;
@@ -1631,9 +1646,9 @@ export const THEMES: Record<MapTheme, Theme> = {
           ox = Math.sin(clock * 0.5 + k * 1.3) * 10,
           oy = Math.cos(clock * 0.45 + k * 2.1) * 6;
         g.lineStyle(1.5, 0x9ffcf0, 0.05 + 0.1 * s);
-        g.strokeEllipse(p.x + ox, p.y + oy, 22 + 10 * s, 9 + 4 * s);
+        strokeOval(g, p.x + ox, p.y + oy, 22 + 10 * s, 9 + 4 * s);
         g.lineStyle(1, 0xc8b0ff, 0.04 + 0.07 * (1 - s));
-        g.strokeEllipse(p.x - ox, p.y - oy, 14 + 8 * s, 6 + 3 * s);
+        strokeOval(g, p.x - ox, p.y - oy, 14 + 8 * s, 6 + 3 * s);
       });
     },
   },
@@ -1711,22 +1726,22 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // A slow glint of light rolling along the path, and a turning highlight on the large wheels.
-    ambient: ({ g, map, clock, path, hash }) => {
+    ambient: ({ g, map, clock, path, hash, blocked, glow, lit }) => {
       flow(path, clock, 2.2, 0.8, (p, k) => {
         const s = 0.5 + 0.5 * Math.sin(clock * 2.2 + k * 1.9),
           len = 7 + 4 * s;
-        g.fillStyle(0xe8c273, 0.05 + 0.07 * s);
-        g.fillEllipse(p.x, p.y, 20 + 8 * s, 9);
+        glow.fillStyle(0xe8c273, (0.05 + 0.07 * s) * lit);
+        fillOval(glow, p.x, p.y, 20 + 8 * s, 9);
         g.lineStyle(1.2, 0xfff0b8, 0.2 + 0.25 * s);
         g.lineBetween(p.x - Math.cos(p.angle) * len, p.y - Math.sin(p.angle) * len, p.x + Math.cos(p.angle) * len, p.y + Math.sin(p.angle) * len);
       });
-      for (const b of map.blocked) {
+      for (const b of blocked) {
         if (hash(b.x, b.y) >= 0.55) continue;
         const a = clock * 0.5 + hash(b.x, b.y + 7) * 6.28,
           cx = px(b.x),
           cy = px(b.y);
         g.fillStyle(0xfff0b8, 0.45);
-        g.fillCircle(cx + Math.cos(a) * 17, cy + Math.sin(a) * 17, 1.6);
+        fillRound(g, cx + Math.cos(a) * 17, cy + Math.sin(a) * 17, 1.6);
       }
     },
   },
@@ -1801,23 +1816,23 @@ export const THEMES: Record<MapTheme, Theme> = {
       }
     },
     // Foam rings drifting along the path, shimmer on the tidepools.
-    ambient: ({ g, map, clock, path, hash }) => {
+    ambient: ({ g, map, clock, path, hash, blocked }) => {
       flow(path, clock, 1.6, 0.45, (p, k) => {
         const s = 0.5 + 0.5 * Math.sin(clock * 1.1 + k * 2.1),
           ox = Math.sin(clock * 0.7 + k * 1.7) * 9,
           oy = Math.cos(clock * 0.6 + k * 2.4) * 6;
         g.lineStyle(1.2, 0xdceaf8, 0.07 + 0.12 * s);
-        g.strokeEllipse(p.x + ox, p.y + oy, 16 + 8 * s, 6 + 3 * s);
+        strokeOval(g, p.x + ox, p.y + oy, 16 + 8 * s, 6 + 3 * s);
         g.fillStyle(0xf0f8ff, 0.12 + 0.2 * (1 - s));
-        g.fillCircle(p.x - ox, p.y - oy, 1.3);
-        g.fillCircle(p.x - ox * 0.5 + 4, p.y + oy * 0.6, 0.9);
+        fillRound(g, p.x - ox, p.y - oy, 1.3);
+        fillRound(g, p.x - ox * 0.5 + 4, p.y + oy * 0.6, 0.9);
       });
-      for (const b of map.blocked) {
+      for (const b of blocked) {
         const o = hash(b.x, b.y);
         if (o < 0.55) continue;
         const s = 0.5 + 0.5 * Math.sin(clock * 1.6 + o * 20);
         g.lineStyle(1, 0xdceaf8, 0.12 + 0.28 * s);
-        g.strokeEllipse(px(b.x) + (s - 0.5) * 6, px(b.y) + 4, 8 + 6 * s, 3 + 2 * s);
+        strokeOval(g, px(b.x) + (s - 0.5) * 6, px(b.y) + 4, 8 + 6 * s, 3 + 2 * s);
       }
     },
   },
@@ -1835,14 +1850,13 @@ const hex = (color: number) => `#${color.toString(16).padStart(6, "0")}`;
 /** Path in pixels; a ring repeats its first cell at the end so lines and markers close the loop. */
 const pixelPath = (map: MapDefinition) =>
   (map.loop ? [...map.path, map.path[0]] : map.path).map((p) => ({ x: px(p.x), y: px(p.y) }));
-/** Reactor in the theme's accent; scene.ts pulses a ring between the two outlines. */
+/** Reactor in the theme's accent; `drawGates` pulses its core and a ring between the two outlines. */
 function drawReactor(g: Phaser.GameObjects.Graphics, end: Point, accent: number, backdrop: number) {
   g.lineStyle(1, accent, 0.3);
-  g.strokeCircle(end.x, end.y, 31);
-  g.fillStyle(backdrop);
-  g.fillCircle(end.x, end.y, 24);
+  strokeRound(g, end.x, end.y, 31);
+  disc(g, end.x, end.y, 24, backdrop);
   g.lineStyle(2, accent);
-  g.strokeCircle(end.x, end.y, 22);
+  strokeRound(g, end.x, end.y, 22);
   polygon(g, end.x, end.y, 13, 6, accent, Math.PI / 6);
   polygon(g, end.x, end.y, 7, 6, shade(accent, -0.65), Math.PI / 6);
 }
@@ -1882,10 +1896,10 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
     }
   const g = scene.add.graphics();
   // One light for every theme: a soft shadow to the lower right under each obstacle, then the theme's own drawing.
-  for (let y = 0; y < map.rows; y++)
-    for (let x = 0; x < map.columns; x++) if (isBlocked(x, y) && !landmarkAt(spots, x, y)) contactShadow(g, px(x), px(y), CELL * 0.46, CELL * 0.38);
-  for (let y = 0; y < map.rows; y++)
-    for (let x = 0; x < map.columns; x++) if (isBlocked(x, y) && !landmarkAt(spots, x, y)) theme.obstacle(g, x * CELL, y * CELL, cellRandom(map, x, y));
+  // Obstacles as pieces: single cells, and in groups some 2×2 blocks drawn as the theme's own obstacle at twice the size.
+  const parts = pieces(map);
+  for (const p of parts) contactShadow(g, (p.x + p.size / 2) * CELL, (p.y + p.size / 2) * CELL, CELL * 0.46 * p.size, CELL * 0.38 * p.size);
+  for (const p of parts) enlarged(g, p, () => theme.obstacle(g, p.x * CELL, p.y * CELL, cellRandom(map, p.x, p.y)));
   for (const spot of spots) drawLandmark(g, spot, family, theme, groundRandom(map, "landmark", spot.x, spot.y));
   const path = pixelPath(map),
     bed = theme.path.bed;
@@ -1906,6 +1920,7 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
   g.strokePoints(shifted(path, 1.2, 1.5), false);
   g.lineStyle(20, shade(bed, 0.06));
   g.strokePoints(path, false);
+  drawPathMaterial(g, map, path, bed, family);
   // Worn lanes either side of the centre.
   for (const side of [-9, 9]) {
     g.lineStyle(3, shade(bed, -0.12), 0.55);
@@ -1945,19 +1960,17 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
   // A ring has no reactor; its entry portal glows in the accent colour instead.
   const portal = map.loop ? accent : 0xf0cf87;
   // Entry: amber in every theme, pointing along the path, inside a dashed ring.
-  g.fillStyle(theme.backdrop, 0.6);
-  g.fillCircle(start.x, start.y, 25);
+  disc(g, start.x, start.y, 25, theme.backdrop, 0.6);
   g.lineStyle(2, portal, 0.5);
   for (let i = 0; i < 8; i++) {
     const a = (i * Math.PI) / 4;
     g.beginPath();
-    g.arc(start.x, start.y, 24, a, a + Math.PI / 8);
+    arcPath(g, start.x, start.y, 24, a, a + Math.PI / 8);
     g.strokePath();
   }
-  g.fillStyle(theme.backdrop);
-  g.fillCircle(start.x, start.y, 19);
+  disc(g, start.x, start.y, 19, theme.backdrop);
   g.lineStyle(2, portal);
-  g.strokeCircle(start.x, start.y, 18);
+  strokeRound(g, start.x, start.y, 18);
   polygon(g, start.x, start.y, 8, 3, portal, Math.atan2(path[1].y - start.y, path[1].x - start.x));
   if (!map.loop) drawReactor(g, end, accent, theme.backdrop);
   drawBoardLight(scene.add.graphics(), map, theme, themeGlow(map));
@@ -2002,15 +2015,106 @@ function landmarks(map: MapDefinition) {
   if (!spots) LANDMARKS.set(map.id, (spots = landmarkSpots(map)));
   return spots;
 }
-/** Animated terrain details, redrawn every frame. */
-export function drawAmbient(g: Ink, map: MapDefinition, clock: number) {
-  const family = GROUND_FAMILY[map.theme ?? "outpost"];
-  for (const spot of landmarks(map)) landmarkLight(g, spot, family, themeOf(map).accent, clock);
-  themeOf(map).ambient({
-    g,
-    map,
+/** Obstacle pieces per map, computed once (ambient asks every frame). */
+const PIECES = new Map<string, ObstaclePiece[]>();
+function pieces(map: MapDefinition) {
+  let list = PIECES.get(map.id);
+  if (!list) PIECES.set(map.id, (list = obstaclePieces(map, landmarks(map))));
+  return list;
+}
+/** Runs `draw` (which draws the piece's top-left cell at its normal place) scaled up about that cell's corner to the piece's size. */
+function enlarged(g: Ink, p: ObstaclePiece, draw: () => void) {
+  if (p.size === 1) return draw();
+  const x = p.x * CELL,
+    y = p.y * CELL;
+  g.save();
+  g.translateCanvas(x, y);
+  g.scaleCanvas(p.size, p.size);
+  g.translateCanvas(-x, -y);
+  draw();
+  g.restore();
+}
+/** Per-map inputs of the ambient layer, computed once instead of every frame. */
+interface AmbientFrame {
+  path: readonly Point[];
+  blocked: readonly Point[];
+  hash: (x: number, y: number) => number;
+}
+const AMBIENT = new Map<string, AmbientFrame>();
+function ambientFrame(map: MapDefinition): AmbientFrame {
+  let frame = AMBIENT.get(map.id);
+  if (frame) return frame;
+  const spots = landmarks(map),
+    big = pieces(map).filter((p) => p.size > 1),
+    inBig = (x: number, y: number) => big.some((p) => x >= p.x && x < p.x + p.size && y >= p.y && y < p.y + p.size),
+    cells = new Float64Array(map.columns * map.rows).fill(-1);
+  frame = {
     path: pixelPath(map),
-    clock,
-    hash: (x, y) => cellRandom(map, x, y)(),
-  });
+    blocked: map.blocked.filter((b) => !landmarkAt(spots, b.x, b.y) && !inBig(b.x, b.y)),
+    // Cells on the board are cached; other arguments (particle and slot indices) are computed each call.
+    hash: (x, y) => {
+      if (x < 0 || y < 0 || x >= map.columns || y >= map.rows || x !== Math.floor(x) || y !== Math.floor(y)) return cellRandom(map, x, y)();
+      const i = y * map.columns + x;
+      return cells[i] >= 0 ? cells[i] : (cells[i] = cellRandom(map, x, y)());
+    },
+  };
+  AMBIENT.set(map.id, frame);
+  return frame;
+}
+/** Animated terrain details, redrawn every frame: motion on `g`, light on `glow` (additive); `still` (reduced motion) freezes them. */
+export function drawAmbient(g: Ink, glow: Ink, map: MapDefinition, clock: number, still = false) {
+  const family = GROUND_FAMILY[map.theme ?? "outpost"],
+    time = still ? 0 : clock,
+    lit = themeGlow(map);
+  for (const spot of landmarks(map)) landmarkLight(g, glow, spot, family, themeOf(map).accent, time, lit);
+  const frame = ambientFrame(map);
+  themeOf(map).ambient({ g, glow, lit, map, clock: time, still, ...frame });
+  // Big pieces: the theme's ambient once more per piece, for its top-left cell only, scaled like the piece. No path
+  // and a board of size 0, so the board-wide parts (flows, rain, snow, stars, flashes) stay out of it.
+  const empty = { ...map, columns: 0, rows: 0 };
+  for (const p of pieces(map))
+    if (p.size > 1)
+      enlarged(g, p, () => enlarged(glow, p, () => themeOf(map).ambient({ g, glow, lit, map: empty, clock: time, still, hash: frame.hash, path: [], blocked: [{ x: p.x, y: p.y }] })));
+}
+const DANGER = 0xff647c;
+/** Portal colour: amber at a reactor map's entry, the accent on a ring's portal (as `drawTerrain` paints it). */
+const portalColor = (map: MapDefinition) => (map.loop ? themeOf(map).accent : 0xf0cf87);
+/**
+ * The live part of the entry and the reactor, drawn every frame over the baked terrain: a vortex turning in the entry
+ * portal (light on `glow`, thin arcs on `g`) and the reactor core pulsing, with a ring breathing between its outlines.
+ * `alarm` (0 to 1) turns the reactor red and quickens it; a ring map has no reactor, so its portal takes the alarm.
+ * `still` (reduced motion) keeps everything in place.
+ */
+export function drawGates({ g, glow }: Pen, map: MapDefinition, clock: number, still: boolean, alarm: number) {
+  const path = pixelPath(map),
+    start = path[0],
+    accent = themeOf(map).accent,
+    lit = themeGlow(map),
+    t = still ? 0 : clock,
+    portal = portalColor(map),
+    danger = Math.max(0, Math.min(1, alarm));
+  // Entry vortex: three arms spiralling inwards, a soft core light.
+  for (let i = 0; i < 3; i++) {
+    const a = -t * 1.2 + (i * Math.PI * 2) / 3;
+    arcBand(glow, start.x, start.y, 11, 3, a, a + 1.4, portal, 0.18 * lit);
+    arcBand(glow, start.x, start.y, 6, 2, a + 0.8, a + 2, portal, 0.14 * lit);
+    g.lineStyle(1, portal, 0.35);
+    g.beginPath();
+    arcPath(g, start.x, start.y, 15, a + 0.4, a + 1.3);
+    g.strokePath();
+  }
+  halo(glow, start.x, start.y, 22, portal, (0.16 + 0.06 * Math.sin(t * 1.7)) * lit);
+  const gate = map.loop ? start : path[path.length - 1],
+    color = danger > 0 ? blend(map.loop ? portal : accent, DANGER, danger) : map.loop ? portal : accent,
+    speed = 1 + danger * 1.5,
+    beat = 0.5 + 0.5 * Math.sin(t * 2.2 * speed);
+  if (!map.loop) {
+    // Reactor core: a breathing light over the hexagon, flaring with the alarm.
+    halo(glow, gate.x, gate.y, 26 + 6 * danger, color, (0.14 + 0.1 * beat + 0.14 * danger) * lit);
+    disc(glow, gate.x, gate.y, 6, color, (0.12 + 0.1 * beat) * lit);
+  }
+  // The ring between the outer and inner outline, as the battlefield drew it before.
+  g.lineStyle(1, color, 0.35 + 0.2 * Math.sin(t * 3 * speed));
+  strokeRound(g, gate.x, gate.y, 26 + Math.sin(t * 2) * 2);
+  if (danger > 0) ring(glow, gate.x, gate.y, 28 + 4 * beat, 3, DANGER, 0.22 * danger * lit);
 }

@@ -20,4 +20,8 @@ describe("landmark spots", () => {
     expect(landmarkAt([spot], spot.x + 1, spot.y + 1)).toBe(spot);
     expect(landmarkAt([spot], spot.x + 2, spot.y)).toBeUndefined();
   });
+  it("use both designs across the campaign", () => {
+    const variants = new Set(maps.flatMap((m) => landmarkSpots(m).map((s) => s.variant)));
+    expect([...variants].sort()).toEqual([0, 1]);
+  });
 });

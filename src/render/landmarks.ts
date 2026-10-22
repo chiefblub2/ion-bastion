@@ -1,4 +1,5 @@
 import type { MapDefinition } from "../core/types";
+import { fnv } from "../core/hash";
 /**
  * A cell block that hosts one large set-piece instead of its small obstacles: `size` 2 is a 2×2 block of obstacles
  * (top-left cell `x`, `y`), `size` 1 a single obstacle cell drawn as a smaller "hero" variant.
@@ -7,6 +8,8 @@ export interface LandmarkSpot {
   x: number;
   y: number;
   size: 1 | 2;
+  /** Which of the family's two designs stands here: hashed from the map and the spot, so themes sharing a family differ. */
+  variant: 0 | 1;
 }
 /** At most this many landmarks per map, so they stay landmarks. */
 export const MAX_LANDMARKS = 2;
@@ -26,7 +29,8 @@ export function landmarkSpots(map: MapDefinition): LandmarkSpot[] {
       const spots: LandmarkSpot[] = [];
       for (const c of candidates) {
         if (spots.length >= MAX_LANDMARKS) break;
-        if (spots.every((s) => Math.max(Math.abs(s.x - c.x), Math.abs(s.y - c.y)) >= 3)) spots.push({ x: c.x, y: c.y, size });
+        if (spots.every((s) => Math.max(Math.abs(s.x - c.x), Math.abs(s.y - c.y)) >= 3))
+          spots.push({ x: c.x, y: c.y, size, variant: (fnv(`${map.id}:landmark:${c.x}:${c.y}`) & 1) as 0 | 1 });
       }
       return spots;
     };
