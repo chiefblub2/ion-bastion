@@ -315,3 +315,392 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+/* ── Run v2: gauges, acts, the route map, threats, drafts, camps ── */
+.run-gauges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+}
+.run-gauge {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: 2px 10px;
+  font: 500 12px var(--mono);
+  letter-spacing: 0.1em;
+  color: var(--m-text-2);
+}
+.run-gauge b {
+  color: var(--m-text);
+  font-size: 14px;
+}
+.run-gauge i {
+  grid-column: 1 / -1;
+  display: block;
+  width: 160px;
+  height: 6px;
+  background: linear-gradient(90deg, var(--m-accent) var(--fill), var(--m-surface-2) var(--fill));
+  border: 1px solid var(--m-border);
+}
+.run-gauge i[data-low="true"] {
+  background: linear-gradient(90deg, var(--m-danger) var(--fill), var(--m-surface-2) var(--fill));
+}
+.run-acts li {
+  width: auto;
+  min-width: 30px;
+  padding: 0 8px;
+}
+.run-rank {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--m-star);
+}
+.run-doctrine-tag {
+  font: 600 11px var(--mono);
+  font-style: normal;
+  color: var(--run);
+}
+.run-rankup {
+  margin: 0 0 16px;
+  font: 600 14px var(--mono);
+  color: var(--m-star);
+}
+.run-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin: 12px 0 26px;
+}
+.run-continue {
+  margin-top: 28px;
+}
+.run-continue .primary {
+  width: auto;
+  min-width: 260px;
+}
+.run-mini {
+  padding: 3px 10px;
+  font-size: 12px;
+  min-height: 0;
+}
+.run-mini[aria-pressed="true"] {
+  color: var(--m-bg);
+  background: var(--run);
+  border-color: var(--run);
+}
+.run-pick .run-chip {
+  padding-right: 4px;
+}
+.run-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px 28px;
+  margin-top: 18px;
+}
+.run-length {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.run-length legend,
+.run-threat {
+  font: 500 12px var(--mono);
+  letter-spacing: 0.12em;
+  color: var(--m-text-2);
+  text-transform: uppercase;
+}
+.run-length legend {
+  margin-bottom: 6px;
+}
+.run-length label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--m-text);
+}
+.run-length small {
+  color: var(--m-text-2);
+}
+.run-threat {
+  display: grid;
+  gap: 6px;
+}
+.run-threat select {
+  max-width: 320px;
+  padding: 8px 10px;
+  font: 500 14px var(--mono);
+  color: var(--m-text);
+  background: var(--m-surface);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+}
+.run-daily small {
+  margin-left: 6px;
+  font: 500 11px var(--mono);
+  color: var(--m-text-2);
+}
+.run-history li .run-mini {
+  margin-left: 8px;
+}
+/* The route map: nodes placed by column (--c) and lane (--l); on phones the columns run downwards. */
+.run-routemap {
+  position: relative;
+  height: 300px;
+  margin: 8px 0 22px;
+  background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--run) 9%, transparent), transparent 70%), var(--m-glass);
+  border: 1px solid var(--m-border);
+}
+.run-route-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.run-route-lines.is-vertical {
+  display: none;
+}
+.run-route-lines line {
+  stroke: var(--m-border);
+  stroke-width: 2;
+  stroke-dasharray: 5 5;
+  vector-effect: non-scaling-stroke;
+}
+.run-route-lines line[data-live] {
+  stroke: var(--run);
+  stroke-dasharray: none;
+}
+.run-node {
+  position: absolute;
+  left: var(--c);
+  top: var(--l);
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 112px;
+  min-height: 0;
+  padding: 6px 4px;
+  font: 500 11px var(--mono);
+  color: var(--m-text-2);
+  background: var(--m-surface);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius);
+  transform: translate(-50%, -50%);
+}
+.run-node i {
+  font-size: 20px;
+  font-style: normal;
+  line-height: 1;
+  color: var(--m-text);
+}
+.run-node span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.run-node[data-kind="elite"] i {
+  color: var(--run);
+}
+.run-node:is([data-kind="boss"], [data-kind="final"]) {
+  width: 128px;
+  border-color: var(--m-danger);
+}
+.run-node:is([data-kind="boss"], [data-kind="final"]) i {
+  color: var(--m-danger);
+  font-size: 26px;
+}
+.run-node[data-state="next"] {
+  color: var(--m-text);
+  border-color: var(--run);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--run) 45%, transparent);
+  cursor: pointer;
+}
+.run-node[data-state="next"]:hover,
+.run-node[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--run) 22%, var(--m-surface));
+}
+.run-node[data-state="here"] {
+  outline: 2px solid var(--m-accent);
+}
+.run-node[data-state="past"] {
+  opacity: 0.45;
+}
+.run-node:disabled {
+  cursor: default;
+}
+.run-node-detail {
+  margin-bottom: 10px;
+  padding: 16px;
+  background: var(--m-glass);
+  border: 1px solid var(--m-border);
+  border-top: 3px solid var(--run);
+}
+.run-node-detail h3 {
+  margin: 4px 0 8px;
+  font: 800 26px / 1.1 var(--display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.run-deploy[data-kind="elite"] .choice-index {
+  color: var(--run);
+}
+.run-deploy:is([data-kind="boss"], [data-kind="final"]) .choice-index {
+  color: var(--m-danger);
+}
+.run-threats,
+.run-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 0;
+  list-style: none;
+}
+.run-threats li {
+  margin: 0;
+  padding: 3px 9px;
+  font: 600 12px var(--mono);
+  color: var(--m-text);
+  background: var(--m-surface-2);
+  border: 1px solid var(--m-border);
+}
+.run-threats li small {
+  color: var(--m-text-2);
+}
+.run-threats li[data-open] {
+  color: var(--m-danger);
+  border-color: var(--m-danger);
+}
+.run-threats li[data-suppressed] {
+  color: var(--m-text-2);
+  text-decoration: line-through;
+}
+.run-mods {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 0;
+  list-style: none;
+}
+.run-mods li {
+  margin: 0;
+  font-size: 14px;
+  color: var(--m-text-2);
+}
+.run-mods i {
+  margin-right: 6px;
+  font-style: normal;
+  color: var(--m-danger);
+}
+.run-mods b {
+  color: var(--m-text);
+}
+.run-tags li {
+  margin: 0;
+  padding: 1px 7px;
+  font: 500 11px var(--mono);
+  color: var(--m-text-2);
+  border: 1px solid var(--m-border);
+}
+.run-tags li[data-shared] {
+  color: var(--run);
+  border-color: var(--run);
+}
+.run-synergy {
+  font: 600 12px var(--mono);
+  color: var(--run);
+}
+.run-card[data-rarity="rare"] {
+  border-top-color: #6fa8ff;
+}
+.run-card[data-rarity="epic"],
+.run-card[data-rarity="legendary"] {
+  border-top-color: var(--m-star);
+}
+.run-card[data-rarity="cursed"] {
+  border-top-color: var(--m-danger);
+}
+.run-card[data-rarity="epic"] .choice-index,
+.run-card[data-rarity="legendary"] .choice-index {
+  color: var(--m-star);
+}
+.run-card[data-rarity="cursed"] .choice-index {
+  color: var(--m-danger);
+}
+.run-relic[data-rarity="legendary"] i {
+  color: var(--m-star);
+}
+.run-relic[data-rarity="cursed"] i {
+  color: var(--m-danger);
+}
+.run-path {
+  border-top-color: var(--path);
+}
+.run-path strong {
+  color: var(--path);
+}
+.run-tiers {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+.run-tiers li {
+  margin: 2px 0;
+}
+.run-doctrine-tabs {
+  margin: 0 0 12px;
+}
+.run-event h3 {
+  margin: 0 0 6px;
+  font: 800 24px / 1.1 var(--display);
+  text-transform: uppercase;
+}
+.run-event > p {
+  max-width: 640px;
+  color: var(--m-text-2);
+}
+.run-shop {
+  min-height: 0;
+}
+.run-shop:disabled,
+.run-card:disabled {
+  opacity: 0.5;
+}
+.run-manage {
+  margin: 8px 0 0;
+  color: var(--m-text-2);
+}
+.run-manage summary {
+  cursor: pointer;
+  font: 500 13px var(--mono);
+}
+.run-manage .run-chips {
+  margin-top: 10px;
+}
+.run-history li small + small {
+  margin-left: -4px;
+}
+@media (max-width: 700px) {
+  .run-routemap {
+    height: 560px;
+  }
+  .run-route-lines {
+    display: none;
+  }
+  .run-route-lines.is-vertical {
+    display: block;
+  }
+  .run-node {
+    left: var(--l);
+    top: var(--c);
+    width: 96px;
+  }
+  .run-gauge i {
+    width: 120px;
+  }
+}

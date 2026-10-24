@@ -19,6 +19,8 @@ import { campaignRecord, markTrainingDone, recordWin } from "./app/progress";
 import { campaignLocks, newlyUnlocked } from "./app/campaign-unlock";
 import { isRunMission } from "./run/run-id";
 import { settleRun } from "./run/session";
+import { endJournal, journalFrame } from "./app/run-journal";
+import { runResult } from "./app/run-result";
 import { missionStars, PeakTracker } from "./app/rating";
 import { Coach } from "./ui/coach-view";
 import { TowerCard } from "./ui/tower-card-view";
@@ -70,7 +72,11 @@ const battlefield = new Battlefield(game, view, {
     peak.observe(game.mission, game.state);
     const end = e.find((event) => event.type === "end");
     // A Run mission moves its run on: the reward after a win, the end of the run after a loss.
-    if (end && isRunMission(game.mission)) settleRun(game.mission.id, end.result === "won", game.baseContent);
+    if (isRunMission(game.mission)) journalFrame(game, e.some((event) => event.type === "waveEnd"));
+    if (end && isRunMission(game.mission)) {
+      endJournal();
+      settleRun(game.mission.id, runResult(game, end.result === "won"), game.baseContent);
+    }
     if (end?.result !== "won") return;
     if (game.mission.manualWaves) markTrainingDone();
     // Only real campaign wins count: no versus field and no `&wave=`/`&credits=` run (those are other mission objects).
