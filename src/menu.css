@@ -880,16 +880,15 @@
     inset 0 0 0 1px #ffffff14,
     0 24px 60px -30px #000;
 }
-/* A vignette and a faint scan line give the map its instrument look. */
+/* A vignette darkens the edges like an orbital view. */
 .world-view::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  background:
-    radial-gradient(ellipse at center, transparent 55%, #02040acc 100%),
-    repeating-linear-gradient(0deg, #ffffff05 0 1px, transparent 1px 4px);
+  background: radial-gradient(ellipse at 50% 60%, transparent 50%, #02040ab3 100%);
+  box-shadow: inset 0 0 0 1px #ffffff14;
   border-radius: inherit;
 }
 .world-plane {
@@ -914,75 +913,77 @@
   height: 100%;
   overflow: visible;
 }
-.world-svg .sea-light {
-  stop-color: #0c1a2e;
+.world-svg .space {
+  fill: #02040a;
 }
-.world-svg .sea-dark {
-  stop-color: #03060c;
-}
-.world-svg :is(.grid, .shelf, .coast, .route, .lane, .dot) {
+.world-svg :is(.border, .wild-border, .route, .lane, .dot) {
   vector-effect: non-scaling-stroke;
 }
-.land .shelf-far {
-  fill: none;
-  stroke: color-mix(in srgb, var(--accent) 12%, transparent);
+/* Territories: a flat ground colour per biome until the baked surface is in, a state tint over it and the border. */
+.world-svg .ground {
+  fill: color-mix(in srgb, var(--accent) 22%, #4a3a28);
 }
-.world-svg .grid {
-  stroke: #7fb4ff12;
+.world-svg .ground.wild {
+  fill: #4b3a26;
+}
+.world-svg .wild-border {
+  fill: none;
+  stroke: #ffe8c826;
   stroke-width: calc(1px * var(--inv));
 }
 .land {
   --accent: var(--m-accent);
+  --edge: #e9f1ff;
   cursor: pointer;
-}
-.land .shelf {
-  fill: color-mix(in srgb, var(--accent) 10%, #08111f);
-  stroke: color-mix(in srgb, var(--accent) 22%, transparent);
-  stroke-width: calc(1px * var(--inv));
-  stroke-dasharray: calc(2px * var(--inv)) calc(4px * var(--inv));
-}
-.land .ground {
-  fill: color-mix(in srgb, var(--accent) 22%, #0b1322);
-}
-.land .terrain {
-  opacity: 0;
-  transition:
-    opacity 500ms ease-out,
-    filter 300ms ease-out;
-}
-.land .terrain.is-ready {
-  opacity: 0.85;
 }
 .land .tint {
   fill: #05070f;
-  opacity: 0.38;
+  opacity: 0.2;
+  pointer-events: fill;
   transition: opacity 300ms ease-out;
 }
-.land .coast {
+/* Clipped to the territory, so only its inner half shows: neighbours draw their shared edge side by side. */
+.land .border {
   fill: none;
-  stroke: var(--accent);
-  stroke-width: calc(1.5px * var(--inv));
-  opacity: 0.65;
-  filter: drop-shadow(0 0 calc(3px * var(--inv)) var(--accent));
+  stroke: var(--edge);
+  stroke-width: calc(3px * var(--inv));
+  stroke-linejoin: round;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 calc(2px * var(--inv)) var(--edge));
+  transition: opacity 300ms ease-out;
 }
-.land:hover .tint,
-.land[data-selected] .tint {
-  opacity: 0.12;
+.land[data-state="held"] {
+  --edge: var(--mode);
 }
-.land[data-selected] .coast {
-  stroke-width: calc(2.5px * var(--inv));
+.land[data-state="hostile"] {
+  --edge: var(--m-danger);
+}
+.land[data-state="hostile"] .tint {
+  fill: #12030a;
+  opacity: 0.5;
+}
+.land[data-next] {
+  --edge: var(--m-warn);
+}
+.land:hover .tint {
+  opacity: 0.06;
+}
+.land:hover .border {
   opacity: 1;
 }
-.land[data-locked] .terrain {
-  filter: grayscale(1) brightness(0.5);
+.land[data-state="hostile"]:hover .tint {
+  opacity: 0.35;
 }
-.land[data-locked] .tint {
-  opacity: 0.55;
+.land[data-selected] .tint {
+  opacity: 0;
 }
-.land[data-locked] .coast {
-  stroke: #ffffff40;
-  stroke-dasharray: calc(3px * var(--inv)) calc(4px * var(--inv));
-  filter: none;
+.land[data-selected] .border {
+  stroke-width: calc(5px * var(--inv));
+  opacity: 1;
+}
+/* Zoomed into a sector, its neighbours fall back into shadow. */
+.world-view[data-zoom="sector"] .land:not([data-selected]) .tint {
+  opacity: 0.45;
 }
 .world-svg .route,
 .world-svg .lane {
@@ -990,23 +991,25 @@
   stroke-linecap: round;
 }
 .world-svg .route {
-  stroke: #ffffff66;
+  stroke: #ffffff59;
   stroke-width: calc(1.5px * var(--inv));
+  stroke-dasharray: calc(5px * var(--inv)) calc(4px * var(--inv));
 }
 .world-svg .route[data-state="lit"] {
   stroke: var(--mode);
-  stroke-width: calc(2.5px * var(--inv));
+  stroke-width: calc(2px * var(--inv));
+  stroke-dasharray: none;
   filter: drop-shadow(0 0 calc(3px * var(--inv)) var(--mode));
 }
 .world-svg .route[data-state="locked"] {
   stroke: #ffffff26;
   stroke-dasharray: calc(2px * var(--inv)) calc(4px * var(--inv));
 }
-/* Sea lanes between sectors: open ones glow faintly in the mode colour. */
+/* Links between sectors: open ones glow faintly in the mode colour. */
 .world-svg .lane {
-  stroke: #7fb4ff2e;
+  stroke: #ffffff26;
   stroke-width: calc(1.5px * var(--inv));
-  stroke-dasharray: calc(5px * var(--inv)) calc(5px * var(--inv));
+  stroke-dasharray: calc(2px * var(--inv)) calc(5px * var(--inv));
 }
 .world-svg .lane[data-state="open"] {
   stroke: color-mix(in srgb, var(--mode) 60%, transparent);
@@ -1063,12 +1066,17 @@
   justify-items: center;
   gap: 1px;
   min-width: 128px;
-  padding: 6px 12px 9px;
+  padding: 7px 14px 9px;
   overflow: hidden;
   white-space: nowrap;
-  background: #05070fc4;
-  border-radius: 8px;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+  /* A gunmetal plaque with chamfered corners and the sector colour along its top edge. */
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent 40%),
+    linear-gradient(180deg, #161e2bf0, #080c13f0);
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%, 0 8px);
+  box-shadow:
+    inset 0 2px 0 var(--accent),
+    inset 0 0 0 1px #ffffff1a;
   transform: translate(-50%, -50%) scale(var(--inv));
   transition:
     opacity 300ms ease-out,
@@ -1093,17 +1101,22 @@
 }
 .region:hover .region-label,
 .region:focus-visible .region-label {
-  box-shadow: inset 0 0 0 1px var(--accent);
+  box-shadow:
+    inset 0 2px 0 var(--accent),
+    inset 0 0 0 1px var(--accent);
 }
 .region[aria-selected="true"] .region-label {
   box-shadow:
-    inset 0 0 0 2px var(--accent),
-    0 0 24px -6px var(--accent);
+    inset 0 3px 0 var(--accent),
+    inset 0 0 0 2px var(--accent);
 }
 .region[data-next] .region-label {
   box-shadow:
-    inset 0 0 0 1px var(--m-warn),
-    0 0 18px -8px var(--m-warn);
+    inset 0 2px 0 var(--m-warn),
+    inset 0 0 0 1px color-mix(in srgb, var(--m-warn) 60%, transparent);
+}
+.region[data-locked] .region-label {
+  --accent: var(--m-danger);
 }
 .start-screen .region:focus-visible {
   outline: none;
@@ -1136,10 +1149,12 @@
   z-index: 3;
   max-width: calc(100% - 190px);
   margin: 0;
-  padding: 8px 12px;
-  background: #05070fd0;
-  border-radius: 8px;
-  box-shadow: inset 0 0 0 1px #ffffff14;
+  padding: 9px 14px 10px;
+  background: linear-gradient(180deg, #161e2bf2, #080c13f2);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+  box-shadow:
+    inset 3px 0 0 var(--mode),
+    inset 0 0 0 1px #ffffff1a;
 }
 .start-screen .world-zoom {
   position: absolute;
@@ -1155,12 +1170,16 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--m-text);
-  background: #05070fd0;
+  background: linear-gradient(180deg, #1a2331f2, #0a0e15f2);
   border: 1px solid #ffffff26;
-  border-radius: 8px;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 0 #ffffff1a;
 }
 .start-screen .world-zoom:hover {
   border-color: var(--mode);
+  box-shadow:
+    inset 0 1px 0 #ffffff1a,
+    0 0 14px -4px var(--mode);
 }
 .world-zoom[hidden] {
   display: none;
@@ -1549,131 +1568,186 @@
   font: 500 12px var(--mono);
   color: var(--muted);
 }
-/* Stations: the selected sector's missions as buttons over its dots, shown while zoomed into it. Each button is
-   anchored at its mark (`--anchor`) and kept at screen size. Won stations are filled, the next one is an amber
-   ring, locked ones carry a padlock, the finale is square. */
+/* Stations: the selected sector's missions as markers planted on the ground, shown while zoomed into it: a hex badge
+   with the mission number on a stem, a ring where the stem meets the ground (the button's anchor, `--anchor`), the
+   name below. Each is kept at screen size. Won badges are filled, the next one pulses amber, locked ones carry a
+   padlock, the finale is a shield. */
 .start-screen .mission-node {
-  --mark: 16px;
-  --anchor: calc(8px + var(--mark) / 2);
+  --badge: 26px;
+  --stem: 14px;
+  --anchor: calc(6px + var(--badge) + var(--stem) + 3px);
+  --rim: color-mix(in srgb, var(--mode) 75%, #fff);
   position: absolute;
-  width: 128px;
+  width: 132px;
   min-height: 0;
   display: grid;
   justify-items: center;
-  gap: 5px;
-  padding: 8px 4px 6px;
+  padding: 6px 4px 6px;
   text-align: center;
   color: var(--m-text-2);
-  text-shadow: 0 1px 6px #000;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  pointer-events: auto;
+  border: 0;
+  border-radius: 6px;
+  pointer-events: none;
   transform: translate(-50%, calc(-1 * var(--anchor))) scale(var(--inv));
   transform-origin: 50% var(--anchor);
-  transition:
-    background var(--m-speed),
-    border-color var(--m-speed),
-    box-shadow var(--m-speed),
-    color var(--m-speed);
+  transition: color var(--m-speed);
+}
+.start-screen .mission-node > * {
+  pointer-events: auto;
 }
 .node-mark {
   position: relative;
   display: grid;
   place-items: center;
-  width: var(--mark);
-  height: var(--mark);
-  border-radius: 50%;
-  color: var(--muted);
-  background: var(--m-bg);
-  box-shadow: inset 0 0 0 2px var(--m-border);
+  width: calc(var(--badge) * 1.15);
+  height: var(--badge);
   transition:
-    background var(--m-speed),
-    box-shadow var(--m-speed);
+    transform var(--m-speed),
+    filter var(--m-speed);
+}
+/* The badge: a rim hexagon with a gunmetal one inside. */
+.node-mark::before,
+.node-mark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+.node-mark::before {
+  background: var(--rim);
+}
+.node-mark::after {
+  inset: 2px;
+  background: linear-gradient(180deg, #273244, #0b1019 70%);
+}
+.mission-node[data-final] .node-mark::before,
+.mission-node[data-final] .node-mark::after {
+  clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
+}
+.node-number {
+  position: relative;
+  z-index: 1;
+  font: 700 11px / 1 var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--m-text);
+}
+.mission-node[data-final] .node-number {
+  margin-top: -3px;
 }
 .node-mark svg {
-  width: 9px;
-  height: 9px;
+  position: absolute;
+  z-index: 2;
+  right: -4px;
+  bottom: -3px;
+  width: 11px;
+  height: 11px;
+  padding: 1px;
+  color: var(--m-text-2);
+  background: #05070f;
+  border-radius: 3px;
 }
-.mission-node[data-won] .node-mark {
-  background: var(--mode);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--mode) 60%, transparent);
+/* The stem down to the ground and the ring it stands in. */
+.node-stem {
+  position: relative;
+  width: 2px;
+  height: calc(var(--stem) + 6px);
+  margin-bottom: 2px;
+  background: linear-gradient(180deg, var(--rim), color-mix(in srgb, var(--rim) 30%, transparent));
+}
+.node-stem::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  width: 16px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--rim);
+  box-shadow: 0 0 8px var(--rim);
+  transform: translateX(-50%);
+}
+.mission-node[data-won] {
+  --rim: var(--mode);
+}
+.mission-node[data-won] .node-mark::after {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mode) 85%, #fff), color-mix(in srgb, var(--mode) 70%, #000));
+}
+.mission-node[data-won] .node-number {
+  color: var(--on-neon);
+}
+.mission-node[data-next] {
+  --rim: var(--m-warn);
 }
 .mission-node[data-next] .node-mark {
-  box-shadow: inset 0 0 0 2px var(--m-warn);
   animation: atlas-next 2s ease-out infinite;
 }
 @keyframes atlas-next {
   0% {
-    box-shadow:
-      inset 0 0 0 2px var(--m-warn),
-      0 0 0 0 color-mix(in srgb, var(--m-warn) 55%, transparent);
+    filter: drop-shadow(0 0 0 var(--m-warn));
   }
-  70%,
+  50% {
+    filter: drop-shadow(0 0 7px var(--m-warn));
+  }
   100% {
-    box-shadow:
-      inset 0 0 0 2px var(--m-warn),
-      0 0 0 8px transparent;
+    filter: drop-shadow(0 0 0 transparent);
   }
 }
-.mission-node[data-final] .node-mark {
-  border-radius: 4px;
+.mission-node[data-locked] {
+  --rim: #ffffff40;
 }
-.mission-node[data-locked] .node-mark {
-  background: #05070fcc;
-  box-shadow: inset 0 0 0 1px #ffffff26;
+.mission-node[data-locked] .node-number {
+  color: var(--muted);
 }
 .mission-node[data-locked] .node-copy {
-  opacity: 0.55;
+  opacity: 0.6;
 }
-/* A fresh unlock: the station flares once in the mode colour. */
+/* A fresh unlock: the badge flares once in the mode colour. */
 .mission-node[data-fresh] .node-mark {
   animation: atlas-unlock 1.4s ease-out 300ms both;
 }
 @keyframes atlas-unlock {
   0% {
     transform: scale(0.4);
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--mode) 80%, transparent);
+    filter: drop-shadow(0 0 10px var(--mode));
   }
   40% {
     transform: scale(1.3);
   }
   100% {
     transform: none;
-    box-shadow: 0 0 0 14px transparent;
+    filter: none;
   }
 }
-/* A dark pill keeps the label legible where the route runs behind it. */
+/* The name stands on the ground below the ring, legible over any terrain through its shadow. */
 .node-copy {
   min-width: 0;
   max-width: 100%;
   display: grid;
   justify-items: inherit;
-  gap: 2px;
-  padding: 2px 6px;
-  background: #05070f8c;
-  border-radius: 6px;
-}
-.mission-node[aria-pressed="true"] .node-copy {
-  background: transparent;
-}
-.node-number {
-  font: 700 13px / 1 var(--mono);
-  letter-spacing: 0.1em;
-  color: var(--muted);
+  gap: 1px;
+  margin-top: 4px;
+  padding: 2px 8px 3px;
+  text-shadow:
+    0 1px 2px #000,
+    0 0 8px #000;
+  border-radius: 3px;
+  transition:
+    background var(--m-speed),
+    box-shadow var(--m-speed);
 }
 .node-name {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: 600 15px / 1.2 "Rajdhani", sans-serif;
-  letter-spacing: 0.05em;
+  font: 700 14px / 1.15 "Rajdhani", sans-serif;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .node-meta {
   white-space: nowrap;
-  font: 500 11px var(--mono);
+  font: 500 10px var(--mono);
   letter-spacing: 0.06em;
   color: var(--muted);
 }
@@ -1684,8 +1758,8 @@
 }
 .node-tag {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 0;
+  left: calc(50% + var(--badge) * 0.62);
   font-size: 9px;
   text-shadow: none;
 }
@@ -1703,22 +1777,34 @@
 }
 .start-screen .mission-node:hover {
   color: var(--m-text);
-  background: color-mix(in srgb, var(--m-surface) 75%, transparent);
-  border-color: #ffffff1a;
+}
+.start-screen .mission-node:hover .node-mark {
+  transform: translateY(-2px);
 }
 .start-screen .mission-node[aria-pressed="true"] {
+  z-index: 1;
   color: var(--m-text);
-  background: color-mix(in srgb, var(--mode) 14%, color-mix(in srgb, var(--m-surface) 85%, transparent));
-  border-color: var(--mode);
-  box-shadow: 0 0 22px -8px var(--mode);
 }
-.mission-node[aria-pressed="true"] .node-number {
-  color: var(--mode);
+.mission-node[aria-pressed="true"] .node-mark {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 6px var(--rim));
 }
-.mission-node[aria-pressed="true"]:not([data-won]):not([data-next]):not([data-locked]) .node-mark {
-  box-shadow: inset 0 0 0 2px var(--mode);
+.mission-node[aria-pressed="true"]:not([data-won]):not([data-next]):not([data-locked]) {
+  --rim: #fff;
+}
+.mission-node[aria-pressed="true"] .node-copy {
+  text-shadow: none;
+  background: linear-gradient(180deg, #1a2331f0, #0b1019f0);
+  box-shadow:
+    inset 0 2px 0 var(--mode),
+    inset 0 0 0 1px #ffffff1f,
+    0 6px 18px -6px #000;
 }
 .start-screen .mission-node:focus-visible {
+  outline: none;
+}
+.start-screen .mission-node:focus-visible .node-copy {
+  outline: 2px solid var(--mode);
   outline-offset: 2px;
 }
 /* Locked sectors: a padlock chip instead of the progress. */
@@ -1747,13 +1833,13 @@
 @keyframes sector-unlock {
   0% {
     box-shadow:
-      inset 0 0 0 2px var(--accent),
-      0 0 0 0 var(--accent);
+      inset 0 2px 0 var(--accent),
+      inset 0 0 0 40px color-mix(in srgb, var(--accent) 45%, transparent);
   }
   100% {
     box-shadow:
-      inset 0 0 0 1px var(--accent),
-      0 0 0 14px transparent;
+      inset 0 2px 0 var(--accent),
+      inset 0 0 0 1px transparent;
   }
 }
 /* A locked mission's briefing: what opens it, and a Start button that stays off. */
@@ -1851,7 +1937,7 @@
   .start-screen .mission-node {
     width: 68px;
   }
-  .start-screen .mission-node:not([aria-pressed="true"]) :is(.node-name, .node-meta) {
+  .start-screen .mission-node:not([aria-pressed="true"]) .node-copy {
     display: none;
   }
   .start-screen .mission-node[aria-pressed="true"] {
@@ -1895,7 +1981,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .world-plane.is-flying,
-  .land .terrain,
+  .land :is(.tint, .border),
   .preview-layer,
   .preview-layer img,
   .start-screen .mission-node,

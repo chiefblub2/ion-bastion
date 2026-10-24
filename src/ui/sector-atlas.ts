@@ -9,7 +9,7 @@ import { enemyIcon } from "./wave-forecast";
 import type { CampaignRecord } from "../app/progress";
 import { starText } from "../app/rating";
 import { type Lock, sectorLocked, type Unlocked } from "../app/campaign-unlock";
-import { curve, fitBox, type Region, stationBox, stationPoints, type Point, WORLD_BOX, WORLD_H, WORLD_W, worldLayout } from "./world-map";
+import { fitBox, link, planetLayout, type Region, stationBox, stationPoints, type Point, WORLD_BOX, WORLD_H, WORLD_W } from "./world-map";
 /**
  * The mission page as a Sector Atlas: a world map with every sector of the mode as a landmass (its terrain, its
  * missions as stations on a route, sea lanes to the next sector) that zooms into the selected sector, then the
@@ -234,7 +234,7 @@ export function fitWorld(smooth = false) {
 let contentIndex = new Map<MissionSector, number>();
 /** Header, mode toggle and the world of one mode: ocean, landmasses, sea lanes and every sector's stations. */
 function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
-  const { lobby, image, record = {}, locks = NO_LOCKS } = options;
+  const { lobby, record = {}, locks = NO_LOCKS } = options;
   const { content } = game,
     sectors = content.sectors ?? [],
     campaign = atlasGroup(sectors, false),
@@ -265,31 +265,36 @@ function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
   );
   $("atlas-context").textContent = `${group.length} ${plural(group.length, "sector")} · ${count(group)} ${plural(count(group), "mission")}${progress.won ? ` · ${progress.won} cleared · ${progress.stars}/${progress.count * 3} ★` : ""}`;
   $("mode-rules").hidden = !circle;
-  const regions = worldLayout(group.length),
+  const { regions, wilds } = planetLayout(group.length),
     cards = atlasSectors(content, circle, record, locks);
   const stations = group.map((s, i) => stationPoints(regions[i], s.missions.length, sectors.indexOf(s)));
   world = { sectors: group, regions, stations, selected: -1 };
   contentIndex = new Map(group.map((s) => [s, sectors.indexOf(s)]));
-  // Sea lanes from each sector's last station to the next sector's first; lit once the next sector is open.
+  // Links from each sector's last station to the next sector's first; lit once the next sector is open.
   const lanes = stations
       .slice(1)
-      .map((points, i) => `<path class="lane" data-state="${cards[i + 1].locked ? "locked" : "open"}" d="${curve(stations[i].at(-1)!, points[0])}"/>`)
+      .map((points, i) => `<path class="lane" data-state="${cards[i + 1].locked ? "locked" : "open"}" d="${link(stations[i].at(-1)!, points[0])}"/>`)
       .join(""),
+    grounds = [...wilds.map((w) => `<path class="ground wild" d="${w.outline}"/>`), ...regions.map((r, i) => `<path class="ground" style="--accent:${cards[i].accent}" d="${r.outline}"/>`)].join(""),
+    wildBorders = wilds.map((w) => `<path class="wild-border" d="${w.outline}"/>`).join(""),
     lands = regions
       .map((r, i) => {
         const s = cards[i],
           list = group[i].missions,
           routes = stations[i]
             .slice(1)
-            .map((p, j) => `<path class="route" data-state="${record[list[j].id] && record[list[j + 1].id] ? "lit" : locks.has(list[j + 1].id) ? "locked" : "open"}" d="${curve(stations[i][j], p)}"/>`)
+            .map((p, j) => `<path class="route" data-state="${record[list[j].id] && record[list[j + 1].id] ? "lit" : locks.has(list[j + 1].id) ? "locked" : "open"}" d="${link(stations[i][j], p)}"/>`)
             .join(""),
           dots = stations[i]
             .map((p, j) => `<circle class="dot" data-state="${record[list[j].id] ? "won" : locks.has(list[j].id) ? "locked" : "open"}" cx="${p.x}" cy="${p.y}" r="1"/>`)
             .join("");
-        return `<g class="land" data-sector="${s.index}" style="--accent:${s.accent}"${s.locked ? ' data-locked="true"' : ""}${s.next ? ' data-next="true"' : ""}><clipPath id="land-clip-${i}"><path d="${r.outline}"/></clipPath><path class="shelf shelf-far" d="${r.outline}" transform="translate(${r.x} ${r.y}) scale(1.22) translate(${-r.x} ${-r.y})"/><path class="shelf" d="${r.outline}" transform="translate(${r.x} ${r.y}) scale(1.1) translate(${-r.x} ${-r.y})"/><path class="ground" d="${r.outline}"/><image class="terrain" data-map="${s.cover.id}" clip-path="url(#land-clip-${i})" x="${r.box.x}" y="${r.box.y}" width="${r.box.w}" height="${r.box.h}" preserveAspectRatio="xMidYMid slice"/><path class="tint" d="${r.outline}"/><path class="coast" d="${r.outline}"/>${routes}${dots}</g>`;
+        // The border is clipped to the territory, so two neighbours draw their shared edge side by side, each in its
+        // own state's colour: held (all won), contested (open) or hostile (locked).
+        const state = s.locked ? "hostile" : s.won === s.count ? "held" : "open";
+        return `<g class="land" data-sector="${s.index}" data-state="${state}" style="--accent:${s.accent}"${s.next ? ' data-next="true"' : ""}><clipPath id="land-clip-${i}"><path d="${r.outline}"/></clipPath><path class="tint" d="${r.outline}"/><path class="border" clip-path="url(#land-clip-${i})" d="${r.outline}"/>${routes}${dots}</g>`;
       })
       .join("");
-  $("world-svg").innerHTML = `<defs><pattern id="world-grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M10 0H0V10" fill="none" class="grid"/></pattern><radialGradient id="world-sea" cx="35%" cy="30%" r="80%"><stop offset="0" class="sea-light"/><stop offset="1" class="sea-dark"/></radialGradient></defs><rect x="-200" y="-100" width="${WORLD_W + 400}" height="${WORLD_H + 200}" fill="url(#world-sea)"/><rect x="-200" y="-100" width="${WORLD_W + 400}" height="${WORLD_H + 200}" fill="url(#world-grid)"/>${lanes}${lands}`;
+  $("world-svg").innerHTML = `<rect class="space" x="-200" y="-150" width="${WORLD_W + 400}" height="${WORLD_H + 300}"/><g class="planet">${grounds}${wildBorders}${lands}${lanes}</g>`;
   // Region labels: buttons on each landmass's northern shore, the sector tabs of the page (the land itself is clickable too).
   $("sector-tabs").innerHTML = cards
     .map((s, i) => {
@@ -302,23 +307,7 @@ function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
       return `<button class="region" role="tab" id="sector-tab-${s.index}" data-sector="${s.index}" aria-controls="mission-list" aria-selected="false" tabindex="-1" style="--accent:${s.accent};--done:${s.won / s.count};left:${(r.x / WORLD_W) * 100}%;top:${((r.y - r.ry * 0.95) / WORLD_H) * 100}%"${s.next ? ' data-next="true"' : ""}${s.won === s.count ? ' data-done="true"' : ""}${s.locked ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}${state ? ` title="${state}"` : ""} aria-label="Sector ${s.numeral}: ${escape(s.name)}, ${s.count} ${plural(s.count, "mission")}${s.locked ? `, locked. ${state}` : ""}${s.won ? `, ${s.won} cleared, ${s.stars} of ${s.count * 3} stars` : ""}${s.next ? ", holds the next mission" : ""}"><span class="region-label" aria-hidden="true"><small>${s.numeral}${s.next ? '<b class="sector-next">NEXT</b>' : ""}${isNew ? '<b class="sector-next sector-new">NEW</b>' : ""}</small><strong>${s.name}</strong><span class="region-line">${line}</span><span class="sector-bar"></span></span></button>`;
     })
     .join("");
-  // Terrain pictures fill the landmasses once the featured map's picture is under way.
-  coverImages = () => {
-    coverImages = () => {};
-    for (const el of $("world-svg").querySelectorAll<SVGImageElement>("image[data-map]")) {
-      const map = content.missions.find((m) => m.map.id === el.dataset.map)?.map;
-      if (map)
-        image(map).then(
-          (url) => {
-            el.setAttribute("href", url);
-            el.classList.add("is-ready");
-          },
-          () => {},
-        );
-    }
-  };
 }
-let coverImages = () => {};
 /** Marks the sector's landmass, places its stations, zooms into it and features a mission. */
 function showSector(game: Game, sector: MissionSector | undefined, options: AtlasOptions, pickedId: string | undefined) {
   const { missions } = game.content,
@@ -360,7 +349,7 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
         flags = `${best ? ' data-won="true"' : ""}${m === next ? ' data-next="true"' : ""}${i === shown.length - 1 && shown.length > 1 ? ' data-final="true"' : ""}${lock ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}`,
         tags = `${m === next ? '<b class="node-tag" data-tag="next">Next</b>' : ""}${loaded ? '<b class="node-tag" data-tag="loaded">Loaded</b>' : ""}${isNew && m !== next ? '<b class="node-tag" data-tag="new">New</b>' : ""}`,
         title = lock ? `${m.focus} · ${lockText(lock, missions, sectors)}` : m.focus;
-      return `<button class="mission-node" data-pick="${m.id}" style="left:${(p.x / WORLD_W) * 100}%;top:${(p.y / WORLD_H) * 100}%" aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${flags} title="${escape(title)}"><span class="node-mark" aria-hidden="true">${lock ? LOCK_ICON : ""}</span><span class="node-copy"><span class="node-number">${pad(n)}</span><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (in progress)</span>' : ""}${m === next ? '<span class="sr-only"> (next)</span>' : ""}${lock ? '<span class="sr-only"> (locked)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${lock ? "Locked" : `${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}`}</small></span>${tags}</button>`;
+      return `<button class="mission-node" data-pick="${m.id}" style="left:${(p.x / WORLD_W) * 100}%;top:${(p.y / WORLD_H) * 100}%" aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${flags} title="${escape(title)}"><span class="node-mark"><span class="node-number">${pad(n)}</span>${lock ? LOCK_ICON : ""}</span><span class="node-stem" aria-hidden="true"></span><span class="node-copy"><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (in progress)</span>' : ""}${m === next ? '<span class="sr-only"> (next)</span>' : ""}${lock ? '<span class="sr-only"> (locked)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${lock ? "Locked" : `${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}`}</small></span>${tags}</button>`;
     })
     .join("");
   zoom = "sector";
@@ -412,12 +401,11 @@ export function renderFeatured(game: Game, m: MissionDefinition | undefined, { l
       fill = layer.querySelector<HTMLImageElement>(".preview-fill")!;
     fillImage(img, m.map, image, () => {
       layer.classList.remove("is-loading");
-      coverImages();
       if (!img.src) return;
       fill.onload = () => fill.classList.add("is-ready");
       fill.src = img.src;
     });
-  } else coverImages();
+  }
   // Briefing.
   const s = game.state,
     lock = locks?.get(m.id),
