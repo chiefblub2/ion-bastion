@@ -20,7 +20,8 @@ import type { Audio } from "./audio";
 import { createCoop } from "./coop";
 import { createDialogs } from "./dialogs";
 import { createScreens, GAME, HOME, type MenuPage, type Screen } from "./screens";
-import { campaignRecord, lastMission, rememberMission, trainingDone } from "./progress";
+import { campaignRecord, type CampaignRecord, lastMission, rememberMission, rememberUnlocks, seenUnlocks, trainingDone } from "./progress";
+import { campaignLocks, type Lock } from "./campaign-unlock";
 import { homeAction, type HomeAction } from "./home-action";
 import { isCircleSector, missionById, playableMissions, sectorOf } from "../content/missions";
 import type { CodexTab } from "../ui/enemy-codex";
@@ -121,7 +122,21 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     /** What the home page's primary button does right now. */
     primary: HomeAction;
   /** The Sector Atlas picks for a multiplayer room while the page was opened from there or from a lobby. */
-  const atlas = (): AtlasOptions => ({ lobby: forRoom || coop.inLobby(), image: terrainImage, record: campaignRecord(), playing: inProgress() });
+  const atlas = (): AtlasOptions => {
+    const lobby = forRoom || coop.inLobby();
+    return { lobby, image: terrainImage, record: campaignRecord(), playing: inProgress(), locks: lobby ? undefined : locks(), seen: seenUnlocks() };
+  };
+  /** `?unlock=all` (QA) opens every mission for this page load. */
+  const unlockAll = new URLSearchParams(location.search).get("unlock") === "all";
+  let lockCache: { record: CampaignRecord; locks: ReadonlyMap<string, Lock> } | undefined;
+  /** The campaign's locked missions for solo play; multiplayer and `?unlock=all` lock nothing. */
+  function locks(): ReadonlyMap<string, Lock> | undefined {
+    if (unlockAll || coop.active()) return undefined;
+    const record = campaignRecord();
+    if (lockCache?.record !== record) lockCache = { record, locks: campaignLocks(game.content.sectors ?? [], record) };
+    return lockCache.locks;
+  }
+  ui.locks = locks;
   const sectorRail = document.getElementById("sector-tabs")!;
   sectorRail.addEventListener("scroll", syncRailSteps, { passive: true });
   new ResizeObserver(syncRailSteps).observe(sectorRail);
@@ -159,13 +174,16 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
         status: game.state.status,
         inProgress: inProgress(),
         multiplayer: coop.active(),
-      }, record);
+      }, record, locks());
       // A newcomer: no Training won, no mission won and none started yet.
       renderMenu(game, primary, record, terrainImage, !trainingDone() && !Object.keys(record).length && !lastMission());
     }
     if (to.page !== "missions") forRoom = false;
     if (to.page === "missions") {
-      renderAtlas(game, atlas(), missionSector, missionPick);
+      const options = atlas();
+      renderAtlas(game, options, missionSector, missionPick);
+      // Every unlock shown now has had its reveal; the next visit only reveals what a later win opens.
+      if (options.locks) rememberUnlocks([...(options.seen ?? []), ...game.content.missions.filter((m) => !options.locks!.has(m.id)).map((m) => m.id)]);
     }
     if (to.page === "coop") coop.render();
     if (to.page === "editor") void import("../editor/editor-view").then((m) => m.openEditor(editorHost));
@@ -257,6 +275,13 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     if (forRoom || coop.inLobby()) {
       execute({ type: "mission", id });
       screens.back();
+      return;
+    }
+    // A locked campaign mission is only shown on the atlas, never started.
+    if (locks()?.has(id)) {
+      missionSector = undefined;
+      missionPick = id;
+      screens.show(page("missions"));
       return;
     }
     execute({ type: "mission", id });
@@ -504,7 +529,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
           screens.show(page("run"));
           break;
         }
-        const next = nextMission(game);
+        const next = nextMission(game, locks());
         if (next) selectMission(next.id);
         break;
       }

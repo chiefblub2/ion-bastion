@@ -15,7 +15,8 @@ import { bindFullscreen } from "./app/fullscreen";
 import { createInput } from "./app/input";
 import { registerTools } from "./app/webmcp";
 import { screenFromUrl } from "./app/screens";
-import { markTrainingDone, recordWin } from "./app/progress";
+import { campaignRecord, markTrainingDone, recordWin } from "./app/progress";
+import { campaignLocks, newlyUnlocked } from "./app/campaign-unlock";
 import { isRunMission } from "./run/run-id";
 import { settleRun } from "./run/session";
 import { missionStars, PeakTracker } from "./app/rating";
@@ -75,7 +76,10 @@ const battlefield = new Battlefield(game, view, {
     // Only real campaign wins count: no versus field and no `&wave=`/`&credits=` run (those are other mission objects).
     else if (!input.match() && game.mission === findMission(game.mission.id, game.content)) {
       const stars = missionStars(game.mission, game.state, peak.peak);
-      ui.result = { state: game.state, stars, best: recordWin(game.mission.id, stars) };
+      const sectors = game.content.sectors ?? [],
+        before = campaignLocks(sectors, campaignRecord()),
+        best = recordWin(game.mission.id, stars);
+      ui.result = { state: game.state, stars, best, unlocked: newlyUnlocked(sectors, before, campaignLocks(sectors, campaignRecord())) };
     }
   },
 });

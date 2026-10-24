@@ -55,9 +55,13 @@ export const storedRecord = (record: CampaignRecord) => JSON.stringify({ v: RECO
 /** The record with a win added; keeps the better of the old and new stars. */
 export const mergeRecord = (record: CampaignRecord, id: string, stars: Stars): CampaignRecord =>
   (record[id] ?? 0) >= stars ? record : { ...record, [id]: stars };
+let cached: { raw: string | null; record: CampaignRecord } | undefined;
+/** The stored record; parsed again only when the stored text changed, so the HUD can ask every refresh. */
 export function campaignRecord(): CampaignRecord {
   try {
-    return parseRecord(localStorage.getItem(CAMPAIGN_KEY));
+    const raw = localStorage.getItem(CAMPAIGN_KEY);
+    if (cached?.raw !== raw) cached = { raw, record: parseRecord(raw) };
+    return cached.record;
   } catch {
     return {};
   }
@@ -73,4 +77,25 @@ export function recordWin(id: string, stars: Stars): boolean {
     // Not remembered; the atlas simply shows the mission as not cleared.
   }
   return true;
+}
+const SEEN_KEY = "ion-bastion:campaign-seen";
+/**
+ * Mission ids the atlas has already shown unlocked, so a fresh unlock plays its reveal once. Undefined before the first
+ * visit (then nothing counts as fresh); purely cosmetic.
+ */
+export function seenUnlocks(): ReadonlySet<string> | undefined {
+  try {
+    const raw = localStorage.getItem(SEEN_KEY),
+      data: unknown = raw ? JSON.parse(raw) : undefined;
+    return Array.isArray(data) ? new Set(data.filter((id): id is string => typeof id === "string")) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+export function rememberUnlocks(ids: Iterable<string>) {
+  try {
+    localStorage.setItem(SEEN_KEY, JSON.stringify([...new Set(ids)]));
+  } catch {
+    // Not remembered; the reveal simply plays again.
+  }
 }

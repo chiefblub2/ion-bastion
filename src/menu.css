@@ -1384,9 +1384,10 @@
 .start-screen .atlas-start:focus-visible {
   outline-offset: -5px;
 }
-/* Mission journey: the sector's missions as stations on one line, lit up to the last won one. Won stations are
-   filled, the next one is an amber ring, the finale is square. On phones the line runs sideways. Every node has a
-   fixed size (`--node`) so the half-lines of neighbouring markers meet in the middle of the gap. */
+/* Sector map: the sector's missions as stations on a route over its blurred terrain, lit up between won stations.
+   Won stations are filled, the next one is an amber ring, locked ones carry a padlock, the finale is square. The map
+   runs sideways (and scrolls) below 1100 px and downwards in the left column above; the layout gives each station a
+   position along and across the route (`--along`, `--across`, percent), and the route is drawn for both directions. */
 .atlas-missions {
   grid-area: missions;
   min-width: 0;
@@ -1418,36 +1419,99 @@
   color: var(--muted);
 }
 .mission-rail {
-  --node: 124px;
-  --gap: 8px;
-  --mark: 14px;
-  --line: #ffffff1f;
-  position: relative;
-  display: flex;
-  gap: var(--gap);
-  padding: 2px 2px 4px;
   overflow-x: auto;
-  scroll-snap-type: x proximity;
-  scroll-padding-inline: 2px;
   scrollbar-width: none;
+  border-radius: 12px;
 }
 .mission-rail::-webkit-scrollbar {
   display: none;
 }
-.start-screen .mission-node {
+.map-field {
+  --node-w: 116px;
+  --pad: 8px;
+  --mark: 16px;
   position: relative;
-  flex: 0 0 var(--node);
+  isolation: isolate;
+  min-width: max(100%, calc(var(--stations, 5) * 124px));
+  height: 220px;
+  overflow: hidden;
+  background: var(--m-surface);
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px #ffffff14;
+}
+.map-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+}
+.map-backdrop img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  filter: blur(5px) saturate(0.6) brightness(0.5);
+  transform: scale(1.12);
+  transition: opacity 400ms ease-out;
+}
+.map-backdrop img.is-ready {
+  opacity: 1;
+}
+.map-field[data-locked] .map-backdrop img {
+  filter: blur(5px) grayscale(0.9) brightness(0.32);
+}
+/* A scrim keeps the copy legible and tints the map with the sector's colour. */
+.map-field::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse at 30% 20%, color-mix(in srgb, var(--accent, var(--mode)) 16%, transparent), transparent 70%),
+    linear-gradient(180deg, #05070f66, #05070fb0);
+}
+.map-route {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.route {
+  fill: none;
+  stroke: #ffffff38;
+  stroke-width: 2;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.route[data-state="lit"] {
+  stroke: var(--mode);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--mode) 70%, transparent));
+}
+.route[data-state="locked"] {
+  stroke: #ffffff1c;
+  stroke-dasharray: 3 6;
+}
+.route-v {
+  display: none;
+}
+.start-screen .mission-node {
+  position: absolute;
+  left: calc(var(--along) * 1% - var(--node-w) / 2);
+  top: calc(var(--across) * 1% - var(--pad) - var(--mark) / 2);
+  width: var(--node-w);
   display: grid;
-  grid-template-rows: auto auto;
   justify-items: center;
-  gap: 8px;
-  padding: 12px 8px 10px;
+  gap: 6px;
+  padding: var(--pad) 6px 8px;
   text-align: center;
   color: var(--m-text-2);
+  text-shadow: 0 1px 6px #000;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 10px;
-  scroll-snap-align: start;
   transition:
     background var(--m-speed),
     border-color var(--m-speed),
@@ -1456,39 +1520,21 @@
 }
 .node-mark {
   position: relative;
+  display: grid;
+  place-items: center;
   width: var(--mark);
   height: var(--mark);
   border-radius: 50%;
+  color: var(--muted);
   background: var(--m-bg);
   box-shadow: inset 0 0 0 2px var(--m-border);
   transition:
     background var(--m-speed),
     box-shadow var(--m-speed);
 }
-/* Half-lines to the neighbours: sideways here, vertical from 700 px. */
-.node-mark::before,
-.node-mark::after {
-  content: "";
-  position: absolute;
-  top: calc(50% - 1px);
-  width: calc(var(--node) / 2 - var(--mark) / 2 + var(--gap) / 2);
-  height: 2px;
-  background: var(--line);
-}
-.node-mark::before {
-  right: 100%;
-}
-.node-mark::after {
-  left: 100%;
-}
-.mission-node:first-child .node-mark::before,
-.mission-node:last-child .node-mark::after {
-  display: none;
-}
-.mission-node[data-won] .node-mark::after,
-.mission-node[data-won] + .mission-node .node-mark::before {
-  background: var(--mode);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--mode) 60%, transparent);
+.node-mark svg {
+  width: 9px;
+  height: 9px;
 }
 .mission-node[data-won] .node-mark {
   background: var(--mode);
@@ -1514,12 +1560,43 @@
 .mission-node[data-final] .node-mark {
   border-radius: 4px;
 }
+.mission-node[data-locked] .node-mark {
+  background: #05070fcc;
+  box-shadow: inset 0 0 0 1px #ffffff26;
+}
+.mission-node[data-locked] .node-copy {
+  opacity: 0.55;
+}
+/* A fresh unlock: the station flares once in the mode colour. */
+.mission-node[data-fresh] .node-mark {
+  animation: atlas-unlock 1.4s ease-out 300ms both;
+}
+@keyframes atlas-unlock {
+  0% {
+    transform: scale(0.4);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--mode) 80%, transparent);
+  }
+  40% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: none;
+    box-shadow: 0 0 0 14px transparent;
+  }
+}
+/* A dark pill keeps the label legible where the route runs behind it. */
 .node-copy {
   min-width: 0;
   max-width: 100%;
   display: grid;
   justify-items: inherit;
   gap: 2px;
+  padding: 2px 6px;
+  background: #05070f8c;
+  border-radius: 6px;
+}
+.mission-node[aria-pressed="true"] .node-copy {
+  background: transparent;
 }
 .node-number {
   font: 700 13px / 1 var(--mono);
@@ -1531,7 +1608,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: 600 16px / 1.2 "Rajdhani", sans-serif;
+  font: 600 15px / 1.2 "Rajdhani", sans-serif;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -1548,53 +1625,113 @@
 }
 .node-tag {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 4px;
+  right: 4px;
   font-size: 9px;
+  text-shadow: none;
 }
 .node-tag[data-tag="loaded"] {
   color: var(--mode);
-  background: transparent;
+  background: #05070fcc;
   box-shadow: inset 0 0 0 1px var(--mode);
+}
+.node-tag[data-tag="new"] {
+  color: var(--on-neon);
+  background: var(--mode);
 }
 .node-tag + .node-tag {
   display: none;
 }
 .start-screen .mission-node:hover {
   color: var(--m-text);
-  background: color-mix(in srgb, var(--m-surface) 80%, transparent);
+  background: color-mix(in srgb, var(--m-surface) 75%, transparent);
   border-color: #ffffff1a;
 }
 .start-screen .mission-node[aria-pressed="true"] {
   color: var(--m-text);
-  background: color-mix(in srgb, var(--mode) 12%, var(--m-surface));
+  background: color-mix(in srgb, var(--mode) 14%, color-mix(in srgb, var(--m-surface) 85%, transparent));
   border-color: var(--mode);
   box-shadow: 0 0 22px -8px var(--mode);
 }
 .mission-node[aria-pressed="true"] .node-number {
   color: var(--mode);
 }
-.mission-node[aria-pressed="true"]:not([data-won]):not([data-next]) .node-mark {
+.mission-node[aria-pressed="true"]:not([data-won]):not([data-next]):not([data-locked]) .node-mark {
   box-shadow: inset 0 0 0 2px var(--mode);
 }
 .start-screen .mission-node:focus-visible {
   outline-offset: 2px;
 }
-/* Entry: the briefing and the journey rise in quickly after a change. */
+/* Locked sectors: greyed cover, a padlock chip instead of the progress. */
+.sector-card[data-locked] .sector-art :is(svg, img) {
+  filter: grayscale(0.85) brightness(0.4);
+}
+.sector-card[data-locked] .sector-numeral {
+  opacity: 0.2;
+}
+.sector-card[data-locked] .sector-copy strong {
+  color: var(--m-text-2);
+}
+.sector-lock {
+  margin-right: 4px;
+  padding: 0 5px;
+  font: 700 9px / 1.5 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--m-text-2);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px #ffffff40;
+}
+.sector-new {
+  color: var(--on-neon);
+  background: var(--accent);
+}
+.sector-card[data-fresh] {
+  animation: sector-unlock 1.6s ease-out 300ms both;
+}
+@keyframes sector-unlock {
+  0% {
+    box-shadow: 0 0 0 0 var(--accent), inset 0 0 0 1px #ffffff14;
+  }
+  100% {
+    box-shadow: 0 0 0 12px transparent, inset 0 0 0 1px #ffffff14;
+  }
+}
+/* A locked mission's briefing: what opens it, and a Start button that stays off. */
+.mission-lock {
+  margin: 0;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--m-text-2);
+  border-left: 3px solid #ffffff40;
+  background: #03050bd9;
+}
+.start-screen .atlas-start:disabled {
+  cursor: not-allowed;
+  color: var(--m-text-2);
+  background: color-mix(in srgb, var(--m-surface) 80%, #fff 6%);
+  box-shadow: none;
+  transform: none;
+}
+.atlas-start svg {
+  width: 14px;
+  height: 14px;
+}
+/* Entry: the briefing and the map's stations rise in quickly after a change. */
 .brief-body.is-entering > *,
 .mission-rail.is-entering .mission-node {
   animation: atlas-rise 260ms ease-out both;
 }
 .brief-body.is-entering > :nth-child(2),
-.mission-rail.is-entering .mission-node:nth-child(2) {
+.mission-rail.is-entering .mission-node:nth-of-type(2) {
   animation-delay: 30ms;
 }
 .brief-body.is-entering > :nth-child(3),
-.mission-rail.is-entering .mission-node:nth-child(3) {
+.mission-rail.is-entering .mission-node:nth-of-type(3) {
   animation-delay: 60ms;
 }
 .brief-body.is-entering > :nth-child(n + 4),
-.mission-rail.is-entering .mission-node:nth-child(n + 4) {
+.mission-rail.is-entering .mission-node:nth-of-type(n + 4) {
   animation-delay: 90ms;
 }
 @keyframes atlas-rise {
@@ -1668,7 +1805,7 @@
     padding: 20px;
   }
 }
-/* Large screens: the journey runs down the left of the card. */
+/* Large screens: the sector map runs down the left of the card. */
 @media (min-width: 1100px) {
   .menu-page.atlas {
     grid-template-columns: minmax(200px, 250px) minmax(0, 1fr);
@@ -1679,49 +1816,29 @@
     align-self: start;
   }
   .mission-rail {
-    --node: 62px;
-    --gap: 6px;
-    flex-direction: column;
-    padding: 2px;
     overflow: visible;
   }
+  .map-field {
+    --node-w: 112px;
+    min-width: 0;
+    height: max(300px, calc(var(--stations, 5) * 100px));
+  }
+  /* The last station's label hangs below its mark, so the route ends `--foot` above the bottom edge. */
+  .map-field {
+    --foot: 44px;
+  }
+  .map-route {
+    height: calc(100% - var(--foot));
+  }
+  .route-h {
+    display: none;
+  }
+  .route-v {
+    display: inline;
+  }
   .start-screen .mission-node {
-    flex: 0 0 var(--node);
-    grid-template-columns: 22px minmax(0, 1fr) auto;
-    grid-template-rows: none;
-    align-items: center;
-    justify-items: start;
-    gap: 0 12px;
-    padding: 0 10px 0 8px;
-    text-align: left;
-  }
-  .node-mark {
-    justify-self: center;
-  }
-  .node-mark::before,
-  .node-mark::after {
-    top: auto;
-    left: calc(50% - 1px);
-    right: auto;
-    width: 2px;
-    height: calc(var(--node) / 2 - var(--mark) / 2 + var(--gap) / 2);
-  }
-  .node-mark::before {
-    bottom: 100%;
-  }
-  .node-mark::after {
-    top: 100%;
-  }
-  .node-copy {
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: baseline;
-    gap: 2px 8px;
-  }
-  .node-meta {
-    grid-column: 2;
-  }
-  .node-tag {
-    position: static;
+    left: calc(var(--across) * 1% - var(--node-w) / 2);
+    top: calc((100% - var(--foot)) * var(--along) / 100 - var(--pad) - var(--mark) / 2);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1742,6 +1859,8 @@
   .brief-body.is-entering > *,
   .mission-rail.is-entering .mission-node,
   .mission-node[data-next] .node-mark,
+  .mission-node[data-fresh] .node-mark,
+  .sector-card[data-fresh],
   .preview-layer.is-loading::after {
     animation: none;
   }

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import { isCircleSector, missionNumber } from "../content/missions";
-import { atlasNext, atlasPick, atlasSectors, progressOf } from "./sector-atlas";
+import { atlasNext, atlasPick, atlasSectors, lockText, progressOf, routePath, sectorMapLayout } from "./sector-atlas";
+import { campaignLocks } from "../app/campaign-unlock";
 const { missions, sectors = [] } = DEFAULT_CONTENT;
 describe("sector atlas", () => {
   const campaign = atlasSectors(DEFAULT_CONTENT, false),
@@ -46,5 +47,25 @@ describe("sector atlas", () => {
     expect(atlasPick(list, record, "elsewhere", list[2].id)).toBe(list[2]);
     expect(atlasPick(list, record, undefined, "elsewhere")).toBe(list[1]);
     expect(atlasPick(list, all)).toBe(list[0]);
+  });
+  it("locks every campaign sector but the first for a new player and skips locked missions as next", () => {
+    const locks = campaignLocks(sectors, {}),
+      cards = atlasSectors(DEFAULT_CONTENT, false, {}, locks),
+      list = sectors[0].missions;
+    expect(cards.map((s) => s.locked)).toEqual(cards.map((_, i) => i > 0));
+    expect(lockText(cards[1].lock!, missions, sectors)).toBe("Clear 4 more missions in Sector I to unlock");
+    expect(atlasSectors(DEFAULT_CONTENT, true, {}, locks).some((s) => s.locked)).toBe(false);
+    const record = { [list[0].id]: 3 } as const,
+      after = campaignLocks(sectors, record);
+    expect(atlasNext(sectors[1].missions, record, after)).toBeUndefined();
+    expect(atlasPick(sectors[1].missions, record, undefined, undefined, after)).toBe(sectors[1].missions[0]);
+    expect(lockText(after.get(list[3].id)!, missions, sectors)).toBe("Clear Mission 03 to unlock");
+  });
+  it("lays a sector's stations out along the map, zigzagging across it", () => {
+    const points = sectorMapLayout(5, 2);
+    expect(points.map((p) => p.along)).toEqual([10, 30, 50, 70, 90]);
+    for (const [i, p] of points.entries()) expect(p.across < 50).toBe(points[(i + 1) % 5].across > 50 || i === 4);
+    expect(sectorMapLayout(5, 2)).toEqual(points);
+    expect(routePath(points[0], points[1], true)).toMatch(new RegExp(`^M${points[0].across} 10 C`));
   });
 });
