@@ -405,3 +405,28 @@ Task 3 (journal) comes first: with one-loss-ends, a free retry makes the rule me
 - [ ] `scripts/balance.ts` for sector I before/after Phases 1–3: identical.
 - [ ] Manual: `npm run dev`, `/#run`: play act I at 2×, replace a tower at the cap, take the free Doctrine after mission 2 and buy its tiers in game, close the tab mid-wave and resume, shop, reach the act transition, abandon; start a daily.
 - [ ] Update CLAUDE.md's Run paragraph (acts, formats, carried reactor, roster cap, Doctrines, ranks, new modules, storage key `ion-bastion:run-journal`, v2 record, `run/tuning.ts`).
+
+---
+
+## Implementation status (2026-10-24)
+
+All phases are implemented. Where the build differs from the tasks above:
+
+- **No Hull; the reactor itself carries over** (the user's "one loss ends the run" plus the carried-reactor decision): `run.reactor`/`reactorMax` start at 30, every mission starts with the run's reactor, a win adds `FIELD_REPAIR` (3), Repair nodes heal 10 or reinforce +3 maximum, shops patch +6, act transitions repair fully.
+- **No loadout and no Overdrive** (user decisions); the roster cap (6/8/10) replaces the loadout.
+- **No Breach or Skirmish nodes**: a run is always exactly ten missions; elites are lane alternatives on mission columns.
+- **New: air cap.** The bot lost early on air-heavy act I maps (Zero-G 79% flyers) with a single anti-air tower. `airCap` grounds air groups beyond 35% of the budget with one anti-air attack tower and 60% with two, so drafting anti-air widens what a node may send (and its hazard pay).
+- **Relics:** Emergency Core and Hot Start were dropped (they would need simulation rules); Reinforced Core (+8 reactor) and Field Medic (+3 repair) take their places. Glass Reactor was tuned to +18% damage / −40% reactor after it lifted completion by 17 points.
+- **Doctrines** are checked in tests (`lockSpecializations`) and the bot buys their tiers; the greedy bot rarely affords tiers, so `--no-doctrines` barely moves its numbers. Players will feel them more.
+- **Resume** replays the journal inside the `run` command (`Replay`, `Game.ticks`); a browser check (build, play a wave at 2×, pause, reload, resume) restored wave, credits, reactor, towers and enemies exactly.
+
+Balance (greedy bot, 40 full runs, threat 0, `src/run/tuning.ts` as committed):
+
+| Act / format | Won | Reactor lost per win |
+| --- | --- | --- |
+| I standard / boss | 87% / 80% | 9% / 9% |
+| II standard / boss | 83% / 76% | 11% / 25% |
+| III standard / boss | 88% / 90% | 18% / 19% |
+| Final Stand | 78% | 17% |
+
+18% of full runs complete (7/40); without ranks 0/40; at threat 5 5%. Median wave 36 s of game time, about 50 game minutes per full run. The bot loses most runs in act I on maps it plays badly even in their campaign form (it cannot win Fog Swamp with most starter rosters); a human player should clear act I far more reliably, so act I was not pushed further down.

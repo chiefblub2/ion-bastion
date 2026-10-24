@@ -92,7 +92,7 @@ export const RELICS = [
   { id: "sergeant", icon: "✪", rarity: "rare", name: "Drill Sergeant", description: "Towers earn 50% more rank XP.", xp: 1.5 },
   { id: "medic", icon: "✚", rarity: "rare", name: "Field Medic", description: "+3 reactor repair after every won mission.", repair: 3 },
   // Cursed: strong, with a price.
-  { id: "glass", icon: "◈", rarity: "cursed", name: "Glass Reactor", description: "All towers deal 25% more damage; the reactor holds 30% less.", content: scaleStat("damage", 1.25, ANY), reactor: { factor: 0.7 } },
+  { id: "glass", icon: "◈", rarity: "cursed", name: "Glass Reactor", description: "All towers deal 18% more damage; the reactor holds 40% less.", content: scaleStat("damage", 1.18, ANY), reactor: { factor: 0.6 } },
   {
     id: "austerity",
     icon: "⊘",

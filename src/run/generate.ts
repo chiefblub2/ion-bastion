@@ -13,6 +13,7 @@ import { runMissionId } from "./run-id";
 import { needsOf, offspring, rosterCovers, type Need } from "./threats";
 import { compose, discount, lockSpecializations, only, upgradePrice, type PackFn } from "./transform";
 import { DEPTH_HP, ECONOMY_SHARE, ELITE_HP } from "./tuning";
+import { pageOf } from "../ui/tower-pages";
 /**
  * Mission formats. A mission plays a window of its source campaign mission: it enters at `enter` (a share of the
  * source's waves) with the credits a player would have had there ("hot drop"), and plays `waves` waves up to the
@@ -77,16 +78,18 @@ const SWAP = 0.6;
  * One generated wave, remixed from a source wave: every group keeps its layer, its budget (count × HP × √speed) and
  * its spawn span, but its type may be swapped for another of the pool. `airBias` turns ground groups into flyers.
  */
-function remixWave(r: Rng, source: WaveDefinition, pool: Map<EnemyId, number>, content: ContentPack, airBias = 0): WaveGroup[] {
+function remixWave(r: Rng, source: WaveDefinition, pool: Map<EnemyId, number>, content: ContentPack, airBias = 0, grounded = 0): WaveGroup[] {
   const types = [...pool.keys()],
     layerOf = (id: EnemyId) => content.enemies[id].layer,
     cost = (id: EnemyId) => content.enemies[id].hp * Math.sqrt(content.enemies[id].speed),
-    air = types.filter((id) => layerOf(id) === "air");
+    air = types.filter((id) => layerOf(id) === "air"),
+    ground = types.filter((id) => layerOf(id) === "ground");
   return source.groups
     .map((group) => {
-      const toAir = airBias > 0 && air.length > 0 && group.type !== "boss" && layerOf(group.type) === "ground" && r() < airBias;
-      if (group.type === "boss" || (!toAir && pool.has(group.type) && r() >= SWAP)) return group;
-      const same = toAir ? air : types.filter((id) => layerOf(id) === layerOf(group.type)),
+      const toAir = airBias > 0 && air.length > 0 && group.type !== "boss" && layerOf(group.type) === "ground" && r() < airBias,
+        toGround = !toAir && grounded > 0 && ground.length > 0 && layerOf(group.type) === "air" && r() < grounded;
+      if (group.type === "boss" || (!toAir && !toGround && pool.has(group.type) && r() >= SWAP)) return group;
+      const same = toAir ? air : toGround ? ground : types.filter((id) => layerOf(id) === layerOf(group.type)),
         type = draw(r, same.length ? same : types, 1, (id) => Math.sqrt(pool.get(id)!))[0],
         count = Math.min(MAX_GROUP, Math.max(1, Math.round((group.count * cost(group.type)) / cost(type)))),
         span = (group.count - 1) * group.interval,
@@ -94,6 +97,28 @@ function remixWave(r: Rng, source: WaveDefinition, pool: Map<EnemyId, number>, c
       return g(type, count, Math.round(interval * 100) / 100, tenth(group.delay + (r() - 0.5) * 2));
     })
     .map((x) => (x.delay < 0 ? { ...x, delay: 0 } : x));
+}
+/**
+ * The share of the budget that may fly, by the roster's anti-air attack towers: one carries 35%, two 60%, three or
+ * more any share. Control towers that also reach flyers (Cryo, Acid, ...) slow them but do not count.
+ */
+export function airCap(roster: readonly TowerId[], content: ContentPack) {
+  const n = roster.filter((id) => pageOf(content.towers[id]) === 0 && content.towers[id].targets.includes("air")).length;
+  return n >= 3 ? 1 : n === 2 ? 0.6 : 0.35;
+}
+/** The share of air groups the remix turns into ground groups so the source's air share fits under the cap. */
+function groundedShare(source: MissionDefinition, content: ContentPack, cap: number) {
+  let air = 0,
+    total = 0;
+  for (const w of source.waves)
+    for (const group of w.groups) {
+      const e = content.enemies[group.type],
+        v = group.count * e.hp * Math.sqrt(e.speed);
+      total += v;
+      if (e.layer === "air") air += v;
+    }
+  const share = total ? air / total : 0;
+  return share > cap ? 1 - cap / share : 0;
 }
 /** Index of a mission column inside its act: first, second, boss. */
 const columnSlot = (node: RunNode) => (node.kind === "final" ? 0 : Math.min(2, node.column / 2));
@@ -142,6 +167,7 @@ export function runMission(run: RunState, node: RunNode, base: ContentPack): Run
   const r = streamOf(run.seed, "waves", run.step, node.mission),
     { pool, suppressed } = enemyPool(source, roster, base, { allowed, stealth: blackout && canStealth ? blackout.stealth : undefined }),
     airBias = Math.max(0, ...mods.map((m) => m.airBias ?? 0)),
+    grounded = airBias ? 0 : groundedShare(source, base, airCap(roster, base)),
     n = source.waves.length,
     start = Math.min(n - 1, Math.round(format.enter * n)),
     count = format.waves,
@@ -153,7 +179,7 @@ export function runMission(run: RunState, node: RunNode, base: ContentPack): Run
       from = source.waves[lo],
       hp = waveHpScale(source, lo + 1) * (1 - frac) + waveHpScale(source, Math.min(n, lo + 2)) * frac;
     return {
-      groups: remixWave(r, from, pool, base, airBias),
+      groups: remixWave(r, from, pool, base, airBias, grounded),
       // The window may be shorter or longer than the format: the bonuses scale so the mission pays about the same.
       bonus: Math.round((from.bonus * (n - start)) / count),
       hpMultiplier: Math.round(hp * depth * 1000) / 1000,

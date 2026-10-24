@@ -4,10 +4,10 @@
  */
 /** HP factor per act (I, II, III, Final) and mission column inside it (first, second, boss), on top of the source curve. */
 export const DEPTH_HP: readonly (readonly number[])[] = [
-  [0.68, 0.72, 0.76],
-  [0.72, 0.76, 0.8],
-  [0.76, 0.8, 0.85],
-  [0.88],
+  [0.58, 0.6, 0.62],
+  [0.72, 0.76, 0.76],
+  [0.8, 0.86, 0.9],
+  [1.3],
 ];
 export const ELITE_HP = 1.15;
 /** Share of a source mission's income up to a wave that a hot drop hands out as starting credits. */
