@@ -3,6 +3,7 @@ import type { MissionDefinition } from "../core/types";
 import { isPlaytest } from "../editor/playtest-id";
 import { isRunMission } from "../run/run-id";
 import type { CampaignRecord } from "./progress";
+import type { Lock } from "./campaign-unlock";
 /**
  * What the home page's primary button does: begin, return to the game in memory, move on to the next unwon mission,
  * or replay the remembered one.
@@ -25,11 +26,14 @@ export interface HomeSession {
   multiplayer: boolean;
 }
 const pad = (n: number) => String(n).padStart(2, "0");
-/** The first unwon mission after `from` in its own mode (campaign or Circuit), wrapping round; undefined when all are won. */
-export function nextUnwon(missions: readonly MissionDefinition[], from: MissionDefinition, record: CampaignRecord) {
+/**
+ * The first unwon, unlocked mission after `from` in its own mode (campaign or Circuit), wrapping round (back to a
+ * skipped one); undefined when every open one is won.
+ */
+export function nextUnwon(missions: readonly MissionDefinition[], from: MissionDefinition, record: CampaignRecord, locks?: ReadonlyMap<string, Lock>) {
   const mode = missions.filter((m) => !!m.circle === !!from.circle),
     at = mode.findIndex((m) => m.id === from.id);
-  return [...mode.slice(at + 1), ...mode.slice(0, at + 1)].find((m) => !record[m.id]);
+  return [...mode.slice(at + 1), ...mode.slice(0, at + 1)].find((m) => !record[m.id] && !locks?.has(m.id));
 }
 /**
  * Picks the primary action from what is really available. Only the mission id survives a reload, so after one the
@@ -42,6 +46,8 @@ export function homeAction(
   last: string | undefined,
   session: HomeSession,
   record: CampaignRecord = {},
+  /** Locked campaign missions (`campaignLocks`), never offered by "continue". */
+  locks?: ReadonlyMap<string, Lock>,
 ): HomeAction {
   const number = (m: MissionDefinition) => pad(missions.findIndex((n) => n.id === m.id) + 1);
   const proceed = (m: MissionDefinition): HomeAction => ({
@@ -64,7 +70,7 @@ export function homeAction(
   if (remembered && isPlaytest(remembered))
     return { kind: "restart", title: "Restart Playtest", subtitle: `${remembered.name} · Starts from wave 1`, mission: remembered };
   if (remembered) {
-    const next = record[remembered.id] ? nextUnwon(missions, remembered, record) : undefined;
+    const next = record[remembered.id] ? nextUnwon(missions, remembered, record, locks) : undefined;
     if (next) return proceed(next);
     return {
       kind: "restart",
@@ -73,7 +79,7 @@ export function homeAction(
       mission: remembered,
     };
   }
-  const first = missions.find((m) => !m.circle && !record[m.id]);
+  const first = missions.find((m) => !m.circle && !record[m.id] && !locks?.has(m.id));
   if (first && Object.keys(record).length) return proceed(first);
   return { kind: "start", title: "Start Playing", subtitle: "Begin your defense campaign", mission: missions[0] };
 }

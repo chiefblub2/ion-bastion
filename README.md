@@ -115,7 +115,9 @@ In all modes the host decides mission, restart and speed. Dialogs and tab switch
 
 ## Missions
 
-The start screen leads to Campaign and Circuit (the Sector Atlas: pick a sector, then a mission, then "Start Mission"), Run, Multiplayer, Training with the rules beside it, Enemy Codex and Tower Codex. Every win earns 1–3 stars (90 % reactor energy left for three, 50 % for two; on a ring, never more than half, or 80 %, of the limit alive at once); the atlas shows the best per mission. Every mission stays open regardless.
+The start screen leads to Campaign and Circuit (the Sector Atlas: a world map with every sector as an island; pick a sector to fly into it, then a mission, then "Start Mission"), Run, Multiplayer, Training with the rules beside it, Enemy Codex and Tower Codex. Every win earns 1–3 stars (90 % reactor energy left for three, 50 % for two; on a ring, never more than half, or 80 %, of the limit alive at once); the atlas shows the best per mission.
+
+The campaign unlocks as you play: it starts with the first mission, each win opens the next two missions of the sector (so one hard mission can be skipped), and a sector opens once all but one mission of the sector before it are won. Locked missions can still be looked at, and won missions always stay open. Circuit, Run and Multiplayer have no locks.
 
 ### Circuit
 

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { asPlaytest } from "../editor/playtest-id";
 import { MISSIONS } from "../content/missions";
 import { homeAction, type HomeSession } from "./home-action";
+import { campaignLocks } from "./campaign-unlock";
+import { SECTORS } from "../content/missions";
 const fresh: HomeSession = { mission: MISSIONS[0], wave: 0, status: "ready", inProgress: false, multiplayer: false };
 describe("home action", () => {
   it("starts a first-time visitor on the mission selector", () => {
@@ -25,6 +27,13 @@ describe("home action", () => {
     expect(a.kind).toBe("continue");
     expect(a.mission).toBe(MISSIONS[5]);
     expect(a.subtitle).toBe(`Mission 06 · ${MISSIONS[5].name}`);
+  });
+  it("never continues to a locked mission and goes back to a skipped one instead", () => {
+    const list = SECTORS[0].missions,
+      record = { [list[0].id]: 3, [list[1].id]: 2, [list[4].id]: 1 } as const,
+      a = homeAction(MISSIONS, list[4].id, fresh, record, campaignLocks(SECTORS, record));
+    expect(a.kind).toBe("continue");
+    expect(a.mission).toBe(list[2]);
   });
   it("continues within the remembered mission's mode", () => {
     const ring = MISSIONS.filter((m) => m.circle),
