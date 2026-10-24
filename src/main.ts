@@ -132,6 +132,10 @@ new Phaser.Game({
   antialias: true,
   render: ART_FILTERING,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  // Only touches on the board itself: with window events Phaser also tracks taps on the HUD, and iOS Safari never
+  // lets the end of a touch on a button that re-rendered under the finger reach the window, which left Phaser's
+  // single touch pointer held down and the board dead to every later tap.
+  input: { windowEvents: false },
   scene: battlefield,
   audio: { noAudio: true },
 });

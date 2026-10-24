@@ -230,6 +230,9 @@ export class Battlefield extends Phaser.Scene {
     if (!this.observer && this.scale.parent) {
       this.observer = new ResizeObserver(() => this.fit());
       this.observer.observe(this.scale.parent);
+      // Phaser has one touch pointer; if a touch's end never arrives, every later tap on the board is ignored. Before
+      // Phaser sees a new touch, free any pointer whose finger is no longer on the screen.
+      this.scale.parent.addEventListener("touchstart", (e: TouchEvent) => this.releaseLostTouches(e), { capture: true, passive: true });
     }
     this.terrainParts = drawTerrain(this, this.sim.map, (x, y) => this.sim.isBlocked(x, y));
     for (const part of this.terrainParts) (part as Phaser.GameObjects.Graphics).setVisible(false);
@@ -289,6 +292,10 @@ export class Battlefield extends Phaser.Scene {
       (window as unknown as { __frameStats: FrameStats }).__frameStats = stats;
       this.statsHooked = true;
     }
+  }
+  private releaseLostTouches(e: TouchEvent) {
+    const down = new Set(Array.from(e.touches, (t) => t.identifier));
+    for (const p of this.input.manager.pointers) if (p.id > 0 && p.active && !down.has(p.identifier)) p.reset();
   }
   /** Refits the canvas after its container changed size, e.g. entering full screen or leaving the start screen. */
   fit() {
