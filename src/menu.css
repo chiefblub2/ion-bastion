@@ -946,7 +946,7 @@
   stop-opacity: 0;
 }
 .world-svg .haze-thick {
-  stop-color: #8fe0ff;
+  stop-color: var(--atmo, #8fe0ff);
   stop-opacity: 0.55;
 }
 /* The atmosphere along the horizon: a wide faint glow, a brighter band and a thin crisp rim, in world units. */
@@ -955,17 +955,17 @@
   pointer-events: none;
 }
 .world-svg .atmo-wide {
-  stroke: #3fb8ff;
+  stroke: var(--atmo, #3fb8ff);
   stroke-width: 9;
   opacity: 0.1;
 }
 .world-svg .atmo-mid {
-  stroke: #6fd6ff;
+  stroke: var(--atmo, #6fd6ff);
   stroke-width: 2.6;
   opacity: 0.22;
 }
 .world-svg .atmo-rim {
-  stroke: #c8f1ff;
+  stroke: color-mix(in srgb, var(--atmo, #6fd6ff) 35%, #fff);
   stroke-width: 0.35;
   opacity: 0.85;
 }
@@ -1094,6 +1094,309 @@
 .world-view[data-zoom="sector"] .land[data-selected] .dot {
   opacity: 0;
 }
+/* A station in orbit: a dark hull with its painted plating, floating in space above the horizon. */
+.land.station .deck-hull {
+  fill: #121822;
+  stroke: #ffffff40;
+  stroke-width: calc(1px * var(--inv));
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 calc(4px * var(--inv)) calc(10px * var(--inv)) #000);
+}
+.land.station .tint {
+  opacity: 0.12;
+}
+.sector-orbit {
+  padding: 1px 6px;
+  font: 700 10px / 1.4 var(--mono);
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+/* The world bar along the map's lower edge: the world on screen between the ones before and after it. */
+.world-nav {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  width: min(560px, calc(100% - 24px));
+  transform: translateX(-50%);
+  transition:
+    opacity 300ms ease-out,
+    visibility 300ms;
+}
+.world-name {
+  display: grid;
+  justify-items: center;
+  margin: 0;
+  padding: 6px 18px 7px;
+  background: linear-gradient(180deg, #161e2bf2, #080c13f2);
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+  box-shadow: inset 0 2px 0 var(--atmo, var(--mode));
+}
+.world-name strong {
+  font: 700 16px / 1.1 "Rajdhani", sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.world-name small {
+  font: 500 10px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--m-text-2);
+}
+.start-screen .world-hop {
+  min-height: 32px;
+  padding: 0 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 600 11px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--m-text-2);
+  background: #05070fc4;
+  border: 1px solid #ffffff1f;
+  border-radius: 2px;
+}
+.start-screen .world-hop[data-dir="prev"] {
+  justify-self: end;
+}
+.start-screen .world-hop[data-dir="next"] {
+  justify-self: start;
+}
+.start-screen button.world-hop:hover {
+  color: var(--m-text);
+  border-color: var(--mode);
+}
+span.world-hop {
+  visibility: hidden;
+}
+/* The star system: the sun's glow on the left, orbits and the worlds as turning spheres. It fades in over the planet,
+   which falls back as if the camera pulled away from it. */
+.system-view {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0;
+  visibility: hidden;
+  background:
+    radial-gradient(1px 1px at 12% 22%, #fff9, transparent),
+    radial-gradient(1px 1px at 34% 78%, #fff8, transparent),
+    radial-gradient(1px 1px at 58% 14%, #fffa, transparent),
+    radial-gradient(1px 1px at 76% 64%, #fff7, transparent),
+    radial-gradient(1px 1px at 91% 30%, #fff9, transparent),
+    radial-gradient(1px 1px at 46% 52%, #fff6, transparent),
+    radial-gradient(1px 1px at 22% 60%, #fff7, transparent),
+    radial-gradient(1px 1px at 66% 88%, #fff8, transparent),
+    #02040a;
+  transform: scale(1.15);
+  transition:
+    opacity 450ms ease-out,
+    transform 600ms cubic-bezier(0.3, 0.05, 0.2, 1),
+    visibility 450ms;
+}
+.world-view[data-zoom="system"] .system-view {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+.world-tilt {
+  transition:
+    opacity 450ms ease-out,
+    visibility 450ms;
+}
+.world-view[data-zoom="system"] :is(.world-regions, .world-nav) {
+  opacity: 0;
+  visibility: hidden;
+}
+/* Hidden, the tilted planet must not take clicks: Chrome hit-tests its near half above the layers stacked over it. */
+.world-view[data-zoom="system"] .world-tilt {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.system-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.system-svg .sun-core {
+  stop-color: #fff4d6;
+}
+.system-svg .sun-mid {
+  stop-color: #ffb45a;
+  stop-opacity: 0.8;
+}
+.system-svg .sun-edge {
+  stop-color: #ff7a2a;
+  stop-opacity: 0;
+}
+.system-svg .orbit {
+  fill: none;
+  stroke: #9fc4ff29;
+  stroke-width: 1;
+  stroke-dasharray: 2 6;
+}
+.system-bodies {
+  position: absolute;
+  inset: 0;
+}
+.start-screen .world-body {
+  --size: 120px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  min-height: 0;
+  padding: 0;
+  color: var(--m-text);
+  background: transparent;
+  border: 0;
+}
+.body-sphere {
+  position: absolute;
+  left: calc(var(--size) / -2);
+  top: calc(var(--size) / -2);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  /* The world's own surface, slowly turning, shaded into a sphere lit from the sun on the left. */
+  background: var(--surface, radial-gradient(circle, #3a4250, #11151c)) 0 50% / auto 100% repeat-x;
+  box-shadow:
+    0 0 calc(var(--size) * 0.12) color-mix(in srgb, var(--atmo) 55%, transparent),
+    inset 0 0 calc(var(--size) * 0.06) color-mix(in srgb, var(--atmo) 70%, transparent);
+  animation: body-turn 140s linear infinite;
+  transition:
+    transform var(--m-speed),
+    filter var(--m-speed);
+}
+.body-sphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 38%, #ffffff2e, transparent 35%),
+    radial-gradient(circle at 34% 45%, transparent 42%, #000000b3 72%, #000000eb 100%);
+}
+@keyframes body-turn {
+  to {
+    background-position-x: calc(var(--size) * -3.37);
+  }
+}
+/* The ring of missions won around the sphere. */
+.body-ring {
+  position: absolute;
+  inset: -9px;
+  width: calc(100% + 18px);
+  height: calc(100% + 18px);
+  overflow: visible;
+  transform: rotate(-90deg);
+}
+.body-ring circle {
+  fill: none;
+  stroke: #ffffff1f;
+  stroke-width: 1.5;
+}
+.body-ring .body-done {
+  stroke: var(--atmo);
+  stroke-dasharray: var(--done) 1;
+  filter: drop-shadow(0 0 3px var(--atmo));
+}
+.body-label {
+  position: absolute;
+  left: 0;
+  top: calc(var(--size) / 2 + 16px);
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px #000;
+  transform: translateX(-50%);
+}
+.body-label small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 10px var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--atmo) 80%, #fff);
+}
+.body-label strong {
+  font: 700 18px / 1.1 "Rajdhani", sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.body-line {
+  font: 500 11px var(--mono);
+  color: var(--m-text-2);
+}
+.body-line svg {
+  width: 9px;
+  height: 9px;
+  vertical-align: -1px;
+}
+.start-screen .world-body:hover .body-sphere,
+.start-screen .world-body:focus-visible .body-sphere {
+  transform: scale(1.06);
+}
+.start-screen .world-body:focus-visible {
+  outline: none;
+}
+.start-screen .world-body:focus-visible .body-label strong {
+  text-decoration: underline 2px var(--mode);
+  text-underline-offset: 4px;
+}
+.world-body[aria-current="true"] .body-ring circle:first-child {
+  stroke: #ffffff59;
+  stroke-dasharray: 0.02 0.03;
+}
+.world-body[data-next] .body-sphere {
+  box-shadow:
+    0 0 calc(var(--size) * 0.16) color-mix(in srgb, var(--m-warn) 50%, transparent),
+    inset 0 0 calc(var(--size) * 0.06) color-mix(in srgb, var(--atmo) 70%, transparent);
+}
+/* Locked worlds are dark silhouettes against space, still there to look forward to. */
+.world-body[data-locked] .body-sphere {
+  filter: grayscale(1) brightness(0.32);
+}
+.world-body[data-locked] .body-label strong {
+  color: var(--m-text-2);
+}
+.world-body[data-moon] .body-label strong {
+  font-size: 15px;
+}
+/* Phones: names and a short progress line only. */
+.body-short {
+  display: none;
+  font: 500 10px var(--mono);
+  color: var(--m-text-2);
+}
+.body-short svg {
+  width: 8px;
+  height: 8px;
+  vertical-align: -1px;
+}
+.system-view[data-narrow] .body-label {
+  top: calc(var(--size) / 2 + 10px);
+}
+.system-view[data-narrow] :is(.body-label small, .body-line) {
+  display: none;
+}
+.system-view[data-narrow] .body-short {
+  display: block;
+}
+.system-view[data-narrow] .body-label strong {
+  font-size: 13px;
+}
 /* Sector labels: buttons over each landmass (the page's sector tabs), the label kept at its screen size. */
 .world-regions,
 .world-stations {
@@ -1108,7 +1411,7 @@
     opacity 300ms ease-out,
     visibility 300ms;
 }
-.world-view[data-zoom="world"] .world-stations {
+.world-view:not([data-zoom="sector"]) .world-stations {
   opacity: 0;
   visibility: hidden;
 }
@@ -1202,7 +1505,7 @@
 .world-view[data-zoom="sector"] .region[aria-selected="true"] .region-label {
   pointer-events: none;
 }
-.world-view[data-zoom="world"] .world-legend {
+.world-view:not([data-zoom="sector"]) .world-legend {
   opacity: 0;
   visibility: hidden;
 }
@@ -1992,11 +2295,11 @@
     aspect-ratio: 4 / 3;
     min-height: 0;
   }
-  .world-view[data-zoom="world"] .region-label {
+  .world-view[data-zoom="planet"] .region-label {
     min-width: 0;
     padding: 4px 8px 6px;
   }
-  .world-view[data-zoom="world"] .region-label :is(strong, .region-line) {
+  .world-view[data-zoom="planet"] .region-label :is(strong, .region-line) {
     display: none;
   }
   .world-view[data-zoom="sector"] .region:not([aria-selected="true"]) .region-label strong {
@@ -2010,6 +2313,16 @@
   }
   .world-legend h2 {
     font-size: 17px;
+  }
+  .world-nav {
+    bottom: 8px;
+    grid-template-columns: auto auto auto;
+  }
+  .start-screen .world-hop {
+    max-width: 96px;
+  }
+  .world-name {
+    padding: 5px 14px 6px;
   }
   .start-screen .world-zoom {
     right: 8px;
@@ -2068,9 +2381,12 @@
   .preview-layer img,
   .start-screen .mission-node,
   .node-mark,
-  .brief-intel summary::before {
+  .brief-intel summary::before,
+  .system-view,
+  .world-tilt {
     transition: none;
   }
+  .body-sphere,
   .brief-body.is-entering > *,
   .mission-node[data-next] .node-mark,
   .mission-node[data-fresh] .node-mark,

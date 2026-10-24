@@ -31,12 +31,11 @@ export interface Territory {
   /** The border's points. */
   border: Point[];
 }
-/** A sector's territory, with the radii its stations and label use. */
+/** A sector's territory, or its deck when the sector is a station in orbit. */
 export interface Region extends Territory {
-  rx: number;
-  ry: number;
-  /** The stations run right to left on the serpentine's way back. */
-  reverse: boolean;
+  /** Where the sector's label stands: in the north of its territory, above a deck. */
+  label: Point;
+  station?: boolean;
 }
 /** A stable pseudo-random number in [0, 1) for a pair of integers (render-side jitter, no `Math.random`). */
 export function jitter(a: number, b: number) {
@@ -46,10 +45,8 @@ export function jitter(a: number, b: number) {
   return (h >>> 0) / 2 ** 32;
 }
 const round = (n: number) => Math.round(n * 100) / 100;
-/** Rows of the serpentine: one row for up to four sectors, else enough rows for cells about 3:2. */
-export const worldRows = (count: number) => (count <= 4 ? 1 : Math.ceil(Math.sqrt(count / 2)));
 /** The planet's surface: land beyond the world on every side, so the tilted view and the zoom never show its edge. */
-export const SURFACE: Box = { x: -60, y: -40, w: WORLD_W + 120, h: WORLD_H + 90 };
+export const SURFACE: Box = { x: -100, y: -40, w: WORLD_W + 200, h: WORLD_H + 90 };
 /** The convex cell of `seeds[i]` (all points closer to it than to any other seed) inside `bounds`. */
 export function voronoiCell(seeds: readonly Point[], i: number, bounds: Box): Point[] {
   const s = seeds[i];
@@ -155,38 +152,63 @@ export interface Planet {
   regions: Region[];
   wilds: Territory[];
 }
-/**
- * The serpentine of sector centres plus a ring of wild seeds just outside the world, which bounds the outer
- * sectors, all grown into territories that tile the surface.
- */
-export function planetLayout(count: number): Planet {
+/** Rows of a serpentine: one row for up to four sectors, else enough rows for cells about 3:2. */
+export const worldRows = (count: number) => (count <= 4 ? 1 : Math.ceil(Math.sqrt(count / 2)));
+/** Sector centres in a serpentine across the world, for a world without enough hand-placed centres. */
+export function serpentine(count: number): Point[] {
   const rows = worldRows(count),
     cols = Math.ceil(count / rows),
     cw = WORLD_W / cols,
     ch = WORLD_H / rows;
-  const centres = Array.from({ length: count }, (_, i) => {
+  return Array.from({ length: count }, (_, i) => {
     const row = Math.floor(i / cols),
-      reverse = row % 2 === 1,
-      col = reverse ? cols - 1 - (i % cols) : i % cols;
-    return {
-      x: round(cw * (col + 0.5) + (jitter(i, 1) - 0.5) * cw * 0.2),
-      y: round(ch * (row + 0.5) + (jitter(i, 2) - 0.5) * ch * 0.26),
-      reverse,
-    };
+      col = row % 2 === 1 ? cols - 1 - (i % cols) : i % cols;
+    return { x: round(cw * (col + 0.5) + (jitter(i, 1) - 0.5) * cw * 0.2), y: round(ch * (row + 0.5) + (jitter(i, 2) - 0.5) * ch * 0.26) };
   });
-  // About one sector cell apart along each side; the corners of the surface get their own wilds.
-  const wildSeeds: Point[] = [],
-    across = Math.max(2, Math.round(WORLD_W / Math.max(cw, 40))),
-    down = Math.max(1, Math.round(WORLD_H / Math.max(ch, 40))),
-    reachX = Math.min(cw, 60) * 0.5 + 8,
-    reachY = Math.min(ch, 50) * 0.5 + 6;
-  for (let i = 0; i <= across; i++) {
-    const x = round((WORLD_W * i) / across + (jitter(i, 30) - 0.5) * 10);
-    wildSeeds.push({ x, y: round(-reachY - jitter(i, 31) * 5) }, { x: round(x + WORLD_W / across / 2), y: round(WORLD_H + reachY + jitter(i, 32) * 5) });
+}
+/** The deck of a station in orbit around `c`: a long hull with chamfered ends and a notched spine. */
+export function deckOutline(c: Point): Point[] {
+  const w = 26,
+    h = 9;
+  return [
+    [-w, -2],
+    [-w + 6, -h],
+    [-6, -h],
+    [-3, -h - 3],
+    [3, -h - 3],
+    [6, -h],
+    [w - 6, -h],
+    [w, -2],
+    [w, 2],
+    [w - 6, h],
+    [6, h],
+    [3, h + 3],
+    [-3, h + 3],
+    [-6, h],
+    [-w + 6, h],
+    [-w, 2],
+  ].map(([x, y]) => ({ x: round(c.x + x), y: round(c.y + y) }));
+}
+/** How far up from `p` the polygon's inside reaches, in whole units. */
+function reachUp(p: Point, poly: readonly Point[]) {
+  let d = 0;
+  while (d < 100 && inside({ x: p.x, y: p.y - d - 1 }, poly)) d++;
+  return d;
+}
+/**
+ * A world's territories: one per centre in play order, grown into cells that tile the surface together with a ring
+ * of wild seeds just outside the world; the `station` centre becomes a deck in orbit instead and splits no land.
+ */
+export function planetLayout(centres: readonly Point[], station?: number): Planet {
+  const ground = centres.filter((_, i) => i !== station),
+    wildSeeds: Point[] = [];
+  for (let i = 0; i <= 4; i++) {
+    const x = round((WORLD_W * i) / 4 + (jitter(i, 30) - 0.5) * 10);
+    wildSeeds.push({ x, y: round(-24 - jitter(i, 31) * 5) }, { x: round(x + WORLD_W / 8), y: round(WORLD_H + 24 + jitter(i, 32) * 5) });
   }
-  for (let i = 0; i < down; i++) {
-    const y = round((WORLD_H * (i + 0.5)) / down + (jitter(i, 33) - 0.5) * 8);
-    wildSeeds.push({ x: round(-reachX - jitter(i, 34) * 5), y }, { x: round(WORLD_W + reachX + jitter(i, 35) * 5), y });
+  for (let i = 0; i < 2; i++) {
+    const y = round(WORLD_H * (0.25 + i * 0.5) + (jitter(i, 33) - 0.5) * 8);
+    wildSeeds.push({ x: round(-30 - jitter(i, 34) * 5), y }, { x: round(WORLD_W + 30 + jitter(i, 35) * 5), y });
   }
   for (const [fx, fy] of [
     [0, 0],
@@ -195,21 +217,26 @@ export function planetLayout(count: number): Planet {
     [1, 1],
   ])
     wildSeeds.push({ x: SURFACE.x + 6 + fx * (SURFACE.w - 12), y: SURFACE.y + 6 + fy * (SURFACE.h - 12) });
-  const seeds: Point[] = [...centres, ...wildSeeds],
+  const seeds = [...ground, ...wildSeeds],
     border = (i: number) => jaggedBorder(voronoiCell(seeds, i, SURFACE));
-  const regions = centres.map((c, i) => {
-    const points = border(i),
-      rx = round(cw * 0.36);
-    return { x: c.x, y: c.y, rx, ry: round(Math.min(ch * 0.34, rx * 0.8)), box: boxOf(points), outline: pathOf(points), border: points, reverse: c.reverse };
+  let g = 0;
+  const regions = centres.map((c): Region => {
+    if (station !== undefined && c === centres[station]) {
+      const deck = deckOutline(c),
+        box = boxOf(deck);
+      return { x: c.x, y: c.y, box, outline: pathOf(deck), border: deck, label: { x: c.x, y: round(box.y - 4) }, station: true };
+    }
+    const points = border(g++);
+    return { x: c.x, y: c.y, box: boxOf(points), outline: pathOf(points), border: points, label: { x: c.x, y: round(c.y - reachUp(c, points) * 0.62) } };
   });
   const wilds = wildSeeds.map((s, i) => {
-    const points = border(count + i);
+    const points = border(ground.length + i);
     return { x: s.x, y: s.y, box: boxOf(points), outline: pathOf(points), border: points };
   });
   return { regions, wilds };
 }
-/** The territory of every sector, in play order along the serpentine. */
-export const worldLayout = (count: number): Region[] => planetLayout(count).regions;
+/** Sector territories in a serpentine (a world without hand-placed centres). */
+export const worldLayout = (count: number): Region[] => planetLayout(serpentine(count)).regions;
 /**
  * The shapes a sector's route of missions can take, as points in the territory's own frame: `x` runs from the
  * entry (-1) towards the exit (+1), `y` across it, both scaled to the room the territory has (`frameOf`). Each has

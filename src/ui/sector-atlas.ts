@@ -9,8 +9,9 @@ import { enemyIcon } from "./wave-forecast";
 import type { CampaignRecord } from "../app/progress";
 import { starText } from "../app/rating";
 import { type Lock, sectorLocked, type Unlocked } from "../app/campaign-unlock";
-import { type Box, fitBox, headingOf, HORIZON, link, planetLayout, project, type Region, routePoints, routeShape, stars, stationBox, type Point, SURFACE, tiltFor, WORLD_BOX, WORLD_H, WORLD_W } from "./world-map";
-import { biomeGround, type SurfaceSeed } from "./planet-surface";
+import { type Box, fitBox, headingOf, HORIZON, link, planetLayout, project, type Region, routePoints, routeShape, serpentine, stars, stationBox, type Point, SURFACE, tiltFor, WORLD_BOX, WORLD_H, WORLD_W } from "./world-map";
+import { SYSTEM, type WorldEntry, worldOf, worldsOf } from "./planets";
+import { type BiomeId, biomeGround, type SurfaceSeed } from "./planet-surface";
 import { surfaceImage } from "./planet-texture";
 /**
  * The mission page as a Sector Atlas: a world map with every sector of the mode as a landmass (its terrain, its
@@ -153,8 +154,8 @@ const shownMode = () => {
 /**
  * Fills the whole page; called each time it opens. It opens on `sectorIndex`, else the sector of the game under way,
  * else the sector of the next mission of the loaded mission's mode, and features `pickedId`, else the mission being
- * played, else the sector's next unwon mission, else its first. The world shows whole for a moment, then flies into
- * that sector.
+ * played, else the sector's next unwon mission, else its first. That sector's world shows whole for a moment, then
+ * the view flies into the sector.
  */
 export function renderAtlas(game: Game, options: AtlasOptions, sectorIndex?: number, pickedId?: string) {
   const sectors = game.content.sectors ?? [],
@@ -162,8 +163,11 @@ export function renderAtlas(game: Game, options: AtlasOptions, sectorIndex?: num
     next = modeNext(sectors, !!loaded && isCircleSector(loaded), options.record, options.locks),
     home = (options.playing ? loaded : undefined) ?? (next ? sectorOf(next, sectors) : undefined) ?? loaded,
     selected = sectors[sectorIndex ?? (home ? sectors.indexOf(home) : 0)];
-  renderModes(game, !!selected && isCircleSector(selected), options);
-  zoom = "world";
+  entries = worldsOf(sectors);
+  renderHeader(game, !!selected && isCircleSector(selected), options);
+  renderWorld(game, (selected && worldOf(entries, selected)) ?? entries[0], options);
+  renderSystem(game, options);
+  zoom = "planet";
   fitWorld(false);
   showSector(game, selected, options, pickedId);
 }
@@ -176,16 +180,42 @@ const modeNext = (sectors: readonly MissionSector[], circle: boolean, record: Ca
   );
 /** An unlocked mission the atlas has not shown unlocked before (only once a first visit is stored). */
 const fresh = (m: MissionDefinition, { locks, seen }: AtlasOptions) => !!seen && !locks?.has(m.id) && !seen.has(m.id);
-/** Switches to another sector (a landmass, its label or a mode tab); a different mode rebuilds the world. */
+/** Switches to another sector (a territory, its label or a mode tab); another world or mode is rendered first. */
 export function selectSector(game: Game, index: number, options: AtlasOptions) {
-  const sector = (game.content.sectors ?? [])[index];
-  if (!sector) return;
-  if (shownMode() !== isCircleSector(sector)) {
-    renderModes(game, isCircleSector(sector), options);
-    zoom = "world";
+  const sector = (game.content.sectors ?? [])[index],
+    entry = sector && worldOf(entries, sector);
+  if (!sector || !entry) return;
+  showWorld(game, entry, options);
+  showSector(game, sector, options, undefined);
+}
+/**
+ * Lands on a world (a planet in the system view or the world bar): its next sector selected, the whole planet in
+ * view.
+ */
+export function selectWorld(game: Game, index: number, options: AtlasOptions) {
+  const entry = entries[index];
+  if (!entry) return;
+  const next = atlasNext(
+      entry.sectors.flatMap((s) => s.missions),
+      options.record ?? {},
+      options.locks,
+    ),
+    sector = (next && sectorOf(next, entry.sectors)) ?? entry.sectors[0];
+  showWorld(game, entry, options);
+  showSector(game, sector, options, undefined, false);
+}
+/** Renders `entry`'s world (and the header when the mode changes) unless it is already on screen. */
+function showWorld(game: Game, entry: WorldEntry, options: AtlasOptions) {
+  if (world.entry === entry) return;
+  const circle = !!entry.world.moon;
+  if (shownMode() !== circle) renderHeader(game, circle, options);
+  renderWorld(game, entry, options);
+  renderSystem(game, options);
+  // From the system view the world is entered whole; from another world it appears at once.
+  if (zoom !== "system") {
+    zoom = "planet";
     fitWorld(false);
   }
-  showSector(game, sector, options, undefined);
 }
 /** Features another mission of the shown sector. */
 export function selectMission(game: Game, id: string, options: AtlasOptions) {
@@ -194,18 +224,34 @@ export function selectMission(game: Game, id: string, options: AtlasOptions) {
   for (const node of document.querySelectorAll<HTMLElement>("#mission-list [data-pick]")) node.setAttribute("aria-pressed", String(node.dataset.pick === id));
   renderFeatured(game, m, options);
 }
-/** The world on screen: the mode's sectors, their landmasses and the one zoomed into. */
-let world: { sectors: readonly MissionSector[]; regions: Region[]; stations: Point[][]; selected: number } = { sectors: [], regions: [], stations: [], selected: -1 },
-  zoom: "world" | "sector" = "world";
-/** Shows the whole world or flies back into the selected sector (the map's World button). */
+/** Every world of the content (`worldsOf`), in system order. */
+let entries: WorldEntry[] = [];
+/** The world on screen: its sectors, their territories and stations, and the sector selected. */
+let world: { entry: WorldEntry | null; sectors: readonly MissionSector[]; regions: Region[]; stations: Point[][]; selected: number } = {
+    entry: null,
+    sectors: [],
+    regions: [],
+    stations: [],
+    selected: -1,
+  },
+  zoom: "system" | "planet" | "sector" = "planet";
+/** The map's zoom button steps out, sector → planet → star system, and from the system back onto the planet. */
 export function toggleWorld() {
-  zoom = zoom === "world" && world.selected >= 0 ? "sector" : "world";
+  zoom = zoom === "sector" ? "planet" : zoom === "planet" ? "system" : "planet";
   fitWorld(true);
 }
+/** What the planet view shows: the world with a margin for its labels, and the deck of a station in orbit. */
+function planetBox(regions: readonly Region[]): Box {
+  const deck = regions.find((r) => r.station);
+  if (!deck) return WORLD_BOX;
+  const y = Math.min(WORLD_BOX.y, deck.box.y - 11);
+  return { ...WORLD_BOX, y, h: WORLD_BOX.y + WORLD_BOX.h - y };
+}
 /**
- * Moves and scales the plane so the selected sector (or the whole world) fills the view, flying there when `smooth`.
- * The surface is tilted (CSS); labels and stations stay upright on a flat layer above it, placed where their world
- * point lands on screen (`project`). Called on every change and, unanimated, when the view is resized.
+ * Moves and scales the plane so the selected sector (or the whole planet) fills the view, flying there when
+ * `smooth`; the system view fades over it. The surface is tilted (CSS); labels and stations stay upright on a flat
+ * layer above it, placed where their world point lands on screen (`project`). Called on every change and,
+ * unanimated, when the view is resized.
  */
 export function fitWorld(smooth = false) {
   const view = $("world-view"),
@@ -216,16 +262,17 @@ export function fitWorld(smooth = false) {
   // A sector zoom keeps the band under the legend free.
   const narrow = view.clientWidth < 600,
     top = sector ? $("missions-label").parentElement!.offsetHeight + 12 : 0,
-    box = sector ? stationBox(world.stations[world.selected], narrow ? 7 : 9, narrow ? 5 : 8) : WORLD_BOX,
+    box = sector ? stationBox(world.stations[world.selected], narrow ? 7 : 9, narrow ? 5 : 8) : planetBox(world.regions),
     fit = fitBox(box, view.clientWidth, view.clientHeight - top);
   fit.y += top;
-  view.dataset.zoom = sector ? "sector" : "world";
-  const button = $("world-zoom");
-  button.setAttribute("aria-pressed", String(!sector));
-  button.innerHTML = sector
-    ? '<span aria-hidden="true">◱</span> World map'
-    : `<span aria-hidden="true">⊕</span> Sector ${roman(contentIndex.get(world.sectors[world.selected]) ?? 0)}`;
-  button.hidden = !region;
+  view.dataset.zoom = zoom === "sector" && !sector ? "planet" : zoom;
+  const button = $("world-zoom"),
+    name = escape(world.entry?.world.name ?? "Planet");
+  button.setAttribute("aria-label", zoom === "sector" ? `Show all of ${name}` : zoom === "planet" ? "Show the star system" : `Back to ${name}`);
+  button.innerHTML =
+    zoom === "sector" ? `<span aria-hidden="true">◱</span> ${name}` : zoom === "planet" ? '<span aria-hidden="true">◎</span> Star system' : `<span aria-hidden="true">⊕</span> ${name}`;
+  button.hidden = !world.entry;
+  placeSystem();
   cancelAnimationFrame(flight);
   if (!smooth || !motion() || !shown) return place(fit);
   const from = shown;
@@ -258,7 +305,7 @@ function place(fit: { x: number; y: number; scale: number }) {
   plane.style.setProperty("--px", String(WORLD_W / (width * fit.scale)));
   const lean = $("world-tilt");
   lean.style.transform = `perspective(${tilt.perspective}px) rotateX(${tilt.deg}deg)`;
-  for (const el of view.querySelectorAll<HTMLElement>("[data-wx]")) {
+  for (const el of view.querySelectorAll<HTMLElement>(":is(#sector-tabs, #mission-list) [data-wx]")) {
     const p = project({ x: Number(el.dataset.wx), y: Number(el.dataset.wy) }, fit, width, height, tilt);
     el.style.transform = `translate(${Math.round(p.x * 10) / 10}px, ${Math.round(p.y * 10) / 10}px)`;
   }
@@ -266,9 +313,9 @@ function place(fit: { x: number; y: number; scale: number }) {
 const round = (n: number) => Math.round(n * 100) / 100;
 /** Content index of each shown sector, which numbers it. */
 let contentIndex = new Map<MissionSector, number>();
-/** Header, mode toggle and the world of one mode: ocean, landmasses, sea lanes and every sector's stations. */
-function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
-  const { lobby, record = {}, locks = NO_LOCKS } = options;
+/** The header of one mode: title, context line, rules and the Campaign/Circuit toggle. */
+function renderHeader(game: Game, circle: boolean, options: AtlasOptions) {
+  const { lobby, record = {} } = options;
   const { content } = game,
     sectors = content.sectors ?? [],
     campaign = atlasGroup(sectors, false),
@@ -299,47 +346,74 @@ function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
   );
   $("atlas-context").textContent = `${group.length} ${plural(group.length, "sector")} · ${count(group)} ${plural(count(group), "mission")}${progress.won ? ` · ${progress.won} cleared · ${progress.stars}/${progress.count * 3} ★` : ""}`;
   $("mode-rules").hidden = !circle;
-  const { regions, wilds } = planetLayout(group.length),
-    cards = atlasSectors(content, circle, record, locks);
+}
+/** A world's territories and the seeds and biomes of its surface (the station deck paints apart). */
+function layoutOf(entry: WorldEntry) {
+  const { world: w, sectors } = entry,
+    centres = w.centres.length >= sectors.length ? w.centres.slice(0, sectors.length) : serpentine(sectors.length),
+    station = w.centres.length >= sectors.length ? w.station : undefined,
+    { regions, wilds } = planetLayout(centres, station),
+    biomes: BiomeId[] = sectors.map((s) => s.missions[0].map.theme ?? "outpost"),
+    seeds: SurfaceSeed[] = [
+      ...regions.flatMap((r, i) => (r.station ? [] : [{ x: r.x, y: r.y, biome: biomes[i] }])),
+      ...wilds.map((t) => ({ x: t.x, y: t.y, biome: w.wild })),
+    ];
+  return { regions, wilds, biomes, seeds };
+}
+/** The world on screen: its surface, territories (or deck), routes, links and every sector's label. */
+function renderWorld(game: Game, entry: WorldEntry, options: AtlasOptions) {
+  const { record = {}, locks = NO_LOCKS } = options;
+  const { content } = game,
+    sectors = content.sectors ?? [],
+    circle = !!entry.world.moon,
+    group = entry.sectors,
+    { regions, wilds, biomes, seeds: surface } = layoutOf(entry),
+    all = atlasSectors(content, circle, record, locks),
+    cards = group.map((s) => all.find((c) => c.index === sectors.indexOf(s))!);
   const stations = group.map((s, i) =>
     routePoints(regions[i], s.missions.length, {
-      shape: routeShape(s.missions[0].map.theme ?? "outpost", isCircleSector(s)),
+      shape: routeShape(s.missions[0].map.theme ?? "outpost", circle),
       heading: headingOf(regions, i),
       mirror: i % 2 === 1,
       aside: asideOf(s.missions),
     }),
   );
-  world = { sectors: group, regions, stations, selected: -1 };
-  seeds = [...regions.map((r, i) => ({ x: r.x, y: r.y, biome: group[i].missions[0].map.theme ?? "outpost" })), ...wilds.map((w) => ({ x: w.x, y: w.y, biome: "waste" as const }))];
+  world = { entry, sectors: group, regions, stations, selected: -1 };
+  seeds = surface;
   contentIndex = new Map(group.map((s) => [s, sectors.indexOf(s)]));
+  $("world-view").style.setProperty("--atmo", entry.world.atmosphere);
   // Links from each sector's last station to the next sector's first; lit once the next sector is open.
   const lanes = stations
       .slice(1)
       .map((points, i) => `<path class="lane" data-state="${cards[i + 1].locked ? "locked" : "open"}" d="${link(stations[i].at(-1)!, points[0])}"/>`)
       .join(""),
     grounds = [
-      ...wilds.map((w) => `<path class="ground" style="fill:${biomeGround("waste")}" d="${w.outline}"/>`),
-      ...regions.map((r, i) => `<path class="ground" style="fill:${biomeGround(seeds[i].biome)}" d="${r.outline}"/>`),
+      ...wilds.map((t) => `<path class="ground" style="fill:${biomeGround(entry.world.wild)}" d="${t.outline}"/>`),
+      ...regions.flatMap((r, i) => (r.station ? [] : [`<path class="ground" style="fill:${biomeGround(biomes[i])}" d="${r.outline}"/>`])),
     ].join(""),
-    wildBorders = wilds.map((w) => `<path class="wild-border" d="${w.outline}"/>`).join(""),
-    lands = regions
-      .map((r, i) => {
-        const s = cards[i],
-          list = group[i].missions,
-          routes = routeLinks(list, !circle)
-            .map(([a, b, skip]) => `<path class="route${skip ? " skip" : ""}" data-state="${record[list[a].id] && record[list[b].id] ? "lit" : locks.has(list[b].id) ? "locked" : "open"}" d="${link(stations[i][a], stations[i][b])}"/>`)
-            .join(""),
-          dots = stations[i]
-            .map((p, j) => `<circle class="dot" data-state="${record[list[j].id] ? "won" : locks.has(list[j].id) ? "locked" : "open"}" cx="${p.x}" cy="${p.y}" r="1"/>`)
-            .join("");
+    wildBorders = wilds.map((t) => `<path class="wild-border" d="${t.outline}"/>`).join(""),
+    land = (r: Region, i: number) => {
+      const s = cards[i],
+        list = group[i].missions,
+        routes = routeLinks(list, !circle)
+          .map(([a, b, skip]) => `<path class="route${skip ? " skip" : ""}" data-state="${record[list[a].id] && record[list[b].id] ? "lit" : locks.has(list[b].id) ? "locked" : "open"}" d="${link(stations[i][a], stations[i][b])}"/>`)
+          .join(""),
+        dots = stations[i]
+          .map((p, j) => `<circle class="dot" data-state="${record[list[j].id] ? "won" : locks.has(list[j].id) ? "locked" : "open"}" cx="${p.x}" cy="${p.y}" r="1"/>`)
+          .join(""),
         // The border is clipped to the territory, so two neighbours draw their shared edge side by side, each in its
         // own state's colour: held (all won), contested (open) or hostile (locked).
-        const state = s.locked ? "hostile" : s.won === s.count ? "held" : "open";
-        return `<g class="land" data-sector="${s.index}" data-state="${state}" style="--accent:${s.accent}"${s.next ? ' data-next="true"' : ""}><clipPath id="land-clip-${i}"><path d="${r.outline}"/></clipPath><path class="tint" d="${r.outline}"/><path class="border" clip-path="url(#land-clip-${i})" d="${r.outline}"/>${routes}${dots}</g>`;
-      })
-      .join("");
+        state = s.locked ? "hostile" : s.won === s.count ? "held" : "open",
+        // A station's deck carries its own painted plating under the tint.
+        deck = r.station
+          ? `<path class="deck-hull" d="${r.outline}"/><image class="surface deck-plating" clip-path="url(#land-clip-${i})" x="${r.box.x}" y="${r.box.y}" width="${r.box.w}" height="${r.box.h}" preserveAspectRatio="none"/>`
+          : "";
+      return `<g class="land${r.station ? " station" : ""}" data-sector="${s.index}" data-state="${state}" style="--accent:${s.accent}"${s.next ? ' data-next="true"' : ""}><clipPath id="land-clip-${i}"><path d="${r.outline}"/></clipPath>${deck}<path class="tint" d="${r.outline}"/><path class="border" clip-path="url(#land-clip-${i})" d="${r.outline}"/>${routes}${dots}</g>`;
+    },
+    lands = regions.map((r, i) => (r.station ? "" : land(r, i))).join(""),
+    decks = regions.map((r, i) => (r.station ? land(r, i) : "")).join("");
   // Space with stars, the planet clipped to its curve, light from the upper left with the night side to the right,
-  // and the atmosphere's haze and rim along the horizon.
+  // and the atmosphere's haze and rim along the horizon; a station's deck floats in space above it.
   const { x: hx, y: hy, r: hr } = HORIZON,
     cy = hy + hr,
     sky = stars(140)
@@ -347,10 +421,14 @@ function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
       .map((s) => `<circle cx="${s.x}" cy="${s.y}" r="${s.r}"/>`)
       .join(""),
     atmosphere = ["wide", "mid", "rim"].map((k) => `<circle class="atmo atmo-${k}" cx="${hx}" cy="${cy}" r="${hr}"/>`).join("");
-  $("world-svg").innerHTML = `<defs><clipPath id="planet-clip"><circle cx="${hx}" cy="${cy}" r="${hr}"/></clipPath><linearGradient id="planet-day" gradientUnits="userSpaceOnUse" x1="-40" y1="-20" x2="260" y2="60"><stop offset="0" class="day-lit"/><stop offset="0.45" class="day-mid"/><stop offset="1" class="day-night"/></linearGradient><radialGradient id="planet-haze" gradientUnits="userSpaceOnUse" cx="${hx}" cy="${cy}" r="${hr}"><stop offset="${(hr - 18) / hr}" class="haze-clear"/><stop offset="1" class="haze-thick"/></radialGradient></defs><rect class="space" x="-200" y="-150" width="${WORLD_W + 400}" height="${WORLD_H + 300}"/><g class="stars">${sky}</g><g class="planet" clip-path="url(#planet-clip)">${grounds}${`<image class="surface" x="${SURFACE.x}" y="${SURFACE.y}" width="${SURFACE.w}" height="${SURFACE.h}" preserveAspectRatio="none"/>`.repeat(2)}<g class="tiles"></g>${wildBorders}<rect class="daylight" x="${SURFACE.x}" y="${SURFACE.y}" width="${SURFACE.w}" height="${SURFACE.h}" fill="url(#planet-day)"/><rect class="haze" x="${SURFACE.x}" y="${SURFACE.y}" width="${SURFACE.w}" height="${SURFACE.h}" fill="url(#planet-haze)"/>${lands}${lanes}</g>${atmosphere}`;
+  $("world-svg").innerHTML = `<defs><clipPath id="planet-clip"><circle cx="${hx}" cy="${cy}" r="${hr}"/></clipPath><linearGradient id="planet-day" gradientUnits="userSpaceOnUse" x1="-40" y1="-20" x2="260" y2="60"><stop offset="0" class="day-lit"/><stop offset="0.45" class="day-mid"/><stop offset="1" class="day-night"/></linearGradient><radialGradient id="planet-haze" gradientUnits="userSpaceOnUse" cx="${hx}" cy="${cy}" r="${hr}"><stop offset="${(hr - 18) / hr}" class="haze-clear"/><stop offset="1" class="haze-thick"/></radialGradient></defs><rect class="space" x="-200" y="-150" width="${WORLD_W + 400}" height="${WORLD_H + 300}"/><g class="stars">${sky}</g><g class="planet" clip-path="url(#planet-clip)">${grounds}${`<image class="surface" x="${SURFACE.x}" y="${SURFACE.y}" width="${SURFACE.w}" height="${SURFACE.h}" preserveAspectRatio="none"/>`.repeat(2)}<g class="tiles"></g>${wildBorders}<rect class="daylight" x="${SURFACE.x}" y="${SURFACE.y}" width="${SURFACE.w}" height="${SURFACE.h}" fill="url(#planet-day)"/><rect class="haze" x="${SURFACE.x}" y="${SURFACE.y}" width="${SURFACE.w}" height="${SURFACE.h}" fill="url(#planet-haze)"/>${lands}${lanes}</g>${atmosphere}${decks}`;
   // A quick coarse surface first; the sharp one follows the zoomed sector's tile (`paintTile`).
   paint($("world-svg").querySelector<SVGImageElement>("image.surface")!, SURFACE, 512);
-  // Region labels: buttons on each landmass's northern shore, the sector tabs of the page (the land itself is clickable too).
+  regions.forEach((r, i) => {
+    const plating = r.station && $("world-svg").querySelector<SVGImageElement>(`.land[data-sector="${cards[i].index}"] .deck-plating`);
+    if (plating) paint(plating, r.box, 768, [{ x: r.x, y: r.y, biome: biomes[i] }]);
+  });
+  // Region labels: buttons in the north of each territory, the sector tabs of the page (the land itself is clickable too).
   $("sector-tabs").innerHTML = cards
     .map((s, i) => {
       const r = regions[i],
@@ -359,9 +437,102 @@ function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
         line = s.locked
           ? `<b class="sector-lock">${LOCK_ICON} Locked</b>`
           : `${s.won}/${s.count}${s.stars ? ` · <i class="sector-stars">${s.stars} ★</i>` : ""}`;
-      return `<button class="region" role="tab" id="sector-tab-${s.index}" data-sector="${s.index}" aria-controls="mission-list" aria-selected="false" tabindex="-1" style="--accent:${s.accent};--done:${s.won / s.count};" data-wx="${r.x}" data-wy="${round(r.y - r.ry * 0.95)}"${s.next ? ' data-next="true"' : ""}${s.won === s.count ? ' data-done="true"' : ""}${s.locked ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}${state ? ` title="${state}"` : ""} aria-label="Sector ${s.numeral}: ${escape(s.name)}, ${s.count} ${plural(s.count, "mission")}${s.locked ? `, locked. ${state}` : ""}${s.won ? `, ${s.won} cleared, ${s.stars} of ${s.count * 3} stars` : ""}${s.next ? ", holds the next mission" : ""}"><span class="region-label" aria-hidden="true"><small>${s.numeral}${s.next ? '<b class="sector-next">NEXT</b>' : ""}${isNew ? '<b class="sector-next sector-new">NEW</b>' : ""}</small><strong>${s.name}</strong><span class="region-line">${line}</span><span class="sector-bar"></span></span></button>`;
+      return `<button class="region" role="tab" id="sector-tab-${s.index}" data-sector="${s.index}" aria-controls="mission-list" aria-selected="false" tabindex="-1" style="--accent:${s.accent};--done:${s.won / s.count};" data-wx="${r.label.x}" data-wy="${r.label.y}"${s.next ? ' data-next="true"' : ""}${s.won === s.count ? ' data-done="true"' : ""}${s.locked ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}${state ? ` title="${state}"` : ""} aria-label="Sector ${s.numeral}: ${escape(s.name)}${r.station ? ", a station in orbit" : ""}, ${s.count} ${plural(s.count, "mission")}${s.locked ? `, locked. ${state}` : ""}${s.won ? `, ${s.won} cleared, ${s.stars} of ${s.count * 3} stars` : ""}${s.next ? ", holds the next mission" : ""}"><span class="region-label" aria-hidden="true"><small>${s.numeral}${r.station ? '<b class="sector-orbit">IN ORBIT</b>' : ""}${s.next ? '<b class="sector-next">NEXT</b>' : ""}${isNew ? '<b class="sector-next sector-new">NEW</b>' : ""}</small><strong>${s.name}</strong><span class="region-line">${line}</span><span class="sector-bar"></span></span></button>`;
     })
     .join("");
+  // The world bar: this world's name, the worlds before and after it.
+  const at = entries.indexOf(entry),
+    hop = (i: number, dir: "prev" | "next") => {
+      const other = entries[i];
+      return other
+        ? `<button class="world-hop" data-planet="${i}" data-dir="${dir}" aria-label="Go to ${escape(other.world.name)}">${dir === "prev" ? "‹ " : ""}${escape(other.world.name)}${dir === "next" ? " ›" : ""}</button>`
+        : '<span class="world-hop" aria-hidden="true"></span>';
+    };
+  $("world-nav").innerHTML = `${hop(at - 1, "prev")}<p class="world-name"><strong>${escape(entry.world.name)}</strong><small>${escape(entry.world.epithet)}</small></p>${hop(at + 1, "next")}`;
+}
+/** Worlds whose every sector is locked: shown as silhouettes in the system view. */
+const worldLocked = (entry: WorldEntry, locks: ReadonlyMap<string, Lock>) => entry.sectors.every((s) => sectorLocked(s, locks));
+/** The coarse surface picture of each world, for its sphere in the system view. */
+const spheres = new Map<string, Promise<string>>();
+/**
+ * The star system: a sun on the left, the planets on their orbits and the moon around the last planet, each a
+ * slowly turning sphere of its own painted surface with a ring of the missions won. Locked worlds show dark.
+ */
+function renderSystem(game: Game, options: AtlasOptions) {
+  const { record = {}, locks = NO_LOCKS } = options,
+    { missions } = game.content,
+    sectors = game.content.sectors ?? [];
+  drawn = null;
+  const next = [false, true].map((circle) => modeNext(sectors, circle, record, locks));
+  $("system-bodies").innerHTML = entries
+    .map((entry, i) => {
+      const { world: w } = entry,
+        list = entry.sectors.flatMap((s) => s.missions),
+        { won, stars, count } = progressOf(list, record),
+        locked = worldLocked(entry, locks),
+        lock = locked ? locks.get(entry.sectors[0].missions[0].id) : undefined,
+        holdsNext = next.some((m) => !!m && list.includes(m)),
+        line = locked && lock ? lockText(lock, missions, sectors) : `${won}/${count} cleared${stars ? ` · ${stars} ★` : ""}`,
+        short = locked ? `${LOCK_ICON} Locked` : `${won}/${count}${stars ? ` · ${stars} ★` : ""}`,
+        span = `${roman(sectors.indexOf(entry.sectors[0]))}–${roman(sectors.indexOf(entry.sectors.at(-1)!))}`;
+      return `<button class="world-body" data-planet="${i}" style="--atmo:${w.atmosphere};--done:${count ? won / count : 0}"${w.moon ? ' data-moon="true"' : ""}${locked ? ' data-locked="true"' : ""}${holdsNext ? ' data-next="true"' : ""}${entry === world.entry ? ' aria-current="true"' : ""} aria-label="${escape(w.name)}, ${escape(w.epithet)}, sectors ${span}. ${escape(line)}"><span class="body-sphere" aria-hidden="true"><svg class="body-ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" pathLength="1"/><circle class="body-done" cx="50" cy="50" r="48" pathLength="1"/></svg></span><span class="body-label" aria-hidden="true"><small>${escape(w.epithet)} · ${span}${holdsNext ? ' <b class="sector-next">NEXT</b>' : ""}</small><strong>${escape(w.name)}</strong><span class="body-line">${locked ? `${LOCK_ICON} ` : ""}${escape(line)}</span><span class="body-short">${short}</span></span></button>`;
+    })
+    .join("");
+  entries.forEach((entry, i) => {
+    let picture = spheres.get(entry.world.id);
+    if (!picture) {
+      picture = surfaceImage(layoutOf(entry).seeds, SURFACE, 512, Math.round((512 * SURFACE.h) / SURFACE.w));
+      picture.catch(() => spheres.delete(entry.world.id));
+      spheres.set(entry.world.id, picture);
+    }
+    picture.then(
+      (url) => {
+        const sphere = $("system-bodies").querySelector<HTMLElement>(`[data-planet="${i}"] .body-sphere`);
+        sphere?.style.setProperty("--surface", `url("${url}")`);
+      },
+      () => {},
+    );
+  });
+  placeSystem();
+}
+/** The system layout the SVG shows ("wide" or "narrow"), redrawn when the view crosses the phone width. */
+let drawn: keyof typeof SYSTEM | null = null;
+/** The sun and the orbits of one layout: planets around the sun, the moon around the last planet. */
+function drawOrbits(layout: keyof typeof SYSTEM) {
+  const { w, h, sun } = SYSTEM[layout],
+    at = (e: WorldEntry) => (layout === "narrow" ? e.world.orbitNarrow : e.world.orbit),
+    // An orbit through `p` around `c`, flattened by `k`.
+    orbit = (c: Point, p: Point, k: number) => {
+      const rx = Math.sqrt((p.x - c.x) ** 2 + ((p.y - c.y) / k) ** 2);
+      return `<ellipse class="orbit" cx="${c.x}" cy="${c.y}" rx="${round(rx)}" ry="${round(rx * k)}"/>`;
+    },
+    host = entries.filter((e) => !e.world.moon).at(-1),
+    orbits = entries.map((e) => (e.world.moon && host ? orbit(at(host), at(e), 0.55) : orbit(sun, at(e), layout === "narrow" ? 0.7 : 0.4))).join(""),
+    svg = $("system-svg");
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  svg.innerHTML = `<defs><radialGradient id="sun-glow"><stop offset="0" class="sun-core"/><stop offset="0.25" class="sun-mid"/><stop offset="1" class="sun-edge"/></radialGradient></defs><circle class="sun" cx="${sun.x}" cy="${sun.y}" r="${sun.r}" fill="url(#sun-glow)"/>${orbits}`;
+  drawn = layout;
+}
+/** Places the worlds of the system view over its SVG, which fits the layout's plane into the view (meet). */
+function placeSystem() {
+  const view = $("world-view"),
+    width = view.clientWidth,
+    height = view.clientHeight,
+    layout = width < 600 ? "narrow" : "wide",
+    { w, h } = SYSTEM[layout],
+    scale = Math.min(width / w, height / h),
+    ox = (width - w * scale) / 2,
+    oy = (height - h * scale) / 2;
+  if (!width) return;
+  if (drawn !== layout) drawOrbits(layout);
+  $("system-view").toggleAttribute("data-narrow", layout === "narrow");
+  for (const el of $("system-bodies").querySelectorAll<HTMLElement>("[data-planet]")) {
+    const world = entries[Number(el.dataset.planet)]?.world,
+      o = world && (layout === "narrow" ? world.orbitNarrow : world.orbit);
+    if (!o) continue;
+    el.style.transform = `translate(${Math.round(ox + o.x * scale)}px, ${Math.round(oy + o.y * scale)}px)`;
+    el.style.setProperty("--size", `${Math.round(o.r * 2 * scale)}px`);
+  }
 }
 /**
  * The mission that steps aside from its sector's route: the special operation with restricted towers, unless it
@@ -396,8 +567,8 @@ function surfaceWidth(box: Box, span: number) {
   return Math.max(256, Math.min(cap, wide, Math.floor(Math.sqrt((3e6 * box.w) / box.h))));
 }
 /** Paints the surface in `box` into an SVG image, which fades in once the picture is there. */
-function paint(el: SVGImageElement, box: Box, width: number) {
-  surfaceImage(seeds, box, width, Math.round((width * box.h) / box.w)).then(
+function paint(el: SVGImageElement, box: Box, width: number, from: readonly SurfaceSeed[] = seeds) {
+  surfaceImage(from, box, width, Math.round((width * box.h) / box.w)).then(
     (url) => {
       if (!el.isConnected) return;
       el.onload = () => el.classList.add("is-ready");
@@ -408,14 +579,15 @@ function paint(el: SVGImageElement, box: Box, width: number) {
 }
 /**
  * A sharper picture of the selected sector's territory over the whole surface's, once per sector and world, then
- * the whole surface at full size (the worker paints in order, so the zoomed sector comes first).
+ * the whole surface at full size (the worker paints in order, so the zoomed sector comes first). A station's deck
+ * is painted sharp from the start.
  */
 function paintTile(at: number) {
   const svg = $("world-svg"),
     tiles = svg.querySelector(".tiles"),
     region = world.regions[at],
     full = svg.querySelectorAll<SVGImageElement>("image.surface")[1];
-  if (tiles && region && !tiles.querySelector(`[data-tile="${at}"]`)) tile(tiles, at, region);
+  if (tiles && region && !region.station && !tiles.querySelector(`[data-tile="${at}"]`)) tile(tiles, at, region);
   if (full && !full.dataset.painted) {
     full.dataset.painted = "true";
     paint(full, SURFACE, surfaceWidth(SURFACE, WORLD_BOX.w));
@@ -433,8 +605,8 @@ function tile(tiles: Element, at: number, region: Region) {
   tiles.append(el);
   paint(el, box, surfaceWidth(box, stationBox(world.stations[at], 9, 8).w));
 }
-/** Marks the sector's landmass, places its stations, zooms into it and features a mission. */
-function showSector(game: Game, sector: MissionSector | undefined, options: AtlasOptions, pickedId: string | undefined) {
+/** Marks the sector's territory, places its stations, zooms into it (unless `fly` is false) and features a mission. */
+function showSector(game: Game, sector: MissionSector | undefined, options: AtlasOptions, pickedId: string | undefined, fly = true) {
   const { missions } = game.content,
     sectors = game.content.sectors ?? [],
     record = options.record ?? {},
@@ -478,7 +650,7 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
       return `<button class="mission-node" data-pick="${m.id}" data-wx="${p.x}" data-wy="${p.y}" aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${flags} title="${escape(title)}"><span class="node-mark"><span class="node-number">${pad(n)}</span>${lock ? LOCK_ICON : ""}</span><span class="node-stem" aria-hidden="true"></span><span class="node-copy"><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (in progress)</span>' : ""}${m === next ? '<span class="sr-only"> (next)</span>' : ""}${lock ? '<span class="sr-only"> (locked)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${lock ? "Locked" : `${i === aside ? "Special op · " : ""}${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}`}</small></span>${tags}</button>`;
     })
     .join("");
-  zoom = "sector";
+  zoom = fly ? "sector" : "planet";
   paintTile(at);
   // A frame later, so a fresh render shows the whole world first and then flies in.
   requestAnimationFrame(() => fitWorld(true));

@@ -10,7 +10,7 @@ import { isSupport } from "../systems/attacks";
 import { openUpgrades } from "../core/upgrades";
 import type { MatchCommand } from "../core/match";
 import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderMission, renderTowerCodexPage, TOWER_KEYS } from "../ui/interface";
-import { type AtlasOptions, fitWorld, renderAtlas, selectMission as featureMission, selectSector, toggleWorld } from "../ui/sector-atlas";
+import { type AtlasOptions, fitWorld, renderAtlas, selectMission as featureMission, selectSector, selectWorld, toggleWorld } from "../ui/sector-atlas";
 import { terrainImage } from "../render/terrain-snapshot";
 import { describeResult } from "../ui/messages";
 import { playerName } from "../ui/players";
@@ -443,6 +443,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     if (!b) return;
     if (b.dataset.back !== undefined) return screens.back();
     if (b.dataset.worldZoom !== undefined) return toggleWorld();
+    if (b.dataset.planet) return selectWorld(game, Number(b.dataset.planet), atlas());
     if (b.dataset.tower) return choose(b.dataset.tower as TowerId);
     if (b.dataset.mission) return selectMission(b.dataset.mission);
     if (b.dataset.pick) return pickMission(b.dataset.pick);
