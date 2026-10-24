@@ -9,7 +9,7 @@ import { enemyIcon } from "./wave-forecast";
 import type { CampaignRecord } from "../app/progress";
 import { starText } from "../app/rating";
 import { type Lock, sectorLocked, type Unlocked } from "../app/campaign-unlock";
-import { type Box, fitBox, HORIZON, link, planetLayout, project, type Region, stars, stationBox, stationPoints, type Point, SURFACE, tiltFor, WORLD_BOX, WORLD_H, WORLD_W } from "./world-map";
+import { type Box, fitBox, headingOf, HORIZON, link, planetLayout, project, type Region, routePoints, routeShape, stars, stationBox, type Point, SURFACE, tiltFor, WORLD_BOX, WORLD_H, WORLD_W } from "./world-map";
 import { biomeGround, type SurfaceSeed } from "./planet-surface";
 import { surfaceImage } from "./planet-texture";
 /**
@@ -301,7 +301,14 @@ function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
   $("mode-rules").hidden = !circle;
   const { regions, wilds } = planetLayout(group.length),
     cards = atlasSectors(content, circle, record, locks);
-  const stations = group.map((s, i) => stationPoints(regions[i], s.missions.length, sectors.indexOf(s)));
+  const stations = group.map((s, i) =>
+    routePoints(regions[i], s.missions.length, {
+      shape: routeShape(s.missions[0].map.theme ?? "outpost", isCircleSector(s)),
+      heading: headingOf(regions, i),
+      mirror: i % 2 === 1,
+      aside: asideOf(s.missions),
+    }),
+  );
   world = { sectors: group, regions, stations, selected: -1 };
   seeds = [...regions.map((r, i) => ({ x: r.x, y: r.y, biome: group[i].missions[0].map.theme ?? "outpost" })), ...wilds.map((w) => ({ x: w.x, y: w.y, biome: "waste" as const }))];
   contentIndex = new Map(group.map((s) => [s, sectors.indexOf(s)]));
@@ -319,9 +326,8 @@ function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
       .map((r, i) => {
         const s = cards[i],
           list = group[i].missions,
-          routes = stations[i]
-            .slice(1)
-            .map((p, j) => `<path class="route" data-state="${record[list[j].id] && record[list[j + 1].id] ? "lit" : locks.has(list[j + 1].id) ? "locked" : "open"}" d="${link(stations[i][j], p)}"/>`)
+          routes = routeLinks(list, !circle)
+            .map(([a, b, skip]) => `<path class="route${skip ? " skip" : ""}" data-state="${record[list[a].id] && record[list[b].id] ? "lit" : locks.has(list[b].id) ? "locked" : "open"}" d="${link(stations[i][a], stations[i][b])}"/>`)
             .join(""),
           dots = stations[i]
             .map((p, j) => `<circle class="dot" data-state="${record[list[j].id] ? "won" : locks.has(list[j].id) ? "locked" : "open"}" cx="${p.x}" cy="${p.y}" r="1"/>`)
@@ -356,6 +362,26 @@ function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
       return `<button class="region" role="tab" id="sector-tab-${s.index}" data-sector="${s.index}" aria-controls="mission-list" aria-selected="false" tabindex="-1" style="--accent:${s.accent};--done:${s.won / s.count};" data-wx="${r.x}" data-wy="${round(r.y - r.ry * 0.95)}"${s.next ? ' data-next="true"' : ""}${s.won === s.count ? ' data-done="true"' : ""}${s.locked ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}${state ? ` title="${state}"` : ""} aria-label="Sector ${s.numeral}: ${escape(s.name)}, ${s.count} ${plural(s.count, "mission")}${s.locked ? `, locked. ${state}` : ""}${s.won ? `, ${s.won} cleared, ${s.stars} of ${s.count * 3} stars` : ""}${s.next ? ", holds the next mission" : ""}"><span class="region-label" aria-hidden="true"><small>${s.numeral}${s.next ? '<b class="sector-next">NEXT</b>' : ""}${isNew ? '<b class="sector-next sector-new">NEW</b>' : ""}</small><strong>${s.name}</strong><span class="region-line">${line}</span><span class="sector-bar"></span></span></button>`;
     })
     .join("");
+}
+/**
+ * The mission that steps aside from its sector's route: the special operation with restricted towers, unless it
+ * is the finale.
+ */
+export function asideOf(missions: readonly MissionDefinition[]) {
+  const i = missions.findIndex((m) => m.availableTowers);
+  return i >= 0 && i < missions.length - 1 ? i : undefined;
+}
+/**
+ * The links between a sector's missions as index pairs: each to the next and, where campaign unlocks apply (a win
+ * opens the next two), a fainter skip link to the one after (`true`).
+ */
+export function routeLinks(missions: readonly unknown[], skips: boolean): [number, number, boolean][] {
+  const links: [number, number, boolean][] = [];
+  for (let j = 0; j + 1 < missions.length; j++) {
+    links.push([j, j + 1, false]);
+    if (skips && j + 2 < missions.length) links.push([j, j + 2, true]);
+  }
+  return links;
 }
 /** The territories' seeds and biomes of the shown world, for its surface pictures. */
 let seeds: SurfaceSeed[] = [];
@@ -431,7 +457,8 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
   const list = $("mission-list"),
     progress = progressOf(shown, record),
     closed = !!sector && sectorLocked(sector, locks),
-    points = at >= 0 ? stationPoints(world.regions[at], shown.length, sectors.indexOf(sector!)) : [];
+    points = at >= 0 ? world.stations[at] : [],
+    aside = asideOf(shown);
   list.setAttribute("aria-label", sector ? `Missions of sector ${roman(sectors.indexOf(sector))}, ${sector.name}` : "Missions");
   $("missions-label").innerHTML = sector ? `<small>Sector ${roman(sectors.indexOf(sector))}</small> ${sector.name}` : "Missions";
   $("missions-progress").textContent = closed
@@ -445,10 +472,10 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
         lock = locks.get(m.id),
         isNew = fresh(m, options),
         p = points[i] ?? { x: 0, y: 0 },
-        flags = `${best ? ' data-won="true"' : ""}${m === next ? ' data-next="true"' : ""}${i === shown.length - 1 && shown.length > 1 ? ' data-final="true"' : ""}${lock ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}`,
+        flags = `${best ? ' data-won="true"' : ""}${m === next ? ' data-next="true"' : ""}${i === shown.length - 1 && shown.length > 1 ? ' data-final="true"' : ""}${i === aside ? ' data-special="true"' : ""}${lock ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}`,
         tags = `${m === next ? '<b class="node-tag" data-tag="next">Next</b>' : ""}${loaded ? '<b class="node-tag" data-tag="loaded">Loaded</b>' : ""}${isNew && m !== next ? '<b class="node-tag" data-tag="new">New</b>' : ""}`,
         title = lock ? `${m.focus} · ${lockText(lock, missions, sectors)}` : m.focus;
-      return `<button class="mission-node" data-pick="${m.id}" data-wx="${p.x}" data-wy="${p.y}" aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${flags} title="${escape(title)}"><span class="node-mark"><span class="node-number">${pad(n)}</span>${lock ? LOCK_ICON : ""}</span><span class="node-stem" aria-hidden="true"></span><span class="node-copy"><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (in progress)</span>' : ""}${m === next ? '<span class="sr-only"> (next)</span>' : ""}${lock ? '<span class="sr-only"> (locked)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${lock ? "Locked" : `${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}`}</small></span>${tags}</button>`;
+      return `<button class="mission-node" data-pick="${m.id}" data-wx="${p.x}" data-wy="${p.y}" aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${flags} title="${escape(title)}"><span class="node-mark"><span class="node-number">${pad(n)}</span>${lock ? LOCK_ICON : ""}</span><span class="node-stem" aria-hidden="true"></span><span class="node-copy"><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (in progress)</span>' : ""}${m === next ? '<span class="sr-only"> (next)</span>' : ""}${lock ? '<span class="sr-only"> (locked)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${lock ? "Locked" : `${i === aside ? "Special op · " : ""}${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}`}</small></span>${tags}</button>`;
     })
     .join("");
   zoom = "sector";

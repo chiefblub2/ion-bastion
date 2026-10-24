@@ -6,6 +6,7 @@
  * `sector-atlas.ts` draws it. Everything is a pure function of the sector count and index, so the map never moves
  * between visits.
  */
+import type { MapTheme } from "../core/types";
 export const WORLD_W = 200;
 export const WORLD_H = 100;
 export interface Point {
@@ -210,18 +211,171 @@ export function planetLayout(count: number): Planet {
 /** The territory of every sector, in play order along the serpentine. */
 export const worldLayout = (count: number): Region[] => planetLayout(count).regions;
 /**
- * Where a sector's missions sit in its territory: evenly across it in travel direction, zigzagging up and down, with
- * a small per-sector offset so neighbouring sectors differ.
+ * The shapes a sector's route of missions can take, as points in the territory's own frame: `x` runs from the
+ * entry (-1) towards the exit (+1), `y` across it, both scaled to the room the territory has (`frameOf`). Each has
+ * five points; other mission counts are sampled along it.
  */
-export function stationPoints(region: Region, count: number, seed: number): Point[] {
-  const span = region.rx * 1.3,
-    rise = region.ry * 0.34;
+export const ROUTE_SHAPES = {
+  chain: [
+    [-1, 0.15],
+    [-0.5, -0.3],
+    [0, 0.25],
+    [0.5, -0.25],
+    [1, 0.1],
+  ],
+  // Two branches that meet again: the second and third missions side by side.
+  fork: [
+    [-1, 0],
+    [-0.35, -0.55],
+    [-0.25, 0.5],
+    [0.4, -0.05],
+    [1, 0.05],
+  ],
+  climb: [
+    [-1, 0.65],
+    [-0.5, 0.2],
+    [0.02, 0.45],
+    [0.45, -0.15],
+    [0.95, -0.6],
+  ],
+  // Inwards to the finale at the centre.
+  spiral: [
+    [-1, 0],
+    [-0.07, -0.8],
+    [0.59, -0.1],
+    [0.1, 0.39],
+    [0, 0],
+  ],
+  hop: [
+    [-1, 0.4],
+    [-0.45, -0.5],
+    [0.05, 0.5],
+    [0.5, -0.45],
+    [1, 0.3],
+  ],
+  ridge: [
+    [-1, -0.45],
+    [-0.5, -0.3],
+    [0, 0.08],
+    [0.5, 0.2],
+    [1, 0.5],
+  ],
+  arc: [
+    [-1, 0.5],
+    [-0.6, -0.15],
+    [0, -0.45],
+    [0.6, -0.15],
+    [1, 0.5],
+  ],
+  // Down into a cave mouth.
+  descent: [
+    [-1, -0.55],
+    [-0.45, -0.6],
+    [0, -0.15],
+    [0.35, 0.3],
+    [0.6, 0.7],
+  ],
+  meander: [
+    [-1, -0.2],
+    [-0.55, 0.45],
+    [0, -0.45],
+    [0.5, 0.4],
+    [1, -0.1],
+  ],
+  // A cross on a deck: in, two wings, the hub, out.
+  deck: [
+    [-0.95, 0],
+    [-0.35, -0.6],
+    [-0.35, 0.6],
+    [0.35, 0],
+    [0.95, 0],
+  ],
+  // Around a ring, the finale in its middle.
+  ring: [
+    [-0.9, 0.25],
+    [-0.35, -0.7],
+    [0.5, -0.65],
+    [0.9, 0.2],
+    [0, 0.1],
+  ],
+} satisfies Record<string, readonly (readonly [number, number])[]>;
+export type RouteShape = keyof typeof ROUTE_SHAPES;
+/** The route shape of a sector, from the terrain theme of its first map; ring missions circle. */
+export const THEME_ROUTES: Record<MapTheme, RouteShape> = {
+  outpost: "fork",
+  lock: "chain",
+  shard: "chain",
+  ember: "ridge",
+  core: "deck",
+  frost: "climb",
+  toxic: "hop",
+  orbit: "deck",
+  ruin: "fork",
+  rift: "spiral",
+  dune: "meander",
+  abyss: "hop",
+  storm: "spiral",
+  jungle: "arc",
+  volcano: "ridge",
+  geode: "descent",
+  gear: "ring",
+  tide: "hop",
+};
+export const routeShape = (theme: MapTheme, circle: boolean): RouteShape => (circle && theme !== "tide" ? "ring" : THEME_ROUTES[theme]);
+/**
+ * The room a route has in a territory: half the clear distance from its centre to the border along each axis
+ * (the smaller side), so every station keeps a margin to the border for its label.
+ */
+export function frameOf(region: Region): { rx: number; ry: number } {
+  const reach = (dx: number, dy: number) => {
+    let d = 0;
+    while (d < 200 && inside({ x: region.x + dx * (d + 1), y: region.y + dy * (d + 1) }, region.border)) d++;
+    return d;
+  };
+  return { rx: round(Math.min(reach(1, 0), reach(-1, 0)) * 0.68), ry: round(Math.min(reach(0, 1), reach(0, -1)) * 0.6) };
+}
+/** `count` points along a polyline, evenly by length; the polyline itself when the counts match. */
+function sample(points: readonly (readonly [number, number])[], count: number): [number, number][] {
+  if (count === points.length) return points.map(([x, y]) => [x, y]);
+  if (count === 1) return [[0, 0]];
+  const lengths = points.slice(1).map(([x, y], i) => Math.sqrt((x - points[i][0]) ** 2 + (y - points[i][1]) ** 2)),
+    total = lengths.reduce((a, b) => a + b, 0);
   return Array.from({ length: count }, (_, i) => {
-    const t = count === 1 ? 0.5 : i / (count - 1),
-      along = (region.reverse ? 1 - t : t) - 0.5,
-      side = count === 1 ? 0 : i % 2 === seed % 2 ? -1 : 1;
-    return { x: round(region.x + along * span), y: round(region.y + side * rise + (jitter(seed, i + 10) - 0.5) * rise * 0.4) };
+    let at = (total * i) / (count - 1),
+      k = 0;
+    while (k < lengths.length - 1 && at > lengths[k]) at -= lengths[k++];
+    const t = Math.min(1, at / (lengths[k] || 1)),
+      [ax, ay] = points[k],
+      [bx, by] = points[k + 1];
+    return [ax + (bx - ax) * t, ay + (by - ay) * t];
   });
+}
+export interface RouteOptions {
+  shape: RouteShape;
+  /** The direction of travel through the territory, radians: from where the route comes in to where it leaves. */
+  heading: number;
+  /** Mirror the route across its direction, so neighbours with one shape differ. */
+  mirror?: boolean;
+  /** The mission that steps aside from the route (the special operation with restricted towers). */
+  aside?: number;
+}
+/** Where a sector's missions sit in its territory: its route shape, turned to the direction of travel. */
+export function routePoints(region: Region, count: number, { shape, heading, mirror, aside }: RouteOptions): Point[] {
+  const { rx, ry } = frameOf(region),
+    cos = Math.cos(heading),
+    sin = Math.sin(heading);
+  return sample(ROUTE_SHAPES[shape], count).map(([u, v], i) => {
+    let w = mirror ? -v : v;
+    if (i === aside) w = Math.max(-1, Math.min(1, w + (w < 0 ? -0.45 : 0.45)));
+    // Turned in the unit frame, then stretched to the territory's room.
+    return { x: round(region.x + (u * cos - w * sin) * rx), y: round(region.y + (u * sin + w * cos) * ry) };
+  });
+}
+/** The heading of sector `i` of a chain of centres: from the one before it towards the one after it. */
+export function headingOf(centres: readonly Point[], i: number): number {
+  const a = centres[Math.max(0, i - 1)],
+    b = centres[Math.min(centres.length - 1, i + 1)];
+  return a === b ? 0 : Math.atan2(b.y - a.y, b.x - a.x);
 }
 /** A straight SVG path from `a` to `b`. */
 export const link = (a: Point, b: Point) => `M${a.x} ${a.y}L${b.x} ${b.y}`;

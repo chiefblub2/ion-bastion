@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fitBox, inside, jaggedBorder, planetLayout, project, stationPoints, tiltFor, voronoiCell, WORLD_H, WORLD_W, worldLayout, worldRows } from "./world-map";
+import { fitBox, headingOf, inside, jaggedBorder, planetLayout, project, ROUTE_SHAPES, type RouteShape, routePoints, tiltFor, voronoiCell, WORLD_H, WORLD_W, worldLayout, worldRows } from "./world-map";
 describe("world map", () => {
   it("lays the campaign out as a serpentine of territories", () => {
     const regions = worldLayout(12);
@@ -49,17 +49,21 @@ describe("world map", () => {
     expect(a.size).toBeGreaterThan(20);
     expect([...a].filter((p) => b.has(p)).length).toBeGreaterThan(a.size * 0.9);
   });
-  it("places a sector's stations inside its territory in travel direction, zigzagging", () => {
-    const regions = worldLayout(12),
-      [ahead, , , , back] = regions,
-      forward = stationPoints(ahead, 5, 0),
-      reverse = stationPoints(back, 5, 4);
-    expect(forward.map((p) => p.x)).toEqual([...forward.map((p) => p.x)].sort((a, b) => a - b));
-    expect(reverse.map((p) => p.x)).toEqual([...reverse.map((p) => p.x)].sort((a, b) => b - a));
-    expect(forward.every((p, i) => i === 0 || p.y > ahead.y !== forward[i - 1].y > ahead.y)).toBe(true);
-    regions.forEach((r, i) => {
-      for (const p of stationPoints(r, 5, i)) expect(inside(p, r.border)).toBe(true);
-    });
+  it("lays every route shape into each territory, from its entry towards its exit", () => {
+    const regions = worldLayout(12);
+    for (const shape of Object.keys(ROUTE_SHAPES) as RouteShape[])
+      regions.forEach((r, i) => {
+        for (const count of [3, 5]) for (const p of routePoints(r, count, { shape, heading: headingOf(regions, i), aside: 1 })) expect(inside(p, r.border)).toBe(true);
+      });
+    const east = routePoints(regions[0], 5, { shape: "chain", heading: 0 }),
+      west = routePoints(regions[0], 5, { shape: "chain", heading: Math.PI });
+    expect(east[0].x).toBeLessThan(east[4].x);
+    expect(west[0].x).toBeGreaterThan(west[4].x);
+    // The mission stepping aside moves away from the route.
+    const plain = routePoints(regions[0], 5, { shape: "chain", heading: 0 }),
+      aside = routePoints(regions[0], 5, { shape: "chain", heading: 0, aside: 2 });
+    expect(Math.abs(aside[2].y - regions[0].y)).toBeGreaterThan(Math.abs(plain[2].y - regions[0].y));
+    expect(aside[1]).toEqual(plain[1]);
   });
   it("fits a box centred into the view", () => {
     const box = { x: 50, y: 20, w: 40, h: 20 },

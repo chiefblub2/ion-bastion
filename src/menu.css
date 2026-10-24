@@ -1046,7 +1046,8 @@
   stroke-linecap: round;
 }
 .world-svg .route {
-  stroke: #ffffff59;
+  filter: drop-shadow(0 0 calc(1.5px * var(--inv)) #000c);
+  stroke: #ffffff8c;
   stroke-width: calc(1.5px * var(--inv));
   stroke-dasharray: calc(5px * var(--inv)) calc(4px * var(--inv));
 }
@@ -1059,6 +1060,15 @@
 .world-svg .route[data-state="locked"] {
   stroke: #ffffff26;
   stroke-dasharray: calc(2px * var(--inv)) calc(4px * var(--inv));
+}
+/* The skip link: a win opens the next two missions, so a hard one can be passed. */
+.world-svg .route.skip {
+  stroke-width: calc(1px * var(--inv));
+  stroke-dasharray: calc(1.5px * var(--inv)) calc(5px * var(--inv));
+  opacity: 0.55;
+}
+.world-svg .route.skip[data-state="lit"] {
+  filter: none;
 }
 /* Links between sectors: open ones glow faintly in the mode colour. */
 .world-svg .lane {
@@ -1693,6 +1703,17 @@
 }
 .mission-node[data-final] .node-number {
   margin-top: -3px;
+}
+/* The special operation (restricted towers) off the route: a diamond badge. */
+.mission-node[data-special] .node-mark::before,
+.mission-node[data-special] .node-mark::after {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.mission-node[data-special] .node-mark::before {
+  inset: -3px;
+}
+.mission-node[data-special] .node-mark::after {
+  inset: -1px;
 }
 .node-mark svg {
   position: absolute;
