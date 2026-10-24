@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import { isCircleSector, missionNumber } from "../content/missions";
-import { atlasNext, atlasPick, atlasSectors, lockText, progressOf } from "./sector-atlas";
+import { asideOf, atlasNext, atlasPick, atlasSectors, lockText, progressOf, routeLinks } from "./sector-atlas";
 import { campaignLocks } from "../app/campaign-unlock";
 const { missions, sectors = [] } = DEFAULT_CONTENT;
 describe("sector atlas", () => {
@@ -60,5 +60,21 @@ describe("sector atlas", () => {
     expect(atlasNext(sectors[1].missions, record, after)).toBeUndefined();
     expect(atlasPick(sectors[1].missions, record, undefined, undefined, after)).toBe(sectors[1].missions[0]);
     expect(lockText(after.get(list[3].id)!, missions, sectors)).toBe("Clear Mission 03 to unlock");
+  });
+  it("links each mission to the next, plus a skip link where campaign unlocks apply, and sets the special op aside", () => {
+    expect(routeLinks([1, 2, 3, 4], false)).toEqual([
+      [0, 1, false],
+      [1, 2, false],
+      [2, 3, false],
+    ]);
+    expect(routeLinks([1, 2, 3, 4], true).filter(([, , skip]) => skip)).toEqual([
+      [0, 2, true],
+      [1, 3, true],
+    ]);
+    for (const sector of sectors) {
+      const aside = asideOf(sector.missions);
+      if (aside !== undefined) expect(sector.missions[aside].availableTowers).toBeDefined();
+      expect(aside).not.toBe(sector.missions.length - 1);
+    }
   });
 });

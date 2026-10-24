@@ -7,7 +7,7 @@ import { borderShift, type Box, type Point } from "./world-map";
  * glowing cracks or hive plating. Everything is a function of world coordinates, so a sharper tile of one sector
  * matches the whole surface under it.
  */
-export type BiomeId = MapTheme | "waste";
+export type BiomeId = MapTheme | "waste" | "tundra" | "verdant" | "regolith";
 export interface Biome {
   /** Ground colour from low to high. */
   ramp: readonly [number, number, number];
@@ -22,6 +22,9 @@ export interface Biome {
 }
 export const BIOMES: Record<BiomeId, Biome> = {
   waste: { ramp: [0x3a2414, 0x6e4422, 0xa27046], relief: 0.75 },
+  tundra: { ramp: [0x2a3036, 0x56606a, 0x9aa6ae], relief: 0.7, sea: { level: 0.22, deep: 0x1c2e40, shallow: 0x3c5a72 } },
+  verdant: { ramp: [0x1e2a16, 0x3a4a26, 0x6e7a48], relief: 0.65, sea: { level: 0.24, deep: 0x0e2a30, shallow: 0x1f5a56 } },
+  regolith: { ramp: [0x2a2a30, 0x55555e, 0x9a98a2], relief: 0.55 },
   outpost: { ramp: [0x3a3626, 0x686244, 0xa29774], relief: 0.6 },
   lock: { ramp: [0x262c36, 0x485260, 0x7c8796], relief: 0.3, plates: 3.2 },
   shard: { ramp: [0x2c2638, 0x544a6a, 0x9488b4], relief: 0.8, cracks: 0xd8ccff },
@@ -158,7 +161,7 @@ export function paintSurface(seeds: readonly SurfaceSeed[], box: Box, width: num
         p = unwarp(x, y);
       // The two nearest seeds and the distance to their bisector: 0 on the border, BLEND or more fully inside.
       let a = 0,
-        b = 1,
+        b = seeds.length > 1 ? 1 : 0,
         da = Infinity,
         db = Infinity;
       for (let n = 0; n < seeds.length; n++) {
@@ -174,7 +177,7 @@ export function paintSurface(seeds: readonly SurfaceSeed[], box: Box, width: num
         }
       }
       const span = Math.sqrt((seeds[a].x - seeds[b].x) ** 2 + (seeds[a].y - seeds[b].y) ** 2) || 1,
-        w = 0.5 + 0.5 * Math.min(1, (db - da) / (2 * span) / BLEND),
+        w = a === b ? 1 : 0.5 + 0.5 * Math.min(1, (db - da) / (2 * span) / BLEND),
         relief = mix(biomes[b].relief, biomes[a].relief, w),
         wx = x + (noise(x * 0.06 + 40, y * 0.06) - 0.5) * 8,
         wy = y + (noise(x * 0.06, y * 0.06 + 40) - 0.5) * 8,
