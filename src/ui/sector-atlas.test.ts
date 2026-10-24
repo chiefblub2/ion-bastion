@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import { isCircleSector, missionNumber } from "../content/missions";
-import { atlasNext, atlasPick, atlasSectors, lockText, progressOf, routePath, sectorMapLayout } from "./sector-atlas";
+import { atlasNext, atlasPick, atlasSectors, lockText, progressOf } from "./sector-atlas";
 import { campaignLocks } from "../app/campaign-unlock";
 const { missions, sectors = [] } = DEFAULT_CONTENT;
 describe("sector atlas", () => {
@@ -60,12 +60,5 @@ describe("sector atlas", () => {
     expect(atlasNext(sectors[1].missions, record, after)).toBeUndefined();
     expect(atlasPick(sectors[1].missions, record, undefined, undefined, after)).toBe(sectors[1].missions[0]);
     expect(lockText(after.get(list[3].id)!, missions, sectors)).toBe("Clear Mission 03 to unlock");
-  });
-  it("lays a sector's stations out along the map, zigzagging across it", () => {
-    const points = sectorMapLayout(5, 2);
-    expect(points.map((p) => p.along)).toEqual([10, 30, 50, 70, 90]);
-    for (const [i, p] of points.entries()) expect(p.across < 50).toBe(points[(i + 1) % 5].across > 50 || i === 4);
-    expect(sectorMapLayout(5, 2)).toEqual(points);
-    expect(routePath(points[0], points[1], true)).toMatch(new RegExp(`^M${points[0].across} 10 C`));
   });
 });

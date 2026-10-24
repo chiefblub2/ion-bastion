@@ -10,7 +10,7 @@ import { isSupport } from "../systems/attacks";
 import { openUpgrades } from "../core/upgrades";
 import type { MatchCommand } from "../core/match";
 import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderMission, renderTowerCodexPage, TOWER_KEYS } from "../ui/interface";
-import { type AtlasOptions, renderAtlas, selectMission as featureMission, selectSector, stepRail, syncRailSteps } from "../ui/sector-atlas";
+import { type AtlasOptions, fitWorld, renderAtlas, selectMission as featureMission, selectSector, toggleWorld } from "../ui/sector-atlas";
 import { terrainImage } from "../render/terrain-snapshot";
 import { describeResult } from "../ui/messages";
 import { playerName } from "../ui/players";
@@ -137,9 +137,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     return lockCache.locks;
   }
   ui.locks = locks;
-  const sectorRail = document.getElementById("sector-tabs")!;
-  sectorRail.addEventListener("scroll", syncRailSteps, { passive: true });
-  new ResizeObserver(syncRailSteps).observe(sectorRail);
+  // The world map keeps its sector in view when the page resizes.
+  new ResizeObserver(() => fitWorld()).observe(document.getElementById("world-view")!);
   const screens = createScreens(playableMissions(game.content), () => game.mission.id, enter);
   /** A mission this session has played on, which "Resume Game" returns to instead of reloading it. */
   const inProgress = () => coop.active() || game.state.wave > 0 || game.state.towers.length > 0;
@@ -437,10 +436,13 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     }
     // The home page's map preview is a pointer shortcut for the primary button, which stays the keyboard route.
     if ((event.target as HTMLElement).closest("#home-map")) return runPrimary();
+    // A landmass on the atlas's world map selects its sector, like its label.
+    const land = (event.target as Element).closest<SVGGElement>("#world-svg .land");
+    if (land) return showSector(Number(land.dataset.sector), "sector-tabs");
     const b = (event.target as HTMLElement).closest("button");
     if (!b) return;
     if (b.dataset.back !== undefined) return screens.back();
-    if (b.dataset.railStep) return stepRail(Number(b.dataset.railStep));
+    if (b.dataset.worldZoom !== undefined) return toggleWorld();
     if (b.dataset.tower) return choose(b.dataset.tower as TowerId);
     if (b.dataset.mission) return selectMission(b.dataset.mission);
     if (b.dataset.pick) return pickMission(b.dataset.pick);
