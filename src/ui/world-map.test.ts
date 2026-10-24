@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fitBox, inside, jaggedBorder, planetLayout, stationPoints, voronoiCell, WORLD_H, WORLD_W, worldLayout, worldRows } from "./world-map";
+import { fitBox, inside, jaggedBorder, planetLayout, project, stationPoints, tiltFor, voronoiCell, WORLD_H, WORLD_W, worldLayout, worldRows } from "./world-map";
 describe("world map", () => {
   it("lays the campaign out as a serpentine of territories", () => {
     const regions = worldLayout(12);
@@ -68,5 +68,20 @@ describe("world map", () => {
     expect(fit.x + (box.x + box.w / 2) * unit * fit.scale).toBeCloseTo(500);
     expect(fit.y + (box.y + box.h / 2) * unit * fit.scale).toBeCloseTo(200);
     expect(fit.scale).toBeCloseTo(Math.min(1000 / (40 * unit), 400 / (20 * unit)));
+  });
+  it("projects world points through the fit and the tilt", () => {
+    const fit = { x: 100, y: 50, scale: 2 },
+      flat = { ...tiltFor(1000), deg: 0 },
+      tilt = tiltFor(1000);
+    // Untilted, a point lands where the plane's transform puts it.
+    expect(project({ x: 20, y: 10 }, fit, 1000, 400, flat)).toEqual({ x: 100 + 20 * 5 * 2, y: 50 + 10 * 5 * 2 });
+    // Tilted, the pivot stays, the far side shrinks towards it and the near side grows.
+    const pivot = { x: (500 - fit.x) / 10, y: (300 - fit.y) / 10 },
+      at = (dy: number) => project({ x: pivot.x + 10, y: pivot.y + dy }, fit, 1000, 400, tilt);
+    expect(project(pivot, fit, 1000, 400, tilt).x).toBeCloseTo(500);
+    expect(project(pivot, fit, 1000, 400, tilt).y).toBeCloseTo(300);
+    expect(at(-10).x - 500).toBeLessThan(100);
+    expect(at(10).x - 500).toBeGreaterThan(100);
+    expect(300 - at(-10).y).toBeLessThan(100);
   });
 });

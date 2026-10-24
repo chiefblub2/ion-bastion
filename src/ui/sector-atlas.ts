@@ -9,7 +9,7 @@ import { enemyIcon } from "./wave-forecast";
 import type { CampaignRecord } from "../app/progress";
 import { starText } from "../app/rating";
 import { type Lock, sectorLocked, type Unlocked } from "../app/campaign-unlock";
-import { type Box, fitBox, link, planetLayout, type Region, stationBox, stationPoints, type Point, SURFACE, WORLD_BOX, WORLD_H, WORLD_W } from "./world-map";
+import { type Box, fitBox, HORIZON, link, planetLayout, project, type Region, stars, stationBox, stationPoints, type Point, SURFACE, tiltFor, WORLD_BOX, WORLD_H, WORLD_W } from "./world-map";
 import { biomeGround, type SurfaceSeed } from "./planet-surface";
 import { surfaceImage } from "./planet-texture";
 /**
@@ -203,12 +203,12 @@ export function toggleWorld() {
   fitWorld(true);
 }
 /**
- * Moves and scales the plane so the selected sector (or the whole world) fills the view; labels keep their screen
- * size through `--inv`. Called on every change and, unanimated, when the view is resized.
+ * Moves and scales the plane so the selected sector (or the whole world) fills the view, flying there when `smooth`.
+ * The surface is tilted (CSS); labels and stations stay upright on a flat layer above it, placed where their world
+ * point lands on screen (`project`). Called on every change and, unanimated, when the view is resized.
  */
 export function fitWorld(smooth = false) {
   const view = $("world-view"),
-    plane = $("world-plane"),
     region = world.regions[world.selected],
     sector = zoom === "sector" && !!region;
   if (!view.clientWidth) return;
@@ -220,18 +220,50 @@ export function fitWorld(smooth = false) {
     fit = fitBox(box, view.clientWidth, view.clientHeight - top);
   fit.y += top;
   view.dataset.zoom = sector ? "sector" : "world";
-  plane.classList.toggle("is-flying", smooth && motion());
-  plane.style.transform = `translate(${fit.x}px, ${fit.y}px) scale(${fit.scale})`;
-  plane.style.setProperty("--inv", String(1 / fit.scale));
-  // World units per screen pixel, for sizes in the SVG (dot radii) that stay constant on screen.
-  plane.style.setProperty("--px", String(WORLD_W / (view.clientWidth * fit.scale)));
   const button = $("world-zoom");
   button.setAttribute("aria-pressed", String(!sector));
   button.innerHTML = sector
     ? '<span aria-hidden="true">◱</span> World map'
     : `<span aria-hidden="true">⊕</span> Sector ${roman(contentIndex.get(world.sectors[world.selected]) ?? 0)}`;
   button.hidden = !region;
+  cancelAnimationFrame(flight);
+  if (!smooth || !motion() || !shown) return place(fit);
+  const from = shown;
+  // New stations get their place at once, before the first frame of the flight.
+  place(from);
+  const start = performance.now(),
+    ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2),
+    frame = (now: number) => {
+      const t = Math.min(1, (now - start) / FLIGHT_MS),
+        e = ease(t);
+      place({ x: from.x + (fit.x - from.x) * e, y: from.y + (fit.y - from.y) * e, scale: from.scale + (fit.scale - from.scale) * e });
+      if (t < 1) flight = requestAnimationFrame(frame);
+    };
+  flight = requestAnimationFrame(frame);
 }
+const FLIGHT_MS = 800;
+let flight = 0,
+  shown: { x: number; y: number; scale: number } | null = null;
+/** Applies one placement of the plane: its transform, the tilt and every label's screen position. */
+function place(fit: { x: number; y: number; scale: number }) {
+  const view = $("world-view"),
+    plane = $("world-plane"),
+    width = view.clientWidth,
+    height = view.clientHeight,
+    tilt = tiltFor(width);
+  shown = fit;
+  plane.style.transform = `translate(${fit.x}px, ${fit.y}px) scale(${fit.scale})`;
+  plane.style.setProperty("--inv", String(1 / fit.scale));
+  // World units per screen pixel, for sizes in the SVG (dot radii) that stay constant on screen.
+  plane.style.setProperty("--px", String(WORLD_W / (width * fit.scale)));
+  const lean = $("world-tilt");
+  lean.style.transform = `perspective(${tilt.perspective}px) rotateX(${tilt.deg}deg)`;
+  for (const el of view.querySelectorAll<HTMLElement>("[data-wx]")) {
+    const p = project({ x: Number(el.dataset.wx), y: Number(el.dataset.wy) }, fit, width, height, tilt);
+    el.style.transform = `translate(${Math.round(p.x * 10) / 10}px, ${Math.round(p.y * 10) / 10}px)`;
+  }
+}
+const round = (n: number) => Math.round(n * 100) / 100;
 /** Content index of each shown sector, which numbers it. */
 let contentIndex = new Map<MissionSector, number>();
 /** Header, mode toggle and the world of one mode: ocean, landmasses, sea lanes and every sector's stations. */
@@ -300,7 +332,16 @@ function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
         return `<g class="land" data-sector="${s.index}" data-state="${state}" style="--accent:${s.accent}"${s.next ? ' data-next="true"' : ""}><clipPath id="land-clip-${i}"><path d="${r.outline}"/></clipPath><path class="tint" d="${r.outline}"/><path class="border" clip-path="url(#land-clip-${i})" d="${r.outline}"/>${routes}${dots}</g>`;
       })
       .join("");
-  $("world-svg").innerHTML = `<rect class="space" x="-200" y="-150" width="${WORLD_W + 400}" height="${WORLD_H + 300}"/><g class="planet">${grounds}${`<image class="surface" x="${SURFACE.x}" y="${SURFACE.y}" width="${SURFACE.w}" height="${SURFACE.h}" preserveAspectRatio="none"/>`.repeat(2)}<g class="tiles"></g>${wildBorders}${lands}${lanes}</g>`;
+  // Space with stars, the planet clipped to its curve, light from the upper left with the night side to the right,
+  // and the atmosphere's haze and rim along the horizon.
+  const { x: hx, y: hy, r: hr } = HORIZON,
+    cy = hy + hr,
+    sky = stars(140)
+      .filter((s) => (s.x - hx) ** 2 + (s.y - cy) ** 2 > (hr + 1) ** 2)
+      .map((s) => `<circle cx="${s.x}" cy="${s.y}" r="${s.r}"/>`)
+      .join(""),
+    atmosphere = ["wide", "mid", "rim"].map((k) => `<circle class="atmo atmo-${k}" cx="${hx}" cy="${cy}" r="${hr}"/>`).join("");
+  $("world-svg").innerHTML = `<defs><clipPath id="planet-clip"><circle cx="${hx}" cy="${cy}" r="${hr}"/></clipPath><linearGradient id="planet-day" gradientUnits="userSpaceOnUse" x1="-40" y1="-20" x2="260" y2="60"><stop offset="0" class="day-lit"/><stop offset="0.45" class="day-mid"/><stop offset="1" class="day-night"/></linearGradient><radialGradient id="planet-haze" gradientUnits="userSpaceOnUse" cx="${hx}" cy="${cy}" r="${hr}"><stop offset="${(hr - 18) / hr}" class="haze-clear"/><stop offset="1" class="haze-thick"/></radialGradient></defs><rect class="space" x="-200" y="-150" width="${WORLD_W + 400}" height="${WORLD_H + 300}"/><g class="stars">${sky}</g><g class="planet" clip-path="url(#planet-clip)">${grounds}${`<image class="surface" x="${SURFACE.x}" y="${SURFACE.y}" width="${SURFACE.w}" height="${SURFACE.h}" preserveAspectRatio="none"/>`.repeat(2)}<g class="tiles"></g>${wildBorders}<rect class="daylight" x="${SURFACE.x}" y="${SURFACE.y}" width="${SURFACE.w}" height="${SURFACE.h}" fill="url(#planet-day)"/><rect class="haze" x="${SURFACE.x}" y="${SURFACE.y}" width="${SURFACE.w}" height="${SURFACE.h}" fill="url(#planet-haze)"/>${lands}${lanes}</g>${atmosphere}`;
   // A quick coarse surface first; the sharp one follows the zoomed sector's tile (`paintTile`).
   paint($("world-svg").querySelector<SVGImageElement>("image.surface")!, SURFACE, 512);
   // Region labels: buttons on each landmass's northern shore, the sector tabs of the page (the land itself is clickable too).
@@ -312,7 +353,7 @@ function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
         line = s.locked
           ? `<b class="sector-lock">${LOCK_ICON} Locked</b>`
           : `${s.won}/${s.count}${s.stars ? ` · <i class="sector-stars">${s.stars} ★</i>` : ""}`;
-      return `<button class="region" role="tab" id="sector-tab-${s.index}" data-sector="${s.index}" aria-controls="mission-list" aria-selected="false" tabindex="-1" style="--accent:${s.accent};--done:${s.won / s.count};left:${(r.x / WORLD_W) * 100}%;top:${((r.y - r.ry * 0.95) / WORLD_H) * 100}%"${s.next ? ' data-next="true"' : ""}${s.won === s.count ? ' data-done="true"' : ""}${s.locked ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}${state ? ` title="${state}"` : ""} aria-label="Sector ${s.numeral}: ${escape(s.name)}, ${s.count} ${plural(s.count, "mission")}${s.locked ? `, locked. ${state}` : ""}${s.won ? `, ${s.won} cleared, ${s.stars} of ${s.count * 3} stars` : ""}${s.next ? ", holds the next mission" : ""}"><span class="region-label" aria-hidden="true"><small>${s.numeral}${s.next ? '<b class="sector-next">NEXT</b>' : ""}${isNew ? '<b class="sector-next sector-new">NEW</b>' : ""}</small><strong>${s.name}</strong><span class="region-line">${line}</span><span class="sector-bar"></span></span></button>`;
+      return `<button class="region" role="tab" id="sector-tab-${s.index}" data-sector="${s.index}" aria-controls="mission-list" aria-selected="false" tabindex="-1" style="--accent:${s.accent};--done:${s.won / s.count};" data-wx="${r.x}" data-wy="${round(r.y - r.ry * 0.95)}"${s.next ? ' data-next="true"' : ""}${s.won === s.count ? ' data-done="true"' : ""}${s.locked ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}${state ? ` title="${state}"` : ""} aria-label="Sector ${s.numeral}: ${escape(s.name)}, ${s.count} ${plural(s.count, "mission")}${s.locked ? `, locked. ${state}` : ""}${s.won ? `, ${s.won} cleared, ${s.stars} of ${s.count * 3} stars` : ""}${s.next ? ", holds the next mission" : ""}"><span class="region-label" aria-hidden="true"><small>${s.numeral}${s.next ? '<b class="sector-next">NEXT</b>' : ""}${isNew ? '<b class="sector-next sector-new">NEW</b>' : ""}</small><strong>${s.name}</strong><span class="region-line">${line}</span><span class="sector-bar"></span></span></button>`;
     })
     .join("");
 }
@@ -407,7 +448,7 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
         flags = `${best ? ' data-won="true"' : ""}${m === next ? ' data-next="true"' : ""}${i === shown.length - 1 && shown.length > 1 ? ' data-final="true"' : ""}${lock ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}`,
         tags = `${m === next ? '<b class="node-tag" data-tag="next">Next</b>' : ""}${loaded ? '<b class="node-tag" data-tag="loaded">Loaded</b>' : ""}${isNew && m !== next ? '<b class="node-tag" data-tag="new">New</b>' : ""}`,
         title = lock ? `${m.focus} · ${lockText(lock, missions, sectors)}` : m.focus;
-      return `<button class="mission-node" data-pick="${m.id}" style="left:${(p.x / WORLD_W) * 100}%;top:${(p.y / WORLD_H) * 100}%" aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${flags} title="${escape(title)}"><span class="node-mark"><span class="node-number">${pad(n)}</span>${lock ? LOCK_ICON : ""}</span><span class="node-stem" aria-hidden="true"></span><span class="node-copy"><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (in progress)</span>' : ""}${m === next ? '<span class="sr-only"> (next)</span>' : ""}${lock ? '<span class="sr-only"> (locked)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${lock ? "Locked" : `${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}`}</small></span>${tags}</button>`;
+      return `<button class="mission-node" data-pick="${m.id}" data-wx="${p.x}" data-wy="${p.y}" aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${flags} title="${escape(title)}"><span class="node-mark"><span class="node-number">${pad(n)}</span>${lock ? LOCK_ICON : ""}</span><span class="node-stem" aria-hidden="true"></span><span class="node-copy"><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (in progress)</span>' : ""}${m === next ? '<span class="sr-only"> (next)</span>' : ""}${lock ? '<span class="sr-only"> (locked)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${lock ? "Locked" : `${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}`}</small></span>${tags}</button>`;
     })
     .join("");
   zoom = "sector";

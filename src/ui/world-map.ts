@@ -225,8 +225,17 @@ export function stationPoints(region: Region, count: number, seed: number): Poin
 }
 /** A straight SVG path from `a` to `b`. */
 export const link = (a: Point, b: Point) => `M${a.x} ${a.y}L${b.x} ${b.y}`;
-/** The whole world with a margin for the labels along its edges. */
-export const WORLD_BOX: Box = { x: -4, y: -9, w: WORLD_W + 8, h: WORLD_H + 13 };
+/**
+ * The planet's curve: a circle whose top touches `y` over the world's middle, so the horizon bends down towards
+ * the sides; above it is space.
+ */
+export const HORIZON = { x: WORLD_W / 2, y: -15, r: 700 };
+/** The whole world with a margin for the labels along its edges and a strip of the horizon above it. */
+export const WORLD_BOX: Box = { x: -4, y: -17, w: WORLD_W + 8, h: WORLD_H + 21 };
+/** Stars above the horizon: position and radius, the same on every visit. */
+export function stars(count: number): (Point & { r: number })[] {
+  return Array.from({ length: count }, (_, i) => ({ x: round(-80 + jitter(i, 40) * 360), y: round(-90 + jitter(i, 41) * 80), r: round(0.12 + jitter(i, 42) ** 3 * 0.35) }));
+}
 /** What a sector zoom shows: its stations with room around them for the labels (`mx`, `my` world units). */
 export function stationBox(points: readonly Point[], mx: number, my: number): Box {
   const xs = points.map((p) => p.x),
@@ -234,6 +243,27 @@ export function stationBox(points: readonly Point[], mx: number, my: number): Bo
     x = Math.min(...xs) - mx,
     y = Math.min(...ys) - my;
   return { x, y, w: Math.max(...xs) + mx - x, h: Math.max(...ys) + my * 1.3 - y };
+}
+/** The view's tilt: the surface leans back by `deg` about a point `ox`, `oy` (fractions of the view) seen from `perspective` px. */
+export interface Tilt {
+  deg: number;
+  perspective: number;
+  ox: number;
+  oy: number;
+}
+/** Phones lean the surface less, so the far sectors keep their size. The origin is mirrored in `menu.css` (`.world-tilt`). */
+export const tiltFor = (width: number): Tilt => ({ deg: width < 600 ? 16 : 24, perspective: 1200, ox: 0.5, oy: 0.75 });
+/**
+ * Where a world point lands on screen (px from the view's top-left): through the plane's `fit` (`fitBox`), then the
+ * view's `tilt`, as CSS `perspective() rotateX()` about the tilt's origin does it.
+ */
+export function project(p: Point, fit: { x: number; y: number; scale: number }, width: number, height: number, tilt: Tilt): Point {
+  const unit = (width / WORLD_W) * fit.scale,
+    x = fit.x + p.x * unit - width * tilt.ox,
+    y = fit.y + p.y * unit - height * tilt.oy,
+    a = (tilt.deg * Math.PI) / 180,
+    k = tilt.perspective / (tilt.perspective - y * Math.sin(a));
+  return { x: width * tilt.ox + x * k, y: height * tilt.oy + y * Math.cos(a) * k };
 }
 /**
  * The plane's transform that fits `box` (world units) centred into a `width` × `height` viewport, where the plane is

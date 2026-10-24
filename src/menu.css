@@ -891,19 +891,25 @@
   box-shadow: inset 0 0 0 1px #ffffff14;
   border-radius: inherit;
 }
+/* The surface seen from orbit at an angle (`tiltFor`, set by `fitWorld`): the far side recedes towards the horizon.
+   Hit-testing follows the tilt; labels and stations stand upright on the flat layers above it. Paint containment
+   keeps the 3D layer flat (without it Chrome's GPU compositor can leave the label layers unpainted); it clips to
+   the layer's own box, so the box reaches beyond the view on every side and its tilted outline still covers the
+   view. The plane sits at the view's origin inside it, and the tilt pivots at `tiltFor`'s origin (50%, 75% of the
+   view). */
+.world-tilt {
+  position: absolute;
+  inset: -40% -25% -20%;
+  contain: paint;
+  transform-origin: 50% 71.875%;
+}
 .world-plane {
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
+  left: 16.6667%;
+  top: 25%;
+  width: 66.6667%;
   aspect-ratio: 2 / 1;
   transform-origin: 0 0;
-}
-.world-plane.is-flying {
-  transition:
-    transform 800ms cubic-bezier(0.3, 0.05, 0.2, 1),
-    --inv 800ms cubic-bezier(0.3, 0.05, 0.2, 1),
-    --px 800ms cubic-bezier(0.3, 0.05, 0.2, 1);
 }
 .world-svg {
   position: absolute;
@@ -915,6 +921,53 @@
 }
 .world-svg .space {
   fill: #02040a;
+}
+.world-svg .stars {
+  fill: #cfe4ff;
+  opacity: 0.7;
+}
+.world-svg :is(.daylight, .haze) {
+  pointer-events: none;
+}
+.world-svg .day-lit {
+  stop-color: #fff2d8;
+  stop-opacity: 0.06;
+}
+.world-svg .day-mid {
+  stop-color: #000;
+  stop-opacity: 0;
+}
+.world-svg .day-night {
+  stop-color: #01030a;
+  stop-opacity: 0.6;
+}
+.world-svg .haze-clear {
+  stop-color: #6fd6ff;
+  stop-opacity: 0;
+}
+.world-svg .haze-thick {
+  stop-color: #8fe0ff;
+  stop-opacity: 0.55;
+}
+/* The atmosphere along the horizon: a wide faint glow, a brighter band and a thin crisp rim, in world units. */
+.world-svg .atmo {
+  fill: none;
+  pointer-events: none;
+}
+.world-svg .atmo-wide {
+  stroke: #3fb8ff;
+  stroke-width: 9;
+  opacity: 0.1;
+}
+.world-svg .atmo-mid {
+  stroke: #6fd6ff;
+  stroke-width: 2.6;
+  opacity: 0.22;
+}
+.world-svg .atmo-rim {
+  stroke: #c8f1ff;
+  stroke-width: 0.35;
+  opacity: 0.85;
 }
 .world-svg :is(.border, .wild-border, .route, .lane, .dot) {
   vector-effect: non-scaling-stroke;
@@ -1036,6 +1089,7 @@
 .world-stations {
   position: absolute;
   inset: 0;
+  z-index: 1;
   pointer-events: none;
 }
 .world-stations {
@@ -1051,6 +1105,8 @@
 .start-screen .region {
   --accent: var(--m-accent);
   position: absolute;
+  left: 0;
+  top: 0;
   width: 0;
   height: 0;
   min-height: 0;
@@ -1079,7 +1135,7 @@
   box-shadow:
     inset 0 2px 0 var(--accent),
     inset 0 0 0 1px #ffffff1a;
-  transform: translate(-50%, -50%) scale(var(--inv));
+  transform: translate(-50%, -50%);
   transition:
     opacity 300ms ease-out,
     box-shadow var(--m-speed);
@@ -1580,6 +1636,8 @@
   --anchor: calc(6px + var(--badge) + var(--stem) + 3px);
   --rim: color-mix(in srgb, var(--mode) 75%, #fff);
   position: absolute;
+  left: 0;
+  top: 0;
   width: 132px;
   min-height: 0;
   display: grid;
@@ -1591,8 +1649,7 @@
   border: 0;
   border-radius: 6px;
   pointer-events: none;
-  transform: translate(-50%, calc(-1 * var(--anchor))) scale(var(--inv));
-  transform-origin: 50% var(--anchor);
+  translate: -50% calc(-1 * var(--anchor));
   transition: color var(--m-speed);
 }
 .start-screen .mission-node > * {
@@ -1733,7 +1790,8 @@
   text-shadow:
     0 1px 2px #000,
     0 0 8px #000;
-  background: radial-gradient(closest-side, #05070fa6, #05070f59 60%, transparent);
+  color: #d8e2ee;
+  background: radial-gradient(closest-side, #05070fd9, #05070f99 55%, transparent);
   border-radius: 3px;
   transition:
     background var(--m-speed),
@@ -1983,7 +2041,6 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .world-plane.is-flying,
   .land :is(.tint, .border),
   .world-svg .surface,
   .preview-layer,
