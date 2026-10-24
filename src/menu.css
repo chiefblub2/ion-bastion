@@ -919,12 +919,14 @@
 .world-svg :is(.border, .wild-border, .route, .lane, .dot) {
   vector-effect: non-scaling-stroke;
 }
-/* Territories: a flat ground colour per biome until the baked surface is in, a state tint over it and the border. */
-.world-svg .ground {
-  fill: color-mix(in srgb, var(--accent) 22%, #4a3a28);
+/* Territories: a flat ground colour per biome until the painted surface fades in (planet-surface.ts), a state tint
+   over it and the border. */
+.world-svg .surface {
+  opacity: 0;
+  transition: opacity 600ms ease-out;
 }
-.world-svg .ground.wild {
-  fill: #4b3a26;
+.world-svg .surface.is-ready {
+  opacity: 1;
 }
 .world-svg .wild-border {
   fill: none;
@@ -1700,7 +1702,7 @@
   color: var(--muted);
 }
 .mission-node[data-locked] .node-copy {
-  opacity: 0.6;
+  opacity: 0.8;
 }
 /* A fresh unlock: the badge flares once in the mode colour. */
 .mission-node[data-fresh] .node-mark {
@@ -1731,6 +1733,7 @@
   text-shadow:
     0 1px 2px #000,
     0 0 8px #000;
+  background: radial-gradient(closest-side, #05070fa6, #05070f59 60%, transparent);
   border-radius: 3px;
   transition:
     background var(--m-speed),
@@ -1982,6 +1985,7 @@
 @media (prefers-reduced-motion: reduce) {
   .world-plane.is-flying,
   .land :is(.tint, .border),
+  .world-svg .surface,
   .preview-layer,
   .preview-layer img,
   .start-screen .mission-node,

@@ -9,7 +9,9 @@ import { enemyIcon } from "./wave-forecast";
 import type { CampaignRecord } from "../app/progress";
 import { starText } from "../app/rating";
 import { type Lock, sectorLocked, type Unlocked } from "../app/campaign-unlock";
-import { fitBox, link, planetLayout, type Region, stationBox, stationPoints, type Point, WORLD_BOX, WORLD_H, WORLD_W } from "./world-map";
+import { type Box, fitBox, link, planetLayout, type Region, stationBox, stationPoints, type Point, SURFACE, WORLD_BOX, WORLD_H, WORLD_W } from "./world-map";
+import { biomeGround, type SurfaceSeed } from "./planet-surface";
+import { surfaceImage } from "./planet-texture";
 /**
  * The mission page as a Sector Atlas: a world map with every sector of the mode as a landmass (its terrain, its
  * missions as stations on a route, sea lanes to the next sector) that zooms into the selected sector, then the
@@ -269,13 +271,17 @@ function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
     cards = atlasSectors(content, circle, record, locks);
   const stations = group.map((s, i) => stationPoints(regions[i], s.missions.length, sectors.indexOf(s)));
   world = { sectors: group, regions, stations, selected: -1 };
+  seeds = [...regions.map((r, i) => ({ x: r.x, y: r.y, biome: group[i].missions[0].map.theme ?? "outpost" })), ...wilds.map((w) => ({ x: w.x, y: w.y, biome: "waste" as const }))];
   contentIndex = new Map(group.map((s) => [s, sectors.indexOf(s)]));
   // Links from each sector's last station to the next sector's first; lit once the next sector is open.
   const lanes = stations
       .slice(1)
       .map((points, i) => `<path class="lane" data-state="${cards[i + 1].locked ? "locked" : "open"}" d="${link(stations[i].at(-1)!, points[0])}"/>`)
       .join(""),
-    grounds = [...wilds.map((w) => `<path class="ground wild" d="${w.outline}"/>`), ...regions.map((r, i) => `<path class="ground" style="--accent:${cards[i].accent}" d="${r.outline}"/>`)].join(""),
+    grounds = [
+      ...wilds.map((w) => `<path class="ground" style="fill:${biomeGround("waste")}" d="${w.outline}"/>`),
+      ...regions.map((r, i) => `<path class="ground" style="fill:${biomeGround(seeds[i].biome)}" d="${r.outline}"/>`),
+    ].join(""),
     wildBorders = wilds.map((w) => `<path class="wild-border" d="${w.outline}"/>`).join(""),
     lands = regions
       .map((r, i) => {
@@ -294,7 +300,9 @@ function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
         return `<g class="land" data-sector="${s.index}" data-state="${state}" style="--accent:${s.accent}"${s.next ? ' data-next="true"' : ""}><clipPath id="land-clip-${i}"><path d="${r.outline}"/></clipPath><path class="tint" d="${r.outline}"/><path class="border" clip-path="url(#land-clip-${i})" d="${r.outline}"/>${routes}${dots}</g>`;
       })
       .join("");
-  $("world-svg").innerHTML = `<rect class="space" x="-200" y="-150" width="${WORLD_W + 400}" height="${WORLD_H + 300}"/><g class="planet">${grounds}${wildBorders}${lands}${lanes}</g>`;
+  $("world-svg").innerHTML = `<rect class="space" x="-200" y="-150" width="${WORLD_W + 400}" height="${WORLD_H + 300}"/><g class="planet">${grounds}${`<image class="surface" x="${SURFACE.x}" y="${SURFACE.y}" width="${SURFACE.w}" height="${SURFACE.h}" preserveAspectRatio="none"/>`.repeat(2)}<g class="tiles"></g>${wildBorders}${lands}${lanes}</g>`;
+  // A quick coarse surface first; the sharp one follows the zoomed sector's tile (`paintTile`).
+  paint($("world-svg").querySelector<SVGImageElement>("image.surface")!, SURFACE, 512);
   // Region labels: buttons on each landmass's northern shore, the sector tabs of the page (the land itself is clickable too).
   $("sector-tabs").innerHTML = cards
     .map((s, i) => {
@@ -307,6 +315,56 @@ function renderModes(game: Game, circle: boolean, options: AtlasOptions) {
       return `<button class="region" role="tab" id="sector-tab-${s.index}" data-sector="${s.index}" aria-controls="mission-list" aria-selected="false" tabindex="-1" style="--accent:${s.accent};--done:${s.won / s.count};left:${(r.x / WORLD_W) * 100}%;top:${((r.y - r.ry * 0.95) / WORLD_H) * 100}%"${s.next ? ' data-next="true"' : ""}${s.won === s.count ? ' data-done="true"' : ""}${s.locked ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}${state ? ` title="${state}"` : ""} aria-label="Sector ${s.numeral}: ${escape(s.name)}, ${s.count} ${plural(s.count, "mission")}${s.locked ? `, locked. ${state}` : ""}${s.won ? `, ${s.won} cleared, ${s.stars} of ${s.count * 3} stars` : ""}${s.next ? ", holds the next mission" : ""}"><span class="region-label" aria-hidden="true"><small>${s.numeral}${s.next ? '<b class="sector-next">NEXT</b>' : ""}${isNew ? '<b class="sector-next sector-new">NEW</b>' : ""}</small><strong>${s.name}</strong><span class="region-line">${line}</span><span class="sector-bar"></span></span></button>`;
     })
     .join("");
+}
+/** The territories' seeds and biomes of the shown world, for its surface pictures. */
+let seeds: SurfaceSeed[] = [];
+/**
+ * Pixels across for a surface picture of `box` that stays sharp while `span` world units fill the view's width;
+ * phones get less, a tile never more than about 3 megapixels.
+ */
+function surfaceWidth(box: Box, span: number) {
+  const view = $("world-view"),
+    cap = view.clientWidth < 600 ? 1536 : 2048,
+    wide = Math.round(((view.clientWidth || 1200) * Math.min(2, devicePixelRatio || 1) * box.w) / span);
+  return Math.max(256, Math.min(cap, wide, Math.floor(Math.sqrt((3e6 * box.w) / box.h))));
+}
+/** Paints the surface in `box` into an SVG image, which fades in once the picture is there. */
+function paint(el: SVGImageElement, box: Box, width: number) {
+  surfaceImage(seeds, box, width, Math.round((width * box.h) / box.w)).then(
+    (url) => {
+      if (!el.isConnected) return;
+      el.onload = () => el.classList.add("is-ready");
+      el.setAttribute("href", url);
+    },
+    () => {},
+  );
+}
+/**
+ * A sharper picture of the selected sector's territory over the whole surface's, once per sector and world, then
+ * the whole surface at full size (the worker paints in order, so the zoomed sector comes first).
+ */
+function paintTile(at: number) {
+  const svg = $("world-svg"),
+    tiles = svg.querySelector(".tiles"),
+    region = world.regions[at],
+    full = svg.querySelectorAll<SVGImageElement>("image.surface")[1];
+  if (tiles && region && !tiles.querySelector(`[data-tile="${at}"]`)) tile(tiles, at, region);
+  if (full && !full.dataset.painted) {
+    full.dataset.painted = "true";
+    paint(full, SURFACE, surfaceWidth(SURFACE, WORLD_BOX.w));
+  }
+}
+function tile(tiles: Element, at: number, region: Region) {
+  const pad = 4,
+    x = Math.max(SURFACE.x, region.box.x - pad),
+    y = Math.max(SURFACE.y, region.box.y - pad),
+    box = { x, y, w: Math.min(SURFACE.x + SURFACE.w, region.box.x + region.box.w + pad) - x, h: Math.min(SURFACE.y + SURFACE.h, region.box.y + region.box.h + pad) - y },
+    el = document.createElementNS("http://www.w3.org/2000/svg", "image");
+  el.classList.add("surface");
+  el.dataset.tile = String(at);
+  for (const [k, v] of Object.entries({ x: box.x, y: box.y, width: box.w, height: box.h, preserveAspectRatio: "none" })) el.setAttribute(k, String(v));
+  tiles.append(el);
+  paint(el, box, surfaceWidth(box, stationBox(world.stations[at], 9, 8).w));
 }
 /** Marks the sector's landmass, places its stations, zooms into it and features a mission. */
 function showSector(game: Game, sector: MissionSector | undefined, options: AtlasOptions, pickedId: string | undefined) {
@@ -353,6 +411,7 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
     })
     .join("");
   zoom = "sector";
+  paintTile(at);
   // A frame later, so a fresh render shows the whole world first and then flies in.
   requestAnimationFrame(() => fitWorld(true));
   renderFeatured(game, picked, options);

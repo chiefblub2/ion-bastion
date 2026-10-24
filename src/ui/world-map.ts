@@ -97,15 +97,20 @@ export function valueNoise(x: number, y: number, seed = 0) {
 /** How far a border point moves at most from the straight cell edge, in world units. */
 export const BORDER_WOBBLE = 4.5;
 /**
- * The border warp: a smooth displacement that depends on the position only, so both neighbours of an edge move it
- * alike and their borders stay one line. A broad meander, a mid bend and a fine jag.
+ * The border warp's displacement at (x, y), in units of `BORDER_WOBBLE`: smooth, and a function of the position
+ * only, so both neighbours of an edge move it alike and their borders stay one line. A broad meander, a mid bend and
+ * a fine jag (`fine` false leaves the jag out, for the surface's biome lookup).
  */
+export function borderShift(x: number, y: number, fine = true): Point {
+  const d = (seed: number) =>
+    (valueNoise(x * 0.11, y * 0.11, seed) - 0.5) * 1.2 + (valueNoise(x * 0.45, y * 0.45, seed + 1) - 0.5) * 0.55 + (fine ? (valueNoise(x * 1.7, y * 1.7, seed + 2) - 0.5) * 0.25 : 0);
+  return { x: d(11) * BORDER_WOBBLE, y: d(21) * BORDER_WOBBLE };
+}
 function warp(p: Point): Point {
   const x = round(p.x),
     y = round(p.y),
-    d = (seed: number) =>
-      (valueNoise(x * 0.11, y * 0.11, seed) - 0.5) * 1.2 + (valueNoise(x * 0.45, y * 0.45, seed + 1) - 0.5) * 0.55 + (valueNoise(x * 1.7, y * 1.7, seed + 2) - 0.5) * 0.25;
-  return { x: round(x + d(11) * BORDER_WOBBLE), y: round(y + d(21) * BORDER_WOBBLE) };
+    d = borderShift(x, y);
+  return { x: round(x + d.x), y: round(y + d.y) };
 }
 /**
  * The jagged border of a convex cell: every edge split into short steps, each edge walked from its smaller end so
