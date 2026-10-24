@@ -950,8 +950,14 @@ export type Command = (
   | { type: "mission"; id: string }
   | { type: "playtest"; mission: MissionDefinition }
   /** A Run mission (`run/`): generated mission plus the content pack its relics derived; solo only. */
-  | { type: "run"; mission: MissionDefinition; content: ContentPack }
+  | { type: "run"; mission: MissionDefinition; content: ContentPack; replay?: Replay }
 ) & { player?: number };
+/** Commands with the `Game.ticks` they were applied at; replaying them after a load rebuilds a game exactly. */
+export interface Replay {
+  entries: readonly { tick: number; command: Command }[];
+  /** Ticks to simulate in total. */
+  ticks: number;
+}
 /** Language-neutral result; `ui/messages.ts` turns it into text. */
 export type MessageCode =
   | "restarted"

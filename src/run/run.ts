@@ -1,132 +1,266 @@
-import { isCircleSector } from "../content/missions";
 import type { ContentPack, TowerId } from "../core/types";
-import { pageOf } from "../ui/tower-pages";
-import { RELIC_IDS, type RelicId } from "./relics";
+import { threatRules } from "./ascension";
+import { eventOf, pickEvent } from "./events";
+import { runMission } from "./generate";
+import { actsOf, isMissionKind, missionsOf, nextNodes, type MissionKind, type RunLength, type RunNode } from "./map";
+import { rankOf } from "./ranks";
+import { hasFlag, relicOf, type RelicId } from "./relics";
 import { draw, streamOf } from "./rng";
+import { shopStock } from "./shop";
+import {
+  actMapOf,
+  addTower,
+  changeReactor,
+  cursedRelic,
+  doctrineCandidates,
+  doctrinePaths,
+  gainRelic,
+  legendaryOffers,
+  prizeOffers,
+  relicOffers,
+  removeTower,
+  runDepth,
+  towerOffers,
+  type MissionLog,
+  type RunOffers,
+  type RunState,
+} from "./state";
+import { hazardPay, threatsOf } from "./threats";
+import { FIELD_REPAIR, REINFORCE_NODE, REPAIR_NODE, RETIRE, REROLL, REROLL_STEP, SCRAP_BASE, SCRAP_FORMAT, SCRAP_STAR, SKIP_RELIC, SKIP_TOWER, XP_BUILT } from "./tuning";
+export * from "./state";
 /**
- * A Run: `RUN_LENGTH` generated missions in a row. The player starts with a pack of three towers, picks every next
- * map from two route offers and drafts a tower (sometimes a relic too) after each win; a loss ends the run.
- * Everything here is pure: every offer is drawn from the seed and the step, so a run state always replays alike.
+ * A Run: ten full-length missions in three acts and a Final Stand (a short run: act I only). The player starts with a
+ * pack of three towers, walks each act's map (missions, camps, the act boss), drafts towers, relics and Doctrines, and
+ * carries the reactor's damage from mission to mission. One lost mission ends the run. Every transition is pure.
  */
-export const RUN_LENGTH = 5;
-export type NodeKind = "normal" | "elite" | "boss";
-export interface RouteNode {
-  /** The campaign mission whose map, credits and enemy pool the generated mission uses. */
-  mission: string;
-  kind: NodeKind;
-}
-export type RunPhase = "starter" | "route" | "mission" | "reward" | "won" | "lost";
-export interface RunOffers {
-  starters?: TowerId[][];
-  routes?: RouteNode[];
-  towers?: TowerId[];
-  relics?: RelicId[];
-}
-export interface RunState {
-  v: 1;
-  seed: number;
-  /** The mission being played or chosen next, 0-based. */
-  step: number;
-  phase: RunPhase;
-  roster: TowerId[];
-  relics: RelicId[];
-  offers: RunOffers;
-  /** The node being played (phase "mission") or just won (phase "reward"). */
-  node?: RouteNode;
-  history: { mission: string; kind: NodeKind; won: boolean }[];
-}
+export { missionsOf, actsOf };
 /** Starter packs: one tower that hits flyers, one with area damage (it also hits buried units) and one controller. */
 const STARTERS: readonly (readonly TowerId[])[] = [
   ["pulse", "tesla", "lance", "shrapnel", "inferno"],
   ["blast", "mortar", "plasma"],
   ["frost", "acid", "stasis"],
 ];
-/** Draft weight per build-menu tab: Attack, Control, Traps, Support. */
-const DRAFT_WEIGHT = [3, 2, 1.2, 1];
-export const OFFERED_TOWERS = 3,
-  OFFERED_RELICS = 3;
-export function newRun(seed: number): RunState {
-  const r = streamOf(seed, "starters"),
-    columns = STARTERS.map((list) => draw(r, list, 3));
-  return {
-    v: 1,
+/** The trap column a "trap pack" swaps in for the controller (threat 4 unlock). */
+const TRAPS: readonly TowerId[] = ["spikes", "mine", "grill"];
+export interface RunOptions {
+  length?: RunLength;
+  threat?: number;
+  /** A daily run's UTC date. */
+  daily?: string;
+  /** Unlocks: a fourth starter pack, and a trap pack among them. */
+  packs?: 3 | 4;
+  trapPack?: boolean;
+}
+export function newRun(seed: number, options: RunOptions = {}, content?: ContentPack): RunState {
+  const threat = options.threat ?? 0,
+    rules = threatRules(threat),
+    count = options.packs ?? 3,
+    r = streamOf(seed, "starters"),
+    columns = STARTERS.map((list) => draw(r, list, count)),
+    traps = content ? TRAPS.filter((id) => content.towers[id]) : TRAPS,
+    starters = Array.from({ length: count }, (_, i) => columns.map((c) => c[i % c.length]));
+  if (options.trapPack && traps.length) starters[count - 1] = [starters[count - 1][0], starters[count - 1][1], draw(r, traps, 1)[0]];
+  let run: RunState = {
+    v: 2,
     seed,
+    length: options.length ?? "full",
+    threat,
+    daily: options.daily,
     step: 0,
+    act: 0,
+    column: -1,
+    lane: -1,
     phase: "starter",
     roster: [],
     relics: [],
-    offers: { starters: [0, 1, 2].map((i) => columns.map((c) => c[i])) },
-    history: [],
+    doctrines: [],
+    ranks: {},
+    mods: [],
+    scrap: 0,
+    reactor: rules.reactorMax,
+    reactorMax: rules.reactorMax,
+    rerolls: 0,
+    offers: { starters },
+    log: [],
   };
+  if (rules.cursedStart) {
+    const cursed = cursedRelic(run, "start");
+    if (cursed) run = gainRelic(run, cursed);
+  }
+  return run;
 }
-/** The campaign missions in order; a Run never visits the Circuit. */
-const campaignMissions = (content: ContentPack) => (content.sectors ?? []).filter((s) => !isCircleSector(s)).flatMap((s) => s.missions);
-/**
- * Overlapping windows over the campaign, as shares of its length: the first mission comes from the opening sector,
- * the boss node from the last sectors.
- */
-const BANDS: readonly (readonly [number, number])[] = [[0, 0.12], [0.08, 0.3], [0.25, 0.53], [0.47, 0.77], [0.7, 1]];
-/** Two maps from the band of the step, never one already played; the last step offers two boss nodes. */
-export function routeOffers(run: RunState, content: ContentPack): RouteNode[] {
-  const missions = campaignMissions(content),
-    [lo, hi] = BANDS[Math.min(run.step, BANDS.length - 1)],
-    played = new Set(run.history.map((h) => h.mission)),
-    candidates = missions.slice(Math.floor(lo * missions.length), Math.max(2, Math.ceil(hi * missions.length))).filter((m) => !played.has(m.id)),
-    r = streamOf(run.seed, "routes", run.step),
-    picks = draw(r, candidates, 2);
-  if (run.step === RUN_LENGTH - 1) return picks.map((m) => ({ mission: m.id, kind: "boss" }));
-  // The first offer is always a normal node; the second is an elite (tougher, but pays a relic) half of the time.
-  return picks.map((m, i) => ({ mission: m.id, kind: i === 1 && r() < 0.5 ? "elite" : "normal" }));
-}
-export function chooseStarter(run: RunState, index: number, content: ContentPack): RunState {
+export function chooseStarter(run: RunState, index: number): RunState {
   const pack = run.offers.starters?.[index];
   if (run.phase !== "starter" || !pack) return run;
-  const next: RunState = { ...run, roster: [...pack], phase: "route", offers: {} };
-  return { ...next, offers: { routes: routeOffers(next, content) } };
+  return { ...run, roster: [...pack], phase: "map", offers: {} };
 }
-export function chooseRoute(run: RunState, index: number): RunState {
-  const node = run.offers.routes?.[index];
-  if (run.phase !== "route" || !node) return run;
-  return { ...run, phase: "mission", node, offers: {} };
+/** The nodes the player may walk to next. */
+export const mapChoices = (run: RunState, content: ContentPack) => (run.phase === "map" ? nextNodes(actMapOf(run, content), run.column, run.lane) : []);
+/** Walks to a node: a mission waits for Deploy, a camp opens at once. */
+export function chooseNode(run: RunState, lane: number, content: ContentPack): RunState {
+  const node = mapChoices(run, content).find((n) => n.lane === lane);
+  if (!node) return run;
+  if (isMissionKind(node.kind)) return { ...run, phase: "mission", node, offers: {} };
+  const at: RunState = { ...run, phase: "camp", node, column: node.column, lane: node.lane, rerolls: 0, offers: {} };
+  const offers: RunOffers =
+    node.kind === "shop" || node.kind === "forge"
+      ? { shop: shopStock(at, content, node.kind === "forge") }
+      : node.kind === "repair"
+        ? { repair: true }
+        : { event: pickEvent(at) };
+  return { ...at, offers };
 }
-/** Three towers outside the roster, drawn by tab weight. */
-export function towerOffers(run: RunState, content: ContentPack): TowerId[] {
-  const left = (Object.keys(content.towers) as TowerId[]).filter((id) => !run.roster.includes(id));
-  return draw(streamOf(run.seed, "towers", run.step), left, OFFERED_TOWERS, (id) => DRAFT_WEIGHT[pageOf(content.towers[id])]);
+/** Marks the node's mission as started: from now on it can only be resumed, never restarted. */
+export const deploy = (run: RunState): RunState => (run.phase === "mission" && run.node && !run.deployed ? { ...run, deployed: true } : run);
+export interface MissionResult {
+  won: boolean;
+  /** Reactor energy left. */
+  lives: number;
+  /** Kills per tower type, from the towers standing at the end. */
+  kills: Partial<Record<TowerId, number>>;
+  /** Tower types built in the mission (standing at the end). */
+  built: TowerId[];
+  stars?: number;
+  wave?: number;
 }
-export const relicOffers = (run: RunState): RelicId[] =>
-  draw(streamOf(run.seed, "relics", run.step), RELIC_IDS.filter((id) => !run.relics.includes(id)), OFFERED_RELICS);
-/** After an elite node and after every second mission the reward includes a relic. */
-export const paysRelic = (run: RunState) => run.node?.kind === "elite" || run.step % 2 === 1;
-/** The end of the node's mission: a loss ends the run, the last win completes it, any other win opens the reward. */
-export function finishMission(run: RunState, won: boolean, content: ContentPack): RunState {
-  if (run.phase !== "mission" || !run.node) return run;
-  const history = [...run.history, { mission: run.node.mission, kind: run.node.kind, won }];
-  if (!won) return { ...run, phase: "lost", history };
-  if (run.step === RUN_LENGTH - 1) return { ...run, phase: "won", history, step: RUN_LENGTH };
-  const done: RunState = { ...run, history };
-  return {
-    ...done,
-    phase: "reward",
-    offers: { towers: towerOffers(done, content), relics: paysRelic(done) ? relicOffers(done) : undefined },
+/** Is this node the run's last mission? */
+const isLast = (run: RunState, node: RunNode) => node.kind === "final" || (node.kind === "boss" && run.length === "short");
+/** After a mission: a loss ends the run; a win carries the reactor, pays Scrap and rank XP, and opens the reward. */
+export function finishMission(run: RunState, result: MissionResult, content: ContentPack): RunState {
+  const node = run.node;
+  if (run.phase !== "mission" || !node) return run;
+  const kind = node.kind as MissionKind,
+    entry: MissionLog = {
+      mission: node.mission!,
+      kind,
+      act: node.act,
+      won: result.won,
+      stars: result.won ? result.stars : undefined,
+      start: run.reactor,
+      end: result.won ? result.lives : 0,
+      kills: Object.values(result.kills).reduce((a, b) => a + (b ?? 0), 0),
+      scrap: 0,
+      wave: result.wave,
+    };
+  if (!result.won) return { ...run, phase: "lost", deployed: undefined, log: [...run.log, entry], offers: {} };
+  // Scrap: base, stars, format and hazard pay for the threats the mission carried.
+  const generated = runMission(run, node, content),
+    hazard = hazardPay(threatsOf(generated.mission, generated.content, generated.mission.availableTowers ?? run.roster, generated.suppressed)),
+    scrap = SCRAP_BASE + SCRAP_STAR * Math.max(0, (result.stars ?? 1) - 1) + SCRAP_FORMAT[kind] + hazard;
+  // Rank XP: kills plus a bonus per type built; a loaned tower earns nothing for the roster.
+  const factor = run.relics.reduce((f, id) => f * (relicOf(id).xp ?? 1), 1),
+    ranks = { ...run.ranks },
+    rankUps: TowerId[] = [];
+  for (const id of run.roster) {
+    const gain = ((result.kills[id] ?? 0) + (result.built.includes(id) ? XP_BUILT : 0)) * factor;
+    if (!gain) continue;
+    const before = rankOf(ranks[id]);
+    ranks[id] = Math.round((ranks[id] ?? 0) + gain);
+    if (rankOf(ranks[id]) > before) rankUps.push(id);
+  }
+  const repair = Math.round((FIELD_REPAIR + run.relics.reduce((n, id) => n + (relicOf(id).repair ?? 0), 0)) * threatRules(run.threat).repair);
+  const done: RunState = {
+    ...run,
+    step: run.step + 1,
+    column: node.column,
+    lane: node.lane,
+    reactor: Math.max(1, Math.min(run.reactorMax, result.lives + repair)),
+    scrap: run.scrap + scrap,
+    ranks,
+    funds: undefined,
+    loan: undefined,
+    deployed: undefined,
+    rerolls: 0,
+    log: [...run.log, { ...entry, scrap }],
   };
+  if (isLast(run, node)) return { ...done, phase: "won", offers: {} };
+  const cleared = runDepth(done),
+    offers: RunOffers = { towers: towerOffers(done, content, kind === "elite" ? 4 : 3, kind === "elite"), rankUps: rankUps.length ? rankUps : undefined };
+  if (cleared % 2 === 0) offers.relics = relicOffers(done);
+  if (kind === "elite") offers.prize = prizeOffers(done);
+  if (cleared === 2 && threatRules(run.threat).freeDoctrine && doctrineCandidates(done, content).length) offers.doctrine = true;
+  return { ...done, phase: "reward", offers };
 }
-/** Once both picks are made (or skipped), the run moves on to the next route choice. */
-function settleReward(run: RunState, content: ContentPack): RunState {
-  if (run.offers.towers || run.offers.relics) return run;
-  const next: RunState = { ...run, step: run.step + 1, phase: "route", node: undefined };
-  return { ...next, offers: { routes: routeOffers(next, content) } };
+const PICK_PHASES = new Set(["reward", "camp", "act"]);
+/** Takes one of the offered towers; at the roster cap `replace` names the tower it replaces. `null` skips for Scrap. */
+export function pickTower(run: RunState, id: TowerId | null, replace?: TowerId): RunState {
+  const offers = run.offers.towers;
+  if (!PICK_PHASES.has(run.phase) || !offers || (id !== null && !offers.includes(id))) return run;
+  if (id === null) return { ...run, scrap: run.scrap + SKIP_TOWER, offers: { ...run.offers, towers: undefined } };
+  const next = addTower(run, id, replace);
+  return next === run ? run : { ...next, offers: { ...next.offers, towers: undefined } };
 }
-/** Takes one of the offered towers into the roster; `null` skips the draft. */
-export function pickTower(run: RunState, id: TowerId | null, content: ContentPack): RunState {
-  if (run.phase !== "reward" || !run.offers.towers || (id !== null && !run.offers.towers.includes(id))) return run;
-  const roster = id ? [...run.roster, id] : run.roster;
-  return settleReward({ ...run, roster, offers: { ...run.offers, towers: undefined } }, content);
+type RelicSlot = "relics" | "prize" | "legendary";
+/** Takes a relic from one of the offers; `null` skips (the regular relic pays Scrap). A cursed prize pays 30 Scrap. */
+export function pickRelic(run: RunState, slot: RelicSlot, id: RelicId | null): RunState {
+  const offers = run.offers[slot];
+  if (!PICK_PHASES.has(run.phase) || !offers || (id !== null && !offers.includes(id))) return run;
+  const cleared: RunOffers = { ...run.offers, [slot]: undefined };
+  // At an act transition the legendary relic and the Doctrine exclude each other, unless Master License grants both.
+  if (slot === "legendary" && id && !hasFlag(run.relics, "master")) delete cleared.doctrine;
+  if (id === null) return { ...run, scrap: run.scrap + (slot === "relics" ? SKIP_RELIC : 0), offers: cleared };
+  const next = gainRelic(run, id);
+  return { ...next, scrap: next.scrap + (slot === "prize" && relicOf(id).rarity === "cursed" ? 30 : 0), offers: cleared };
 }
-export function pickRelic(run: RunState, id: RelicId | null, content: ContentPack): RunState {
-  if (run.phase !== "reward" || !run.offers.relics || (id !== null && !run.offers.relics.includes(id))) return run;
-  const relics = id ? [...run.relics, id] : run.relics;
-  return settleReward({ ...run, relics, offers: { ...run.offers, relics: undefined } }, content);
+/** Commits a roster tower to one of its specialization paths for the rest of the run; `null` skips. */
+export function pickDoctrine(run: RunState, tower: TowerId | null, path: string | undefined, content: ContentPack): RunState {
+  if (!PICK_PHASES.has(run.phase) || !run.offers.doctrine) return run;
+  const cleared: RunOffers = { ...run.offers, doctrine: undefined };
+  if (run.phase === "act" && tower && !hasFlag(run.relics, "master")) delete cleared.legendary;
+  if (tower === null) return { ...run, offers: cleared };
+  if (!path || !doctrinePaths(run, tower, content).includes(path)) return run;
+  return { ...run, doctrines: [...run.doctrines, `${tower}:${path}`], offers: cleared };
 }
-/** Missions won so far. */
-export const runDepth = (run: RunState) => run.history.filter((h) => h.won).length;
+export const rerollPrice = (run: RunState) => REROLL + REROLL_STEP * run.rerolls;
+/** Buys a fresh tower draft. */
+export function reroll(run: RunState, content: ContentPack): RunState {
+  const price = rerollPrice(run);
+  if (!PICK_PHASES.has(run.phase) || !run.offers.towers || run.scrap < price) return run;
+  const next = { ...run, rerolls: run.rerolls + 1, scrap: run.scrap - price };
+  return { ...next, offers: { ...next.offers, towers: towerOffers(next, content, run.offers.towers.length, run.offers.towers.length > 3) } };
+}
+/** Sells a tower off the roster for Scrap (never the last one). */
+export function retire(run: RunState, tower: TowerId): RunState {
+  if (!PICK_PHASES.has(run.phase) || !run.roster.includes(tower) || run.roster.length <= 1) return run;
+  return { ...removeTower(run, tower), scrap: run.scrap + RETIRE };
+}
+/** Picks still open in the current reward, camp or act screen. */
+export const pendingPicks = (run: RunState) => !!(run.offers.towers || run.offers.relics || run.offers.prize || run.offers.legendary || run.offers.doctrine);
+/** Leaves the reward: the next map choice, or after an act boss the act transition. Open picks are dropped. */
+export function continueRun(run: RunState, content: ContentPack): RunState {
+  if (run.phase === "reward") {
+    if (run.node?.kind === "boss") {
+      // The act transition: a full repair, then a legendary relic or a Doctrine.
+      const act: RunState = { ...run, phase: "act", reactor: run.reactorMax, rerolls: 0, offers: {} };
+      return { ...act, offers: { legendary: legendaryOffers(act), doctrine: doctrineCandidates(act, content).length ? true : undefined } };
+    }
+    return { ...run, phase: "map", node: undefined, offers: {} };
+  }
+  if (run.phase === "act") return { ...run, phase: "map", act: run.act + 1, column: -1, lane: -1, node: undefined, offers: {} };
+  if (run.phase === "camp") return { ...run, phase: "map", node: undefined, offers: {} };
+  return run;
+}
+/** Repair node: heal the reactor, or reinforce it for good. */
+export function repairChoice(run: RunState, choice: "heal" | "reinforce"): RunState {
+  if (run.phase !== "camp" || !run.offers.repair) return run;
+  const rules = threatRules(run.threat),
+    zealot = hasFlag(run.relics, "zealot"),
+    next =
+      choice === "heal"
+        ? zealot
+          ? run
+          : changeReactor(run, Math.round(REPAIR_NODE * rules.repair))
+        : { ...run, reactorMax: run.reactorMax + REINFORCE_NODE, reactor: run.reactor + (zealot ? 0 : REINFORCE_NODE) };
+  return { ...next, offers: { ...next.offers, repair: undefined } };
+}
+/** Event node: applies a choice; the camp stays open for picks the choice opened (a draft, a Doctrine). */
+export function eventChoice(run: RunState, index: number, content: ContentPack): RunState {
+  const event = run.phase === "camp" && run.offers.event ? eventOf(run.offers.event) : undefined,
+    choice = event?.choices(run, content)[index];
+  if (!choice || !choice.ok) return run;
+  const next = choice.apply(run, content);
+  return { ...next, offers: { ...next.offers, event: undefined } };
+}
+/** Ends the run where it stands (Abandon). */
+export const abandon = (run: RunState): RunState => (run.phase === "won" || run.phase === "lost" ? run : { ...run, phase: "lost", deployed: undefined, offers: {} });
+export { removeTower };

@@ -3,6 +3,7 @@ import { isPlaytest } from "../editor/playtest-id";
 import type { EditorHost } from "../editor/editor-view";
 import type { RunHost } from "../ui/run-view";
 import { isRunMission } from "../run/run-id";
+import { beginJournal, journalCommand, persist, storedJournal } from "./run-journal";
 import type { CommandResult, EnemyId, TargetPriority, TowerId } from "../core/types";
 import { TARGET_PRIORITIES } from "../systems/combat";
 import { hasPage, hotkeyTowers, isPaged, pageOf, towerOrder } from "../ui/tower-pages";
@@ -61,6 +62,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       return { ok: false, code: "training-step" };
     }
     const result = game.command(c);
+    if (result.ok) journalCommand(game, c);
     applied({ command: c, result, player: view.player });
     return result;
   }
@@ -299,13 +301,18 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
   /** What the lazily loaded Run page may do in the app. */
   const runHost: RunHost = {
     content: game.baseContent,
-    launch(mission, content) {
-      const r = execute({ type: "run", mission, content });
-      if (r.ok) screens.show(GAME);
+    launch(mission, content, resumed) {
+      const r = execute({ type: "run", mission, content, replay: resumed });
+      if (!r.ok) return;
+      beginJournal(game, resumed);
+      // A resumed mission opens paused, so the player finds their bearings first.
+      if (resumed && isRunning(game.state) && !game.state.paused) execute({ type: "pause" });
+      screens.show(GAME);
     },
     canRun: () => !coop.active(),
     playing: () => (isRunMission(game.mission) && inProgress() && (game.state.status === "ready" || game.state.status === "wave") ? game.mission.id : undefined),
     resume: () => screens.show(GAME),
+    journal: storedJournal,
     image: terrainImage,
   };
   /** The home page's primary button: begin on the first campaign mission, return to the game in memory, move on to the next unwon mission, or replay the remembered one from wave 1. */
@@ -639,6 +646,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
   document.addEventListener("visibilitychange", () => {
     // In multiplayer the others keep playing; pausing stays an explicit choice.
     if (document.hidden && !coop.active() && isRunning(game.state) && !game.state.paused) execute({ type: "pause" });
+    if (document.hidden) persist(game);
   });
+  window.addEventListener("pagehide", () => persist(game));
   return { execute, chooseCell, chooseEnemy, cancel, confirmBuild, dropPending, screens, match: coop.match };
 }

@@ -21,6 +21,7 @@ import type {
   GameStatus,
   MessageCode,
   MissionDefinition,
+  Replay,
   Sim,
   Tower,
   TowerId,
@@ -80,6 +81,7 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
     run: (g, c) => {
       if (hostOnly(g, c)) return fail("host-only");
       g.state = initialState(g.mission, g.players);
+      g.ticks = 0;
       return ok("restarted");
     },
   },
@@ -112,6 +114,7 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
       } catch {
         return fail("run-invalid");
       }
+      if (c.replay) replay(g, c.replay);
       return ok("run-loaded", { name: c.mission.name });
     },
   },
@@ -200,6 +203,27 @@ export function isCommand<C extends { type: string } = Command>(c: unknown, extr
   const type = typeof c === "object" && c !== null ? (c as { type?: unknown }).type : undefined;
   return typeof type === "string" && (Object.hasOwn(HANDLERS, type) || extra.includes(type));
 }
+/**
+ * Re-applies journaled commands at their ticks and simulates up to `r.ticks`, all within the loading command. Events
+ * of the replayed past are dropped: the scene and the sound only see what happens after it.
+ */
+function replay(g: Game, r: Replay) {
+  const until = (tick: number) => {
+    while (g.ticks < tick) {
+      const before = g.ticks;
+      g.tick();
+      // A paused or idle game does not advance: the journal and the state disagree, so stop here.
+      if (g.ticks === before) return false;
+    }
+    return true;
+  };
+  for (const e of r.entries) {
+    if (!until(e.tick)) break;
+    g.command(e.command);
+  }
+  until(r.ticks);
+  g.drainEvents();
+}
 export class Game implements Sim {
   state!: GameState;
   mission!: MissionDefinition;
@@ -208,6 +232,8 @@ export class Game implements Sim {
   private pack: ContentPack;
   /** 1 in single-player, 2 in co-op. */
   players = 1;
+  /** Ticks simulated since the mission was loaded or restarted (not part of the state): the clock of a `Replay`. */
+  ticks = 0;
   private path = new Set<string>();
   private blocked = new Set<string>();
   constructor(mission?: MissionDefinition, content: ContentPack = DEFAULT_CONTENT) {
@@ -230,6 +256,7 @@ export class Game implements Sim {
     this.pack = content;
     this.mission = mission;
     this.state = initialState(mission, this.players);
+    this.ticks = 0;
     this.path = new Set(mission.map.path.map((p) => `${p.x},${p.y}`));
     this.blocked = new Set(mission.map.blocked.map((p) => `${p.x},${p.y}`));
   }
@@ -281,12 +308,14 @@ export class Game implements Sim {
     const s = this.state;
     if (s.paused) return;
     if (s.status === "ready" && s.nextWave !== undefined) {
+      this.ticks++;
       s.nextWave -= dt;
       // Tolerates float drift, so the wave starts exactly after WAVE_BREAK / dt ticks.
       if (s.nextWave <= 1e-9) beginWave(this);
       return;
     }
     if (s.status !== "wave") return;
+    this.ticks++;
     s.time += dt;
     s.waveTime += dt;
     spawnEnemies(this);

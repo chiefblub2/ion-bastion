@@ -132,13 +132,16 @@ Circuit is its own game mode with its own tab in the mission picker, separate fr
 
 ### Run
 
-Run is a single-player roguelite mode on the home page: five missions in a row on campaign maps, each one harder and from later sectors.
+Run is a single-player roguelite mode on the home page: ten missions in three acts and a Final Stand, on campaign maps with waves generated from each map's own enemies. Act I plays on Vigil's maps, act II on Ashkar's, act III on Thessaly Prime's.
 
-- You start by picking one of three starter packs of three towers. Only your roster can be built.
-- Before every mission you pick one of two routes. An elite route has tougher enemies but always pays a relic; the fifth mission is a longer finale with Titans.
-- Waves are generated from the map's own enemies, so the mix stays familiar but never repeats. Enemies your roster cannot fight (flyers without anti-air, stealth without a Detector, burrowers without traps or area damage) are swapped out.
-- After every win you draft one of three towers, and after elite routes and every second mission a relic: cheaper towers or upgrades, more damage, range or fire rate, more reactor energy, credits or bounty.
-- A lost mission ends the run, and there is no restart. Every run has a six-character seed; typing it in plays the same offers and waves again.
+- You start with one of three starter packs of three towers (an anti-air tower, an area tower and a controller). Only your roster can be built, and it holds 6 towers in act I, 8 in act II and 10 from act III.
+- Each act is a map: missions, camps (Shop, Forge, Repair, Event) and an act boss with a modifier, all visible from the start. Some missions are elites: tougher, but they pay a relic prize and a fourth draft card.
+- Missions are full length (14 waves, 16 for an act boss, 20 for the Final Stand) and start a little way into their source mission with the credits you would have had there.
+- The reactor carries its damage from mission to mission. Every win repairs a little, Repair nodes and shops more, and each act transition fully.
+- Every win drafts a tower (towers that fit your roster come up more often, and a tower that answers a coming threat is always offered), pays Scrap for shops, and gives rank XP to the towers you fielded: ranks make a tower type stronger for the rest of the run. Every second win offers a relic, elites and act transitions rarer ones.
+- Levels 6–8 need a Doctrine: it unlocks one specialization path of one tower type for the rest of the run. The first is free after mission 2; more come from act transitions, Forges and events.
+- One lost mission ends the run. A mission can be resumed after a reload, but never restarted. Every run has a six-character seed; typing it in plays the same map, offers and waves again.
+- A short run (act I only) unlocks the full run and the daily run (the same seed for everyone, once per day). Each full run won unlocks the next of ten threat levels.
 
 ## Towers
 
