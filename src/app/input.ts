@@ -472,6 +472,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     const b = (event.target as HTMLElement).closest("button");
     if (!b) return;
     if (b.dataset.back !== undefined) return screens.back();
+    if (b.dataset.toTop !== undefined) return scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     if (b.dataset.worldZoom !== undefined) return toggleWorld();
     if (b.dataset.planet) return selectWorld(game, Number(b.dataset.planet), atlas());
     if (b.dataset.tower) return choose(b.dataset.tower as TowerId);
@@ -668,6 +669,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       }
     }
   });
+  // The long codex pages offer a way back to their tabs once scrolled well down.
+  addEventListener("scroll", () => document.documentElement.classList.toggle("scrolled-far", scrollY > 1200), { passive: true });
   document.addEventListener("visibilitychange", () => {
     // In multiplayer the others keep playing; pausing stays an explicit choice.
     if (document.hidden && !coop.active() && isRunning(game.state) && !game.state.paused) execute({ type: "pause" });
