@@ -2042,8 +2042,8 @@ dialog::backdrop {
  */
 @media (orientation: landscape) and (max-height: 540px) {
   :root:is(.is-fullscreen, .is-compact) {
-    --rail: 96px;
-    --side: clamp(150px, 22vw, 200px);
+    --rail: 80px;
+    --side: clamp(140px, 19vw, 180px);
     /* Room beside the notch; the side away from the camera cut-out only clears the rounded corner (app/compact.ts). */
     --inset-l: max(8px, env(safe-area-inset-left));
     --inset-r: max(8px, env(safe-area-inset-right));
@@ -2061,7 +2061,7 @@ dialog::backdrop {
   }
   @media (max-width: 640px) {
     :root:is(.is-fullscreen, .is-compact) {
-      --rail: 86px;
+      --rail: 76px;
       --side: 140px;
     }
   }
@@ -2121,11 +2121,15 @@ dialog::backdrop {
     min-width: 0;
     height: 34px;
   }
+  /* The home-screen app on an iPhone has no browser bars left to hide. */
+  :root.is-compact.fullscreen-moot #fullscreen-btn {
+    display: none;
+  }
   :root:is(.is-fullscreen, .is-compact) .playback .toolbar-start {
     grid-column: 1 / -1;
     height: auto;
     min-height: 38px;
-    padding: 4px;
+    padding: 4px 2px;
     white-space: normal;
     line-height: 1.15;
   }
@@ -2150,6 +2154,7 @@ dialog::backdrop {
   }
   :root:is(.is-fullscreen, .is-compact) .next-wave-head .stat-label {
     font-size: 8px;
+    white-space: normal;
   }
   :root:is(.is-fullscreen, .is-compact) .next-wave-head small {
     font-size: 9px;
