@@ -101,7 +101,10 @@ ui.onRefresh = () => {
   coach.refresh();
   buildConfirm.refresh();
 };
-const fullscreen = bindFullscreen(() => battlefield.fit());
+const fullscreen = bindFullscreen(
+  () => battlefield.fit(),
+  () => ui.notice("iPhone browsers have no full screen: tap Share, then Add to Home Screen, and start the game from there."),
+);
 bindCompact(() => battlefield.fit());
 const input = createInput({
   game,
