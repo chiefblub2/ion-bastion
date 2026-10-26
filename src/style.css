@@ -2044,6 +2044,20 @@ dialog::backdrop {
   :root:is(.is-fullscreen, .is-compact) {
     --rail: 96px;
     --side: clamp(150px, 22vw, 200px);
+    /* Room beside the notch; the side away from the camera cut-out only clears the rounded corner (app/compact.ts). */
+    --inset-l: max(8px, env(safe-area-inset-left));
+    --inset-r: max(8px, env(safe-area-inset-right));
+  }
+  :root:is(.is-fullscreen, .is-compact)[data-notch="left"] {
+    --inset-r: max(8px, min(16px, env(safe-area-inset-right)));
+  }
+  :root:is(.is-fullscreen, .is-compact)[data-notch="right"] {
+    --inset-l: max(8px, min(16px, env(safe-area-inset-left)));
+  }
+  /* The body's own notch padding would count the inset twice: main carries it here. */
+  :root:is(.is-fullscreen, .is-compact)[data-view="game"] body {
+    padding-left: 0;
+    padding-right: 0;
   }
   @media (max-width: 640px) {
     :root:is(.is-fullscreen, .is-compact) {
@@ -2053,8 +2067,8 @@ dialog::backdrop {
   }
   :root:is(.is-fullscreen, .is-compact) main {
     position: relative;
-    padding-left: max(8px, env(safe-area-inset-left));
-    padding-right: max(8px, env(safe-area-inset-right));
+    padding-left: var(--inset-l);
+    padding-right: var(--inset-r);
   }
   :root:is(.is-fullscreen, .is-compact) .workspace {
     grid-template-columns: minmax(0, 1fr) var(--side);
@@ -2197,8 +2211,8 @@ dialog::backdrop {
   :root:is(.is-fullscreen, .is-compact) .bottom-bar {
     position: absolute;
     z-index: 5;
-    left: calc(max(8px, env(safe-area-inset-left)) + var(--rail) + 12px);
-    right: calc(max(8px, env(safe-area-inset-right)) + var(--side) + 18px);
+    left: calc(var(--inset-l) + var(--rail) + 12px);
+    right: calc(var(--inset-r) + var(--side) + 18px);
     bottom: calc(max(4px, env(safe-area-inset-bottom)) + 10px);
     margin: 0;
     justify-content: center;
