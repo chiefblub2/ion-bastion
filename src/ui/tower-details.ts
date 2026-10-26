@@ -1,3 +1,4 @@
+import { isTouch } from "./touch";
 import { DEFAULT_CONTENT } from "../content";
 import { sellValue } from "../core/game";
 import { auraBonuses, effectiveTowerStats, isInAura } from "../systems/auras";
@@ -25,6 +26,13 @@ const attackSummary = (type: TowerId, tower: Tower | undefined, content: Content
 const targets = (layers: readonly UnitLayer[]) =>
   layers.length > 1 ? "Ground · Air" : layers[0] === "air" ? "Air only" : "Ground only";
 
+/** How to place the armed tower: tap and ✓ on a touch screen, click (Shift+click for several) with a mouse. */
+function placementNote(trap: boolean) {
+  const touch = isTouch(),
+    act = touch ? "Tap" : "Click",
+    then = touch ? ", then ✓" : "";
+  return `<div class="placement-note">${trap ? `${act} a free path cell${then}: the trap triggers when ground enemies walk over it.` : `${act} a free cell${then} to build.`}<br><span>${touch ? "✕ exits build mode." : "Esc, ✕ or right-click exits build mode. Shift+click builds several."}</span></div>`;
+}
 export function towerDetails(
   type: TowerId,
   tower: Tower | undefined,
@@ -76,5 +84,5 @@ export function towerDetails(
   const cancelLabel = tower ? "Deselect (Esc)" : "Exit build mode (Esc)";
   return `<div class="selection-heading"><span>${tower ? "TOWER SELECTED" : "BUILD MODE"}</span><span class="selection-actions"><b>${heading}</b><button id="cancel-selection" class="cancel-selection" title="${cancelLabel}" aria-label="${cancelLabel}">✕</button></span></div>
     <p>${definition.description}</p>${isSupport(definition.attack) ? "" : `<p class="tower-targets">Targets: <b>${targets(definition.targets)}</b>${attackSummary(type, tower, content)}${tower ? ` · Kills <b id="tower-kills">${tower.kills}</b>` : ""}</p>`}${values}
-    ${tower ? `${isSupport(definition.attack) ? "" : priorityControl(tower)}${upgradeControl(tower, towers, content)}<button id="sell-btn" class="sell">Sell · +${sellValue(tower)} credits</button>` : `<div class="placement-note">${definition.placement === "path" ? "Click a free path cell: the trap triggers when ground enemies walk over it." : "Click a free cell to build."}<br><span>Esc, ✕ or right-click exits build mode. Shift+click builds several.</span></div>`}`;
+    ${tower ? `${isSupport(definition.attack) ? "" : priorityControl(tower)}${upgradeControl(tower, towers, content)}<button id="sell-btn" class="sell">Sell · +${sellValue(tower)} credits</button>` : placementNote(definition.placement === "path")}`;
 }

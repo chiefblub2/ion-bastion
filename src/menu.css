@@ -2842,7 +2842,7 @@ span.world-hop {
   border-radius: 0 var(--m-radius) var(--m-radius) 0;
   font-size: 15px;
 }
-#help-page .keyboard-help {
+#help-page :is(.keyboard-help, .touch-help) {
   font-size: 13px;
   line-height: 2.1;
 }

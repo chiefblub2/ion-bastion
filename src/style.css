@@ -958,6 +958,23 @@ dialog::backdrop {
 .keyboard-help kbd {
   margin-right: 3px;
 }
+.touch-help {
+  display: none;
+  font-size: 12px;
+  margin-top: 20px;
+  line-height: 2;
+}
+/* A finger has no hotkeys, hover or right click: touch controls replace the key hints. */
+@media (pointer: coarse) and (hover: none) {
+  .touch-help {
+    display: block;
+  }
+  .keyboard-help,
+  .keys-only,
+  .tower-cost kbd {
+    display: none;
+  }
+}
 .dialog-actions {
   display: flex;
   gap: 12px;
@@ -1755,37 +1772,37 @@ dialog::backdrop {
   border-color: var(--mint);
   color: var(--mint);
 }
-:root.is-fullscreen .topbar,
-:root.is-fullscreen .mission-heading,
-:root.is-fullscreen .field-footer,
-:root.is-fullscreen .wave-timeline {
+:root:is(.is-fullscreen, .is-compact) .topbar,
+:root:is(.is-fullscreen, .is-compact) .mission-heading,
+:root:is(.is-fullscreen, .is-compact) .field-footer,
+:root:is(.is-fullscreen, .is-compact) .wave-timeline {
   display: none;
 }
-:root.is-fullscreen main {
+:root:is(.is-fullscreen, .is-compact) main {
   max-width: none;
   padding: 12px 16px 8px;
 }
-:root.is-fullscreen .bottom-bar {
+:root:is(.is-fullscreen, .is-compact) .bottom-bar {
   margin-top: 8px;
 }
 /* Desktop, and phones and tablets in landscape: field and sidebar fit the viewport. */
 @media (min-width: 851px), (orientation: landscape) {
-  :root.is-fullscreen main {
+  :root:is(.is-fullscreen, .is-compact) main {
     height: 100dvh;
     display: flex;
     flex-direction: column;
   }
-  :root.is-fullscreen .workspace {
+  :root:is(.is-fullscreen, .is-compact) .workspace {
     flex: 1;
     min-height: 0;
     align-items: stretch;
   }
-  :root.is-fullscreen .field-panel {
+  :root:is(.is-fullscreen, .is-compact) .field-panel {
     display: flex;
     flex-direction: column;
     min-height: 0;
   }
-  :root.is-fullscreen #board-wrap {
+  :root:is(.is-fullscreen, .is-compact) #board-wrap {
     flex: 1;
     min-height: 0;
     container-type: size;
@@ -1793,10 +1810,10 @@ dialog::backdrop {
     align-items: center;
     justify-content: center;
   }
-  :root.is-fullscreen #board {
+  :root:is(.is-fullscreen, .is-compact) #board {
     width: min(100cqw, calc(100cqh * var(--cols, 18) / var(--rows, 12)));
   }
-  :root.is-fullscreen .sidebar {
+  :root:is(.is-fullscreen, .is-compact) .sidebar {
     min-height: 0;
     overflow-y: auto;
     padding-right: 6px;
@@ -1838,150 +1855,363 @@ dialog::backdrop {
 }
 /* Phones in landscape: a compact toolbar and tower column so the board gets the height. */
 @media (orientation: landscape) and (max-height: 540px) {
-  :root.is-fullscreen,
-  :root.is-fullscreen body {
+  /* Only the game view is fitted; the menu pages keep scrolling. */
+  :root:is(.is-fullscreen, .is-compact)[data-view="game"],
+  :root:is(.is-fullscreen, .is-compact)[data-view="game"] body {
     overflow: hidden;
   }
-  :root.is-fullscreen main {
+  :root:is(.is-fullscreen, .is-compact) main {
     padding: max(6px, env(safe-area-inset-top)) 8px max(4px, env(safe-area-inset-bottom));
   }
-  :root.is-fullscreen .workspace {
+  :root:is(.is-fullscreen, .is-compact) .workspace {
     grid-template-columns: minmax(0, 1fr) clamp(150px, 22vw, 200px);
     gap: 6px;
   }
-  :root.is-fullscreen .sidebar {
+  :root:is(.is-fullscreen, .is-compact) .sidebar {
     display: block;
   }
   /* The category tabs label the list; the "Towers" heading only costs height. */
-  :root.is-fullscreen .towers-title {
+  :root:is(.is-fullscreen, .is-compact) .towers-title {
     display: none;
   }
-  :root.is-fullscreen .tower-tabs {
+  :root:is(.is-fullscreen, .is-compact) .tower-tabs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 3px;
     margin-bottom: 5px;
   }
-  :root.is-fullscreen .tower-tab {
+  :root:is(.is-fullscreen, .is-compact) .tower-tab {
     padding: 4px 3px;
     font-size: 10px;
   }
-  :root.is-fullscreen .tower-tab small {
+  :root:is(.is-fullscreen, .is-compact) .tower-tab small {
     display: none;
   }
-  :root.is-fullscreen .tower-list {
+  :root:is(.is-fullscreen, .is-compact) .tower-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 3px;
   }
-  :root.is-fullscreen .tower-card {
+  :root:is(.is-fullscreen, .is-compact) .tower-card {
     gap: 1px;
     padding: 4px 4px 3px;
   }
-  :root.is-fullscreen .tower-symbol {
+  :root:is(.is-fullscreen, .is-compact) .tower-symbol {
     font-size: 14px;
   }
-  :root.is-fullscreen .tower-name {
+  :root:is(.is-fullscreen, .is-compact) .tower-name {
     font-size: 12px;
   }
-  :root.is-fullscreen .tower-cost {
+  :root:is(.is-fullscreen, .is-compact) .tower-cost {
     justify-content: center;
   }
-  :root.is-fullscreen .tower-cost b {
+  :root:is(.is-fullscreen, .is-compact) .tower-cost b {
     font-size: 10px;
   }
   /* A selected tower or enemy folds the tower list away (.menu-collapsed); its heading stays to reopen it. */
-  :root.is-fullscreen .sidebar.menu-collapsed .towers-title {
+  :root:is(.is-fullscreen, .is-compact) .sidebar.menu-collapsed .towers-title {
     display: flex;
     margin: 0 0 6px;
   }
-  :root.is-fullscreen .sidebar.menu-collapsed .towers-title h2 {
+  :root:is(.is-fullscreen, .is-compact) .sidebar.menu-collapsed .towers-title h2 {
     font-size: 16px;
   }
-  :root.is-fullscreen .sidebar.inspecting .selection {
+  :root:is(.is-fullscreen, .is-compact) .sidebar.inspecting .selection {
     margin-top: 0;
     padding-top: 2px;
     border-top: 0;
   }
-  :root.is-fullscreen .selection-heading {
+  :root:is(.is-fullscreen, .is-compact) .selection-heading {
     margin-bottom: 8px;
     font-size: 9px;
   }
-  :root.is-fullscreen .selection > p {
+  :root:is(.is-fullscreen, .is-compact) .selection > p {
     margin-bottom: 8px;
     font-size: 12px;
     line-height: 1.4;
   }
-  :root.is-fullscreen .tower-stats {
+  :root:is(.is-fullscreen, .is-compact) .tower-stats {
     margin-bottom: 8px;
   }
-  :root.is-fullscreen .tower-stats strong {
+  :root:is(.is-fullscreen, .is-compact) .tower-stats strong {
     font-size: 13px;
   }
-  :root.is-fullscreen .tower-stats span {
+  :root:is(.is-fullscreen, .is-compact) .tower-stats span {
     font-size: 10px;
   }
-  :root.is-fullscreen .tower-cost kbd {
+  :root:is(.is-fullscreen, .is-compact) .tower-cost kbd {
     display: none;
   }
-  :root.is-fullscreen .selection {
+  :root:is(.is-fullscreen, .is-compact) .selection {
     margin-top: 8px;
     padding: 10px 0 12px;
     min-height: 0;
   }
-  :root.is-fullscreen .field-toolbar {
+  :root:is(.is-fullscreen, .is-compact) .field-toolbar {
     flex-wrap: nowrap;
     padding: 5px 8px;
     gap: 8px;
   }
-  :root.is-fullscreen .next-wave-slot {
+  :root:is(.is-fullscreen, .is-compact) .next-wave-slot {
     display: none;
   }
-  :root.is-fullscreen .resources {
+  :root:is(.is-fullscreen, .is-compact) .resources {
     gap: 12px;
   }
-  :root.is-fullscreen .resources > div {
+  :root:is(.is-fullscreen, .is-compact) .resources > div {
     min-width: 0;
   }
-  :root.is-fullscreen .stat-label {
+  :root:is(.is-fullscreen, .is-compact) .stat-label {
     font-size: 8px;
     margin-bottom: 2px;
   }
-  :root.is-fullscreen .resources strong {
+  :root:is(.is-fullscreen, .is-compact) .resources strong {
     font-size: 16px;
     gap: 3px;
   }
-  :root.is-fullscreen .resources small {
+  :root:is(.is-fullscreen, .is-compact) .resources small {
     font-size: 9px;
     margin-top: 2px;
   }
-  :root.is-fullscreen .resource-icon {
+  :root:is(.is-fullscreen, .is-compact) .resource-icon {
     font-size: 15px;
   }
-  :root.is-fullscreen .playback {
+  :root:is(.is-fullscreen, .is-compact) .playback {
     gap: 4px;
   }
-  :root.is-fullscreen .playback button {
+  :root:is(.is-fullscreen, .is-compact) .playback button {
     min-width: 32px;
     height: 32px;
     font-size: 13px;
   }
-  :root.is-fullscreen .playback .toolbar-start {
+  :root:is(.is-fullscreen, .is-compact) .playback .toolbar-start {
     padding: 0 9px;
     font-size: 12px;
   }
-  :root.is-fullscreen .players-panel {
+  :root:is(.is-fullscreen, .is-compact) .players-panel {
     padding: 4px 8px;
     gap: 4px 10px;
     font-size: 11px;
   }
-  :root.is-fullscreen .bottom-bar {
+  :root:is(.is-fullscreen, .is-compact) .bottom-bar {
     margin-top: 4px;
     font-size: 11px;
   }
-  :root.is-fullscreen #notice {
+  :root:is(.is-fullscreen, .is-compact) #notice {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+}
+
+/* Buttons for the page header's jobs (menu, restart) while the header is folded away. */
+.chrome-only {
+  display: none;
+}
+:root:is(.is-fullscreen, .is-compact) .playback .chrome-only:not([hidden]) {
+  display: inline-block;
+}
+/*
+ * Phones in landscape: the toolbar turns into a rail left of the board, so the board gets the full height, and the
+ * notice becomes a toast over the board that fades. The next wave sits in the rail as icons; a tap opens it.
+ */
+@media (orientation: landscape) and (max-height: 540px) {
+  :root:is(.is-fullscreen, .is-compact) {
+    --rail: 96px;
+    --side: clamp(150px, 22vw, 200px);
+  }
+  @media (max-width: 640px) {
+    :root:is(.is-fullscreen, .is-compact) {
+      --rail: 86px;
+      --side: 140px;
+    }
+  }
+  :root:is(.is-fullscreen, .is-compact) main {
+    position: relative;
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+  }
+  :root:is(.is-fullscreen, .is-compact) .workspace {
+    grid-template-columns: minmax(0, 1fr) var(--side);
+  }
+  :root:is(.is-fullscreen, .is-compact) .field-panel {
+    display: grid;
+    grid-template-columns: var(--rail) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  :root:is(.is-fullscreen, .is-compact) .field-toolbar {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 7px;
+    padding: 7px 6px;
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+  :root:is(.is-fullscreen, .is-compact) .players-panel {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  :root:is(.is-fullscreen, .is-compact) #board-wrap {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  :root:is(.is-fullscreen, .is-compact) .resources {
+    flex-direction: column;
+    gap: 5px;
+  }
+  :root:is(.is-fullscreen, .is-compact) .resources strong {
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  :root:is(.is-fullscreen, .is-compact) .resource-icon {
+    font-size: 13px;
+  }
+  :root:is(.is-fullscreen, .is-compact) .playback {
+    order: 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+  :root:is(.is-fullscreen, .is-compact) .playback button {
+    min-width: 0;
+    height: 34px;
+  }
+  :root:is(.is-fullscreen, .is-compact) .playback .toolbar-start {
+    grid-column: 1 / -1;
+    height: auto;
+    min-height: 38px;
+    padding: 4px;
+    white-space: normal;
+    line-height: 1.15;
+  }
+  :root:is(.is-fullscreen, .is-compact) .toolbar-start small {
+    display: block;
+    font-size: 10px;
+  }
+  /* The next wave: head and one icon with its count per type, stacked; tags and names wait for the tap. */
+  :root:is(.is-fullscreen, .is-compact) .next-wave-slot {
+    order: 3;
+    display: block;
+    flex: none;
+    min-height: 0;
+    padding-top: 6px;
+    border-top: 1px solid var(--line);
+    cursor: pointer;
+  }
+  :root:is(.is-fullscreen, .is-compact) .next-wave-head {
+    flex-direction: column;
+    gap: 1px;
+    margin-bottom: 4px;
+  }
+  :root:is(.is-fullscreen, .is-compact) .next-wave-head .stat-label {
+    font-size: 8px;
+  }
+  :root:is(.is-fullscreen, .is-compact) .next-wave-head small {
+    font-size: 9px;
+  }
+  :root:is(.is-fullscreen, .is-compact) .next-wave .unit-badges {
+    flex-wrap: wrap;
+    gap: 3px;
+    padding: 0;
+    mask-image: none;
+    overflow: visible;
+  }
+  :root:is(.is-fullscreen, .is-compact) .next-wave-slot:not(.open) .unit-badge {
+    padding: 2px 4px 2px 3px;
+    gap: 3px;
+    font-size: 11px;
+  }
+  :root:is(.is-fullscreen, .is-compact) .next-wave-slot:not(.open) :is(.unit-name, .unit-hp, .unit-tag:not(.air), .next-wave-head small) {
+    display: none;
+  }
+  :root:is(.is-fullscreen, .is-compact) .next-wave-slot:not(.open) .unit-badge.new {
+    border-color: var(--mint);
+  }
+  :root:is(.is-fullscreen, .is-compact) .next-wave-slot:not(.open) .unit-tag {
+    font-size: 8px;
+    padding: 1px 3px;
+  }
+  :root:is(.is-fullscreen, .is-compact) .next-wave-empty {
+    font-size: 9px;
+  }
+  /* Opened: the whole forecast over the board, beside the rail. */
+  :root:is(.is-fullscreen, .is-compact) .next-wave-slot.open {
+    position: absolute;
+    z-index: 6;
+    top: 8px;
+    left: calc(var(--rail) + 8px);
+    width: min(420px, calc(100vw - var(--rail) - var(--side) - 40px));
+    max-height: calc(100% - 16px);
+    overflow-y: auto;
+    padding: 10px 12px;
+    border: 1px solid #2a4670;
+    border-radius: 8px;
+    background: rgba(6, 11, 24, 0.95);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  }
+  :root:is(.is-fullscreen, .is-compact) .next-wave-slot.open .next-wave-head {
+    flex-direction: row;
+    gap: 10px;
+  }
+  :root:is(.is-fullscreen, .is-compact) .next-wave-slot.open .unit-badge {
+    flex-wrap: wrap;
+  }
+  :root:is(.is-fullscreen, .is-compact) .next-wave-slot.open .unit-name {
+    display: inline;
+  }
+  /* The field panel is the opened forecast's frame. */
+  :root:is(.is-fullscreen, .is-compact) .field-panel {
+    position: relative;
+  }
+  :root:is(.is-fullscreen, .is-compact) .bottom-bar {
+    position: absolute;
+    z-index: 5;
+    left: calc(max(8px, env(safe-area-inset-left)) + var(--rail) + 12px);
+    right: calc(max(8px, env(safe-area-inset-right)) + var(--side) + 18px);
+    bottom: calc(max(4px, env(safe-area-inset-bottom)) + 10px);
+    margin: 0;
+    justify-content: center;
+    pointer-events: none;
+  }
+  :root:is(.is-fullscreen, .is-compact) #notice {
+    max-width: 100%;
+    padding: 4px 10px;
+    border: 1px solid #24406a;
+    border-radius: 6px;
+    background: rgba(5, 9, 20, 0.86);
+    color: #c7d6ea;
+    font-size: 12px;
+    white-space: normal;
+    text-align: center;
+    opacity: 0;
+  }
+  :root:is(.is-fullscreen, .is-compact) #notice.fresh {
+    animation: notice-toast 4s ease-in forwards;
+  }
+  :root:is(.is-fullscreen, .is-compact) #notice.error.fresh {
+    animation-duration: 5.5s;
+  }
+  :root:is(.is-fullscreen, .is-compact) #restart-btn {
+    display: none;
+  }
+}
+@keyframes notice-toast {
+  0%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #notice.fresh {
+    animation-timing-function: steps(1, end);
   }
 }
 

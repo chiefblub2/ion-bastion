@@ -214,7 +214,7 @@ function badges(w: ForecastWave) {
       const tags = e.tags
         .map((t) => `<em class="unit-tag ${t.kind === "air" ? "air" : `trait ${t.kind}`}">${escape(t.label)}</em>`)
         .join("");
-      return `<li class="unit-badge ${e.layer}" title="${escape(title)}">${enemyIcon(e.visual, e.color, e.type)}<b>${e.count}×</b><span class="unit-name">${escape(e.name)}</span><span class="unit-hp">♡ ${number(e.hp)}</span>${tags}${e.isNew ? '<em class="unit-tag new">NEW</em>' : ""}</li>`;
+      return `<li class="unit-badge ${e.layer}${e.isNew ? " new" : ""}" title="${escape(title)}">${enemyIcon(e.visual, e.color, e.type)}<b>${e.count}×</b><span class="unit-name">${escape(e.name)}</span><span class="unit-hp">♡ ${number(e.hp)}</span>${tags}${e.isNew ? '<em class="unit-tag new">NEW</em>' : ""}</li>`;
     })
     .join("");
 }

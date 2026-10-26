@@ -12,6 +12,7 @@ import { bindUiSounds } from "./audio/ui-sounds";
 import { bindSoundPanel } from "./ui/sound-panel";
 import { saveGraphics } from "./render/graphics-settings";
 import { bindFullscreen } from "./app/fullscreen";
+import { bindCompact } from "./app/compact";
 import { createInput } from "./app/input";
 import { registerTools } from "./app/webmcp";
 import { screenFromUrl } from "./app/screens";
@@ -101,6 +102,7 @@ ui.onRefresh = () => {
   buildConfirm.refresh();
 };
 const fullscreen = bindFullscreen(() => battlefield.fit());
+bindCompact(() => battlefield.fit());
 const input = createInput({
   game,
   view,

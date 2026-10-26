@@ -28,14 +28,18 @@ export const freshMemory = (): CoachMemory => ({ acked: new Set(), skipped: fals
 type CoachGame = Pick<Game, "state" | "mission" | "content">;
 type CoachView = Pick<ViewState, "build" | "selected" | "player">;
 const HOLD_FIRST = "Place your first tower before you start the wave.";
-/** The current step of a Training run, or null when the coach has nothing to say (another mission, skipped, over). */
-export function coachStep(game: CoachGame, view: CoachView, memory: CoachMemory): CoachStep | null {
+/**
+ * The current step of a Training run, or null when the coach has nothing to say (another mission, skipped, over).
+ * `touch`: the player taps (ui/touch.ts), so the texts say "tap" and leave out keys.
+ */
+export function coachStep(game: CoachGame, view: CoachView, memory: CoachMemory, touch = false): CoachStep | null {
   const { state: s, mission, content } = game;
   if (!mission.manualWaves || memory.skipped || s.status === "won" || s.status === "lost") return null;
   const path = mission.map.path,
     reactor = path[path.length - 1],
     credits = s.wallets[view.player] ?? 0,
     towers = s.towers;
+  const click = touch ? "Tap" : "Click";
   const step = (id: StepId, title: string, text: string, target: CoachTarget, extra: Partial<CoachStep> = {}): CoachStep => ({ id, title, text, target, ...extra });
   if (!memory.acked.has("reactor"))
     return step("reactor", "Protect the reactor", "Enemies march along the glowing path to your reactor. Every one that gets through drains its energy. At zero the mission is lost.", { cell: reactor }, { ack: true, highlight: reactor, holdStart: HOLD_FIRST });
@@ -44,7 +48,7 @@ export function coachStep(game: CoachGame, view: CoachView, memory: CoachMemory)
   if (!towers.length) {
     if (!view.build)
       return step("pick", "Pick a tower", "Choose the Pulse tower in the build menu. It fires fast, precise shots at ground and air units.", { el: '[data-tower="pulse"]' }, { holdStart: HOLD_FIRST });
-    return step("place", "Place it on the bend", "Click the marked cell (on a touch screen, tap it, then ✓). Inside a bend, a tower covers two stretches of the path at once. Any free cell next to the path works too.", { cell: TRAINING_SPOT }, { highlight: TRAINING_SPOT, holdStart: HOLD_FIRST });
+    return step("place", "Place it on the bend", `${touch ? "Tap the marked cell, then ✓" : "Click the marked cell (on a touch screen, tap it, then ✓)"}. Inside a bend, a tower covers two stretches of the path at once. Any free cell next to the path works too.`, { cell: TRAINING_SPOT }, { highlight: TRAINING_SPOT, holdStart: HOLD_FIRST });
   }
   if (s.wave === 0) return step("start", "Start the wave", "Your defense is ready. Start the first wave when you are.", { el: "#toolbar-start" });
   if (s.wave === 1 && s.status === "wave")
@@ -56,19 +60,19 @@ export function coachStep(game: CoachGame, view: CoachView, memory: CoachMemory)
     if (towers.length < 2 && credits >= cheapest) {
       if (!view.build)
         return step("second", "Build a second tower", "The wave is over and you earned a bonus. Pick another tower: Pulse for damage or Cryo to slow enemies down.", { el: "#tower-list" }, { holdStart: "Build a second tower first." });
-      return step("place", "Place it", "Click a free cell next to the path where it covers a long stretch (on a touch screen, tap it, then ✓).", null, { holdStart: "Build a second tower first." });
+      return step("place", "Place it", `${click} a free cell next to the path where it covers a long stretch${touch ? ", then ✓" : " (on a touch screen, tap it, then ✓)"}.`, null, { holdStart: "Build a second tower first." });
     }
     // Only coached while affordable, so the step never points at a disabled button.
     if (!upgraded && towers.length >= 2 && credits >= cheapestUpgrade(game)) {
       const hold = "Upgrade a tower first.";
       if (view.selected === null)
-        return step("select", "Select a tower", "Click one of your towers to see its stats and upgrades.", { cell: first }, { highlight: first, holdStart: hold });
+        return step("select", "Select a tower", `${click} one of your towers to see its stats and upgrades.`, { cell: first }, { highlight: first, holdStart: hold });
       return step("upgrade", "Upgrade it", "Upgrades raise damage, range and fire rate. Buy the next level.", { el: "#tower-card [data-upgrade]" }, { holdStart: hold });
     }
-    return step("next-wave", "Next wave", `Waves only start when you say so.${upgraded ? "" : " Click a tower to upgrade it once you have the credits."} Start wave 2.`, { el: "#toolbar-start" });
+    return step("next-wave", "Next wave", `Waves only start when you say so.${upgraded ? "" : ` ${click} a tower to upgrade it once you have the credits.`} Start wave 2.`, { el: "#toolbar-start" });
   }
   if (s.status === "wave" && !memory.acked.has("speed"))
-    return step("speed", "Speed it up", "Double the game speed here, or pause with Space to plan in peace. You know the basics now. Hold the line to the last wave!", { el: "#speed-btn" }, { ack: true });
+    return step("speed", "Speed it up", `Double the game speed here, or pause${touch ? "" : " with Space"} to plan in peace. You know the basics now. Hold the line to the last wave!`, { el: "#speed-btn" }, { ack: true });
   if (s.status === "ready")
     return step("ready", `Wave ${s.wave + 1} of ${mission.waves.length}`, "Spend your credits on towers and upgrades, then start the next wave.", { el: "#toolbar-start" });
   return null;

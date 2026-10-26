@@ -14,6 +14,7 @@ import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, rende
 import { type AtlasOptions, fitWorld, renderAtlas, selectMission as featureMission, selectSector, selectWorld, toggleWorld } from "../ui/sector-atlas";
 import { terrainImage } from "../render/terrain-snapshot";
 import { describeResult } from "../ui/messages";
+import { isTouch } from "../ui/touch";
 import { playerName } from "../ui/players";
 import type { Driver, ViewState } from "../render/scene";
 import type { Applied } from "../net/lockstep";
@@ -204,7 +205,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     view.selected = null;
     view.enemy = null;
     const d = game.content.towers[type];
-    ui.notice(`${d.name} selected. Click a free cell ${d.placement === "path" ? "on the path" : "next to the path"}.`);
+    const where = d.placement === "path" ? "on the path" : "next to the path";
+    ui.notice(isTouch() ? `${d.name} selected. Tap a free cell ${where}, then ✓.` : `${d.name} selected. Click a free cell ${where}.`);
     ui.refresh();
   }
   /** Leaves build mode and drops the selection (Esc, right click). */
@@ -446,6 +448,12 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     // A landmass on the atlas's world map selects its sector, like its label.
     const land = (event.target as Element).closest<SVGGElement>("#world-svg .land");
     if (land) return showSector(Number(land.dataset.sector), "sector-tabs");
+    // The compact layout's side rail shows the next wave as icons; a tap opens the full forecast over the board.
+    const forecast = (event.target as HTMLElement).closest("#wave-forecast");
+    if (forecast && document.documentElement.classList.contains("is-compact")) {
+      forecast.classList.toggle("open");
+      return;
+    }
     const b = (event.target as HTMLElement).closest("button");
     if (!b) return;
     if (b.dataset.back !== undefined) return screens.back();
@@ -507,6 +515,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
         screens.show(page("run"));
         break;
       case "menu-btn":
+      case "rail-menu":
         screens.show(isPlaytest(game.mission) ? page("editor") : isRunMission(game.mission) ? page("run") : HOME);
         break;
       case "menu-primary":
@@ -544,6 +553,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
         break;
       }
       case "restart-btn":
+      case "rail-restart":
         dialogs.open("restart");
         break;
       case "cancel-restart":

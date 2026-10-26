@@ -1,3 +1,4 @@
+import { isTouch } from "./touch";
 import type { Game } from "../core/game";
 import type { Command, Point } from "../core/types";
 import type { ViewState } from "../render/scene";
@@ -39,11 +40,11 @@ export class Coach {
   }
   /** Null when the command may run, else why the coach holds it back (only the wave start, before its step). */
   refusal(command: Pick<Command, "type">) {
-    return coachRefusal(coachStep(this.game, this.view, this.memory), command);
+    return coachRefusal(coachStep(this.game, this.view, this.memory, isTouch()), command);
   }
   refresh() {
     const inGame = document.documentElement.dataset.view === "game",
-      step = coachStep(this.game, this.view, this.memory);
+      step = coachStep(this.game, this.view, this.memory, isTouch());
     this.step = step;
     this.view.highlight = step?.highlight;
     this.el.hidden = !step || !inGame;
