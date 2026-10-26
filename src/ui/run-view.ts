@@ -580,7 +580,7 @@ function render() {
                   ? actHtml(r)
                   : endHtml(r);
   root.innerHTML = `${r ? statusHtml(r) : ""}<div class="run-body">${body}</div>${
-    live ? `<button class="quiet run-abandon" data-run="abandon">${armed === "abandon" ? "Click again to abandon the run" : "Abandon run"}</button>` : ""
+    live ? `<button class="quiet run-abandon" data-run="abandon">${armed === "abandon" ? "Press again to abandon the run" : "Abandon run"}</button>` : ""
   }`;
   // The real terrain fades in over the SVG placeholders once it is rendered.
   for (const frame of root.querySelectorAll<HTMLElement>("[data-map]")) {

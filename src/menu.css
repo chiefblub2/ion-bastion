@@ -2692,6 +2692,56 @@ span.world-hop {
   border-color: color-mix(in srgb, var(--m-accent) 45%, var(--m-border));
   box-shadow: 0 0 22px #3ef2ff1a;
 }
+/* The tabs stay reachable on the long codex lists. */
+.start-screen .codex-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 8px 0;
+  margin-left: -2px;
+  margin-right: -2px;
+  background: var(--m-bg);
+  box-shadow: 0 8px 12px -6px var(--m-bg);
+}
+.to-top {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 4;
+  display: none;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--m-accent);
+  background: color-mix(in srgb, var(--m-bg) 88%, transparent);
+  color: var(--m-text);
+  font: 600 14px var(--mono);
+  letter-spacing: 0.08em;
+}
+:root.scrolled-far .to-top {
+  display: block;
+}
+.tower-codex-more > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  cursor: pointer;
+  font: 600 12px var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--m-accent);
+}
+.tower-codex-more > summary::-webkit-details-marker {
+  display: none;
+}
+.tower-codex-more > summary::before {
+  content: "▸";
+  transition: transform 0.15s;
+}
+.tower-codex-more[open] > summary::before {
+  transform: rotate(90deg);
+}
 /* Tower codex: wider cards than the enemy codex, they carry a level table. */
 .tower-codex-list {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
@@ -2842,7 +2892,7 @@ span.world-hop {
   border-radius: 0 var(--m-radius) var(--m-radius) 0;
   font-size: 15px;
 }
-#help-page .keyboard-help {
+#help-page :is(.keyboard-help, .touch-help) {
   font-size: 13px;
   line-height: 2.1;
 }
@@ -2851,6 +2901,29 @@ span.world-hop {
   justify-content: center;
 }
 /* Responsive ------------------------------------------------------------------------------------------------- */
+/* Phones in landscape and small tablets: the atlas title gets its own line instead of a narrow column. */
+@media (max-width: 999px) {
+  .atlas-head {
+    flex-wrap: wrap;
+  }
+  .atlas-head .brand {
+    margin-left: auto;
+  }
+  .atlas-title {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+/* Phones: the four enemy stats stay on one row. */
+@media (max-width: 699px) {
+  .start-screen .codex-card .codex-stats:not(.tower-codex-card *) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .start-screen .codex-card .codex-stats div {
+    padding: 5px 6px;
+  }
+}
 @media (max-width: 1099px) {
   .home-grid {
     grid-template-columns: minmax(0, 1fr);

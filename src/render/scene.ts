@@ -35,6 +35,7 @@ import { loadGraphics } from "./graphics-settings";
 import { Trails } from "./trails";
 import { TurretAim } from "./aim";
 import { Scorches } from "./decals";
+import { anchorView, type BoardSize, type BoardView, clampView, fittedView, panView, snapCell, toScreen, toWorld, ZOOMED } from "./board-camera";
 export { CELL } from "./shapes";
 /** Upper bound for the canvas's longer side in pixels, so a huge 4K full screen stays cheap to fill. */
 const MAX_CANVAS = 4096;
@@ -59,6 +60,8 @@ export interface ViewState {
   highlight?: Point;
   /** Touch only: the cell a tap picked for the armed tower, waiting for ✓ or ✕; absent otherwise. */
   pending?: Point;
+  /** The player zoomed into the battlefield (pinch); DOM callouts then dock instead of following the board grid. */
+  zoomed?: boolean;
 }
 /** Advances the simulation once per render frame. */
 export interface Driver {
@@ -111,6 +114,13 @@ function cornerBrackets(g: Phaser.GameObjects.Graphics, x0: number, y0: number, 
 }
 /** CSS pixels a tap may miss an enemy's body by and still pick it; the mouse keeps 6 world pixels. */
 const TOUCH_SLACK = 16;
+/** CSS pixels a finger may move before a tap becomes a drag. */
+const TAP_MOVE = 10;
+/** A finger gesture on the board: a tap until it moves, a pan of the zoomed board, a pinch, or done (ignored to the end). */
+type Gesture =
+  | { kind: "tap" | "pan"; start: Point; last: Point }
+  | { kind: "pinch"; anchor: Point; distance: number; zoom: number }
+  | { kind: "done" };
 interface Effect {
   event: VisualEvent;
   age: number;
@@ -188,6 +198,13 @@ export class Battlefield extends Phaser.Scene {
   /** Canvas pixels per world pixel; text renders at this resolution so it stays sharp when the board is scaled up. */
   private textResolution = 1;
   private observer?: ResizeObserver;
+  /** The player's zoom and pan (touch); the fitted board at zoom 1. */
+  private boardView: BoardView = { zoom: 1, x: 0, y: 0 };
+  /** Camera zoom of the fitted board, per axis; the player's zoom multiplies it. */
+  private baseZoom = { x: 1, y: 1 };
+  private gesture: Gesture | null = null;
+  /** Time of the last finger lift; compatibility mouse events right after it are not clicks. */
+  private lastTouch = -Infinity;
   /** Dev builds only: frame timings for `scripts/frame-bench.ts`; render hooks are added once per game. */
   private stats = import.meta.env.DEV ? new FrameStats() : undefined;
   private statsHooked = false;
@@ -225,6 +242,8 @@ export class Battlefield extends Phaser.Scene {
     this.aim.reset();
     this.scorches.reset();
     this.driver.reset?.();
+    // A new mission (or restart) shows the whole board again.
+    this.boardView = fittedView(this.boardSize());
     this.resize();
     // FIT never changes the game size on its own; follow every size change of the board (window, full screen, layout).
     if (!this.observer && this.scale.parent) {
@@ -233,6 +252,8 @@ export class Battlefield extends Phaser.Scene {
       // Phaser has one touch pointer; if a touch's end never arrives, every later tap on the board is ignored. Before
       // Phaser sees a new touch, free any pointer whose finger is no longer on the screen.
       this.scale.parent.addEventListener("touchstart", (e: TouchEvent) => this.releaseLostTouches(e), { capture: true, passive: true });
+      this.bindTouch(this.scale.parent);
+      document.getElementById("board-fit")?.addEventListener("click", () => this.resetZoom());
     }
     this.terrainParts = drawTerrain(this, this.sim.map, (x, y) => this.sim.isBlocked(x, y));
     for (const part of this.terrainParts) (part as Phaser.GameObjects.Graphics).setVisible(false);
@@ -267,6 +288,8 @@ export class Battlefield extends Phaser.Scene {
     // Right click cancels instead of opening the browser menu on the board.
     this.input.mouse?.disableContextMenu();
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
+      // Fingers go through `bindTouch` (taps, pinch, pan), including the mouse events a browser may send after them.
+      if (p.wasTouch || performance.now() - this.lastTouch < 800) return;
       if (p.rightButtonDown()) return this.hooks.cancel();
       const shift = (p.event as MouseEvent | undefined)?.shiftKey ?? false,
         touch = isTouch(p),
@@ -304,13 +327,134 @@ export class Battlefield extends Phaser.Scene {
     this.resize();
     this.scale.refresh();
   }
-  /** Page rectangle of a board cell, for DOM callouts; null before the canvas is laid out. */
+  /** Page rectangle of a board cell, for DOM callouts, through the player's zoom; null before the canvas is laid out. */
   cellRect(cell: Point): DOMRect | null {
     const r = this.game?.canvas?.getBoundingClientRect();
     if (!r?.width) return null;
-    const w = r.width / this.sim.map.columns,
-      h = r.height / this.sim.map.rows;
-    return new DOMRect(r.left + cell.x * w, r.top + cell.y * h, w, h);
+    const size = this.boardSize(r),
+      a = toScreen(this.boardView, { x: cell.x * CELL, y: cell.y * CELL }, size),
+      b = toScreen(this.boardView, { x: (cell.x + 1) * CELL, y: (cell.y + 1) * CELL }, size);
+    return new DOMRect(r.left + a.x, r.top + a.y, b.x - a.x, b.y - a.y);
+  }
+  /** The board's CSS size (the canvas) and the world it shows at zoom 1. */
+  private boardSize(rect?: DOMRect): BoardSize {
+    const r = rect ?? this.game?.canvas?.getBoundingClientRect();
+    return { width: r?.width || 1, height: r?.height || 1, worldWidth: this.sim.map.columns * CELL, worldHeight: this.sim.map.rows * CELL };
+  }
+  /** Back to the whole board (the ⤢ button). */
+  resetZoom() {
+    this.boardView = fittedView(this.boardSize());
+    this.applyCamera(true);
+  }
+  /**
+   * Points the camera at the player's view. During a gesture only the camera moves (the baked terrain and tower
+   * bodies scale with it); `final` re-bakes them at the new zoom so they are sharp again.
+   */
+  private applyCamera(final: boolean) {
+    const v = this.boardView,
+      camera = this.cameras.main;
+    camera.setZoom(this.baseZoom.x * v.zoom, this.baseZoom.y * v.zoom).centerOn(v.x, v.y);
+    if (!final) return;
+    const zoom = Math.max(camera.zoomX, camera.zoomY),
+      zoomed = v.zoom > ZOOMED;
+    this.textResolution = Math.max(1, zoom);
+    this.sharpenText();
+    this.bakeTerrain();
+    this.bodies.setZoom(zoom);
+    this.screenFx.setZoom(camera.zoomX);
+    if (!!this.view.zoomed !== zoomed) {
+      if (zoomed) this.view.zoomed = true;
+      else delete this.view.zoomed;
+      const fitButton = document.getElementById("board-fit");
+      if (fitButton) fitButton.hidden = !zoomed;
+      // Zoomed in, one finger pans the board instead of scrolling the page.
+      this.scale.parent?.classList.toggle("zoomed", zoomed);
+    }
+    this.hooks.refresh();
+  }
+  /** Fingers on the board: a tap picks (on lift, so a drag or pinch never builds), two fingers zoom, one pans when zoomed. */
+  private bindTouch(el: HTMLElement) {
+    const local = (t: Touch) => {
+        const r = this.game.canvas.getBoundingClientRect();
+        return { x: t.clientX - r.left, y: t.clientY - r.top };
+      },
+      pair = (e: TouchEvent) => {
+        const a = local(e.touches[0]),
+          b = local(e.touches[1]),
+          dx = a.x - b.x,
+          dy = a.y - b.y;
+        return { mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, distance: Math.max(1, Math.sqrt(dx * dx + dy * dy)) };
+      };
+    el.addEventListener("touchstart", (e) => {
+      if (e.touches.length >= 2) {
+        const { mid, distance } = pair(e);
+        this.gesture = { kind: "pinch", anchor: toWorld(this.boardView, mid, this.boardSize()), distance, zoom: this.boardView.zoom };
+        e.preventDefault();
+      } else if (e.touches.length === 1) {
+        const p = local(e.touches[0]);
+        this.gesture = { kind: "tap", start: p, last: p };
+      }
+    }, { passive: false });
+    el.addEventListener("touchmove", (e) => {
+      const g = this.gesture;
+      if (!g || g.kind === "done") return;
+      if (g.kind === "pinch") {
+        if (e.touches.length < 2) return;
+        const { mid, distance } = pair(e);
+        this.boardView = anchorView(g.anchor, mid, (g.zoom * distance) / g.distance, this.boardSize());
+        this.applyCamera(false);
+        e.preventDefault();
+        return;
+      }
+      const p = local(e.touches[0]);
+      if (g.kind === "tap" && Math.abs(p.x - g.start.x) + Math.abs(p.y - g.start.y) > TAP_MOVE) {
+        // At zoom 1 a drag is the page's (scrolling); zoomed in it pans the board.
+        if (this.boardView.zoom <= ZOOMED) return void (this.gesture = { kind: "done" });
+        g.kind = "pan";
+      }
+      if (g.kind === "pan") {
+        this.boardView = panView(this.boardView, p.x - g.last.x, p.y - g.last.y, this.boardSize());
+        this.applyCamera(false);
+        e.preventDefault();
+      }
+      g.last = p;
+    }, { passive: false });
+    const end = (e: TouchEvent) => {
+      this.lastTouch = performance.now();
+      const g = this.gesture;
+      // One finger of a pinch lifted: the other must not tap or pan when it lifts.
+      if (e.touches.length) {
+        if (g?.kind === "pinch") {
+          this.gesture = { kind: "done" };
+          this.applyCamera(true);
+        }
+        return;
+      }
+      this.gesture = null;
+      if (!g || e.type === "touchcancel") {
+        if (g && g.kind !== "tap") this.applyCamera(true);
+        return;
+      }
+      if (g.kind === "tap") this.tap(g.start);
+      else this.applyCamera(true);
+    };
+    el.addEventListener("touchend", end);
+    el.addEventListener("touchcancel", end);
+  }
+  /** A tap on the board: an enemy near the finger (outside build mode), else the cell, snapped to a buildable neighbour. */
+  private tap(p: Point) {
+    const size = this.boardSize(),
+      w = toWorld(this.boardView, p, size),
+      { columns, rows } = this.sim.map;
+    this.view.hover = null;
+    const enemy = this.view.build ? undefined : enemyAt(this.sim, w.x, w.y, CELL, this.touchSlack());
+    if (enemy) return this.hooks.chooseEnemy(enemy.id);
+    let cell = { x: Math.floor(w.x / CELL), y: Math.floor(w.y / CELL) };
+    if (cell.x < 0 || cell.y < 0 || cell.x >= columns || cell.y >= rows) return;
+    const build = this.view.build;
+    if (build && !this.sim.state.towers.some((t) => t.x === cell.x && t.y === cell.y))
+      cell = snapCell(w, CELL, columns, rows, (x, y) => this.sim.canBuild(x, y, build), Math.max(this.touchSlack(), CELL * 0.3));
+    this.hooks.chooseCell(cell.x, cell.y, false, true);
   }
   /** Redraws the terrain after a mission change; `create()` sizes the canvas for the new map. */
   reload() {
@@ -333,20 +477,19 @@ export class Battlefield extends Phaser.Scene {
       width = Math.max(1, Math.round(worldWidth * zoom)),
       height = Math.max(1, Math.round(worldHeight * zoom));
     if (width !== this.scale.gameSize.width || height !== this.scale.gameSize.height) this.scale.setGameSize(width, height);
-    // Zoomed about its centre and centred on the board: Phaser's filter cameras (bloom) assume the default origin.
-    this.cameras.main.setSize(width, height).setZoom(width / worldWidth, height / worldHeight).centerOn(worldWidth / 2, worldHeight / 2);
-    this.textResolution = Math.max(1, zoom);
-    this.sharpenText();
-    this.bakeTerrain();
-    this.bodies.setZoom(Math.max(width / worldWidth, height / worldHeight));
-    this.screenFx.setZoom(width / worldWidth);
+    // Zoomed about its centre and centred on the view: Phaser's filter cameras (bloom) assume the default origin.
+    this.cameras.main.setSize(width, height);
+    this.baseZoom = { x: width / worldWidth, y: height / worldHeight };
+    this.boardView = clampView(this.boardView, this.boardSize());
+    this.applyCamera(true);
   }
   /** Draws the terrain's source objects into a texture of the canvas's pixel size, shown at world size. */
   private bakeTerrain() {
     const camera = this.cameras.main,
-      zoom = Math.max(camera.zoomX, camera.zoomY),
       width = this.sim.map.columns * CELL,
-      height = this.sim.map.rows * CELL;
+      height = this.sim.map.rows * CELL,
+      // Zoomed in, the texture grows with the camera up to the largest texture phones take.
+      zoom = Math.min(Math.max(camera.zoomX, camera.zoomY), MAX_CANVAS / Math.max(width, height));
     if (!this.terrainParts.length || Math.abs(zoom - this.terrainZoom) < 0.01) return;
     this.terrainZoom = zoom;
     this.terrain?.destroy();

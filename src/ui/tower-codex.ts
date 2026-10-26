@@ -94,8 +94,11 @@ export const towerIconHtml = (d: TowerDefinition) => {
     : `<span class="tower-codex-glyph" style="--accent:${hex(d.color)}" aria-hidden="true">${escape(d.visual.icon)}</span>`;
 };
 
-/** Tab bar (one tab per build-menu category) and card list of the tower codex page. */
-export function renderTowerCodex(content: ContentPack, page: number) {
+/**
+ * Tab bar (one tab per build-menu category) and card list of the tower codex page. `collapsed` (phones) folds each
+ * card's level table, upgrades and paths into a closed disclosure, so the list stays scannable.
+ */
+export function renderTowerCodex(content: ContentPack, page: number, collapsed = false) {
   const towers = codexTowers(content),
     total = content.missions.length;
   const tabs = TOWER_PAGES.map((p, i) => {
@@ -129,7 +132,7 @@ export function renderTowerCodex(content: ContentPack, page: number) {
             .map((p) => `<li style="--path:${p.color}"><strong>${escape(p.name)}</strong>${p.role ? `<span>${escape(p.role)}</span>` : ""}<small>${p.tiers.map((x) => `◇ ${x.cost}`).join(" → ")}</small></li>`)
             .join("")}</ul>`
         : "";
-      return `<article class="codex-card tower-codex-card" style="--accent:${hex(d.color)}"><header>${towerIconHtml(d)}<span><strong>${escape(d.name)}</strong><small>${escape(d.role)} · ${where}</small></span></header><p>${escape(d.description)}</p><div class="codex-stats">${facts}</div>${params}${levels}${upgrades}${paths}</article>`;
+      return `<article class="codex-card tower-codex-card" style="--accent:${hex(d.color)}"><header>${towerIconHtml(d)}<span><strong>${escape(d.name)}</strong><small>${escape(d.role)} · ${where}</small></span></header><p>${escape(d.description)}</p><div class="codex-stats">${facts}</div>${params}${levels || upgrades || paths ? `<details class="tower-codex-more"${collapsed ? "" : " open"}><summary>${t.levels.length ? "Levels, upgrades and paths" : "Paths"}</summary>${levels}${upgrades}${paths}</details>` : ""}</article>`;
     })
     .join("");
   return { tabs, list };

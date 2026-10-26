@@ -19,6 +19,13 @@ describe("Training coach", () => {
     expect(coachRefusal(start, { type: "start" })).toBeNull();
     expect(coachRefusal(coachStep(game, view(), memory), { type: "build" })).toBeNull();
   });
+  it("says tap and ✓ on a touch screen, click with a mouse", () => {
+    const game = new Game(TRAINING),
+      memory = freshMemory();
+    memory.acked.add("reactor").add("credits");
+    expect(coachStep(game, view("pulse"), memory, true)?.text).toMatch(/^Tap the marked cell, then ✓/);
+    expect(coachStep(game, view("pulse"), memory)?.text).toMatch(/^Click the marked cell/);
+  });
   it("asks for a second tower and an upgrade after wave 1, then lets wave 2 start", () => {
     const game = new Game(TRAINING),
       memory = freshMemory();

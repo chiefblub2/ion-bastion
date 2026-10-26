@@ -14,6 +14,7 @@ import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, rende
 import { type AtlasOptions, fitWorld, renderAtlas, selectMission as featureMission, selectSector, selectWorld, toggleWorld } from "../ui/sector-atlas";
 import { terrainImage } from "../render/terrain-snapshot";
 import { describeResult } from "../ui/messages";
+import { isTouch } from "../ui/touch";
 import { playerName } from "../ui/players";
 import type { Driver, ViewState } from "../render/scene";
 import type { Applied } from "../net/lockstep";
@@ -204,7 +205,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     view.selected = null;
     view.enemy = null;
     const d = game.content.towers[type];
-    ui.notice(`${d.name} selected. Click a free cell ${d.placement === "path" ? "on the path" : "next to the path"}.`);
+    const where = d.placement === "path" ? "on the path" : "next to the path";
+    ui.notice(isTouch() ? `${d.name} selected. Tap a free cell ${where}, then ✓.` : `${d.name} selected. Click a free cell ${where}.`);
     ui.refresh();
   }
   /** Leaves build mode and drops the selection (Esc, right click). */
@@ -365,6 +367,21 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     e.preventDefault();
     showTowerPage(pages[(next + pages.length) % pages.length]);
   });
+  // A finger held on a build card arms the tower and brings its details (below the list in the sidebar) into view:
+  // touch screens have no hover tooltip.
+  const towerList = document.getElementById("tower-list")!;
+  let hold: number | undefined;
+  towerList.addEventListener("pointerdown", (e) => {
+    const card = (e.target as HTMLElement).closest<HTMLElement>("[data-tower]");
+    if (!card || e.pointerType === "mouse") return;
+    clearTimeout(hold);
+    hold = window.setTimeout(() => {
+      choose(card.dataset.tower as TowerId);
+      document.getElementById("selection")!.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }, 500);
+  });
+  for (const type of ["pointerup", "pointercancel", "pointerleave"]) towerList.addEventListener(type, () => clearTimeout(hold));
+  towerList.addEventListener("contextmenu", (e) => e.preventDefault());
   /** Switches the enemy codex to another tab and keeps the focus on the tab bar. */
   function showCodexTab(tab: CodexTab) {
     renderCodex(game, tab);
@@ -446,9 +463,16 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     // A landmass on the atlas's world map selects its sector, like its label.
     const land = (event.target as Element).closest<SVGGElement>("#world-svg .land");
     if (land) return showSector(Number(land.dataset.sector), "sector-tabs");
+    // The compact layout's side rail shows the next wave as icons; a tap opens the full forecast over the board.
+    const forecast = (event.target as HTMLElement).closest("#wave-forecast");
+    if (forecast && document.documentElement.classList.contains("is-compact")) {
+      forecast.classList.toggle("open");
+      return;
+    }
     const b = (event.target as HTMLElement).closest("button");
     if (!b) return;
     if (b.dataset.back !== undefined) return screens.back();
+    if (b.dataset.toTop !== undefined) return scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     if (b.dataset.worldZoom !== undefined) return toggleWorld();
     if (b.dataset.planet) return selectWorld(game, Number(b.dataset.planet), atlas());
     if (b.dataset.tower) return choose(b.dataset.tower as TowerId);
@@ -507,6 +531,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
         screens.show(page("run"));
         break;
       case "menu-btn":
+      case "rail-menu":
         screens.show(isPlaytest(game.mission) ? page("editor") : isRunMission(game.mission) ? page("run") : HOME);
         break;
       case "menu-primary":
@@ -544,6 +569,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
         break;
       }
       case "restart-btn":
+      case "rail-restart":
         dialogs.open("restart");
         break;
       case "cancel-restart":
@@ -643,6 +669,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       }
     }
   });
+  // The long codex pages offer a way back to their tabs once scrolled well down.
+  addEventListener("scroll", () => document.documentElement.classList.toggle("scrolled-far", scrollY > 1200), { passive: true });
   document.addEventListener("visibilitychange", () => {
     // In multiplayer the others keep playing; pausing stays an explicit choice.
     if (document.hidden && !coop.active() && isRunning(game.state) && !game.state.paused) execute({ type: "pause" });

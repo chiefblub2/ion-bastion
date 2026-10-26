@@ -3,7 +3,7 @@ import type { ViewState } from "../render/scene";
 import type { MultiplayerSession } from "./players";
 import { playerName } from "./players";
 import { cardChoices, cardTower, towerCardHtml } from "./tower-card";
-import { placeTowerCard } from "./tower-card-place";
+import { type CardPlacement, placeTowerCard } from "./tower-card-place";
 /** Phones in landscape (the full-screen layout's media query) get the slim card. */
 const PHONE = "(orientation: landscape) and (max-height: 540px)";
 /** Boards narrower than this get the slim card too. */
@@ -22,6 +22,8 @@ export class TowerCard {
     private game: Game,
     private view: ViewState,
     private session: () => MultiplayerSession | null,
+    /** Page rectangle of a cell through the player's zoom (`Battlefield.cellRect`). */
+    private cellRect: (cell: { x: number; y: number }) => DOMRect | null = () => null,
   ) {
     // A press on the card stays on the card; the board never builds or selects underneath it.
     this.el.addEventListener("pointerdown", (e) => e.stopPropagation());
@@ -61,14 +63,19 @@ export class TowerCard {
     const { map } = this.game;
     this.el.classList.remove("dock-top", "dock-bottom");
     this.el.style.width = "";
-    const p = placeTowerCard({
-      board: { width: this.board.clientWidth, height: this.board.clientHeight },
-      columns: map.columns,
-      rows: map.rows,
-      cell: t,
-      card: { width: this.el.offsetWidth, height: this.el.offsetHeight },
-      path: map.path,
-    });
+    // Zoomed in, the board grid no longer matches the screen: dock along the edge away from the tower.
+    const cell = this.view.zoomed ? this.cellRect(t) : null,
+      board = this.board.getBoundingClientRect(),
+      p: CardPlacement = this.view.zoomed
+        ? { mode: "dock", edge: cell && cell.top + cell.height / 2 > board.top + board.height / 2 ? "top" : "bottom" }
+        : placeTowerCard({
+            board: { width: this.board.clientWidth, height: this.board.clientHeight },
+            columns: map.columns,
+            rows: map.rows,
+            cell: t,
+            card: { width: this.el.offsetWidth, height: this.el.offsetHeight },
+            path: map.path,
+          });
     // The board can sit inset in its wrapper (full screen centres it); the card is positioned in the wrapper.
     const left = this.board.offsetLeft,
       top = this.board.offsetTop;

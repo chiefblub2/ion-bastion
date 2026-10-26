@@ -12,6 +12,7 @@ import { bindUiSounds } from "./audio/ui-sounds";
 import { bindSoundPanel } from "./ui/sound-panel";
 import { saveGraphics } from "./render/graphics-settings";
 import { bindFullscreen } from "./app/fullscreen";
+import { bindCompact } from "./app/compact";
 import { createInput } from "./app/input";
 import { registerTools } from "./app/webmcp";
 import { screenFromUrl } from "./app/screens";
@@ -90,7 +91,7 @@ const battlefield = new Battlefield(game, view, {
   },
 });
 const coach = new Coach(game, view, (cell) => battlefield.cellRect(cell));
-const towerCard = new TowerCard(game, view, () => ui.session());
+const towerCard = new TowerCard(game, view, () => ui.session(), (cell) => battlefield.cellRect(cell));
 const buildConfirm = new BuildConfirm(game, view, (cell) => battlefield.cellRect(cell), {
   confirm: () => input.confirmBuild(),
   cancel: () => input.dropPending(),
@@ -101,6 +102,7 @@ ui.onRefresh = () => {
   buildConfirm.refresh();
 };
 const fullscreen = bindFullscreen(() => battlefield.fit());
+bindCompact(() => battlefield.fit());
 const input = createInput({
   game,
   view,
