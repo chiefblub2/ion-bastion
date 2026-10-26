@@ -2042,8 +2042,8 @@ dialog::backdrop {
  */
 @media (orientation: landscape) and (max-height: 540px) {
   :root:is(.is-fullscreen, .is-compact) {
-    --rail: 80px;
-    --side: clamp(140px, 19vw, 180px);
+    --rail: 60px;
+    --side: 150px;
     /* Room beside the notch; the side away from the camera cut-out only clears the rounded corner (app/compact.ts). */
     --inset-l: max(8px, env(safe-area-inset-left));
     --inset-r: max(8px, env(safe-area-inset-right));
@@ -2061,7 +2061,6 @@ dialog::backdrop {
   }
   @media (max-width: 640px) {
     :root:is(.is-fullscreen, .is-compact) {
-      --rail: 76px;
       --side: 140px;
     }
   }
@@ -2102,28 +2101,63 @@ dialog::backdrop {
   }
   :root:is(.is-fullscreen, .is-compact) .resources {
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
+  }
+  /* Credits and reactor: the icon stands above the value instead of a label; only the wave keeps its word. */
+  :root:is(.is-fullscreen, .is-compact) .resources > div:nth-child(-n + 2) .stat-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   :root:is(.is-fullscreen, .is-compact) .resources strong {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: start;
+    align-items: baseline;
+    gap: 1px 2px;
     font-size: 15px;
     white-space: nowrap;
   }
   :root:is(.is-fullscreen, .is-compact) .resource-icon {
-    font-size: 13px;
+    grid-column: 1 / -1;
+    font-size: 12px;
+    line-height: 1;
   }
+  /* One column: ⚙ (pause and menu), ranges, speed, then the wave button. */
   :root:is(.is-fullscreen, .is-compact) .playback {
     order: 2;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 4px;
   }
   :root:is(.is-fullscreen, .is-compact) .playback button {
     min-width: 0;
-    height: 34px;
+    height: 36px;
   }
-  /* The home-screen app on an iPhone has no browser bars left to hide. */
-  :root.is-compact.fullscreen-moot #fullscreen-btn {
+  :root:is(.is-fullscreen, .is-compact) :is(#pause-btn, #fullscreen-btn) {
     display: none;
+  }
+  :root:is(.is-fullscreen, .is-compact) #rail-settings {
+    order: 1;
+    font-size: 18px;
+  }
+  :root:is(.is-fullscreen, .is-compact) #coverage-btn {
+    order: 2;
+  }
+  :root:is(.is-fullscreen, .is-compact) #speed-btn {
+    order: 3;
+  }
+  :root:is(.is-fullscreen, .is-compact) #toolbar-start {
+    order: 4;
+  }
+  :root:is(.is-fullscreen, .is-compact) .toolbar-start .wave-word {
+    display: none;
+  }
+  :root:is(.is-fullscreen, .is-compact) .playback .toolbar-start {
+    font-size: 11px;
   }
   :root:is(.is-fullscreen, .is-compact) .playback .toolbar-start {
     grid-column: 1 / -1;
@@ -2263,6 +2297,42 @@ dialog::backdrop {
   #notice.fresh {
     animation-timing-function: steps(1, end);
   }
+}
+
+/* The ⚙ menu: a popover beside its button (app/input.ts places it). */
+.game-menu {
+  position: fixed;
+  z-index: 60;
+  display: grid;
+  gap: 6px;
+  width: 190px;
+  padding: 10px;
+  border: 1px solid #2a4670;
+  border-radius: 8px;
+  background: rgba(6, 11, 24, 0.97);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+.game-menu[hidden] {
+  display: none;
+}
+.game-menu button {
+  min-height: 42px;
+  border: 1px solid #24406a;
+  border-radius: 5px;
+  background: #0d1730;
+  color: #e8f6ff;
+  font: 500 14px "DM Sans", sans-serif;
+}
+.game-menu button.primary {
+  justify-content: center;
+  border-color: var(--mint);
+  background: var(--mint);
+  color: var(--on-neon);
+  font-weight: 700;
+}
+.game-menu button[hidden],
+:root.fullscreen-moot #menu-fullscreen {
+  display: none;
 }
 
 /* Sidebar panel while a wave runs: enemies on the field by type. */

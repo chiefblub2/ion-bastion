@@ -445,6 +445,42 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     const next = TARGET_PRIORITIES[(TARGET_PRIORITIES.indexOf(t.priority ?? "first") + 1) % TARGET_PRIORITIES.length];
     execute({ type: "target", id: t.id, priority: next });
   }
+  /**
+   * The ⚙ menu of the compact rail: opening it pauses a solo wave like a dialog; Resume, Esc or a tap beside it
+   * resume what it paused. Its other entries close it and leave the game paused (the overlay offers Resume).
+   */
+  const gameMenu = document.getElementById("game-menu")!,
+    menuButton = document.getElementById("rail-settings")!;
+  let pausedByMenu = false;
+  function openGameMenu() {
+    pausedByMenu = !coop.active() && isRunning(game.state) && !game.state.paused;
+    if (pausedByMenu) execute({ type: "pause" });
+    gameMenu.hidden = false;
+    menuButton.setAttribute("aria-expanded", "true");
+    // Beside the rail's button, or below it where the toolbar runs across the top (full screen on a tall screen).
+    const r = menuButton.getBoundingClientRect(),
+      beside = r.right + 8 + gameMenu.offsetWidth <= innerWidth;
+    gameMenu.style.left = `${Math.round(beside ? r.right + 8 : Math.max(8, r.right - gameMenu.offsetWidth))}px`;
+    gameMenu.style.top = `${Math.round(Math.max(8, Math.min(beside ? r.top : r.bottom + 8, innerHeight - gameMenu.offsetHeight - 8)))}px`;
+    document.getElementById("menu-resume")!.focus();
+  }
+  function closeGameMenu(resume: boolean) {
+    if (gameMenu.hidden) return;
+    gameMenu.hidden = true;
+    menuButton.setAttribute("aria-expanded", "false");
+    if (resume && pausedByMenu && game.state.paused && isRunning(game.state)) execute({ type: "pause" });
+    pausedByMenu = false;
+  }
+  document.addEventListener("pointerdown", (e) => {
+    const target = e.target as Element;
+    if (!gameMenu.hidden && !target.closest("#game-menu, #rail-settings, #sound-panel")) closeGameMenu(true);
+  });
+  gameMenu.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    e.stopPropagation();
+    closeGameMenu(true);
+    menuButton.focus();
+  });
   const fullscreen = () =>
     toggleFullscreen().catch(() => ui.notice("Fullscreen is not available in this browser.", true));
   const pauseIfRunning = () => {
@@ -471,6 +507,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     }
     const b = (event.target as HTMLElement).closest("button");
     if (!b) return;
+    // Every entry of the ⚙ menu closes it; Resume also resumes.
+    if (b.closest("#game-menu")) closeGameMenu(b.id === "menu-resume");
     if (b.dataset.back !== undefined) return screens.back();
     if (b.dataset.toTop !== undefined) return scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     if (b.dataset.worldZoom !== undefined) return toggleWorld();
@@ -506,7 +544,15 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
         cancel();
         break;
       case "fullscreen-btn":
+      case "menu-fullscreen":
         fullscreen();
+        break;
+      case "rail-settings":
+        if (gameMenu.hidden) openGameMenu();
+        else closeGameMenu(true);
+        break;
+      case "overlay-resume":
+        pauseIfRunning();
         break;
       case "coverage-btn":
         toggleCoverage();
