@@ -367,6 +367,21 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     e.preventDefault();
     showTowerPage(pages[(next + pages.length) % pages.length]);
   });
+  // A finger held on a build card arms the tower and brings its details (below the list in the sidebar) into view:
+  // touch screens have no hover tooltip.
+  const towerList = document.getElementById("tower-list")!;
+  let hold: number | undefined;
+  towerList.addEventListener("pointerdown", (e) => {
+    const card = (e.target as HTMLElement).closest<HTMLElement>("[data-tower]");
+    if (!card || e.pointerType === "mouse") return;
+    clearTimeout(hold);
+    hold = window.setTimeout(() => {
+      choose(card.dataset.tower as TowerId);
+      document.getElementById("selection")!.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }, 500);
+  });
+  for (const type of ["pointerup", "pointercancel", "pointerleave"]) towerList.addEventListener(type, () => clearTimeout(hold));
+  towerList.addEventListener("contextmenu", (e) => e.preventDefault());
   /** Switches the enemy codex to another tab and keeps the focus on the tab bar. */
   function showCodexTab(tab: CodexTab) {
     renderCodex(game, tab);

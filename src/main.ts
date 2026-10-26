@@ -91,7 +91,7 @@ const battlefield = new Battlefield(game, view, {
   },
 });
 const coach = new Coach(game, view, (cell) => battlefield.cellRect(cell));
-const towerCard = new TowerCard(game, view, () => ui.session());
+const towerCard = new TowerCard(game, view, () => ui.session(), (cell) => battlefield.cellRect(cell));
 const buildConfirm = new BuildConfirm(game, view, (cell) => battlefield.cellRect(cell), {
   confirm: () => input.confirmBuild(),
   cancel: () => input.dropPending(),

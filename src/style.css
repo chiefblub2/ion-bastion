@@ -363,16 +363,42 @@ p {
   isolation: isolate;
   overflow: hidden;
 }
+/* Two fingers zoom the board (render/scene.ts), never the page; zoomed in, one finger pans it too. */
 #board {
   width: 100%;
   aspect-ratio: 18/12;
   position: relative;
-  touch-action: manipulation;
+  touch-action: pan-x pan-y;
 }
 #board canvas {
   display: block;
   max-width: 100%;
-  touch-action: manipulation;
+  touch-action: pan-x pan-y;
+}
+#board.zoomed,
+#board.zoomed canvas {
+  touch-action: none;
+}
+.board-fit {
+  position: absolute;
+  z-index: 4;
+  top: 8px;
+  right: 8px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--mint);
+  border-radius: 6px;
+  background: rgba(6, 11, 24, 0.88);
+  color: var(--mint);
+  font: 20px/1 sans-serif;
+}
+.board-fit[hidden] {
+  display: none;
+}
+/* Long presses on build cards show details; no text selection or callout menu. */
+.tower-card {
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 #game-overlay {
   position: absolute;
@@ -2177,6 +2203,11 @@ dialog::backdrop {
     margin: 0;
     justify-content: center;
     pointer-events: none;
+  }
+  /* A tower card docked at the bottom keeps its buttons clear: the toast moves to the top. */
+  :root:is(.is-fullscreen, .is-compact) main:has(#tower-card.dock-bottom:not([hidden])) .bottom-bar {
+    top: calc(max(6px, env(safe-area-inset-top)) + 10px);
+    bottom: auto;
   }
   :root:is(.is-fullscreen, .is-compact) #notice {
     max-width: 100%;
