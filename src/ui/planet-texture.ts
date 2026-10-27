@@ -25,9 +25,9 @@ function start() {
   };
   return worker;
 }
-/** An image URL of the surface in `box` (world units) at `width` × `height` pixels. */
-export function surfaceImage(seeds: readonly SurfaceSeed[], box: Box, width: number, height: number): Promise<string> {
-  const key = JSON.stringify([seeds, box, width, height]);
+/** An image URL of the surface in `box` (world units) at `width` × `height` pixels; `wrap` makes it seamless in x. */
+export function surfaceImage(seeds: readonly SurfaceSeed[], box: Box, width: number, height: number, wrap?: number): Promise<string> {
+  const key = JSON.stringify([seeds, box, width, height, wrap]);
   let image = cache.get(key);
   if (!image) {
     image =
@@ -35,7 +35,7 @@ export function surfaceImage(seeds: readonly SurfaceSeed[], box: Box, width: num
         ? Promise.reject(new Error("No worker canvas"))
         : new Promise<string>((resolve, reject) => {
             const id = next++,
-              job: SurfaceJob = { id, seeds: [...seeds], box, width, height };
+              job: SurfaceJob = { id, seeds: [...seeds], box, width, height, wrap };
             waiting.set(id, { resolve, reject });
             start().postMessage(job);
           });

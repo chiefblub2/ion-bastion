@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BIOMES, biomeGround, paintSurface, type SurfaceSeed } from "./planet-surface";
+import { BIOMES, biomeGround, paintSurface, paintWrapped, type SurfaceSeed } from "./planet-surface";
 const seeds: SurfaceSeed[] = [
   { x: 20, y: 20, biome: "frost" },
   { x: 60, y: 20, biome: "volcano" },
@@ -36,5 +36,14 @@ describe("planet surface", () => {
   });
   it("has a flat ground colour for every biome", () => {
     for (const id of Object.keys(BIOMES) as (keyof typeof BIOMES)[]) expect(biomeGround(id)).toMatch(/^#[0-9a-f]{6}$/);
+  });
+  it("paints a picture that wraps around without a seam", () => {
+    const box = { x: 0, y: 0, w: 60, h: 20 },
+      seeds = [{ x: 30, y: 10, biome: "frost" as const }],
+      px = paintWrapped(seeds, box, 120, 40, 10),
+      at = (i: number, j: number) => [0, 1, 2].map((c) => px[(j * 120 + i) * 4 + c]),
+      step = (a: number, b: number) => Math.max(...at(a, 20).map((v, c) => Math.abs(v - at(b, 20)[c])));
+    // The last column runs on into the first about as smoothly as two inner neighbours.
+    expect(step(119, 0)).toBeLessThanOrEqual(Math.max(12, 2 * step(60, 61)));
   });
 });

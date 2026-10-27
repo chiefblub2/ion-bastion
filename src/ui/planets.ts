@@ -4,9 +4,10 @@ import type { BiomeId } from "./planet-surface";
 import type { Point } from "./world-map";
 /**
  * The worlds of the Sector Atlas, display only: the campaign's sectors in play order on three planets, the Circuit
- * on a moon. The simulation and the unlocks never see them. Each world lays its sectors out by hand (`centres`, in
- * world units on the 200 × 100 plane), may hold one sector as a station in orbit above the horizon, and paints its
- * unclaimed land in its own biome.
+ * on a moon. The simulation and the unlocks never see them. Each world is a globe (`globe.ts`) and lays its sectors
+ * out by hand (`centres`, in units of the 200 × 100 plane that wraps around it, inside `FRONT`, the face the globe
+ * turns to the viewer), may hold one sector as a station in orbit above it, and paints its unclaimed land in its own
+ * biome.
  */
 export interface World {
   id: string;
@@ -15,7 +16,7 @@ export interface World {
   moon?: boolean;
   /** Campaign sectors on this planet, in play order; the last planet takes any beyond. The moon takes the Circuit. */
   count?: number;
-  /** The territory centre of each sector in play order; a station's is its deck above the horizon. */
+  /** The territory centre of each sector in play order; a station's is the point its deck floats over. */
   centres: Point[];
   /** The sector (index on this world) that is a station in orbit instead of a territory. */
   station?: number;
@@ -33,10 +34,10 @@ export const WORLDS: readonly World[] = [
     epithet: "Frontier world",
     count: 4,
     centres: [
-      { x: 40, y: 62 },
-      { x: 98, y: 40 },
-      { x: 152, y: 68 },
-      { x: 138, y: -26 },
+      { x: 80, y: 48 },
+      { x: 104, y: 36 },
+      { x: 120, y: 58 },
+      { x: 74, y: 28 },
     ],
     station: 3,
     wild: "tundra",
@@ -50,10 +51,10 @@ export const WORLDS: readonly World[] = [
     epithet: "Dead world",
     count: 4,
     centres: [
-      { x: 38, y: 40 },
-      { x: 82, y: 72 },
-      { x: 126, y: 36 },
-      { x: 168, y: 68 },
+      { x: 76, y: 48 },
+      { x: 104, y: 32 },
+      { x: 126, y: 52 },
+      { x: 98, y: 66 },
     ],
     wild: "waste",
     atmosphere: "#ffb070",
@@ -66,10 +67,10 @@ export const WORLDS: readonly World[] = [
     epithet: "Wild world",
     count: 4,
     centres: [
-      { x: 36, y: 66 },
-      { x: 78, y: 34 },
-      { x: 124, y: 66 },
-      { x: 168, y: 38 },
+      { x: 78, y: 60 },
+      { x: 86, y: 36 },
+      { x: 112, y: 40 },
+      { x: 122, y: 64 },
     ],
     wild: "verdant",
     atmosphere: "#8cffb4",
@@ -82,9 +83,9 @@ export const WORLDS: readonly World[] = [
     epithet: "The Circuit · moon",
     moon: true,
     centres: [
-      { x: 44, y: 60 },
-      { x: 100, y: 36 },
-      { x: 156, y: 62 },
+      { x: 86, y: 48 },
+      { x: 110, y: 38 },
+      { x: 114, y: 62 },
     ],
     wild: "regolith",
     atmosphere: "#ff8fe0",

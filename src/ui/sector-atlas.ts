@@ -9,7 +9,9 @@ import { enemyIcon } from "./wave-forecast";
 import type { CampaignRecord } from "../app/progress";
 import { starText } from "../app/rating";
 import { type Lock, sectorLocked, type Unlocked } from "../app/campaign-unlock";
-import { type Box, fitBox, headingOf, HORIZON, link, planetLayout, project, type Region, routePoints, routeShape, serpentine, stars, stationBox, type Point, SURFACE, tiltFor, WORLD_BOX, WORLD_H, WORLD_W } from "./world-map";
+import { type Box, GLOBE_BOX, headingOf, link, planetLayout, type Region, routePoints, routeShape, serpentine, stars, type Point, WRAP } from "./world-map";
+import { arc, type Camera, DECK_SCALE, deckAnchor, deckSpot, dragCamera, facing, fitCamera, lerpCamera, outlineOnScreen, type Spot, spotOnScreen, surfaceSpot, toSphere, UNIT, type Vec3 } from "./globe";
+import { GlobeGL } from "./globe-gl";
 import { SYSTEM, type WorldEntry, worldOf, worldsOf } from "./planets";
 import { type BiomeId, biomeGround, type SurfaceSeed } from "./planet-surface";
 import { surfaceImage } from "./planet-texture";
@@ -266,34 +268,60 @@ export function toggleWorld() {
   zoom = zoom === "sector" ? "planet" : zoom === "planet" ? "system" : "planet";
   fitWorld(true);
 }
-/** What the planet view shows: the world with a margin for its labels, and the deck of a station in orbit. */
-function planetBox(regions: readonly Region[]): Box {
-  const deck = regions.find((r) => r.station);
-  if (!deck) return WORLD_BOX;
-  const y = Math.min(WORLD_BOX.y, deck.box.y - 11);
-  return { ...WORLD_BOX, y, h: WORLD_BOX.y + WORLD_BOX.h - y };
+/** Where a point of sector `i`'s territory (or of its deck in orbit) sits on the globe. */
+function spotOf(i: number, p: Point): Spot {
+  const r = world.regions[i];
+  return r?.station ? deckSpot(r, p) : surfaceSpot(p);
 }
 /**
- * Moves and scales the plane so the selected sector (or the whole planet) fills the view, flying there when
- * `smooth`; the system view fades over it. The surface is tilted (CSS); labels and stations stay upright on a flat
- * layer above it, placed where their world point lands on screen (`project`). Called on every change and,
+ * The camera of the planet view: the whole globe and any deck in orbit, smaller than the view, turned to the
+ * world's sectors and seen from a little north of them.
+ */
+function planetCamera(width: number, height: number): Camera {
+  const ground = world.regions.filter((r) => !r.station).map((r) => toSphere(r)),
+    { lon, lat } = facing(ground.length ? ground : [toSphere({ x: 100, y: 50 })]),
+    decks = world.regions.flatMap((r) => (r.station ? r.border.map((p) => deckSpot(r, p)) : [])),
+    nav = $("world-nav").offsetHeight + 18,
+    side = Math.max(16, width * 0.06),
+    // A narrow map keeps the zoom button's corner clear of the globe.
+    top = width < 600 ? $("world-zoom").offsetHeight + 14 : 22;
+  return fitCamera(decks, lon, Math.min(0.9, lat + 0.2), width, height, { top, right: side, bottom: nav, left: side }, { disc: 1.08 });
+}
+/**
+ * The camera of a sector zoom: the globe turned until the sector's stations face the viewer, close enough that they
+ * fill the view between the legend above and the world bar below. Phones keep less room beside them (their station
+ * labels shrink to the number).
+ */
+function sectorCamera(width: number, height: number): Camera {
+  const at = world.selected,
+    spots = world.stations[at].map((p) => spotOf(at, p)),
+    region = world.regions[at],
+    face = region.station ? deckAnchor(region) : facing(spots.map((s) => s.v)),
+    { lon, lat } = "lon" in face ? face : facing([face]),
+    side = width < 600 ? 44 : 90;
+  // A station's badge stands about 50 px above its point and its name hangs about 40 px below it.
+  return fitCamera(spots, lon, lat, width, height, {
+    top: $("missions-label").parentElement!.offsetHeight + 62,
+    right: side,
+    bottom: $("world-nav").offsetHeight + 54,
+    left: side,
+  });
+}
+/**
+ * Turns and zooms the globe so the selected sector (or the whole planet) fills the view, flying there when
+ * `smooth`: the globe spins until the target faces the viewer while it zooms; the system view fades over it.
+ * Territories, links and labels are projected onto the globe every frame (`place`). Called on every change and,
  * unanimated, when the view is resized.
  */
 export function fitWorld(smooth = false) {
   const view = $("world-view"),
     region = world.regions[world.selected],
-    sector = zoom === "sector" && !!region;
-  if (!view.clientWidth) return;
-  // Phones show the stations closer together (their labels shrink to the number), so the margin is smaller there.
-  // A sector zoom keeps the band under the legend free.
-  const narrow = view.clientWidth < 600,
-    top = sector ? $("missions-label").parentElement!.offsetHeight + 12 : 0,
-    // A short view (the fitted landscape layout) also keeps the world bar's band free, so labels clear it.
-    bottom = sector && view.clientHeight < 420 ? $("world-nav").offsetHeight + 8 : 0,
-    box = sector ? stationBox(world.stations[world.selected], narrow ? 7 : 9, narrow ? 5 : 8) : planetBox(world.regions),
-    fit = fitBox(box, view.clientWidth, view.clientHeight - top - bottom);
-  fit.y += top;
+    sector = zoom === "sector" && !!region,
+    width = view.clientWidth,
+    height = view.clientHeight;
+  if (!width) return;
   view.dataset.zoom = zoom === "sector" && !sector ? "planet" : zoom;
+  const target = sector ? sectorCamera(width, height) : planetCamera(width, height);
   const button = $("world-zoom"),
     name = escape(world.entry?.world.name ?? "Planet");
   button.setAttribute("aria-label", zoom === "sector" ? `Show all of ${name}` : zoom === "planet" ? "Show the star system" : `Back to ${name}`);
@@ -302,41 +330,127 @@ export function fitWorld(smooth = false) {
   button.hidden = !world.entry;
   placeSystem();
   cancelAnimationFrame(flight);
-  if (!smooth || !motion() || !shown) return place(fit);
+  if (!smooth || !motion() || !shown) return place(target);
   const from = shown;
   // New stations get their place at once, before the first frame of the flight.
   place(from);
   const start = performance.now(),
     ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2),
     frame = (now: number) => {
-      const t = Math.min(1, (now - start) / FLIGHT_MS),
-        e = ease(t);
-      place({ x: from.x + (fit.x - from.x) * e, y: from.y + (fit.y - from.y) * e, scale: from.scale + (fit.scale - from.scale) * e });
+      const t = Math.min(1, (now - start) / FLIGHT_MS);
+      place(lerpCamera(from, target, ease(t)));
       if (t < 1) flight = requestAnimationFrame(frame);
     };
   flight = requestAnimationFrame(frame);
 }
-const FLIGHT_MS = 800;
+const FLIGHT_MS = 950;
 let flight = 0,
-  shown: { x: number; y: number; scale: number } | null = null;
-/** Applies one placement of the plane: its transform, the tilt and every label's screen position. */
-function place(fit: { x: number; y: number; scale: number }) {
+  shown: Camera | null = null;
+/** The SVG pieces that follow the globe, collected when a world renders: outlines, links, dots and decks. */
+let onGlobe: {
+  outlines: { els: Element[]; pts: Vec3[] }[];
+  links: { el: Element; spots: Spot[] }[];
+  dots: { el: Element; spot: Spot }[];
+  decks: { el: SVGGElement; c: Point }[];
+  rings: Element[];
+} = { outlines: [], links: [], dots: [], decks: [], rings: [] };
+/** The painted globe (WebGL), created with the first world; absent or not `ok`, the territories stay flat. */
+let globe: GlobeGL | null = null;
+const num = (n: number) => Math.round(n * 10) / 10;
+/**
+ * Applies one camera: the painted globe, every territory outline, link and dot projected onto it, the decks in orbit
+ * and every label's screen position; what the globe hides is hidden.
+ */
+function place(cam: Camera) {
   const view = $("world-view"),
-    plane = $("world-plane"),
     width = view.clientWidth,
     height = view.clientHeight,
-    tilt = tiltFor(width);
-  shown = fit;
-  plane.style.transform = `translate(${fit.x}px, ${fit.y}px) scale(${fit.scale})`;
-  plane.style.setProperty("--inv", String(1 / fit.scale));
-  // World units per screen pixel, for sizes in the SVG (dot radii) that stay constant on screen.
-  plane.style.setProperty("--px", String(WORLD_W / (width * fit.scale)));
-  const lean = $("world-tilt");
-  lean.style.transform = `perspective(${tilt.perspective}px) rotateX(${tilt.deg}deg)`;
-  for (const el of view.querySelectorAll<HTMLElement>(":is(#sector-tabs, #mission-list) [data-wx]")) {
-    const p = project({ x: Number(el.dataset.wx), y: Number(el.dataset.wy) }, fit, width, height, tilt);
-    el.style.transform = `translate(${Math.round(p.x * 10) / 10}px, ${Math.round(p.y * 10) / 10}px)`;
+    cx = width / 2 + cam.ox,
+    cy = height / 2 + cam.oy;
+  shown = cam;
+  globe?.draw(cam, width, height, Math.min(2, devicePixelRatio || 1));
+  const svg = $("world-svg"),
+    box = `0 0 ${width} ${height}`;
+  if (svg.getAttribute("viewBox") !== box) svg.setAttribute("viewBox", box);
+  for (const ring of onGlobe.rings) {
+    ring.setAttribute("cx", String(num(cx)));
+    ring.setAttribute("cy", String(num(cy)));
+    ring.setAttribute("r", String(num(cam.r)));
   }
+  for (const { els, pts } of onGlobe.outlines) {
+    const out = outlineOnScreen(pts, cam, width, height),
+      d = out ? `M${out.map((p) => `${num(p.x)} ${num(p.y)}`).join("L")}Z` : "";
+    for (const el of els) el.setAttribute("d", d);
+  }
+  for (const { el, spots } of onGlobe.links) {
+    const at = spots.map((s) => spotOnScreen(s, cam, width, height));
+    el.setAttribute("d", at.some((p) => p.hidden) ? "" : `M${at.map((p) => `${num(p.x)} ${num(p.y)}`).join("L")}`);
+  }
+  for (const { el, spot } of onGlobe.dots) {
+    const p = spotOnScreen(spot, cam, width, height);
+    el.toggleAttribute("hidden", p.hidden);
+    el.setAttribute("cx", String(num(p.x)));
+    el.setAttribute("cy", String(num(p.y)));
+  }
+  // A deck faces the viewer, so it is the flat drawing moved and scaled to its anchor.
+  const k = cam.r * UNIT * DECK_SCALE;
+  for (const { el, c } of onGlobe.decks) {
+    const p = spotOnScreen({ v: deckAnchor(c) }, cam, width, height);
+    el.toggleAttribute("hidden", p.hidden);
+    el.setAttribute("transform", `translate(${num(p.x)} ${num(p.y)}) scale(${k}) translate(${-c.x} ${-c.y})`);
+    el.style.setProperty("--px", String(1 / k));
+  }
+  for (const el of view.querySelectorAll<HTMLElement>(":is(#sector-tabs, #mission-list) [data-wx]")) {
+    const at = { x: Number(el.dataset.wx), y: Number(el.dataset.wy) },
+      deck = el.dataset.deck?.split(",").map(Number),
+      p = spotOnScreen(deck ? deckSpot({ x: deck[0], y: deck[1] }, at) : surfaceSpot(at), cam, width, height);
+    el.style.transform = `translate(${num(p.x)}px, ${num(p.y)}px)`;
+    // Labels give way near the horizon, where the land turns away.
+    el.classList.toggle("is-behind", p.hidden || (!deck && p.z < 0.12));
+  }
+}
+/**
+ * Dragging the map turns the globe under the finger (or mouse); a drag never counts as a tap on what it started on.
+ * Bound once by the app.
+ */
+export function bindGlobe() {
+  const view = $("world-view");
+  let start: { x: number; y: number; cam: Camera; id: number } | null = null,
+    moved = false;
+  view.addEventListener("pointerdown", (e) => {
+    if (zoom === "system" || !shown || e.button > 0 || (e.target as Element).closest(".world-nav, .world-legend, .world-zoom")) return;
+    start = { x: e.clientX, y: e.clientY, cam: shown, id: e.pointerId };
+    moved = false;
+  });
+  view.addEventListener("pointermove", (e) => {
+    if (!start || e.pointerId !== start.id) return;
+    const dx = e.clientX - start.x,
+      dy = e.clientY - start.y;
+    if (!moved && dx * dx + dy * dy < 64) return;
+    if (!moved) view.setPointerCapture(e.pointerId);
+    moved = true;
+    cancelAnimationFrame(flight);
+    view.classList.add("is-turning");
+    place(dragCamera(start.cam, dx, dy));
+  });
+  const end = (e: PointerEvent) => {
+    if (!start || e.pointerId !== start.id) return;
+    start = null;
+    view.classList.remove("is-turning");
+  };
+  view.addEventListener("pointerup", end);
+  view.addEventListener("pointercancel", end);
+  // The click that ends a drag is swallowed before the app sees it.
+  view.addEventListener(
+    "click",
+    (e) => {
+      if (!moved) return;
+      moved = false;
+      e.stopPropagation();
+      e.preventDefault();
+    },
+    true,
+  );
 }
 const round = (n: number) => Math.round(n * 100) / 100;
 /** Content index of each shown sector, which numbers it. */
@@ -409,51 +523,88 @@ function renderWorld(game: Game, entry: WorldEntry, options: AtlasOptions) {
   world = { entry, sectors: group, regions, stations, selected: -1 };
   seeds = surface;
   contentIndex = new Map(group.map((s) => [s, sectors.indexOf(s)]));
-  $("world-view").style.setProperty("--atmo", entry.world.atmosphere);
-  // Links from each sector's last station to the next sector's first; lit once the next sector is open.
+  // Every piece that follows the globe carries an index into `onGlobe`: outlines (`data-o`), links (`data-l`) and
+  // dots (`data-d`). Its coordinates are filled in by `place`.
+  const outlines: Vec3[][] = [],
+    links: Spot[][] = [],
+    dotSpots: Spot[] = [],
+    outline = (pts: readonly Point[]) => outlines.push(pts.map(toSphere)) - 1,
+    joint = (spots: Spot[]) => links.push(spots) - 1;
+  // Links from each sector's last station to the next sector's first; lit once the next sector is open. Between two
+  // territories they follow the globe's curve; to and from a deck in orbit they run straight.
   const lanes = stations
       .slice(1)
-      .map((points, i) => `<path class="lane" data-state="${cards[i + 1].locked ? "locked" : "open"}" d="${link(stations[i].at(-1)!, points[0])}"/>`)
+      .map((points, i) => {
+        const a = spotOf(i, stations[i].at(-1)!),
+          b = spotOf(i + 1, points[0]),
+          spots = regions[i].station || regions[i + 1].station ? [a, b] : arc(a.v, b.v, 14).map((v) => ({ v }));
+        return `<path class="lane" data-l="${joint(spots)}" data-state="${cards[i + 1].locked ? "locked" : "open"}"/>`;
+      })
       .join(""),
-    grounds = [
-      ...wilds.map((t) => `<path class="ground" style="fill:${biomeGround(entry.world.wild)}" d="${t.outline}"/>`),
-      ...regions.flatMap((r, i) => (r.station ? [] : [`<path class="ground" style="fill:${biomeGround(biomes[i])}" d="${r.outline}"/>`])),
-    ].join(""),
-    wildBorders = wilds.map((t) => `<path class="wild-border" d="${t.outline}"/>`).join(""),
+    grounds = regions.map((r, i) => (r.station ? "" : `<path class="ground" style="fill:${biomeGround(biomes[i])}" data-o="${outline(r.border)}"/>`)).join(""),
     land = (r: Region, i: number) => {
       const s = cards[i],
         list = group[i].missions,
+        // A deck is drawn flat in its own plane units (the frame moves and scales it); territories follow the globe.
+        flat = !!r.station,
+        o = flat ? -1 : outline(r.border),
+        shape = flat ? ` d="${r.outline}"` : ` data-o="${o}"`,
         routes = routeLinks(list, !circle)
-          .map(([a, b, skip]) => `<path class="route${skip ? " skip" : ""}" data-state="${record[list[a].id] && record[list[b].id] ? "lit" : locks.has(list[b].id) ? "locked" : "open"}" d="${link(stations[i][a], stations[i][b])}"/>`)
+          .map(([a, b, skip]) => {
+            const state = record[list[a].id] && record[list[b].id] ? "lit" : locks.has(list[b].id) ? "locked" : "open";
+            return `<path class="route${skip ? " skip" : ""}" data-state="${state}"${flat ? ` d="${link(stations[i][a], stations[i][b])}"` : ` data-l="${joint([surfaceSpot(stations[i][a]), surfaceSpot(stations[i][b])])}"`}/>`;
+          })
           .join(""),
         dots = stations[i]
-          .map((p, j) => `<circle class="dot" data-state="${record[list[j].id] ? "won" : locks.has(list[j].id) ? "locked" : "open"}" cx="${p.x}" cy="${p.y}" r="1"/>`)
+          .map((p, j) => {
+            const state = record[list[j].id] ? "won" : locks.has(list[j].id) ? "locked" : "open";
+            return `<circle class="dot" data-state="${state}"${flat ? ` cx="${p.x}" cy="${p.y}"` : ` data-d="${dotSpots.push(surfaceSpot(p)) - 1}"`} r="1"/>`;
+          })
           .join(""),
         // The border is clipped to the territory, so two neighbours draw their shared edge side by side, each in its
         // own state's colour: held (all won), contested (open) or hostile (locked).
         state = s.locked ? "hostile" : s.won === s.count ? "held" : "open",
         // A station's deck carries its own painted plating under the tint.
-        deck = r.station
+        deck = flat
           ? `<path class="deck-hull" d="${r.outline}"/><image class="surface deck-plating" clip-path="url(#land-clip-${i})" x="${r.box.x}" y="${r.box.y}" width="${r.box.w}" height="${r.box.h}" preserveAspectRatio="none"/>`
           : "";
-      return `<g class="land${r.station ? " station" : ""}" data-sector="${s.index}" data-state="${state}" style="--accent:${s.accent}"${s.next ? ' data-next="true"' : ""}><clipPath id="land-clip-${i}"><path d="${r.outline}"/></clipPath>${deck}<path class="tint" d="${r.outline}"/><path class="border" clip-path="url(#land-clip-${i})" d="${r.outline}"/>${routes}${dots}</g>`;
+      return `<g class="land${flat ? " station" : ""}" data-sector="${s.index}" data-state="${state}" style="--accent:${s.accent}"${s.next ? ' data-next="true"' : ""}><clipPath id="land-clip-${i}"><path${shape}/></clipPath>${deck}<path class="tint"${shape}/><path class="border" clip-path="url(#land-clip-${i})"${shape}/>${routes}${dots}</g>`;
     },
     lands = regions.map((r, i) => (r.station ? "" : land(r, i))).join(""),
-    decks = regions.map((r, i) => (r.station ? land(r, i) : "")).join("");
-  // Space with stars, the planet clipped to its curve, light from the upper left with the night side to the right,
-  // and the atmosphere's haze and rim along the horizon; a station's deck floats in space above it.
-  const { x: hx, y: hy, r: hr } = HORIZON,
-    cy = hy + hr,
-    sky = stars(140)
-      .filter((s) => (s.x - hx) ** 2 + (s.y - cy) ** 2 > (hr + 1) ** 2)
-      .map((s) => `<circle cx="${s.x}" cy="${s.y}" r="${s.r}"/>`)
-      .join(""),
-    atmosphere = ["wide", "mid", "rim"].map((k) => `<circle class="atmo atmo-${k}" cx="${hx}" cy="${cy}" r="${hr}"/>`).join("");
-  $("world-svg").innerHTML = `<defs><clipPath id="planet-clip"><circle cx="${hx}" cy="${cy}" r="${hr}"/></clipPath><linearGradient id="planet-day" gradientUnits="userSpaceOnUse" x1="-40" y1="-20" x2="260" y2="60"><stop offset="0" class="day-lit"/><stop offset="0.45" class="day-mid"/><stop offset="1" class="day-night"/></linearGradient><radialGradient id="planet-haze" gradientUnits="userSpaceOnUse" cx="${hx}" cy="${cy}" r="${hr}"><stop offset="${(hr - 18) / hr}" class="haze-clear"/><stop offset="1" class="haze-thick"/></radialGradient></defs><rect class="space" x="-200" y="-150" width="${WORLD_W + 400}" height="${WORLD_H + 300}"/><g class="stars">${sky}</g><g class="planet" clip-path="url(#planet-clip)">${grounds}${`<image class="surface" x="${SURFACE.x}" y="${SURFACE.y}" width="${SURFACE.w}" height="${SURFACE.h}" preserveAspectRatio="none"/>`.repeat(2)}<g class="tiles"></g>${wildBorders}<rect class="daylight" x="${SURFACE.x}" y="${SURFACE.y}" width="${SURFACE.w}" height="${SURFACE.h}" fill="url(#planet-day)"/><rect class="haze" x="${SURFACE.x}" y="${SURFACE.y}" width="${SURFACE.w}" height="${SURFACE.h}" fill="url(#planet-haze)"/>${lands}${lanes}</g>${atmosphere}${decks}`;
-  // A quick coarse surface first; the sharp one follows the zoomed sector's tile (`paintTile`).
-  paint($("world-svg").querySelector<SVGImageElement>("image.surface")!, SURFACE, 512);
+    decks = regions.map((r, i) => (r.station ? `<g class="deck-frame" data-deck="${i}">${land(r, i)}</g>` : "")).join("");
+  // The planet: a flat globe of the wild biome with the territories' ground colours until the painted surface is on
+  // the GPU (globe-gl.ts paints it under this SVG, lit from the upper left), then only tints, borders and links;
+  // the atmosphere's glow and rim around it; decks in orbit above. Stars sit on their own layer behind the globe.
+  const view = $("world-view");
+  $("world-sky").innerHTML = stars(160)
+    .map((p) => `<circle cx="${p.x * 100}%" cy="${p.y * 100}%" r="${p.r}"/>`)
+    .join("");
+  $("world-svg").innerHTML = `<defs><radialGradient id="globe-shade" cx="0.32" cy="0.28" r="0.85"><stop offset="0.45" class="shade-day"/><stop offset="1" class="shade-night"/></radialGradient></defs><circle class="atmo atmo-wide" data-ring/><circle class="atmo atmo-mid" data-ring/><g class="planet"><circle class="globe-base" data-ring style="fill:${biomeGround(entry.world.wild)}"/>${grounds}<circle class="globe-shade" data-ring fill="url(#globe-shade)"/>${lands}${lanes}</g><circle class="atmo atmo-rim" data-ring/>${decks}`;
+  const svg = $("world-svg"),
+    each = (attr: string) => {
+      const map = new Map<number, Element[]>();
+      for (const el of svg.querySelectorAll(`[${attr}]`)) {
+        const k = Number(el.getAttribute(attr));
+        map.set(k, [...(map.get(k) ?? []), el]);
+      }
+      return map;
+    };
+  const byOutline = each("data-o"),
+    byLink = each("data-l"),
+    byDot = each("data-d");
+  onGlobe = {
+    outlines: outlines.map((pts, k) => ({ els: byOutline.get(k) ?? [], pts })),
+    links: links.flatMap((spots, k) => (byLink.get(k) ?? []).map((el) => ({ el, spots }))),
+    dots: dotSpots.flatMap((spot, k) => (byDot.get(k) ?? []).map((el) => ({ el, spot }))),
+    decks: [...svg.querySelectorAll<SVGGElement>(".deck-frame")].map((el) => ({ el, c: regions[Number(el.dataset.deck)] })),
+    rings: [...svg.querySelectorAll("[data-ring]")],
+  };
+  // The painted globe: a quick coarse surface first; the selected sector's sharp tile and the full surface follow
+  // (`paintTile`).
+  view.style.setProperty("--atmo", entry.world.atmosphere);
+  paintGlobe(entry);
   regions.forEach((r, i) => {
-    const plating = r.station && $("world-svg").querySelector<SVGImageElement>(`.land[data-sector="${cards[i].index}"] .deck-plating`);
+    const plating = r.station && svg.querySelector<SVGImageElement>(`.land[data-sector="${cards[i].index}"] .deck-plating`);
     if (plating) paint(plating, r.box, 768, [{ x: r.x, y: r.y, biome: biomes[i] }]);
   });
   // Region labels: buttons in the north of each territory, the sector tabs of the page (the land itself is clickable too).
@@ -465,7 +616,7 @@ function renderWorld(game: Game, entry: WorldEntry, options: AtlasOptions) {
         line = s.locked
           ? `<b class="sector-lock">${LOCK_ICON} Locked</b>`
           : `${s.won}/${s.count}${s.stars ? ` · <i class="sector-stars">${s.stars} ★</i>` : ""}`;
-      return `<button class="region" role="tab" id="sector-tab-${s.index}" data-sector="${s.index}" aria-controls="mission-list" aria-selected="false" tabindex="-1" style="--accent:${s.accent};--done:${s.won / s.count};" data-wx="${r.label.x}" data-wy="${r.label.y}"${s.next ? ' data-next="true"' : ""}${s.won === s.count ? ' data-done="true"' : ""}${s.locked ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}${state ? ` title="${state}"` : ""} aria-label="Sector ${s.numeral}: ${escape(s.name)}${r.station ? ", a station in orbit" : ""}, ${s.count} ${plural(s.count, "mission")}${s.locked ? `, locked. ${state}` : ""}${s.won ? `, ${s.won} cleared, ${s.stars} of ${s.count * 3} stars` : ""}${s.next ? ", holds the next mission" : ""}"><span class="region-label" aria-hidden="true"><small>${s.numeral}${r.station ? '<b class="sector-orbit">IN ORBIT</b>' : ""}${s.next ? '<b class="sector-next">NEXT</b>' : ""}${isNew ? '<b class="sector-next sector-new">NEW</b>' : ""}</small><strong>${s.name}</strong><span class="region-line">${line}</span><span class="sector-bar"></span></span></button>`;
+      return `<button class="region" role="tab" id="sector-tab-${s.index}" data-sector="${s.index}" aria-controls="mission-list" aria-selected="false" tabindex="-1" style="--accent:${s.accent};--done:${s.won / s.count};" data-wx="${r.label.x}" data-wy="${r.label.y}"${r.station ? ` data-deck="${r.x},${r.y}"` : ""}${s.next ? ' data-next="true"' : ""}${s.won === s.count ? ' data-done="true"' : ""}${s.locked ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}${state ? ` title="${state}"` : ""} aria-label="Sector ${s.numeral}: ${escape(s.name)}${r.station ? ", a station in orbit" : ""}, ${s.count} ${plural(s.count, "mission")}${s.locked ? `, locked. ${state}` : ""}${s.won ? `, ${s.won} cleared, ${s.stars} of ${s.count * 3} stars` : ""}${s.next ? ", holds the next mission" : ""}"><span class="region-label" aria-hidden="true"><small>${s.numeral}${r.station ? '<b class="sector-orbit">IN ORBIT</b>' : ""}${s.next ? '<b class="sector-next">NEXT</b>' : ""}${isNew ? '<b class="sector-next sector-new">NEW</b>' : ""}</small><strong>${s.name}</strong><span class="region-line">${line}</span><span class="sector-bar"></span></span></button>`;
     })
     .join("");
   // The world bar: this world's name, the worlds before and after it.
@@ -509,7 +660,7 @@ function renderSystem(game: Game, options: AtlasOptions) {
   entries.forEach((entry, i) => {
     let picture = spheres.get(entry.world.id);
     if (!picture) {
-      picture = surfaceImage(layoutOf(entry).seeds, SURFACE, 512, Math.round((512 * SURFACE.h) / SURFACE.w));
+      picture = surfaceImage(layoutOf(entry).seeds, GLOBE_BOX, 512, 256, WRAP);
       picture.catch(() => spheres.delete(entry.world.id));
       spheres.set(entry.world.id, picture);
     }
@@ -584,16 +735,35 @@ export function routeLinks(missions: readonly unknown[], skips: boolean): [numbe
 }
 /** The territories' seeds and biomes of the shown world, for its surface pictures. */
 let seeds: SurfaceSeed[] = [];
-/**
- * Pixels across for a surface picture of `box` that stays sharp while `span` world units fill the view's width;
- * phones get less, a tile never more than about 3 megapixels.
- */
-function surfaceWidth(box: Box, span: number) {
-  const view = $("world-view"),
-    cap = view.clientWidth < 600 ? 1536 : 2048,
-    wide = Math.round(((view.clientWidth || 1200) * Math.min(2, devicePixelRatio || 1) * box.w) / span);
-  return Math.max(256, Math.min(cap, wide, Math.floor(Math.sqrt((3e6 * box.w) / box.h))));
+/** Pixels across the painted globe and a sector's tile: powers of two (the GPU wraps and mipmaps them), less on phones. */
+const globeSize = () => ($("world-view").clientWidth < 700 ? 1024 : 2048);
+/** Bumped with every world painted, so a picture for the world before is dropped when it arrives late. */
+let painting = 0;
+/** Starts the globe's surface for a world: a quick coarse picture; `paintTile` asks for the sharp ones. */
+function paintGlobe(entry: WorldEntry) {
+  const view = $("world-view");
+  if (!globe) {
+    globe = new GlobeGL($("world-globe") as HTMLCanvasElement);
+    globe.onChange = () => {
+      view.dataset.globe = "ready";
+      if (shown) place(shown);
+    };
+    // QA scripts read the globe's state in dev builds.
+    if (import.meta.env.DEV) (window as Window & { __globe?: GlobeGL }).__globe = globe;
+  }
+  const id = ++painting,
+    stale = () => id !== painting;
+  delete view.dataset.globe;
+  fullPainted = false;
+  if (!globe.ok) return;
+  globe.clear();
+  globe.setAtmosphere(entry.world.atmosphere);
+  surfaceImage(seeds, GLOBE_BOX, 512, 256, WRAP).then(
+    (url) => globe!.setBase(url, stale),
+    () => {},
+  );
 }
+let fullPainted = false;
 /** Paints the surface in `box` into an SVG image, which fades in once the picture is there. */
 function paint(el: SVGImageElement, box: Box, width: number, from: readonly SurfaceSeed[] = seeds) {
   surfaceImage(from, box, width, Math.round((width * box.h) / box.w)).then(
@@ -606,32 +776,32 @@ function paint(el: SVGImageElement, box: Box, width: number, from: readonly Surf
   );
 }
 /**
- * A sharper picture of the selected sector's territory over the whole surface's, once per sector and world, then
- * the whole surface at full size (the worker paints in order, so the zoomed sector comes first). A station's deck
- * is painted sharp from the start.
+ * A sharper picture of the selected sector's territory over the globe's, then the whole surface at full size (the
+ * worker paints in order, so the zoomed sector comes first). A deck has its own plating, so it needs no tile.
  */
 function paintTile(at: number) {
-  const svg = $("world-svg"),
-    tiles = svg.querySelector(".tiles"),
-    region = world.regions[at],
-    full = svg.querySelectorAll<SVGImageElement>("image.surface")[1];
-  if (tiles && region && !region.station && !tiles.querySelector(`[data-tile="${at}"]`)) tile(tiles, at, region);
-  if (full && !full.dataset.painted) {
-    full.dataset.painted = "true";
-    paint(full, SURFACE, surfaceWidth(SURFACE, WORLD_BOX.w));
+  if (!globe?.ok) return;
+  const region = world.regions[at],
+    id = painting,
+    stale = () => id !== painting || world.selected !== at,
+    size = globeSize();
+  if (region && !region.station) {
+    const pad = 5,
+      x = Math.max(0, region.box.x - pad),
+      y = Math.max(0, region.box.y - pad),
+      box = { x, y, w: Math.min(GLOBE_BOX.w, region.box.x + region.box.w + pad) - x, h: Math.min(GLOBE_BOX.h, region.box.y + region.box.h + pad) - y };
+    surfaceImage(seeds, box, size, size).then(
+      (url) => globe!.setDetail(url, box, stale),
+      () => {},
+    );
+  } else globe.setDetail(null, null);
+  if (!fullPainted) {
+    fullPainted = true;
+    surfaceImage(seeds, GLOBE_BOX, size, size / 2, WRAP).then(
+      (url) => globe!.setBase(url, () => id !== painting),
+      () => {},
+    );
   }
-}
-function tile(tiles: Element, at: number, region: Region) {
-  const pad = 4,
-    x = Math.max(SURFACE.x, region.box.x - pad),
-    y = Math.max(SURFACE.y, region.box.y - pad),
-    box = { x, y, w: Math.min(SURFACE.x + SURFACE.w, region.box.x + region.box.w + pad) - x, h: Math.min(SURFACE.y + SURFACE.h, region.box.y + region.box.h + pad) - y },
-    el = document.createElementNS("http://www.w3.org/2000/svg", "image");
-  el.classList.add("surface");
-  el.dataset.tile = String(at);
-  for (const [k, v] of Object.entries({ x: box.x, y: box.y, width: box.w, height: box.h, preserveAspectRatio: "none" })) el.setAttribute(k, String(v));
-  tiles.append(el);
-  paint(el, box, surfaceWidth(box, stationBox(world.stations[at], 9, 8).w));
 }
 /** Marks the sector's territory, places its stations, zooms into it (unless `fly` is false) and features a mission. */
 function showSector(game: Game, sector: MissionSector | undefined, options: AtlasOptions, pickedId: string | undefined, fly = true) {
@@ -658,6 +828,8 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
     progress = progressOf(shown, record),
     closed = !!sector && sectorLocked(sector, locks),
     points = at >= 0 ? world.stations[at] : [],
+    // A deck's stations are placed on the deck in orbit, not on the ground.
+    deckAt = at >= 0 && world.regions[at].station ? ` data-deck="${world.regions[at].x},${world.regions[at].y}"` : "",
     aside = asideOf(shown);
   list.setAttribute("aria-label", sector ? `Missions of sector ${roman(sectors.indexOf(sector))}, ${sector.name}` : "Missions");
   $("missions-label").innerHTML = sector ? `<small>Sector ${roman(sectors.indexOf(sector))}</small> ${sector.name}` : "Missions";
@@ -675,7 +847,7 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
         flags = `${best ? ' data-won="true"' : ""}${m === next ? ' data-next="true"' : ""}${i === shown.length - 1 && shown.length > 1 ? ' data-final="true"' : ""}${i === aside ? ' data-special="true"' : ""}${lock ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}`,
         tags = `${m === next ? '<b class="node-tag" data-tag="next">Next</b>' : ""}${loaded ? '<b class="node-tag" data-tag="loaded">Loaded</b>' : ""}${isNew && m !== next ? '<b class="node-tag" data-tag="new">New</b>' : ""}`,
         title = lock ? `${m.focus} · ${lockText(lock, missions, sectors)}` : m.focus;
-      return `<button class="mission-node" data-pick="${m.id}" data-wx="${p.x}" data-wy="${p.y}" aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${flags} title="${escape(title)}"><span class="node-mark"><span class="node-number">${pad(n)}</span>${lock ? LOCK_ICON : ""}</span><span class="node-stem" aria-hidden="true"></span><span class="node-copy"><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (in progress)</span>' : ""}${m === next ? '<span class="sr-only"> (next)</span>' : ""}${lock ? '<span class="sr-only"> (locked)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${lock ? "Locked" : `${i === aside ? "Special op · " : ""}${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}`}</small></span>${tags}</button>`;
+      return `<button class="mission-node" data-pick="${m.id}" data-wx="${p.x}" data-wy="${p.y}"${deckAt} aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${flags} title="${escape(title)}"><span class="node-mark"><span class="node-number">${pad(n)}</span>${lock ? LOCK_ICON : ""}</span><span class="node-stem" aria-hidden="true"></span><span class="node-copy"><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (in progress)</span>' : ""}${m === next ? '<span class="sr-only"> (next)</span>' : ""}${lock ? '<span class="sr-only"> (locked)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${lock ? "Locked" : `${i === aside ? "Special op · " : ""}${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}`}</small></span>${tags}</button>`;
     })
     .join("");
   zoom = fly ? "sector" : "planet";
