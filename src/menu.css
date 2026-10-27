@@ -2365,7 +2365,7 @@ span.world-hop {
   }
   /* A finger-sized target beside the world's name plate. */
   @media (pointer: coarse), (max-height: 540px) {
-    .start-screen .world-hop {
+    .start-screen :is(.world-hop, .world-zoom) {
       min-height: 44px;
     }
   }
@@ -3299,11 +3299,17 @@ span.world-hop {
   .atlas-head .brand > span:last-child {
     display: none;
   }
+  /* The mark alone is narrow: a finger-wide Home target around it. */
+  .atlas-head .brand,
+  .menu-page-head .brand {
+    justify-content: center;
+    min-width: 44px;
+  }
   .atlas-head .mode-tabs {
     flex: none;
   }
   .start-screen .mode-tab {
-    min-height: 38px;
+    min-height: 42px;
     padding: 4px 10px;
   }
   .mode-tab strong {
@@ -3361,7 +3367,7 @@ span.world-hop {
     align-items: center;
     justify-content: center;
     gap: 6px;
-    min-height: 36px;
+    min-height: 42px;
     padding: 0 8px;
     background: none;
     border: 1px solid transparent;
