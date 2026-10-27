@@ -54,11 +54,24 @@ export function protocolFactor(sim: Sim, src: DamageSource, e: Enemy, dot: boole
   if (p.scanner && e.revealed) f *= 1 + p.scanner.bonus;
   return f;
 }
-/** After a tower's hit landed on a living enemy: Armorbreaker Matrix and Skyhunter Array. */
+/** After a tower's hit landed on a living enemy: Armorbreaker Matrix, Skyhunter Array and Rank 4 mastery. */
 export function protocolAfterHit(sim: Sim, src: DamageSource, e: Enemy, dot: boolean, hit?: Hit) {
   const p = sim.mission.protocols;
   if (!p || dot || !hit || e.hp <= 0) return;
-  const s = sim.state;
+  const s = sim.state,
+    mastery = p.mastery?.[src.type];
+  if (mastery) {
+    const until = s.time + mastery.duration;
+    applyStatus(
+      sim,
+      e,
+      mastery.kind === "slow"
+        ? { kind: "slow", factor: mastery.factor, until }
+        : mastery.kind === "vulnerable"
+          ? { kind: "vulnerable", amount: mastery.amount, until }
+          : { kind: "stun", release: until, until: until + mastery.recovery },
+    );
+  }
   if (p.armorbreak && hit.area && hasTrait(sim, e, "armor") && !hasStatus(e, "armorDissolved", s.time))
     if (applyStatus(sim, e, { kind: "armorDissolved", fraction: p.armorbreak.fraction, until: s.time + p.armorbreak.duration }))
       s.events.push({ type: "protocol", protocol: "armorbreak", at: { x: e.x, y: e.y } });

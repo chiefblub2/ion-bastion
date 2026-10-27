@@ -158,13 +158,6 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
-.run-banner {
-  margin: 0 0 18px;
-  font: 700 26px / 1.1 var(--display);
-  letter-spacing: 0.04em;
-  color: var(--m-accent);
-  text-transform: uppercase;
-}
 .run-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
@@ -179,12 +172,10 @@
 .run-card .run-chips {
   margin-top: 6px;
 }
-.run-route[data-kind="elite"],
-.run-relic-card {
+.run-route[data-kind="elite"] {
   border-top-color: var(--run);
 }
-.run-route[data-kind="elite"] .choice-index,
-.run-relic-card .choice-index {
+.run-route[data-kind="elite"] .choice-index {
   color: var(--run);
 }
 .run-route[data-kind="boss"] {
@@ -343,6 +334,10 @@
   font-size: 10px;
   letter-spacing: 1px;
   color: var(--m-star);
+}
+.run-rank[data-mastery] {
+  color: #ff8a3d;
+  text-shadow: 0 0 6px #ff8a3d88;
 }
 .run-doctrine-tag {
   font: 600 11px var(--mono);
@@ -759,19 +754,6 @@
 .run-doctrine-tabs {
   margin: 0 0 12px;
 }
-.run-event h3 {
-  margin: 0 0 6px;
-  font: 800 24px / 1.1 var(--display);
-  text-transform: uppercase;
-}
-.run-event > p {
-  max-width: 640px;
-  color: var(--m-text-2);
-}
-.run-shop {
-  min-height: 0;
-}
-.run-shop:disabled,
 .run-card:disabled {
   opacity: 0.5;
 }

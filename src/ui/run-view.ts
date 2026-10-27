@@ -13,7 +13,7 @@ import { eventOf } from "../run/events";
 import { runMission } from "../run/generate";
 import type { Journal } from "../run/journal";
 import { isMissionKind, LANES, missionsOf, type NodeKind, type RunNode } from "../run/map";
-import { MAX_RANK, nextRankAt, RANK_TEXT } from "../run/ranks";
+import { MASTERY, MAX_RANK, nextRankAt, rankText } from "../run/ranks";
 import { relicFit } from "../run/relic-fit";
 import { hasFlag, relicOf, signatureOf, type RelicId } from "../run/relics";
 import { rewardProgress, rewardSteps } from "../run/rewards";
@@ -346,11 +346,12 @@ function skip(r: RunState) {
 }
 // ── Pieces ──
 const towerName = (id: TowerId) => host.content.towers[id].name;
-const pips = (rank: number) => (rank ? `<span class="run-rank" title="Rank ${rank}: ${escape(RANK_TEXT[rank])}">${"▮".repeat(rank)}${"▯".repeat(MAX_RANK - rank)}</span>` : "");
+const pips = (id: TowerId, rank: number) =>
+  rank ? `<span class="run-rank"${rank >= 4 && MASTERY[id] ? " data-mastery" : ""} title="Rank ${rank}: ${escape(rankText(id, rank))}">${"▮".repeat(rank)}${"▯".repeat(MAX_RANK - rank)}</span>` : "";
 function towerChip(r: RunState, id: TowerId, extra = "") {
   const d = host.content.towers[id],
     doctrines = r.doctrines.filter((x) => x.startsWith(`${id}:`)).map((x) => d.visual.paths?.[x.split(":")[1]]?.name ?? x.split(":")[1]);
-  return `<li class="run-chip" title="${escape(`${d.role}. ${rankHint(r.ranks[id])}`)}">${towerIconHtml(d)}<span>${escape(d.name)}</span>${pips(rankOfTower(r, id))}${
+  return `<li class="run-chip" title="${escape(`${d.role}. ${rankHint(r.ranks[id])}`)}">${towerIconHtml(d)}<span>${escape(d.name)}</span>${pips(id, rankOfTower(r, id))}${
     doctrines.length ? `<em class="run-doctrine-tag">${escape(doctrines.join(" + "))}</em>` : ""
   }${extra}</li>`;
 }
@@ -753,7 +754,13 @@ function replacePreview(r: RunState, out: TowerId, incoming: TowerId) {
 /** The mission's result, above the first reward decision. */
 function clearedHtml(r: RunState) {
   const last = r.log[r.log.length - 1],
-    ups = r.offers.rankUps?.map((id) => `${escape(towerName(id))} rank ${rankOfTower(r, id)}`).join(" · ");
+    ups = r.offers.rankUps
+      ?.map((id) => {
+        const rank = rankOfTower(r, id),
+          m = rank >= 4 ? MASTERY[id] : undefined;
+        return `${escape(towerName(id))} rank ${rank}${m ? `, Mastery: ${escape(m.name)}` : ""}`;
+      })
+      .join(" · ");
   return `<p class="run-cleared"><b>Mission cleared</b> ${last?.stars ? `${STARS(last.stars)} · ` : ""}+◈ ${last?.scrap ?? 0} · reactor ${last?.end ?? r.reactor} → ${r.reactor}${ups ? ` · <span class="run-rankup">▲ ${ups}</span>` : ""}</p>`;
 }
 /** The current decision of a reward, camp or act screen, or undefined when every pick is made; `head` tops the first one. */

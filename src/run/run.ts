@@ -121,6 +121,8 @@ export interface MissionResult {
   kills: Partial<Record<TowerId, number>>;
   /** Tower types built in the mission (standing at the end). */
   built: TowerId[];
+  /** Assist XP per tower type (`run/xp.ts`): Control, trap and Support towers beside the towers that scored. */
+  assists?: Partial<Record<TowerId, number>>;
   stars?: number;
   wave?: number;
 }
@@ -148,12 +150,12 @@ export function finishMission(run: RunState, result: MissionResult, content: Con
   const generated = runMission(run, node, content),
     hazard = hazardPay(threatsOf(generated.mission, generated.content, generated.mission.availableTowers ?? run.roster, generated.suppressed)),
     scrap = SCRAP_BASE + SCRAP_STAR * Math.max(0, (result.stars ?? 1) - 1) + SCRAP_FORMAT[kind] + hazard;
-  // Rank XP: kills plus a bonus per type built; a loaned tower earns nothing for the roster.
+  // Rank XP: kills, assists and a bonus per type built; a loaned tower earns nothing for the roster.
   const factor = run.relics.reduce((f, id) => f * (relicOf(id).xp ?? 1), 1),
     ranks = { ...run.ranks },
     rankUps: TowerId[] = [];
   for (const id of run.roster) {
-    const gain = ((result.kills[id] ?? 0) + (result.built.includes(id) ? XP_BUILT : 0)) * factor;
+    const gain = ((result.kills[id] ?? 0) + (result.assists?.[id] ?? 0) + (result.built.includes(id) ? XP_BUILT : 0)) * factor;
     if (!gain) continue;
     const before = rankOf(ranks[id]);
     ranks[id] = Math.round((ranks[id] ?? 0) + gain);

@@ -8,6 +8,7 @@ import { pageOf } from "../src/ui/tower-pages";
 import type { ContentPack, MissionDefinition, TowerId, UnitLayer } from "../src/core/types";
 import type { MissionResult } from "../src/run/run";
 import { missionStars } from "../src/app/rating";
+import { assistsOf } from "../src/run/xp";
 
 export interface Played {
   result: MissionResult;
@@ -164,6 +165,7 @@ function outcome(g: Game, mission: MissionDefinition, waveTimes: number[], proto
       lives: g.state.lives,
       kills,
       built: [...new Set(g.state.towers.map((t) => t.type))],
+      assists: assistsOf(g.state, mission, g.content),
       stars: won ? missionStars(mission, g.state) : undefined,
       wave: g.state.wave,
     },

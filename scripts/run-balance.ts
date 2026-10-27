@@ -58,7 +58,9 @@ const SEEDS = Number(value("seeds") ?? 30),
   /** Plays the source campaign mission (its own waves) with the run's roster instead: how strong is the bot? */
   baseline = flag("baseline"),
   /** `--relic-pick fit`: the bot takes the offered relic that fits its roster best instead of the first card. */
-  fitPick = value("relic-pick") === "fit";
+  fitPick = value("relic-pick") === "fit",
+  /** `--act-reward relic`: at act transitions the bot takes the first relic (the boss's signature relic when offered) instead of a Doctrine. */
+  actRelic = value("act-reward") === "relic";
 /** Relic statistics: offered cards, how many fit the roster, which were taken. */
 const relicStats = { cards: 0, fitting: 0, synergy: 0, draftsWithSynergy: 0, drafts: 0, taken: new Map<string, number>() };
 function chooseRelic(run: RunState, offers: readonly RelicId[]): RelicId {
@@ -125,7 +127,7 @@ function decide(run: RunState, pick: () => number): RunState {
   }
   if (run.offers.relics) run = pickRelic(run, "relics", chooseRelic(run, run.offers.relics));
   if (run.offers.prize) run = pickRelic(run, "prize", run.offers.prize.find((id) => relicOf(id).rarity !== "cursed") ?? null);
-  if (run.offers.legendary) run = pickRelic(run, "legendary", noDoctrines || !run.offers.doctrine ? chooseRelic(run, run.offers.legendary) : null);
+  if (run.offers.legendary) run = pickRelic(run, "legendary", actRelic || noDoctrines || !run.offers.doctrine ? chooseRelic(run, run.offers.legendary) : null);
   if (run.offers.doctrine) {
     const best = [...doctrineCandidates(run, content)].sort((a, b) => (run.ranks[b] ?? 0) - (run.ranks[a] ?? 0))[0];
     run = pickDoctrine(run, noDoctrines ? null : (best ?? null), best && doctrinePaths(run, best, content)[0], content);
@@ -172,6 +174,7 @@ const total = missionsOf(LENGTH),
   depths = Array(total + 1).fill(0),
   waveTimes: number[] = [],
   protocols = new Map<string, number>(),
+  xpByTab = [0, 1, 2, 3].map(() => ({ xp: 0, n: 0 })),
   ends: { scrap: number; reactor: number; roster: number; ranks: number[]; relics: number; doctrines: number }[] = [],
   types = new Set<string>();
 let simSeconds = 0;
@@ -214,7 +217,14 @@ for (let seed = 1; seed <= SEEDS; seed++) {
         console.log(
           `seed ${seed} m${runDepth(run) + 1} ${key.padEnd(15)} ${mission.name.padEnd(24)} [${run.roster.join(",")}] ${played.result.won ? `won ${played.result.lives}/${mission.reactorEnergy}` : `lost at wave ${played.result.wave}`} scrap ${run.scrap} relics ${run.relics.length} doctrines ${run.doctrines.length}`,
         );
+      const before = { ...run.ranks };
       run = finishMission(run, played.result, content);
+      for (const id of played.result.built)
+        if (run.roster.includes(id)) {
+          const tab = xpByTab[pageOf(content.towers[id])];
+          tab.xp += (run.ranks[id] ?? 0) - (before[id] ?? 0);
+          tab.n++;
+        }
     } else run = decide(run, pick);
     if (!isMissionKind(run.node?.kind ?? "shop") && run.phase === "mission") break;
   }
@@ -242,6 +252,13 @@ console.log(`completed: ${depths[total]}/${SEEDS} (${Math.round((100 * depths[to
 const mean = (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0),
   rankCounts = [0, 0, 0, 0, 0];
 for (const e of ends) for (const r of e.ranks) rankCounts[r]++;
+const TABS = ["Attack", "Control", "Traps", "Support"];
+console.log(
+  `rank XP per mission played, by tab (mean per fielded type): ${TABS.map((name, i) => {
+    const v = xpByTab[i];
+    return `${name} ${v.n ? (v.xp / v.n).toFixed(0) : "-"} (n ${v.n})`;
+  }).join("  ")}`,
+);
 console.log(
   `at the end (mean): scrap ${mean(ends.map((e) => e.scrap)).toFixed(0)}, reactor ${Math.round(100 * mean(ends.map((e) => e.reactor)))}%, roster ${mean(ends.map((e) => e.roster)).toFixed(1)}, relics ${mean(ends.map((e) => e.relics)).toFixed(1)}, doctrines ${mean(ends.map((e) => e.doctrines)).toFixed(1)}; ${types.size} tower types fielded`,
 );

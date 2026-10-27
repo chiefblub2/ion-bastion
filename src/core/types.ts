@@ -723,8 +723,14 @@ export interface Protocols {
   titan?: { bonus: number; reload: number };
   /** Spectral Scanner: towers reveal stealthed enemies within `radius` cells; revealed enemies take `bonus` more damage. */
   scanner?: { radius: number; bonus: number };
+  /** Rank 4 mastery (`run/ranks.ts`): a tower type's hits also apply this effect (a stun only outside its recovery). */
+  mastery?: Partial<Record<TowerId, MasteryEffect>>;
 }
-export type ProtocolId = keyof Protocols;
+export type MasteryEffect =
+  | { kind: "slow"; factor: number; duration: number }
+  | { kind: "stun"; duration: number; recovery: number }
+  | { kind: "vulnerable"; amount: number; duration: number };
+export type ProtocolId = Exclude<keyof Protocols, "mastery">;
 /** Rules of a circle mission; its map must be a `loop`. */
 export interface CircleRules {
   /** Seconds between two waves. */
