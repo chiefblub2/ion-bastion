@@ -19,10 +19,14 @@ npx vite-node scripts/balance.ts -- src/content/sectors/frost.ts src/core/strate
                                           # balance check for one sector (optional `--curve credits=680-780,waves=17-20[,growth=1.1-1.2]` adds WARNs); sector I: -- src/content/missions.ts src/core/strategies/index.ts 0
                                           # flags: --mission <id> (one mission), --why (leaks per enemy type, kills per tower),
                                           # --tune (HP factor window in which A/B win and thin/Nova/empty defenses lose, plus the hpGrowth range)
-npx vite-node scripts/run-balance.ts [-- --seeds 30] [--length full|short] [--threat n] [--until n] [--act n] [--relic id] [--no-ranks] [--no-doctrines] [--verbose] [--baseline] [--mission <id> --roster a,b,c]
-                                          # Run mode: plays N seeded runs with a greedy bot (attack towers twice in a round-robin on the best-covering
-                                          # cell, cheapest upgrade incl. Doctrine tiers; repairs, shops and Doctrines for its best tower between
-                                          # missions) and prints wins and reactor loss per act and format, completed runs and wave times; `--until n`
+npx vite-node scripts/run-balance.ts [-- --seeds 30] [--length full|short] [--threat n] [--until n] [--act n] [--relic id] [--no-ranks] [--no-doctrines] [--verbose] [--baseline] [--bot greedy] [--habits a,b] [--benchmark] [--mission <id> --roster a,b,c]
+                                          # Run mode: plays N seeded runs with the bot of `scripts/bot.ts` (attack towers twice in a round-robin on
+                                          # the best-covering cell outside dead zones, a tower for any layer the next wave brings unanswered, towers
+                                          # that hit nothing still coming skipped, cheapest upgrade with attack towers first incl. Doctrine tiers;
+                                          # drafts anti-air while fewer than two, repairs, shops and Doctrines for its best tower between missions;
+                                          # `--bot greedy` the old bot, `--habits a,b` single habits) and prints wins, reactor loss and credits per
+                                          # act and format, completed runs and wave times; `--benchmark` plays the acts' source missions with
+                                          # strategy A's towers next to strategy A itself; `--until n`
                                           # stops after act n, `--act n` wins earlier acts on paper; `--baseline` plays the source campaign missions
                                           # with the run's roster instead, `--mission` one source mission. Tuning knobs: `src/run/tuning.ts`
                                           # (about 1 min per 40 runs up to act I, 3 min for 40 full runs)

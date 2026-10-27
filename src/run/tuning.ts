@@ -4,9 +4,9 @@
  */
 /** HP factor per act (I, II, III, Final) and mission column inside it (first, second, boss), on top of the source curve. */
 export const DEPTH_HP: readonly (readonly number[])[] = [
-  [0.52, 0.55, 0.6],
+  [0.32, 0.34, 0.48],
   [0.6, 0.64, 0.66],
-  [0.8, 0.86, 0.9],
+  [1.15, 1.2, 1.25],
   [1.3],
 ];
 export const ELITE_HP = 1.15;
@@ -15,7 +15,7 @@ export const ELITE_HP = 1.15;
  * few towers and upgrades to spend on, longer as the run goes on. The same for every roster and strategy.
  */
 export const WAVES: readonly (readonly number[])[] = [
-  [8, 9, 11],
+  [5, 5, 8],
   [11, 12, 14],
   [13, 14, 16],
   [20],

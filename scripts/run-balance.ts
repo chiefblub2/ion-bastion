@@ -1,12 +1,15 @@
-// Plays many Runs with a greedy bot and prints how far they get, to tune `src/run/tuning.ts`.
+// Plays many Runs with a bot (scripts/bot.ts) and prints how far they get, to tune `src/run/tuning.ts`.
 // npx vite-node scripts/run-balance.ts [-- --seeds 30] [--length full|short] [--threat n] [--act n] [--until n] [--relic id]
-//                                      [--no-ranks] [--no-doctrines] [--verbose] [--baseline] [--mission <id> --roster a,b,c]
+//                                      [--no-ranks] [--no-doctrines] [--verbose] [--baseline] [--bot greedy] [--habits a,b]
+//                                      [--mission <id> --roster a,b,c] [--benchmark]
 import { DEFAULT_CONTENT } from "../src/content";
-import { Game } from "../src/core/game";
-import { upgradeOptions } from "../src/core/upgrades";
 import { isSupport } from "../src/systems/attacks";
 import { pageOf } from "../src/ui/tower-pages";
-import type { ContentPack, MissionDefinition, TowerId } from "../src/core/types";
+import type { TowerId } from "../src/core/types";
+import { GREEDY, playBot, STEADY, type Habits } from "./bot";
+import { STRATEGIES } from "../src/core/strategies";
+import { play } from "../src/core/play";
+import { actTiers } from "../src/run/acts";
 import { runMission } from "../src/run/generate";
 import { isMissionKind, missionsOf, type RunNode } from "../src/run/map";
 import { isRelic } from "../src/run/relics";
@@ -34,7 +37,6 @@ import {
 import { buy } from "../src/run/shop";
 import { eventOf } from "../src/run/events";
 import { relicOf } from "../src/run/relics";
-import { missionStars } from "../src/app/rating";
 const args = process.argv.slice(2),
   flag = (name: string) => args.includes(`--${name}`),
   value = (name: string) => {
@@ -54,83 +56,16 @@ const SEEDS = Number(value("seeds") ?? 30),
   /** Plays the source campaign mission (its own waves) with the run's roster instead: how strong is the bot? */
   baseline = flag("baseline");
 const content = DEFAULT_CONTENT;
-/** Path cells within `range` of a cell centre: the bot builds where a tower sees most of the path. */
-function coverage(m: MissionDefinition, x: number, y: number, range: number) {
-  return m.map.path.filter((p) => (p.x - x) ** 2 + (p.y - y) ** 2 <= range * range).length;
-}
-/** Greedy player: before each wave it builds the roster round-robin on the best free cell, else buys the cheapest upgrade (Doctrine tiers included). */
-function playMission(mission: MissionDefinition, pack: ContentPack) {
-  const g = new Game(mission, pack),
-    // Damage dealers twice in the rotation: a player builds more of what kills than of what slows.
-    roster = g
-      .availableTowers()
-      .filter((id) => !isSupport(pack.towers[id].attack) || pack.towers[id].attack.kind === "detect")
-      .flatMap((id) => (pageOf(pack.towers[id]) === 0 ? [id, id] : [id]));
-  let turn = 0;
-  const build = () => {
-    for (let k = 0; k < roster.length; k++) {
-      const id: TowerId = roster[(turn + k) % roster.length],
-        d = pack.towers[id];
-      if (d.attack.kind === "detect" && g.state.towers.some((t) => t.type === id)) continue;
-      if (d.cost > g.state.wallets[0]) continue;
-      let best: { x: number; y: number; score: number } | undefined;
-      const trap = d.placement === "path",
-        cells = trap ? mission.map.path.slice(Math.floor(mission.map.path.length * 0.3)) : undefined;
-      for (let x = 0; x < mission.map.columns; x++)
-        for (let y = 0; y < mission.map.rows; y++) {
-          if (!g.canBuild(x, y, id)) continue;
-          if (trap && !cells!.some((p) => p.x === x && p.y === y)) continue;
-          const score = trap ? -cells!.findIndex((p) => p.x === x && p.y === y) : coverage(mission, x, y, d.range || 3);
-          if (!best || score > best.score) best = { x, y, score };
-        }
-      if (best && g.command({ type: "build", tower: id, x: best.x, y: best.y }).ok) {
-        turn = (turn + k + 1) % roster.length;
-        return true;
-      }
-    }
-    return false;
-  };
-  const upgrade = () => {
-    const options = g.state.towers
-      .flatMap((t) =>
-        upgradeOptions(t, g.state.wallets[0], pack)
-          .filter((o) => o.status === "available")
-          .map((o) => ({ id: t.id, upgrade: o.definition!.id, cost: o.definition!.cost })),
-      )
-      .sort((a, b) => a.cost - b.cost);
-    return !!options.length && g.command({ type: "upgrade", id: options[0].id, upgrade: options[0].upgrade }).ok;
-  };
-  // Towers first while there are few, then upgrades first: roughly what the campaign strategies do.
-  const spend = () => {
-    while (g.state.towers.length < 6 ? build() || upgrade() : upgrade() || build());
-  };
-  const waveTimes: number[] = [];
-  while (g.state.status === "ready") {
-    spend();
-    g.command({ type: "start" });
-    const t0 = g.state.time;
-    let steps = 0;
-    while (g.state.status === "wave" && steps++ < 60000) {
-      g.tick();
-      g.drainEvents();
-    }
-    waveTimes.push(g.state.time - t0);
-  }
-  const kills: Partial<Record<TowerId, number>> = {};
-  for (const t of g.state.towers) kills[t.type] = (kills[t.type] ?? 0) + t.kills;
-  const won = g.state.status === "won";
-  const result: MissionResult = {
-    won,
-    lives: g.state.lives,
-    kills,
-    built: [...new Set(g.state.towers.map((t) => t.type))],
-    stars: won ? missionStars(mission, g.state) : undefined,
-    wave: g.state.wave,
-  };
-  // What the mission paid in all (invested in towers plus left over) and what was still unspent at the end.
-  const left = g.state.wallets[0];
-  return { result, waveTimes, left, earned: left + g.state.towers.reduce((n, t) => n + t.spent, 0) };
-}
+/**
+ * The bot's habits (scripts/bot.ts): the measured default `STEADY`; `--bot greedy` plays the old bot (fixed build order,
+ * cheapest upgrade first) to see how much careful choices matter; `--habits a,b` turns on only those.
+ */
+const habits: Habits = value("habits")
+    ? { ...GREEDY, ...Object.fromEntries(value("habits")!.split(",").map((h) => [h, true])) }
+    : value("bot") === "greedy"
+      ? GREEDY
+      : STEADY,
+  playMission = (mission: Parameters<typeof playBot>[0], pack: Parameters<typeof playBot>[1]) => playBot(mission, pack, habits);
 // `--mission <id> --roster a,b,c`: one source mission with its own waves, to check the bot itself.
 const only = value("mission");
 if (only) {
@@ -139,11 +74,35 @@ if (only) {
   console.log(playMission({ ...source, availableTowers: roster }, content).result);
   process.exit(0);
 }
+// `--benchmark`: the bot on the acts' source missions with the towers of strategy A, next to strategy A itself.
+if (flag("benchmark")) {
+  let bot = 0,
+    hand = 0,
+    n = 0;
+  for (const source of actTiers(content).slice(0, 3).flatMap((t) => t.missions)) {
+    const strategy = STRATEGIES[source.id]?.A;
+    if (!strategy) continue;
+    const towers = [...new Set(strategy.builds.map((b) => b.tower))],
+      mine = playMission({ ...source, availableTowers: towers }, content).result,
+      theirs = play(source, strategy).game.state;
+    n++;
+    if (mine.won) bot++;
+    if (theirs.status === "won") hand++;
+    console.log(
+      `${source.id.padEnd(22)} [${towers.join(",")}]  bot ${mine.won ? `won ${mine.lives}/${source.reactorEnergy}` : `lost at wave ${mine.wave}`}  ·  strategy A ${theirs.status === "won" ? `won ${theirs.lives}/${source.reactorEnergy}` : `lost at wave ${theirs.wave}`}`,
+    );
+  }
+  console.log(`bot won ${bot}/${n}, strategy A won ${hand}/${n}`);
+  process.exit(0);
+}
 const armed = (id: TowerId) => !isSupport(content.towers[id].attack) && content.towers[id].placement !== "path";
 /** The bot's choices between missions: repairs when hurt, shops with Scrap, Doctrines for its best tower. */
 function decide(run: RunState, pick: () => number): RunState {
   if (run.offers.towers) {
-    const id = run.offers.towers.find(armed) ?? run.offers.towers[0],
+    // An anti-air attack tower while fewer than two guard the sky, else an attack tower, else the first offer.
+    const antiAir = (id: TowerId) => armed(id) && pageOf(content.towers[id]) === 0 && content.towers[id].targets.includes("air"),
+      skyGuards = run.roster.filter(antiAir).length,
+      id = (skyGuards < 2 ? run.offers.towers.find(antiAir) : undefined) ?? run.offers.towers.find(armed) ?? run.offers.towers[0],
       worst = [...run.roster].sort((a, b) => (run.ranks[a] ?? 0) - (run.ranks[b] ?? 0))[0];
     run = pickTower(run, id, run.roster.length >= rosterCap(run) ? worst : undefined);
   }
@@ -243,7 +202,7 @@ for (let seed = 1; seed <= SEEDS; seed++) {
 const median = (v: number[]) => (v.length ? [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)] : 0);
 const sorted = [...waveTimes].sort((a, b) => a - b),
   pct = (p: number) => (sorted.length ? sorted[Math.floor(sorted.length * p)].toFixed(1) : "-");
-console.log(`${SEEDS} ${LENGTH} runs at threat ${THREAT}, greedy bot${noRanks ? ", no ranks" : ""}${noDoctrines ? ", no doctrines" : ""}${RELIC ? `, relic ${RELIC}` : ""}`);
+console.log(`${SEEDS} ${LENGTH} runs at threat ${THREAT}, ${value("bot") === "greedy" ? "greedy" : "steady"} bot${value("habits") ? ` (${value("habits")})` : ""}${noRanks ? ", no ranks" : ""}${noDoctrines ? ", no doctrines" : ""}${RELIC ? `, relic ${RELIC}` : ""}`);
 for (const [key, e] of [...plays].sort(([a], [b]) => a.localeCompare(b)))
   console.log(
     `${key.padEnd(16)} won ${String(e.won).padStart(3)}/${String(e.played).padEnd(3)} ${((100 * e.won) / e.played).toFixed(0).padStart(3)}%  ${(e.waves / e.played).toFixed(0).padStart(2)} waves${e.won ? `  reactor left ${Math.round((100 * e.reactor) / e.won)}%, lost ${Math.round((100 * e.leak) / e.won)}% per win; credits per win: earned ${median(e.earned)}, left ${median(e.left)} (median)` : ""}`,
