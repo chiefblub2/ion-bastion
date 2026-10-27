@@ -10,7 +10,7 @@ import { MAX_THREAT, THREAT_TEXT } from "../run/ascension";
 import { bossModOf } from "../run/boss";
 import { DAILY_THREAT, dailyDate, dailySeed } from "../run/daily";
 import { eventOf } from "../run/events";
-import { runMission, FORMATS } from "../run/generate";
+import { runMission } from "../run/generate";
 import type { Journal } from "../run/journal";
 import { isMissionKind, LANES, missionsOf, type NodeKind, type RunNode } from "../run/map";
 import { MAX_RANK, nextRankAt, RANK_TEXT } from "../run/ranks";
@@ -71,10 +71,10 @@ export interface RunHost {
   image: MapImage;
 }
 const KIND: Record<NodeKind, { label: string; icon: string; note: string }> = {
-  standard: { label: "Mission", icon: "◆", note: "A regular mission: 14 waves." },
+  standard: { label: "Mission", icon: "◆", note: "A regular mission. Missions grow longer from act to act." },
   elite: { label: "Elite", icon: "✶", note: "Tougher enemies and a modifier; pays a relic prize and a fourth draft card." },
-  boss: { label: "Act boss", icon: "♛", note: "16 waves with a boss modifier. Win it to cross into the next act." },
-  final: { label: "Final Stand", icon: "☗", note: "20 waves, Titans at the end. Win it and the run is won." },
+  boss: { label: "Act boss", icon: "♛", note: "The act's longest mission, with a boss modifier. Win it to cross into the next act." },
+  final: { label: "Final Stand", icon: "☗", note: "The run's longest mission, with Titans at the end. Win it and the run is won." },
   shop: { label: "Shop", icon: "⌂", note: "Spend Scrap on repairs, funds, upgrades, a relic or a tower." },
   forge: { label: "Forge", icon: "⚒", note: "Doctrines, drills, rank XP and discounts for your towers." },
   repair: { label: "Repair", icon: "✚", note: "Repair the reactor, or reinforce it for good." },
@@ -358,9 +358,8 @@ function modsHtml(node: RunNode) {
     : "";
 }
 function missionFacts(r: RunState, node: RunNode) {
-  const { mission } = runMission(r, node, host.content),
-    format = FORMATS[node.kind as keyof typeof FORMATS];
-  return `<p class="run-facts">${format.waves} waves · ◇ ${mission.startingCredits} starting credits · ⚡ ${mission.reactorEnergy} reactor energy</p>`;
+  const { mission } = runMission(r, node, host.content);
+  return `<p class="run-facts">${mission.waves.length} waves · ◇ ${mission.startingCredits} starting credits · ⚡ ${mission.reactorEnergy} reactor energy</p>`;
 }
 function nodeDetail(r: RunState, node: RunNode, reachable: boolean) {
   const k = KIND[node.kind],

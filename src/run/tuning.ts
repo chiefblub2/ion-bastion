@@ -4,14 +4,26 @@
  */
 /** HP factor per act (I, II, III, Final) and mission column inside it (first, second, boss), on top of the source curve. */
 export const DEPTH_HP: readonly (readonly number[])[] = [
-  [0.58, 0.6, 0.62],
-  [0.72, 0.76, 0.76],
+  [0.52, 0.55, 0.6],
+  [0.6, 0.64, 0.66],
   [0.8, 0.86, 0.9],
   [1.3],
 ];
 export const ELITE_HP = 1.15;
+/**
+ * Waves per mission by act (I, II, III, Final) and mission column (first, second, boss): short while the player has
+ * few towers and upgrades to spend on, longer as the run goes on. The same for every roster and strategy.
+ */
+export const WAVES: readonly (readonly number[])[] = [
+  [8, 9, 11],
+  [11, 12, 14],
+  [13, 14, 16],
+  [20],
+];
+/** Extra waves of an elite mission over a regular one in the same column. */
+export const ELITE_WAVES = 1;
 /** Share of a source mission's income up to a wave that a hot drop hands out as starting credits. */
-export const ECONOMY_SHARE = 0.8;
+export const ECONOMY_SHARE = 0.7;
 /** The run's reactor: its maximum at the start, the field repair after every won mission and the Repair node. */
 export const REACTOR_MAX = 30;
 export const FIELD_REPAIR = 3;

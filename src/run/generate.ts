@@ -12,18 +12,18 @@ import type { RunState } from "./run";
 import { runMissionId } from "./run-id";
 import { needsOf, offspring, rosterCovers, type Need } from "./threats";
 import { compose, discount, lockSpecializations, only, upgradePrice, type PackFn } from "./transform";
-import { DEPTH_HP, ECONOMY_SHARE, ELITE_HP } from "./tuning";
+import { DEPTH_HP, ECONOMY_SHARE, ELITE_HP, ELITE_WAVES, WAVES } from "./tuning";
 import { pageOf } from "../ui/tower-pages";
 /**
  * Mission formats. A mission plays a window of its source campaign mission: it enters at `enter` (a share of the
- * source's waves) with the credits a player would have had there ("hot drop"), and plays `waves` waves up to the
+ * source's waves) with the credits a player would have had there ("hot drop"), and plays `waveCount` waves up to the
  * source's last one, resampled when the window is shorter or longer.
  */
-export const FORMATS: Readonly<Record<MissionKind, { waves: number; enter: number }>> = {
-  standard: { waves: 14, enter: 0.15 },
-  elite: { waves: 14, enter: 0.15 },
-  boss: { waves: 16, enter: 0.15 },
-  final: { waves: 20, enter: 0 },
+export const FORMATS: Readonly<Record<MissionKind, { enter: number }>> = {
+  standard: { enter: 0.15 },
+  elite: { enter: 0.15 },
+  boss: { enter: 0.15 },
+  final: { enter: 0 },
 };
 const MAX_GROUP = 40;
 /** Fallback when no enemy of the source mission fits the roster. */
@@ -122,6 +122,11 @@ function groundedShare(source: MissionDefinition, content: ContentPack, cap: num
 }
 /** Index of a mission column inside its act: first, second, boss. */
 const columnSlot = (node: RunNode) => (node.kind === "final" ? 0 : Math.min(2, node.column / 2));
+/** The number of waves of a mission node: by act and column (`WAVES`), plus `ELITE_WAVES` for an elite. */
+export function waveCount(node: RunNode) {
+  const row = WAVES[Math.min(node.act, WAVES.length - 1)];
+  return row[Math.min(columnSlot(node), row.length - 1)] + (node.kind === "elite" ? ELITE_WAVES : 0);
+}
 /** The HP factor of a node on top of the source curve. */
 export function depthOf(node: RunNode, threat: number) {
   const rules = threatRules(threat),
@@ -170,7 +175,7 @@ export function runMission(run: RunState, node: RunNode, base: ContentPack): Run
     grounded = airBias ? 0 : groundedShare(source, base, airCap(roster, base)),
     n = source.waves.length,
     start = Math.min(n - 1, Math.round(format.enter * n)),
-    count = format.waves,
+    count = waveCount(node),
     depth = depthOf(node, run.threat);
   let waves = Array.from({ length: count }, (_, i): WaveDefinition => {
     const at = start + (i * (n - 1 - start)) / (count - 1),
@@ -180,8 +185,8 @@ export function runMission(run: RunState, node: RunNode, base: ContentPack): Run
       hp = waveHpScale(source, lo + 1) * (1 - frac) + waveHpScale(source, Math.min(n, lo + 2)) * frac;
     return {
       groups: remixWave(r, from, pool, base, airBias, grounded),
-      // The window may be shorter or longer than the format: the bonuses scale so the mission pays about the same.
-      bonus: Math.round((from.bonus * (n - start)) / count),
+      // Each wave pays its source wave's bonus, so a short mission (it skips source waves) pays less.
+      bonus: from.bonus,
       hpMultiplier: Math.round(hp * depth * 1000) / 1000,
     };
   });

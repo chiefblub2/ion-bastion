@@ -5,7 +5,7 @@ import { stateHash } from "../core/hash";
 import { validateMission } from "../core/validation";
 import { isSpecialization } from "../core/upgrades";
 import { STRATEGIES } from "../core/strategies";
-import { creditsAt, runMission } from "./generate";
+import { creditsAt, runMission, waveCount } from "./generate";
 import { mark, newJournal, record } from "./journal";
 import { actMap, isMissionKind, missionsOf, nextNodes } from "./map";
 import { EVENTS } from "./events";
@@ -86,7 +86,7 @@ describe("run", () => {
           covers = rosterCovers(mission.availableTowers!, pack);
         expect(() => validateMission(mission, pack)).not.toThrow();
         expect(mission.reactorEnergy).toBe(run.reactor);
-        expect(mission.waves.length).toBe(run.node!.kind === "final" ? 20 : run.node!.kind === "boss" ? 16 : 14);
+        expect(mission.waves.length).toBe(waveCount(run.node!));
         for (const w of mission.waves)
           for (const g of w.groups) {
             const e = pack.enemies[g.type];
@@ -99,6 +99,20 @@ describe("run", () => {
       expect(runDepth(end)).toBe(10);
     }
     expect(runDepth(walk(3, undefined, "short"))).toBe(3);
+  });
+  it("starts with short missions that grow with the run, whatever the roster", () => {
+    const firsts: number[] = [];
+    let last = 0;
+    walk(4, (run) => {
+      const node = run.node!;
+      last = runMission(run, node, content).mission.waves.length;
+      expect(runMission({ ...run, roster: run.roster.slice(0, 3) }, node, content).mission.waves.length).toBe(last);
+      if (node.column === 0) firsts.push(last - (node.kind === "elite" ? 1 : 0));
+    });
+    // Every act opens longer than the one before and ends on the Final Stand's 20.
+    expect(firsts[0]).toBe(8);
+    for (let i = 1; i < firsts.length; i++) expect(firsts[i]).toBeGreaterThan(firsts[i - 1]);
+    expect(last).toBe(20);
   });
   it("builds act maps whose lanes are all reachable and offer a Shop or Repair before the boss", () => {
     for (let seed = 1; seed <= 200; seed++)
