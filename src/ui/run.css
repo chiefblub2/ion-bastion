@@ -243,30 +243,24 @@
 .run-skip {
   margin: 10px 0 26px;
 }
-.run-deploy {
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: 22px;
-  align-items: start;
-}
-.run-deploy h3 {
-  margin: 4px 0 8px;
-  font: 800 30px / 1.1 var(--display);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.run-deploy p {
-  color: var(--m-text-2);
-  line-height: 1.5;
-}
-.run-deploy .primary {
-  margin-top: 10px;
-}
 .run-note {
   font-size: 13px;
 }
 .run-abandon {
   margin-top: 28px;
+}
+/* The map's header row: the act's name, and Abandon at the other end. */
+.run-map-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.run-map-head .run-step-title {
+  margin: 0;
+}
+.run-map-head .run-abandon {
+  margin: 0;
 }
 .run-end h2 {
   margin: 4px 0 16px;
@@ -309,11 +303,6 @@
 }
 .run-history li[data-won="false"] b {
   color: var(--m-danger);
-}
-@media (max-width: 700px) {
-  .run-deploy {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 /* ── Run v2: gauges, acts, the route map, threats, drafts, camps ── */
 .run-gauges {
@@ -450,7 +439,7 @@
 /* The route map: nodes placed by column (--c) and lane (--l); on phones the columns run downwards. */
 .run-routemap {
   position: relative;
-  height: 300px;
+  height: 340px;
   margin: 8px 0 22px;
   background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--run) 9%, transparent), transparent 70%), var(--m-glass);
   border: 1px solid var(--m-border);
@@ -533,24 +522,126 @@
 .run-node:disabled {
   cursor: default;
 }
-.run-node-detail {
-  margin-bottom: 10px;
-  padding: 16px;
-  background: var(--m-glass);
-  border: 1px solid var(--m-border);
-  border-top: 3px solid var(--run);
+/* The node card: opened on the map beside its node, over the columns ahead (or behind, beside the last one). */
+.run-inspector {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--m-surface);
+  border: 1px solid var(--run);
+  border-top-width: 3px;
+  box-shadow: 0 10px 30px #0008;
+  container-type: inline-size;
 }
-.run-node-detail h3 {
-  margin: 4px 0 8px;
-  font: 800 26px / 1.1 var(--display);
+.run-inspector[data-side="after"] {
+  left: calc(var(--c) + 72px);
+  right: 10px;
+}
+.run-inspector[data-side="before"] {
+  left: 10px;
+  right: calc(100% - var(--c) + 80px);
+}
+.run-inspector:is([data-kind="boss"], [data-kind="final"]) {
+  border-color: var(--m-danger);
+}
+.run-inspector:is([data-kind="boss"], [data-kind="final"]) .choice-index {
+  color: var(--m-danger);
+}
+.run-inspector[data-kind="elite"] .choice-index {
+  color: var(--run);
+}
+/* The pointer from the card to its node. */
+.run-inspector-tip {
+  --tip: var(--run);
+  position: absolute;
+  z-index: 3;
+  top: var(--l);
+  width: 0;
+  height: 0;
+  border: 9px solid transparent;
+  transform: translateY(-50%);
+}
+.run-inspector-tip:is([data-kind="boss"], [data-kind="final"]) {
+  --tip: var(--m-danger);
+}
+.run-inspector-tip[data-side="after"] {
+  left: calc(var(--c) + 55px);
+  border-right-color: var(--tip);
+}
+.run-inspector-tip[data-side="before"] {
+  left: calc(var(--c) - 81px);
+  border-left-color: var(--tip);
+}
+.start-screen .run-inspector-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+}
+.run-inspector-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 16px;
+  align-content: start;
+  align-items: start;
+}
+.run-inspector-body:not(:has(.run-map)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.run-inspector h3 {
+  margin: 2px 44px 6px 0;
+  font: 800 24px / 1.1 var(--display);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.run-deploy[data-kind="elite"] .choice-index {
-  color: var(--run);
+.run-inspector p {
+  margin: 0 0 6px;
+  color: var(--m-text-2);
+  line-height: 1.45;
 }
-.run-deploy:is([data-kind="boss"], [data-kind="final"]) .choice-index {
-  color: var(--m-danger);
+.run-inspector .run-threats {
+  margin: 6px 0 0;
+}
+.run-inspector-action {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding-top: 10px;
+}
+.run-inspector-action .run-note {
+  margin: 0;
+  flex: 1 1 200px;
+}
+.run-inspector-action .primary {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: min(100%, 240px);
+}
+/* A narrow card drops the map picture and the longer lines. */
+@container (max-width: 420px) {
+  .run-inspector-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .run-inspector-body .run-map,
+  .run-inspector-action .run-note {
+    display: none;
+  }
+  .run-inspector-action .primary {
+    flex: 1;
+  }
 }
 .run-threats,
 .run-tags {
@@ -685,7 +776,8 @@
 .run-history li small + small {
   margin-left: -4px;
 }
-@media (max-width: 700px) {
+/* Narrow portrait screens: the route map runs downwards. A landscape phone keeps the columns side by side. */
+@media (max-width: 700px) and (orientation: portrait) {
   .run-routemap {
     height: 560px;
   }
@@ -699,6 +791,32 @@
     left: var(--l);
     top: var(--c);
     width: 96px;
+  }
+  /* The columns run downwards: the card opens under its row (over the rows ahead), above it for the last row. */
+  .run-inspector[data-side] {
+    left: 10px;
+    right: 10px;
+  }
+  .run-inspector[data-side="after"] {
+    top: calc(var(--c) + 40px);
+    bottom: 10px;
+  }
+  .run-inspector[data-side="before"] {
+    top: 10px;
+    bottom: calc(100% - var(--c) + 44px);
+  }
+  .run-inspector-tip[data-side] {
+    left: var(--l);
+    transform: translateX(-50%);
+    border-color: transparent;
+  }
+  .run-inspector-tip[data-side="after"] {
+    top: calc(var(--c) + 22px);
+    border-bottom-color: var(--tip);
+  }
+  .run-inspector-tip[data-side="before"] {
+    top: calc(var(--c) - 40px);
+    border-top-color: var(--tip);
   }
   .run-gauge i {
     width: 120px;
@@ -715,5 +833,92 @@
   .run-options,
   .run-start {
     margin-top: 10px;
+  }
+  /* The act map fits one screen: the status as one slim row, the map taking the height left, its card on top. */
+  #run-page:has(.run-routemap) {
+    height: var(--fit-h);
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  #run-page:has(.run-routemap) #run-root {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  #run-root:has(.run-routemap) .run-status {
+    display: flex;
+    align-items: center;
+    gap: 8px 18px;
+    margin-bottom: 6px;
+    padding: 4px 10px;
+    overflow-x: auto;
+  }
+  #run-root:has(.run-routemap) :is(.run-meta, .run-carry h2) {
+    display: none;
+  }
+  #run-root:has(.run-routemap) :is(.run-gauges, .run-carry, .run-chips) {
+    flex-wrap: nowrap;
+  }
+  #run-root:has(.run-routemap) .run-gauge b {
+    white-space: nowrap;
+  }
+  .run-body[data-map-view] {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .run-map-head .run-step-title {
+    font-size: 16px;
+  }
+  .start-screen .run-map-head .run-abandon {
+    min-height: 40px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+  .run-map-note {
+    display: none;
+  }
+  .run-routemap {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+    margin: 6px 0 0;
+  }
+  .run-node {
+    width: 100px;
+    gap: 2px;
+    padding: 4px;
+  }
+  .run-node i {
+    font-size: 16px;
+  }
+  .run-inspector {
+    top: 6px;
+    bottom: 6px;
+    padding: 8px 10px;
+  }
+  .run-inspector h3 {
+    font-size: 19px;
+  }
+  .run-inspector p {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+  .run-inspector-body {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: 12px;
+  }
+  /* "A regular mission…" only repeats the label; the facts and threats need the room. */
+  .run-inspector-text h3 + p {
+    display: none;
+  }
+  .run-inspector .run-facts {
+    font-size: 11px;
+  }
+  .run-inspector-action {
+    padding-top: 6px;
+  }
+  .run-inspector-action .run-note {
+    display: none;
   }
 }

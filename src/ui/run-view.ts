@@ -87,8 +87,8 @@ let host: RunHost,
   /** Intro: the chosen threat level and run length. */
   threat = 0,
   length: "full" | "short" = "full",
-  /** Map: the node whose details show below the map. */
-  focusLane: number | undefined,
+  /** Map: the lane of the node whose card is open on the map; null when the player closed it. */
+  focusLane: number | null | undefined,
   /** A drafted tower waiting for the roster tower it replaces (roster full). */
   replacing: { tower: TowerId; source: "draft" | "shop"; index?: number } | undefined,
   /** A shop item waiting for its target tower (and path, for a Doctrine). */
@@ -105,6 +105,13 @@ export function openRun(h: RunHost) {
     root.dataset.bound = "1";
     root.addEventListener("click", onClick);
     root.addEventListener("submit", onSubmit);
+    root.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape" || !root.querySelector(".run-inspector")) return;
+      const lane = openLane();
+      focusLane = null;
+      render();
+      if (lane !== undefined) root.querySelector<HTMLElement>(`.run-node[data-run="focus:${lane}"]`)?.focus();
+    });
     root.addEventListener("change", onChange);
     root.addEventListener("input", (e) => {
       if (e.target instanceof HTMLInputElement) e.target.setCustomValidity("");
@@ -177,16 +184,24 @@ function onClick(e: Event) {
     }
     case "starter":
       return run && update(chooseStarter(run, Number(a)));
-    case "focus":
-      focusLane = Number(a);
-      return render();
+    case "focus": {
+      // A second tap on the open node, or the card's ✕, closes the card.
+      const lane = a === "" ? null : Number(a);
+      focusLane = lane !== null && lane === openLane() ? null : lane;
+      render();
+      return focusCard(lane === null ? undefined : lane);
+    }
     case "travel":
       return run && update(chooseNode(run, Number(a), content));
     case "deploy": {
-      if (!run?.node || !host.canRun()) return;
-      const next = deploy(run);
+      // From the map card: choose the mission node and deploy it in one step.
+      if (!run || !host.canRun()) return;
+      const chosen = a === "" ? run : chooseNode(run, Number(a), content);
+      if (chosen.phase !== "mission" || !chosen.node || chosen.deployed) return;
+      const next = deploy(chosen);
       saveRun(next);
       run = next;
+      reset();
       const { mission, content: pack } = runMission(next, next.node!, content);
       return host.launch(mission, pack);
     }
@@ -361,18 +376,59 @@ function missionFacts(r: RunState, node: RunNode) {
   const { mission } = runMission(r, node, host.content);
   return `<p class="run-facts">${mission.waves.length} waves · ◇ ${mission.startingCredits} starting credits · ⚡ ${mission.reactorEnergy} reactor energy</p>`;
 }
-function nodeDetail(r: RunState, node: RunNode, reachable: boolean) {
+/**
+ * The card of a node, opened on the map beside it: what waits there and the one action, Deploy for a mission (it
+ * chooses the node and starts the mission in one step), Go for a camp, Resume for a deployed mission.
+ */
+function nodeCard(r: RunState, node: RunNode) {
   const k = KIND[node.kind],
-    go = reachable ? `<button class="primary" data-run="travel:${node.lane}">${isMissionKind(node.kind) ? "Choose this mission" : `Go to the ${k.label.toLowerCase()}`} <span>→</span></button>` : `<p class="run-note">Not reachable from where you stand.</p>`;
-  if (!isMissionKind(node.kind)) return `<div class="run-node-detail"><p class="choice-index">${k.label.toUpperCase()}</p><h3>${k.icon} ${k.label}</h3><p>${k.note}</p>${go}</div>`;
-  const source = host.content.missions.find((m) => m.id === node.mission)!;
-  return `<div class="run-node-detail run-deploy" data-kind="${node.kind}"><div class="run-map" data-map="${node.mission}">${mapPreviewSvg(source.map)}<img alt=""></div><div><p class="choice-index">${k.label.toUpperCase()}</p><h3>${escape(source.map.name)}</h3><p>${k.note}</p>${modsHtml(node)}${missionFacts(r, node)}${threatChips(r, node)}${go}</div></div>`;
+    blocked = !host.canRun(),
+    close = `<button class="quiet run-inspector-close" data-run="focus:" aria-label="Close">✕</button>`,
+    head = (title: string) => `<p class="choice-index">${k.label.toUpperCase()}</p><h3>${title}</h3>`;
+  if (!isMissionKind(node.kind))
+    return { body: `${head(`${k.icon} ${k.label}`)}<p>${k.note}</p>`, action: `<button class="primary" data-run="travel:${node.lane}">Go to the ${k.label.toLowerCase()} <span>→</span></button>`, close };
+  const { mission } = runMission(r, node, host.content),
+    source = host.content.missions.find((m) => m.id === node.mission)!,
+    chosen = r.phase === "mission" && r.node?.column === node.column && r.node.lane === node.lane,
+    playing = chosen && host.playing() === mission.id,
+    journal = host.journal(),
+    resumable = chosen && r.deployed && journal?.missionId === mission.id;
+  const action = playing
+    ? `<button class="primary" data-run="resume">Return to mission <span>→</span></button>`
+    : resumable
+      ? `<button class="primary" data-run="resume"${blocked ? " disabled" : ""}>Resume mission (wave ${Math.max(1, journal!.wave ?? 1)}) <span>→</span></button><p class="run-note">It continues where you left it and cannot be restarted.</p>`
+      : chosen && r.deployed
+        ? `<p class="run-note">This mission was interrupted and its record is gone. It counts as lost.</p><button class="primary" data-run="forfeit">End the run</button>`
+        : `<button class="primary" data-run="deploy:${node.lane}"${blocked ? " disabled" : ""}>Deploy <span>→</span></button><p class="run-note">${blocked ? "Leave the multiplayer room to play a run." : "Once deployed, it can be resumed but never restarted."}</p>`;
+  return {
+    body: `<div class="run-map" data-map="${node.mission}">${mapPreviewSvg(source.map)}<img alt=""></div><div class="run-inspector-text">${head(escape(source.map.name))}<p>${k.note}</p>${modsHtml(node)}${missionFacts(r, node)}${threatChips(r, node)}</div>`,
+    action,
+    // A deployed mission cannot be swapped for another, so its card stays open.
+    close: chosen && r.deployed ? "" : close,
+  };
+}
+/** The lane whose card is open: the player's pick, else the only choice or the chosen mission. */
+function openLane(): number | undefined {
+  if (!run || (run.phase !== "map" && run.phase !== "mission")) return undefined;
+  if (run.phase === "mission" && run.deployed) return run.node!.lane;
+  if (focusLane === null) return undefined;
+  if (focusLane !== undefined) return focusLane;
+  if (run.phase === "mission") return run.node!.lane;
+  const choices = mapChoices(run, host.content);
+  return choices.length === 1 ? choices[0].lane : undefined;
+}
+/** After the card opens, its action takes the focus (keyboard play). */
+function focusCard(lane: number | undefined) {
+  if (lane !== undefined) root.querySelector<HTMLElement>(".run-inspector-action :is(button, a)")?.focus({ preventScroll: true });
 }
 function mapHtml(r: RunState) {
   const columns = actMapOf(r, host.content),
     choices = mapChoices(r, host.content),
-    reachable = new Set(choices.map((n) => `${n.column}:${n.lane}`)),
-    focus = focusLane !== undefined ? choices.find((n) => n.lane === focusLane) : choices.length === 1 ? choices[0] : undefined,
+    // A deployed mission is the only way on.
+    locked = r.phase === "mission" && r.deployed,
+    reachable = new Set(choices.filter((n) => !locked || n.lane === r.node!.lane).map((n) => `${n.column}:${n.lane}`)),
+    lane = openLane(),
+    focus = lane !== undefined ? choices.find((n) => n.lane === lane) : undefined,
     x = (c: number) => ((c + 0.5) / columns.length) * 100,
     y = (n: RunNode) => ((columns[n.column].length === 1 ? 1 : n.lane) + 0.5) * (100 / LANES),
     lines: string[] = [];
@@ -396,31 +452,20 @@ function mapHtml(r: RunState) {
       return `<button class="run-node" data-kind="${n.kind}" data-state="${state}"${focus && focus.column === n.column && focus.lane === n.lane ? ' aria-pressed="true"' : ""} style="--c:${x(n.column)}%;--l:${y(n)}%" data-run="focus:${n.lane}"${state === "next" ? "" : " disabled"} title="${escape(k.label + (name ? `: ${name}` : ""))}"><i aria-hidden="true">${k.icon}</i><span>${escape(name || k.label)}</span></button>`;
     })
     .join("");
+  // The card covers the columns on the roomier side of its node (ahead, or behind for the late columns) and points at it.
+  let card = "";
+  if (focus) {
+    const c = nodeCard(r, focus),
+      side = x(focus.column) > 50 ? "before" : "after",
+      at = `--c:${x(focus.column)}%;--l:${y(focus)}%`;
+    card = `<i class="run-inspector-tip" data-kind="${focus.kind}" data-side="${side}" style="${at}" aria-hidden="true"></i><section class="run-inspector" data-kind="${focus.kind}" data-side="${side}" style="${at}" aria-label="${escape(KIND[focus.kind].label)}">${c.close}<div class="run-inspector-body">${c.body}</div><div class="run-inspector-action">${c.action}</div></section>`;
+  }
   const act = actName(r, host.content);
-  return `<h2 class="run-step-title">${r.act >= 3 ? "The Final Stand" : `Act ${["I", "II", "III"][r.act]}: ${escape(act)}`}</h2><p class="run-note">${choices.length ? "Pick where to go next. Missions, camps and the act boss lie ahead; lines show the roads." : ""}</p><div class="run-routemap" data-act="${r.act}">${svg(false)}${svg(true)}${nodes}</div>${
-    focus ? nodeDetail(r, focus, true) : `<p class="run-note">Select a highlighted node to see what waits there.</p>`
-  }`;
+  return `<div class="run-map-head"><h2 class="run-step-title">${r.act >= 3 ? "The Final Stand" : `Act ${["I", "II", "III"][r.act]}: ${escape(act)}`}</h2>${abandonHtml()}</div><p class="run-note run-map-note">${
+    locked ? "Your deployed mission waits." : choices.length ? "Pick where to go next. Missions, camps and the act boss lie ahead; lines show the roads." : ""
+  }${focus || locked ? "" : " Select a highlighted node to see what waits there."}</p><div class="run-routemap" data-act="${r.act}"${focus ? " data-open" : ""}>${svg(false)}${svg(true)}${nodes}${card}</div>`;
 }
-function deployHtml(r: RunState) {
-  const node = r.node!,
-    k = KIND[node.kind],
-    { mission } = runMission(r, node, host.content),
-    playing = host.playing() === mission.id,
-    journal = host.journal(),
-    resumable = r.deployed && journal?.missionId === mission.id,
-    blocked = !host.canRun(),
-    source = host.content.missions.find((m) => m.id === node.mission)!;
-  const action = playing
-    ? `<button class="primary" data-run="resume">Return to mission <span>→</span></button>`
-    : resumable
-      ? `<button class="primary" data-run="resume"${blocked ? " disabled" : ""}>Resume mission (wave ${Math.max(1, journal!.wave ?? 1)}) <span>→</span></button><p class="run-note">The mission continues where you left it. It cannot be restarted.</p>`
-      : r.deployed
-        ? `<p class="run-note">This mission was interrupted and its record is gone. It counts as lost.</p><button class="primary" data-run="forfeit">End the run</button>`
-        : `<button class="primary" data-run="deploy"${blocked ? " disabled" : ""}>Deploy <span>→</span></button><p class="run-note">Once deployed, the mission can be resumed but never restarted.</p>`;
-  return `<h2 class="run-step-title">Mission ${runDepth(r) + 1} of ${missionsOf(r.length)}</h2><div class="run-deploy" data-kind="${node.kind}"><div class="run-map" data-map="${node.mission}">${mapPreviewSvg(source.map)}<img alt=""></div><div><p class="choice-index">${k.label.toUpperCase()}</p><h3>${escape(mission.name)}</h3><p>${k.note}</p>${modsHtml(node)}${missionFacts(r, node)}${threatChips(r, node)}${action}${
-    blocked ? `<p class="run-note">Leave the multiplayer room to play a run.</p>` : ""
-  }</div></div>`;
-}
+const abandonHtml = () => `<button class="quiet run-abandon" data-run="abandon">${armed === "abandon" ? "Press again to abandon the run" : "Abandon run"}</button>`;
 function draftHtml(r: RunState) {
   if (!r.offers.towers) return "";
   if (replacing) return replaceHtml(r);
@@ -570,7 +615,7 @@ function render() {
         : r.phase === "map"
           ? mapHtml(r)
           : r.phase === "mission"
-            ? deployHtml(r)
+            ? mapHtml(r)
             : r.phase === "reward"
               ? rewardHtml(r)
               : r.phase === "camp"
@@ -578,9 +623,9 @@ function render() {
                 : r.phase === "act"
                   ? actHtml(r)
                   : endHtml(r);
-  root.innerHTML = `${r ? statusHtml(r) : ""}<div class="run-body">${body}</div>${
-    live ? `<button class="quiet run-abandon" data-run="abandon">${armed === "abandon" ? "Press again to abandon the run" : "Abandon run"}</button>` : ""
-  }`;
+  // The map carries Abandon in its own header row.
+  const onMap = r?.phase === "map" || r?.phase === "mission";
+  root.innerHTML = `${r ? statusHtml(r) : ""}<div class="run-body"${onMap ? ' data-map-view=""' : ""}>${body}</div>${live && !onMap ? abandonHtml() : ""}`;
   // The real terrain fades in over the SVG placeholders once it is rendered.
   for (const frame of root.querySelectorAll<HTMLElement>("[data-map]")) {
     const img = frame.querySelector("img")!,
