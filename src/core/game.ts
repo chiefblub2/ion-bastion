@@ -8,6 +8,8 @@ import { tickStatus } from "../systems/status";
 import { tickZones } from "../systems/zones";
 import { landStrikes } from "../systems/strikes";
 import { updateDetection } from "../systems/detection";
+import { tickProtocols } from "../systems/protocols";
+import { stateHash } from "./hash";
 import { spawnEnemies, settleWave } from "../systems/waves";
 import { beginWave, earlyBonus, settleCircle, wavesLeft } from "../systems/circle";
 import { balance, credit, earn, startingWallets } from "./economy";
@@ -114,7 +116,15 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
       } catch {
         return fail("run-invalid");
       }
-      if (c.replay) replay(g, c.replay);
+      if (c.replay) {
+        replay(g, c.replay);
+        // A replay that ends elsewhere than the journal recorded (rules changed with an update) never plays on as if
+        // nothing happened: the mission starts over from its first wave, with the run's reactor as it was.
+        if (c.replay.hash !== undefined && (g.ticks !== c.replay.ticks || stateHash(g.state) !== c.replay.hash)) {
+          g.loadMission(c.mission, c.content);
+          return ok("run-replay-reset", { name: c.mission.name });
+        }
+      }
       return ok("run-loaded", { name: c.mission.name });
     },
   },
@@ -322,6 +332,7 @@ export class Game implements Sim {
     tickStatus(this, dt);
     moveEnemies(this, dt);
     updateDetection(this);
+    tickProtocols(this, dt);
     moveProjectiles(this, dt);
     fireAftershocks(this);
     landStrikes(this);

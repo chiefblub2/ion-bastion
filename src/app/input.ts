@@ -317,7 +317,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     launch(mission, content, resumed) {
       const r = execute({ type: "run", mission, content, replay: resumed });
       if (!r.ok) return;
-      beginJournal(game, resumed);
+      // A journal the current rules cannot reproduce was dropped: the mission started over with a fresh one.
+      beginJournal(game, r.code === "run-replay-reset" ? undefined : resumed);
       // A resumed mission opens paused, so the player finds their bearings first.
       if (resumed && isRunning(game.state) && !game.state.paused) execute({ type: "pause" });
       screens.show(GAME);

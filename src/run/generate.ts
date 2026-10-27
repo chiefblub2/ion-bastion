@@ -1,11 +1,11 @@
 import { missionById } from "../content/missions";
 import { g } from "../content/waves";
 import { waveHpScale } from "../systems/spawn";
-import type { ContentPack, EnemyId, MissionDefinition, TowerId, WaveDefinition, WaveGroup } from "../core/types";
+import type { ContentPack, EnemyId, MasteryEffect, MissionDefinition, TowerId, WaveDefinition, WaveGroup } from "../core/types";
 import { threatRules } from "./ascension";
 import { bossModOf, harden } from "./boss";
 import type { MissionKind, RunNode } from "./map";
-import { rankOf, rankTransform } from "./ranks";
+import { MASTERY, rankOf, rankTransform } from "./ranks";
 import { applyRelics, hasFlag } from "./relics";
 import { draw, streamOf, type Rng } from "./rng";
 import type { RunState } from "./run";
@@ -134,6 +134,12 @@ export function depthOf(node: RunNode, threat: number) {
     base = row[Math.min(columnSlot(node), row.length - 1)] + rules.depth;
   return base * (node.kind === "elite" ? ELITE_HP * rules.eliteHp : 1) * rules.hp;
 }
+/** Rank 4 mastery effects of the roster's mastered tower types (`MASTERY`), or undefined without one. */
+export function masteryOf(run: Pick<RunState, "roster" | "ranks" | "relics">) {
+  const out: Partial<Record<TowerId, MasteryEffect>> = {};
+  for (const id of run.roster) if (MASTERY[id] && rankOf(run.ranks[id]) >= 4) out[id] = MASTERY[id]!.effect;
+  return Object.keys(out).length ? out : undefined;
+}
 /** The run's content pack: doctrines, shop mods, ranks, then relics, in that order. */
 export function runPack(run: Pick<RunState, "doctrines" | "mods" | "ranks" | "roster" | "relics">): PackFn {
   const veteran = hasFlag(run.relics, "veteran");
@@ -212,6 +218,8 @@ export function runMission(run: RunState, node: RunNode, base: ContentPack): Run
     availableTowers: [...roster],
   };
   const pack = compose([runPack(run), ...mods.flatMap((m) => (m.content ? [m.content] : []))])(base);
-  const done = applyRelics(pack, mission, run.relics);
+  const done = applyRelics(pack, mission, run.relics, run.reactorMax),
+    mastery = masteryOf(run);
+  if (mastery) done.mission = { ...done.mission, protocols: { ...done.mission.protocols, mastery } };
   return { ...done, suppressed };
 }

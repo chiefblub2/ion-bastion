@@ -44,6 +44,13 @@ export const ROSTER_CAP: readonly number[] = [6, 8, 10, 10];
 /** Rank XP: one per kill, plus a bonus for every type built in a mission; thresholds of ranks 1 to 4. */
 export const XP_BUILT = 10;
 export const RANK_XP: readonly number[] = [60, 180, 360, 600];
+/**
+ * Assist XP (`run/xp.ts`) for Control, trap and Support towers: this share of the kills of the other towers they stand
+ * beside (within their range plus `ASSIST_REACH` cells), at most `ASSIST_CAP` per type and mission.
+ */
+export const ASSIST_SHARE = 0.35;
+export const ASSIST_REACH = 1;
+export const ASSIST_CAP = 80;
 /** Shop prices before the threat surcharge. */
 export const PRICES = {
   patch: 25,

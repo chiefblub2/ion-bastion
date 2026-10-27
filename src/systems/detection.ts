@@ -2,6 +2,7 @@ import { resolveUpgrades } from "../core/upgrades";
 import type { Sim } from "../core/types";
 import { dist } from "./path";
 import { hasCloakField, hasTrait, isSuppressed } from "./traits";
+import { scannerReveals } from "./protocols";
 /** Marks stealthed enemies inside any detector's range as revealed for this tick. */
 export function updateDetection(sim: Sim) {
   const detectors = sim.state.towers
@@ -10,5 +11,5 @@ export function updateDetection(sim: Sim) {
   // Cloaked neighbours are revealed like stealthed enemies; `revealed` stays unset on every other enemy in solo.
   const cloak = hasCloakField(sim);
   for (const e of sim.state.enemies)
-    if (cloak || hasTrait(sim, e, "stealth")) e.revealed = detectors.some(({ t, resolved }) => dist(e, t) <= resolved.stats.range);
+    if (cloak || hasTrait(sim, e, "stealth")) e.revealed = detectors.some(({ t, resolved }) => dist(e, t) <= resolved.stats.range) || scannerReveals(sim, e);
 }

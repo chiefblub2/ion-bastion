@@ -36,7 +36,9 @@ import {
 } from "../src/run/run";
 import { buy } from "../src/run/shop";
 import { eventOf } from "../src/run/events";
-import { relicOf } from "../src/run/relics";
+import { relicOf, type RelicId } from "../src/run/relics";
+import { relicFit } from "../src/run/relic-fit";
+import { rankOf } from "../src/run/ranks";
 const args = process.argv.slice(2),
   flag = (name: string) => args.includes(`--${name}`),
   value = (name: string) => {
@@ -54,7 +56,24 @@ const SEEDS = Number(value("seeds") ?? 30),
   noRanks = flag("no-ranks"),
   noDoctrines = flag("no-doctrines"),
   /** Plays the source campaign mission (its own waves) with the run's roster instead: how strong is the bot? */
-  baseline = flag("baseline");
+  baseline = flag("baseline"),
+  /** `--relic-pick fit`: the bot takes the offered relic that fits its roster best instead of the first card. */
+  fitPick = value("relic-pick") === "fit",
+  /** `--act-reward relic`: at act transitions the bot takes the first relic (the boss's signature relic when offered) instead of a Doctrine. */
+  actRelic = value("act-reward") === "relic";
+/** Relic statistics: offered cards, how many fit the roster, which were taken. */
+const relicStats = { cards: 0, fitting: 0, synergy: 0, draftsWithSynergy: 0, drafts: 0, taken: new Map<string, number>() };
+function chooseRelic(run: RunState, offers: readonly RelicId[]): RelicId {
+  relicStats.drafts++;
+  const fits = offers.map((id) => relicFit(run, id, content));
+  relicStats.cards += offers.length;
+  relicStats.fitting += fits.filter((f) => f.fits).length;
+  relicStats.synergy += fits.filter((f) => f.synergy).length;
+  if (fits.some((f) => f.synergy)) relicStats.draftsWithSynergy++;
+  const id = fitPick ? (offers[fits.findIndex((f) => f.synergy)] ?? offers[fits.findIndex((f) => f.fits)] ?? offers[0]) : offers[0];
+  relicStats.taken.set(id, (relicStats.taken.get(id) ?? 0) + 1);
+  return id;
+}
 const content = DEFAULT_CONTENT;
 /**
  * The bot's habits (scripts/bot.ts): the measured default `STEADY`; `--bot greedy` plays the old bot (fixed build order,
@@ -106,13 +125,13 @@ function decide(run: RunState, pick: () => number): RunState {
       worst = [...run.roster].sort((a, b) => (run.ranks[a] ?? 0) - (run.ranks[b] ?? 0))[0];
     run = pickTower(run, id, run.roster.length >= rosterCap(run) ? worst : undefined);
   }
-  if (run.offers.relics) run = pickRelic(run, "relics", run.offers.relics[0]);
+  if (run.offers.relics) run = pickRelic(run, "relics", chooseRelic(run, run.offers.relics));
   if (run.offers.prize) run = pickRelic(run, "prize", run.offers.prize.find((id) => relicOf(id).rarity !== "cursed") ?? null);
-  if (run.offers.legendary) run = pickRelic(run, "legendary", noDoctrines || !run.offers.doctrine ? run.offers.legendary[0] : null);
+  if (run.offers.legendary) run = pickRelic(run, "legendary", actRelic || noDoctrines || !run.offers.doctrine ? chooseRelic(run, run.offers.legendary) : null);
   if (run.offers.doctrine) {
     const best = [...doctrineCandidates(run, content)].sort((a, b) => (run.ranks[b] ?? 0) - (run.ranks[a] ?? 0))[0];
     run = pickDoctrine(run, noDoctrines ? null : (best ?? null), best && doctrinePaths(run, best, content)[0], content);
-    if (run.offers.legendary) run = pickRelic(run, "legendary", run.offers.legendary[0]);
+    if (run.offers.legendary) run = pickRelic(run, "legendary", chooseRelic(run, run.offers.legendary));
   }
   if (run.offers.repair) run = repairChoice(run, run.reactor < run.reactorMax ? "heal" : "reinforce");
   if (run.offers.event) {
@@ -153,7 +172,11 @@ function chooseLane(run: RunState, pick: () => number): number {
 const total = missionsOf(LENGTH),
   plays = new Map<string, { won: number; played: number; reactor: number; leak: number; left: number[]; earned: number[]; waves: number }>(),
   depths = Array(total + 1).fill(0),
-  waveTimes: number[] = [];
+  waveTimes: number[] = [],
+  protocols = new Map<string, number>(),
+  xpByTab = [0, 1, 2, 3].map(() => ({ xp: 0, n: 0 })),
+  ends: { scrap: number; reactor: number; roster: number; ranks: number[]; relics: number; doctrines: number }[] = [],
+  types = new Set<string>();
 let simSeconds = 0;
 for (let seed = 1; seed <= SEEDS; seed++) {
   const pick = rng(seed * 7919);
@@ -188,16 +211,33 @@ for (let seed = 1; seed <= SEEDS; seed++) {
       }
       plays.set(key, entry);
       waveTimes.push(...played.waveTimes);
+      for (const [k, n] of Object.entries(played.protocols)) protocols.set(k, (protocols.get(k) ?? 0) + n);
       simSeconds += played.waveTimes.reduce((a, b) => a + b, 0);
       if (verbose)
         console.log(
           `seed ${seed} m${runDepth(run) + 1} ${key.padEnd(15)} ${mission.name.padEnd(24)} [${run.roster.join(",")}] ${played.result.won ? `won ${played.result.lives}/${mission.reactorEnergy}` : `lost at wave ${played.result.wave}`} scrap ${run.scrap} relics ${run.relics.length} doctrines ${run.doctrines.length}`,
         );
+      const before = { ...run.ranks };
       run = finishMission(run, played.result, content);
+      for (const id of played.result.built)
+        if (run.roster.includes(id)) {
+          const tab = xpByTab[pageOf(content.towers[id])];
+          tab.xp += (run.ranks[id] ?? 0) - (before[id] ?? 0);
+          tab.n++;
+        }
     } else run = decide(run, pick);
     if (!isMissionKind(run.node?.kind ?? "shop") && run.phase === "mission") break;
   }
   depths[runDepth(run)]++;
+  ends.push({
+    scrap: run.scrap,
+    reactor: run.reactor / run.reactorMax,
+    roster: run.roster.length,
+    ranks: run.roster.map((id) => rankOf(run.ranks[id])),
+    relics: run.relics.length,
+    doctrines: run.doctrines.length,
+  });
+  for (const id of run.roster) types.add(id);
 }
 const median = (v: number[]) => (v.length ? [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)] : 0);
 const sorted = [...waveTimes].sort((a, b) => a - b),
@@ -209,4 +249,22 @@ for (const [key, e] of [...plays].sort(([a], [b]) => a.localeCompare(b)))
   );
 console.log(`missions won per run: ${depths.map((n, d) => `${d}: ${n}`).join("  ")}`);
 console.log(`completed: ${depths[total]}/${SEEDS} (${Math.round((100 * depths[total]) / SEEDS)}%)`);
+const mean = (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0),
+  rankCounts = [0, 0, 0, 0, 0];
+for (const e of ends) for (const r of e.ranks) rankCounts[r]++;
+const TABS = ["Attack", "Control", "Traps", "Support"];
+console.log(
+  `rank XP per mission played, by tab (mean per fielded type): ${TABS.map((name, i) => {
+    const v = xpByTab[i];
+    return `${name} ${v.n ? (v.xp / v.n).toFixed(0) : "-"} (n ${v.n})`;
+  }).join("  ")}`,
+);
+console.log(
+  `at the end (mean): scrap ${mean(ends.map((e) => e.scrap)).toFixed(0)}, reactor ${Math.round(100 * mean(ends.map((e) => e.reactor)))}%, roster ${mean(ends.map((e) => e.roster)).toFixed(1)}, relics ${mean(ends.map((e) => e.relics)).toFixed(1)}, doctrines ${mean(ends.map((e) => e.doctrines)).toFixed(1)}; ${types.size} tower types fielded`,
+);
+console.log(`roster ranks at the end: ${rankCounts.map((n, r) => `r${r} ${n}`).join("  ")}`);
+console.log(
+  `relic drafts ${relicStats.drafts}: ${relicStats.cards} cards, ${Math.round((100 * relicStats.fitting) / Math.max(1, relicStats.cards))}% fit the roster, ${Math.round((100 * relicStats.draftsWithSynergy) / Math.max(1, relicStats.drafts))}% of drafts offer a fitting synergy relic; taken: ${[...relicStats.taken].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(", ")}`,
+);
+if (protocols.size) console.log(`protocol activations per run: ${[...protocols].map(([k, n]) => `${k} ${(n / SEEDS).toFixed(0)}`).join(", ")}`);
 console.log(`wave game time: median ${pct(0.5)} s, p10 ${pct(0.1)} s, p90 ${pct(0.9)} s; game minutes per run ${(simSeconds / 60 / SEEDS).toFixed(0)}`);

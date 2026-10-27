@@ -4,7 +4,8 @@ import { actTiers } from "./acts";
 import { threatRules } from "./ascension";
 import { actMap, type MissionKind, type RunLength, type RunNode } from "./map";
 import { rankOf } from "./ranks";
-import { hasFlag, relicOf, relicsOf, RELIC_IDS, type Rarity, type RelicId } from "./relics";
+import { relicFit, usable } from "./relic-fit";
+import { hasFlag, relicOf, relicsOf, signatureOf, type Rarity, type RelicId } from "./relics";
 import { draw, streamOf, type Rng } from "./rng";
 import { sharedTags } from "./tags";
 import { needsOf, rosterCovers, type Need } from "./threats";
@@ -43,6 +44,8 @@ export interface RunOffers {
   shop?: ShopItem[];
   event?: string;
   repair?: true;
+  /** Decisions the reward opened with (`run/rewards.ts`), for its "Reward 2 of 3"; absent with a single one. */
+  steps?: number;
   /** Tower types that ranked up with the last mission (shown once). */
   rankUps?: TowerId[];
 }
@@ -228,32 +231,56 @@ const RELIC_ODDS: readonly (readonly number[])[] = [
   [60, 40],
   [40, 60],
 ];
-/** Relics of a rarity the run does not hold yet. */
-const fresh = (run: RunState, rarity: Rarity) => relicsOf(rarity).filter((id) => !run.relics.includes(id));
-/** The regular relic offer: common and rare by the act's odds. */
-export function relicOffers(run: RunState, count = 3): RelicId[] {
+/** Relics of a rarity the run does not hold yet and that can still pay off (`relic-fit.ts`). */
+const fresh = (run: RunState, rarity: Rarity, content?: ContentPack) => relicsOf(rarity).filter((id) => usable(run, id, content));
+/**
+ * The regular relic offer: common and rare by the act's odds, never one the run cannot use. With a content pack and
+ * at least two cards, one card fits the roster: if none of the drawn ones is a fitting synergy relic, the last card is
+ * swapped for one (from a stream of its own, so the other cards stay as the seed drew them).
+ */
+export function relicOffers(run: RunState, count = 3, content?: ContentPack): RelicId[] {
   const r = streamOf(run.seed, "relics", run.step),
     [common] = RELIC_ODDS[Math.min(run.act, RELIC_ODDS.length - 1)],
     out: RelicId[] = [];
   while (out.length < count) {
     const rarity: Rarity = r() * 100 < common ? "common" : "rare",
-      pool = fresh(run, rarity).filter((id) => !out.includes(id)),
-      any = RELIC_IDS.filter((id) => !run.relics.includes(id) && !out.includes(id) && relicOf(id).rarity !== "cursed" && relicOf(id).rarity !== "legendary"),
+      pool = fresh(run, rarity, content).filter((id) => !out.includes(id)),
+      any = [...fresh(run, "common", content), ...fresh(run, "rare", content)].filter((id) => !out.includes(id)),
       picks = draw(r, pool.length ? pool : any, 1);
     if (!picks.length) break;
     out.push(picks[0]);
   }
-  return out;
+  if (!content || out.length < 2 || out.some((id) => relicFit(run, id, content).synergy)) return out;
+  const fitting = [...fresh(run, "common", content), ...fresh(run, "rare", content)].filter((id) => !out.includes(id) && relicFit(run, id, content).synergy),
+    swap = draw(streamOf(run.seed, "relics-fit", run.step), fitting, 1)[0];
+  return swap ? [...out.slice(0, -1), swap] : out;
 }
 /** The elite prize: two rare-or-legendary relics and a cursed one (which pays Scrap). */
-export function prizeOffers(run: RunState): RelicId[] {
+export function prizeOffers(run: RunState, content?: ContentPack): RelicId[] {
   const r = streamOf(run.seed, "elite-relics", run.step),
-    good = draw(r, [...fresh(run, "rare"), ...fresh(run, "rare"), ...fresh(run, "legendary")].filter((id, i, all) => all.indexOf(id) === i), 2),
-    cursed = draw(r, fresh(run, "cursed"), 1);
+    good = draw(r, [...fresh(run, "rare", content), ...fresh(run, "rare", content), ...fresh(run, "legendary", content)].filter((id, i, all) => all.indexOf(id) === i), 2),
+    cursed = draw(r, fresh(run, "cursed", content), 1);
   return [...good, ...cursed];
 }
-export const legendaryOffers = (run: RunState, count = 3): RelicId[] => draw(streamOf(run.seed, "legendary", run.act), fresh(run, "legendary"), count);
-export const cursedRelic = (run: RunState, key: unknown): RelicId | undefined => draw(streamOf(run.seed, "cursed", key), fresh(run, "cursed"), 1)[0];
+export const legendaryOffers = (run: RunState, count = 3, content?: ContentPack): RelicId[] => draw(streamOf(run.seed, "legendary", run.act), fresh(run, "legendary", content), count);
+/**
+ * The signature relic of the boss just beaten (the first of its modifiers that has one), when it can still pay off
+ * and fits the roster; a modifier's technology the roster cannot use is not offered.
+ */
+export function signatureOffer(run: RunState, content: ContentPack): RelicId | undefined {
+  for (const mod of run.node?.mods ?? []) {
+    const id = signatureOf(mod);
+    if (id && usable(run, id, content) && relicFit(run, id, content).fits) return id;
+  }
+  return undefined;
+}
+/** The act transition's relics: the boss's signature relic and two legendary ones, or three legendary ones. */
+export function actRelicOffers(run: RunState, content: ContentPack): RelicId[] {
+  const legendary = legendaryOffers(run, 3, content),
+    signature = signatureOffer(run, content);
+  return signature ? [signature, ...legendary.slice(0, 2)] : legendary;
+}
+export const cursedRelic = (run: RunState, key: unknown, content?: ContentPack): RelicId | undefined => draw(streamOf(run.seed, "cursed", key), fresh(run, "cursed", content), 1)[0];
 /** A random roster-free tower of a rarity (events and the shop). */
 export function randomTower(run: RunState, content: ContentPack, rarity: TowerRarity, key: unknown): TowerId | undefined {
   const left = (Object.keys(content.towers) as TowerId[]).filter((id) => !run.roster.includes(id) && towerRarity(id, content) === rarity);

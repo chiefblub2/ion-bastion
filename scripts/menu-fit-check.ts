@@ -14,6 +14,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Page } from "playwright-core";
 import { launch } from "./browser";
+import { bossMapState, runStates } from "./run-states";
 
 const arg = (name: string) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -28,6 +29,7 @@ const base = arg("url") ?? "http://localhost:4173",
     [390, 844],
   ];
 mkdirSync(out, { recursive: true });
+const states = runStates();
 const browser = await launch(base);
 let failures = 0;
 const fail = (where: string, what: string) => {
@@ -78,7 +80,68 @@ for (const [w, h] of phones) {
   await page.click('.run-node[data-state="next"]');
   await step(page, size, "run-card", [w, h]);
   const action = await page.$eval(".run-inspector-action .primary", (e) => e.getBoundingClientRect().toJSON());
-  if (action.bottom > h || action.right > w) fail(size, "the Run card's action is off screen");
+  if (action.bottom > h || action.right > w || action.height < 40) fail(size, "the Run card's action is off screen or squashed");
+  // Every reward, camp and act decision fits one screen with its options, details and actions on it.
+  for (const [name, state] of Object.entries(states)) {
+    await page.evaluate((v) => localStorage.setItem("ion-bastion:run", v), JSON.stringify(state));
+    await page.goto(`${base}/#run`);
+    await page.reload();
+    await page.waitForTimeout(500);
+    const where = `${size} run-${name}`;
+    const option = await page.$(".run-option:not(:disabled)");
+    if (!option) fail(where, "no selectable option");
+    else {
+      await option.click();
+      await page.waitForTimeout(150);
+      if (!(await page.evaluate(() => document.activeElement?.classList.contains("run-option") && document.activeElement.getAttribute("aria-pressed") === "true")))
+        fail(where, "the selected option lost the focus");
+    }
+    await step(page, size, `run-${name}`, [w, h]);
+    const boxes = await page.$$eval(".run-decision-actions button, .run-continue .primary", (list) => list.map((e) => e.getBoundingClientRect().toJSON()));
+    if (!boxes.length) fail(where, "no action");
+    for (const b of boxes) if (b.bottom > h + 0.5 || b.right > w + 0.5 || b.top < 0 || b.height < 40) fail(where, `an action is off screen or small (${Math.round(b.top)}–${Math.round(b.bottom)}, ${Math.round(b.height)} px)`);
+    // A full roster: Take opens the replacement, which lists what the replaced tower loses.
+    if (name === "replace") {
+      await page.click(".run-take");
+      await page.waitForTimeout(200);
+      await page.click(".run-option");
+      await step(page, size, "run-replace-confirm", [w, h]);
+      if (!(await page.locator(".run-loss li").count())) fail(where, "the replacement shows no consequences");
+      await page.click('[data-run="cancel"]');
+      await page.waitForTimeout(150);
+      if ((await page.getAttribute(".run-decision", "data-step")) !== "towers") fail(where, "Cancel did not return to the draft");
+    }
+    // A double tap on Take claims the relic once.
+    if (name === "relic") {
+      const before = state.relics.length;
+      await page.dblclick(".run-take");
+      await page.waitForTimeout(200);
+      const after = await page.evaluate(() => JSON.parse(localStorage.getItem("ion-bastion:run")!).relics.length);
+      if (after !== before + 1) fail(where, `Take claimed ${after - before} relics`);
+    }
+    // The act reward: taking the Doctrine gives up the relic (no Master License).
+    if (name === "act") {
+      await page.click('.run-option[data-run="pick:doctrine"]');
+      await page.click(".run-take");
+      await page.waitForTimeout(150);
+      await page.click(".run-option");
+      await page.click(".run-take");
+      await page.waitForTimeout(200);
+      const offers = await page.evaluate(() => JSON.parse(localStorage.getItem("ion-bastion:run")!).offers);
+      if (offers.legendary || offers.doctrine) fail(where, "the act reward left a second pick open");
+    }
+  }
+  // The act boss's card on the map: its modifiers, the technology it may leave, and Deploy on screen.
+  await page.evaluate((v) => localStorage.setItem("ion-bastion:run", v), JSON.stringify(bossMapState()));
+  await page.goto(`${base}/#run`);
+  await page.reload();
+  await page.waitForTimeout(500);
+  // A single road on opens its card by itself; a tap would close it again.
+  if (!(await page.$(".run-inspector"))) await page.click('.run-node[data-kind="boss"][data-state="next"]');
+  await step(page, size, "run-boss-card", [w, h]);
+  const deploy = await page.$eval(".run-inspector-action .primary", (e) => e.getBoundingClientRect().toJSON());
+  if (deploy.bottom > h || deploy.right > w || deploy.height < 40) fail(size, "the boss card's Deploy is off screen or squashed");
+  if (!(await page.locator(".run-inspector .run-loot").count())) fail(size, "the boss card shows no boss technology");
   await page.evaluate(() => localStorage.removeItem("ion-bastion:run"));
   await page.goto(`${base}/#gegnerakte`);
   await page.waitForTimeout(400);

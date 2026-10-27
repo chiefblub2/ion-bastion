@@ -697,7 +697,40 @@ export interface MissionDefinition {
   circle?: CircleRules;
   /** Training: no countdown between waves, the player starts each one; absent everywhere else. */
   manualWaves?: true;
+  /** Combat rules a Run's relics add (`systems/protocols.ts`); absent everywhere else, so other missions are unchanged. */
+  protocols?: Protocols;
 }
+/**
+ * Combat rules carried by a mission, each optional and bounded. Run relics produce them (`run/relics.ts`); the
+ * simulation reads only these values, never the run.
+ */
+export interface Protocols {
+  /** Thermal Fracture: an explosive hit on an enemy slowed to `slowAt` or less deals `bonus` more and ends the slow. */
+  fracture?: { slowAt: number; bonus: number };
+  /** Singularity Protocol: every `every` s the toughest visible enemy is marked for `duration` s; precision towers prefer it and deal `bonus` more to it. */
+  singularity?: { every: number; duration: number; bonus: number };
+  /** Unstable Reactor: tower damage rises by up to `max` as the reactor falls from `from` to `to` of `reactorMax`. */
+  unstable?: { reactorMax: number; from: number; to: number; max: number };
+  /** Kill Box: trap hits on an enemy held to `speedAt` of its speed or less (slowed, stunned, netted) deal `bonus` more. */
+  killbox?: { speedAt: number; bonus: number };
+  /** Armorbreaker Matrix: area hits on armored enemies dissolve `fraction` of their armor for `duration` s. */
+  armorbreak?: { fraction: number; duration: number };
+  /** Swarm Replicator: towers fire `per` faster for every enemy in their range, at most `max`. */
+  swarm?: { per: number; max: number };
+  /** Skyhunter Array: a tower hit leaving a flyer under `below` of its HP nets it for `duration` s (it counts as ground). */
+  skyhunter?: { below: number; duration: number; factor: number };
+  /** Titan Reactor Core: heavy enemies take `bonus` more damage; when one dies, towers within `reload` cells reload at once. */
+  titan?: { bonus: number; reload: number };
+  /** Spectral Scanner: towers reveal stealthed enemies within `radius` cells; revealed enemies take `bonus` more damage. */
+  scanner?: { radius: number; bonus: number };
+  /** Rank 4 mastery (`run/ranks.ts`): a tower type's hits also apply this effect (a stun only outside its recovery). */
+  mastery?: Partial<Record<TowerId, MasteryEffect>>;
+}
+export type MasteryEffect =
+  | { kind: "slow"; factor: number; duration: number }
+  | { kind: "stun"; duration: number; recovery: number }
+  | { kind: "vulnerable"; amount: number; duration: number };
+export type ProtocolId = Exclude<keyof Protocols, "mastery">;
 /** Rules of a circle mission; its map must be a `loop`. */
 export interface CircleRules {
   /** Seconds between two waves. */
@@ -764,7 +797,9 @@ export type StatusEffect =
   /** Oil Slick: burns deal `boost` times and leap to oiled enemies within `radius`. */
   | { kind: "oiled"; boost: number; radius: number; until: number }
   /** Armor Dissolver: the `armor` trait loses `fraction` of its reduction. */
-  | { kind: "armorDissolved"; fraction: number; until: number };
+  | { kind: "armorDissolved"; fraction: number; until: number }
+  /** Singularity Protocol: the marked priority target until `until`. */
+  | { kind: "singularity"; until: number };
 export type StatusKind = StatusEffect["kind"];
 export interface Enemy extends Point {
   id: number;
@@ -880,6 +915,8 @@ export type GameEvent =
   | { type: "barrier"; from: Point; at: Point; amount: number; color: number }
   /** Workshop at `from` saved `amount` credits on an upgrade of the tower at `at`. */
   | { type: "discount"; from: Point; at: Point; amount: number; color: number }
+  /** A Run protocol went off at `at` (`systems/protocols.ts`): a fracture, a mark, a reload, a net, broken armor. */
+  | { type: "protocol"; protocol: ProtocolId; at: Point; radius?: number }
   | { type: "end"; result: "won" | "lost" };
 export type GameStatus = "ready" | "wave" | "won" | "lost";
 export interface GameState {
@@ -957,6 +994,8 @@ export interface Replay {
   entries: readonly { tick: number; command: Command }[];
   /** Ticks to simulate in total. */
   ticks: number;
+  /** `stateHash` the replay must reach at `ticks`; otherwise the mission starts over (`run-replay-reset`). */
+  hash?: number;
 }
 /** Language-neutral result; `ui/messages.ts` turns it into text. */
 export type MessageCode =
@@ -966,6 +1005,7 @@ export type MessageCode =
   | "playtest-solo"
   | "playtest-invalid"
   | "run-loaded"
+  | "run-replay-reset"
   | "run-solo"
   | "run-invalid"
   | "mission-unknown"

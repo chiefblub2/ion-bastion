@@ -8,6 +8,7 @@ import { pageOf } from "../src/ui/tower-pages";
 import type { ContentPack, MissionDefinition, TowerId, UnitLayer } from "../src/core/types";
 import type { MissionResult } from "../src/run/run";
 import { missionStars } from "../src/app/rating";
+import { assistsOf } from "../src/run/xp";
 
 export interface Played {
   result: MissionResult;
@@ -16,6 +17,8 @@ export interface Played {
   /** Credits unspent at the end, and paid in all (invested plus unspent). */
   left: number;
   earned: number;
+  /** Run protocols that went off, per protocol (`systems/protocols.ts`). */
+  protocols: Record<string, number>;
 }
 export interface Habits {
   /** Spends every few seconds during a wave, not only before it, and saves for the next tower of its rotation. */
@@ -135,6 +138,7 @@ export function playBot(mission: MissionDefinition, pack: ContentPack, habits: H
     for (let guard = 0; guard < 60 && (g.state.towers.length < 6 ? build() || upgrade() : upgrade() || build()); guard++);
   };
   const waveTimes: number[] = [],
+    protocols: Record<string, number> = {},
     every = Math.round(SPEND_EVERY * 30);
   while (statusOf(g) === "ready") {
     spend();
@@ -143,14 +147,14 @@ export function playBot(mission: MissionDefinition, pack: ContentPack, habits: H
     let steps = 0;
     while (statusOf(g) === "wave" && steps++ < 60000) {
       g.tick();
-      g.drainEvents();
+      for (const e of g.drainEvents()) if (e.type === "protocol") protocols[e.protocol] = (protocols[e.protocol] ?? 0) + 1;
       if (habits.midWave && steps % every === 0) spend();
     }
     waveTimes.push(g.state.time - t0);
   }
-  return outcome(g, mission, waveTimes);
+  return outcome(g, mission, waveTimes, protocols);
 }
-function outcome(g: Game, mission: MissionDefinition, waveTimes: number[]): Played {
+function outcome(g: Game, mission: MissionDefinition, waveTimes: number[], protocols: Record<string, number>): Played {
   const kills: Partial<Record<TowerId, number>> = {};
   for (const t of g.state.towers) kills[t.type] = (kills[t.type] ?? 0) + t.kills;
   const won = g.state.status === "won",
@@ -161,11 +165,13 @@ function outcome(g: Game, mission: MissionDefinition, waveTimes: number[]): Play
       lives: g.state.lives,
       kills,
       built: [...new Set(g.state.towers.map((t) => t.type))],
+      assists: assistsOf(g.state, mission, g.content),
       stars: won ? missionStars(mission, g.state) : undefined,
       wave: g.state.wave,
     },
     waveTimes,
     left,
     earned: left + g.state.towers.reduce((n, t) => n + t.spent, 0),
+    protocols,
   };
 }

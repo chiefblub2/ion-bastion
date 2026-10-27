@@ -22,6 +22,7 @@ const STATUS_LABELS: { [K in keyof StatusFlags]: string } = {
   tethered: "TETHERED",
   shrunk: "SHRUNK",
   cursed: "HEXED",
+  marked: "PRIORITY TARGET",
 };
 
 /** Changes whenever the panel's content would; avoids rewriting the HTML on every refresh. */

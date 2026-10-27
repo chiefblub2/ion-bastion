@@ -14,6 +14,7 @@ const MESSAGES: Record<MessageCode, (p: Params) => string> = {
   "playtest-solo": () => "Playtests run in single-player only.",
   "playtest-invalid": () => "The draft is not a valid mission.",
   "run-loaded": (p) => `Run: ${p.name}.`,
+  "run-replay-reset": (p) => `Run: ${p.name}. Saved with an older version, so it starts over from wave 1; your reactor is as it was.`,
   "run-solo": () => "Runs are single-player only.",
   "run-invalid": () => "This run mission is not valid.",
   restarted: () => "New mission. Build your first defense.",

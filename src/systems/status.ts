@@ -135,6 +135,10 @@ const STATUSES: { [K in StatusKind]: StatusModule<Of<K>> } = {
   armorDissolved: {
     merge: strongest((s) => s.fraction),
   },
+  // Singularity Protocol (`protocols.ts`): only a mark, read by the targeting and the damage factor.
+  singularity: {
+    merge: strongest(() => 0),
+  },
   // ── new towers: g1 (Attack+Control A) ──
   // Like pull: a reversed walk at the enemy's own speed, the recovery included in the running entry.
   confuse: {
@@ -260,6 +264,8 @@ export interface StatusFlags {
   // ── new towers: g3 (Traps) ──
   oiled: boolean;
   // ── end g3 ──
+  /** Singularity Protocol's priority target. */
+  marked: boolean;
   // ── new towers: g4 (Support A) ──
   // ── end g4 ──
   // ── new towers: g5 (Support B) ──
@@ -292,6 +298,7 @@ export function statusFlags(e: Enemy, time: number): StatusFlags {
     // ── new towers: g3 (Traps) ──
     oiled: on("oiled"),
     // ── end g3 ──
+    marked: on("singularity"),
     // ── new towers: g4 (Support A) ──
     // ── end g4 ──
     // ── new towers: g5 (Support B) ──
@@ -306,7 +313,7 @@ export const isNetted = (e: Enemy, time: number) => e.status.length > 0 && hasSt
 export function activeEffects(e: Enemy, time: number) {
   let n = 0;
   for (const s of e.status)
-    if ("release" in s ? time < s.release : active(s, time)) n++;
+    if (s.kind !== "singularity" && ("release" in s ? time < s.release : active(s, time))) n++;
   return n;
 }
 /** Effects Stabilizer may lengthen; stun and pull never, so nothing is held for good. */

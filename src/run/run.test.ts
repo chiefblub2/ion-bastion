@@ -206,5 +206,10 @@ describe("run", () => {
     again.command({ type: "run", mission, content: pack, replay: journal });
     expect(stateHash(again.state)).toBe(journal.hash);
     expect(runMissionId(run)).toBe(mission.id);
+    // A journal the rules no longer reproduce (an update changed combat) starts the mission over instead.
+    const stale = new Game(content.missions[0], content),
+      result = stale.command({ type: "run", mission, content: pack, replay: { ...journal, hash: journal.hash! + 1 } });
+    expect(result.code).toBe("run-replay-reset");
+    expect([stale.ticks, stale.state.wave, stale.state.towers.length]).toEqual([0, 0, 0]);
   });
 });
