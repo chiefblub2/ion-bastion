@@ -6,13 +6,13 @@ import { campaignLocks } from "./campaign-unlock";
 import { SECTORS } from "../content/missions";
 const fresh: HomeSession = { mission: MISSIONS[0], wave: 0, status: "ready", inProgress: false, multiplayer: false };
 describe("home action", () => {
-  it("starts a first-time visitor on the mission selector", () => {
+  it("offers a first-time visitor only the Play page", () => {
     const a = homeAction(MISSIONS, undefined, fresh);
-    expect(a.kind).toBe("start");
-    expect(a.title).toBe("Start Playing");
+    expect(a.kind).toBe("play");
+    expect(a.title).toBe("Play");
   });
   it("ignores an invalid remembered mission", () => {
-    expect(homeAction(MISSIONS, "gone", fresh).kind).toBe("start");
+    expect(homeAction(MISSIONS, "gone", fresh).kind).toBe("play");
   });
   it("retries an unwon remembered mission from wave 1 after a reload", () => {
     const a = homeAction(MISSIONS, MISSIONS[3].id, fresh);
@@ -56,8 +56,13 @@ describe("home action", () => {
   it("resumes a running or prepared game, paused or not", () => {
     const wave = homeAction(MISSIONS, MISSIONS[0].id, { ...fresh, mission: MISSIONS[2], wave: 6, status: "wave", inProgress: true });
     expect(wave.kind).toBe("resume");
+    expect(wave.title).toBe("Resume Mission");
     expect(wave.subtitle).toBe(`${MISSIONS[2].name} · Wave 06`);
     expect(homeAction(MISSIONS, undefined, { ...fresh, inProgress: true }).subtitle).toContain("Wave 01");
+  });
+  it("calls a run mission in memory a run to resume", () => {
+    const run = { ...MISSIONS[2], id: "run:42:1" };
+    expect(homeAction(MISSIONS, undefined, { ...fresh, mission: run, wave: 3, status: "wave", inProgress: true }).title).toBe("Resume Run");
   });
   it("offers a restart, not a resume, for a finished game", () => {
     for (const status of ["won", "lost"] as const) {

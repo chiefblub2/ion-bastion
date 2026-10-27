@@ -10,7 +10,7 @@ import { hasPage, hotkeyTowers, isPaged, pageOf, towerOrder } from "../ui/tower-
 import { isSupport } from "../systems/attacks";
 import { openUpgrades } from "../core/upgrades";
 import type { MatchCommand } from "../core/match";
-import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderMission, renderTowerCodexPage, TOWER_KEYS } from "../ui/interface";
+import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderMission, renderPlay, renderTowerCodexPage, TOWER_KEYS } from "../ui/interface";
 import { type AtlasOptions, atlasSelection, bindGlobe, type BriefTab, fitWorld, renderAtlas, selectMission as featureMission, selectSector, selectWorld, showBriefTab, toggleWorld } from "../ui/sector-atlas";
 import { terrainImage } from "../render/terrain-snapshot";
 import { describeResult } from "../ui/messages";
@@ -188,6 +188,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       // A newcomer: no Training won, no mission won and none started yet.
       renderMenu(game, primary, record, terrainImage, !trainingDone() && !Object.keys(record).length && !lastMission());
     }
+    if (to.page === "play") renderPlay(game, campaignRecord());
     if (to.page !== "missions") forRoom = false;
     if (to.page === "missions") {
       const options = atlas();
@@ -327,7 +328,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     journal: storedJournal,
     image: terrainImage,
   };
-  /** The home page's primary button: begin on the first campaign mission, return to the game in memory, move on to the next unwon mission, or replay the remembered one from wave 1. */
+  /** The home page's primary button: open the Play page when there is nothing to continue, return to the game in memory, move on to the next unwon mission, or replay the remembered one from wave 1. */
   function runPrimary() {
     if (primary.kind === "resume") return screens.show(GAME);
     if (primary.kind === "run") return screens.show(page("run"));
@@ -337,11 +338,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       return screens.show(GAME);
     }
     if (primary.kind === "restart" || primary.kind === "continue") return selectMission(primary.mission.id);
-    const sectors = game.content.sectors ?? [],
-      first = (modeGroups(sectors).campaign[0] ?? sectors[0]) as (typeof sectors)[number] | undefined;
-    missionSector = first ? sectors.indexOf(first) : undefined;
-    missionPick = (first?.missions ?? game.content.missions)[0]?.id;
-    screens.show(page("missions"));
+    screens.show(page("play"));
   }
   /** Opens the mission page on one game mode: the last mission's sector if it belongs to it, else its first sector. */
   function chooseMode(circle: boolean) {
@@ -525,6 +522,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     // Every entry of the ⚙ menu closes it; Resume also resumes.
     if (b.closest("#game-menu")) closeGameMenu(b.id === "menu-resume");
     if (b.dataset.back !== undefined) return screens.back();
+    // The Codex's Enemies | Towers switch swaps the page in place, so Back still leaves the Codex.
+    if (b.dataset.codex) return screens.show(page(b.dataset.codex as "codex" | "towers"), { replace: true });
     if (b.dataset.toTop !== undefined) return scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     if (b.dataset.worldZoom !== undefined) return toggleWorld();
     if (b.dataset.planet) return selectWorld(game, Number(b.dataset.planet), atlas());
@@ -622,8 +621,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       case "menu-codex":
         screens.show(page("codex"));
         break;
-      case "menu-towers":
-        screens.show(page("towers"));
+      case "menu-play":
+        screens.show(page("play"));
         break;
       case "overlay-missions":
         screens.show(page(isPlaytest(game.mission) ? "editor" : isRunMission(game.mission) ? "run" : "missions"));

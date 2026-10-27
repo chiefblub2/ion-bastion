@@ -1,6 +1,7 @@
 /**
  * The fitted landscape menus (menu.css, `FIT_QUERY` in app/compact.ts): plays the menu flow on phone-sized landscape
- * viewports and fails when a page scrolls or overflows, Start Mission leaves the screen, a locked mission loses its
+ * viewports and fails when a page scrolls or overflows, Play does not open the mode list, the Codex switch does not
+ * swap its pages, Start Mission leaves the screen, a locked mission loses its
  * explanation, Intel is empty, the atlas forgets the browsed mission after Back, or Start does not open the game.
  * Tablet, desktop and portrait sizes are checked for horizontal overflow only (their pages scroll by design).
  *
@@ -65,12 +66,21 @@ for (const [w, h] of phones) {
   page.on("pageerror", (e) => fail(size, String(e)));
   await page.goto(`${base}/`);
   await step(page, size, "home", [w, h]);
-  for (const hash of ["gegnerakte", "turmakte", "spielhilfe", "mehrspieler", "run"]) {
+  for (const hash of ["play", "gegnerakte", "turmakte", "spielhilfe", "mehrspieler", "run"]) {
     await page.goto(`${base}/#${hash}`);
     await step(page, size, hash, [w, h]);
   }
+  await page.goto(`${base}/#gegnerakte`);
+  await page.waitForTimeout(400);
+  await page.click('#codex-page [data-codex="towers"]');
+  await page.waitForTimeout(300);
+  if (!(await page.isVisible("#towers-page"))) fail(size, "the Codex switch did not open the towers");
+  // Home → Play → Campaign: a fresh visitor's Play button opens the mode list.
   await page.goto(`${base}/`);
   await page.waitForTimeout(600);
+  await page.click("#menu-primary");
+  await page.waitForTimeout(300);
+  if (!(await page.isVisible("#play-page"))) fail(size, "Play did not open the mode list");
   await page.click("#menu-campaign");
   await step(page, size, "atlas", [w, h], { start: true });
   // Out to the star system and back down: a world, a sector, a locked mission.
@@ -91,7 +101,7 @@ for (const [w, h] of phones) {
   await page.click('[data-brief-tab="overview"]');
   await page.click('#brief-actions [data-step="prev"]');
   await step(page, size, "previous", [w, h], { start: true });
-  // Back home and into the campaign again: the browsed mission is still featured.
+  // Back to Play and into the campaign again: the browsed mission is still featured.
   const picked = await page.getAttribute("#mission-list [aria-pressed=true]", "data-pick");
   await page.click("#mission-page [data-back]");
   await step(page, size, "back", [w, h]);
@@ -115,7 +125,7 @@ for (const [w, h] of phones) {
 for (const [w, h] of others) {
   const size = `${w}x${h}`,
     page = await browser.newPage({ viewport: { width: w, height: h } });
-  for (const hash of ["", "#missionen"]) {
+  for (const hash of ["", "#play", "#missionen"]) {
     await page.goto(`${base}/${hash}`);
     await step(page, size, hash.slice(1) || "home", [w, h], { fitted: false });
   }

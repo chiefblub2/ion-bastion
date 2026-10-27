@@ -5,14 +5,15 @@ import { isRunMission } from "../run/run-id";
 import type { CampaignRecord } from "./progress";
 import type { Lock } from "./campaign-unlock";
 /**
- * What the home page's primary button does: begin, return to the game in memory, move on to the next unwon mission,
- * or replay the remembered one.
+ * What the home page's primary button does: return to the game in memory, move on to the next unwon mission, replay
+ * the remembered one, or, with nothing to continue, open the Play page ("play").
  */
 export type HomeAction = {
-  kind: "start" | "resume" | "continue" | "restart" | "run";
+  kind: "play" | "resume" | "continue" | "restart" | "run";
   title: string;
   subtitle: string;
-  /** The mission the button shows on the preview map and, for "continue" and "restart", loads; "run" opens the Run page. */
+  /** The mission the button shows on the preview map and, for "continue" and "restart", loads; "run" opens the Run page.
+   * For "play" it is only a placeholder: the home page shows no preview then. */
   mission: MissionDefinition;
 };
 export interface HomeSession {
@@ -59,7 +60,7 @@ export function homeAction(
   if (session.inProgress && (session.multiplayer || session.status === "ready" || session.status === "wave"))
     return {
       kind: "resume",
-      title: "Resume Game",
+      title: isRunMission(session.mission) ? "Resume Run" : "Resume Mission",
       subtitle: `${session.mission.name} · Wave ${pad(Math.max(1, session.wave))}`,
       mission: session.mission,
     };
@@ -81,5 +82,5 @@ export function homeAction(
   }
   const first = missions.find((m) => !m.circle && !record[m.id] && !locks?.has(m.id));
   if (first && Object.keys(record).length) return proceed(first);
-  return { kind: "start", title: "Start Playing", subtitle: "Begin your defense campaign", mission: missions[0] };
+  return { kind: "play", title: "Play", subtitle: "Campaign · Run · Circuit · Multiplayer", mission: missions[0] };
 }
