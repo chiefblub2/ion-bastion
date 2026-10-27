@@ -184,9 +184,9 @@ export function renderMenu(game: Game, action: HomeAction, record: CampaignRecor
   const map = document.getElementById("home-map")!;
   map.dataset.action = action.kind;
   map.innerHTML = `<div class="home-map-head"><span>${where}</span><span>${place}</span></div><div class="home-map-view">${mapPreviewSvg(m.map)}<img class="home-map-img" alt=""><i class="scan" aria-hidden="true"></i><span class="home-map-play" aria-hidden="true">▶</span></div><div class="home-map-foot"><small class="home-map-kind">${PREVIEW_LABEL[action.kind]}</small><div class="home-map-title"><strong>${m.name}</strong>${best ? `<span class="home-map-stars" aria-label="Best: ${best} of 3 stars">${starText(best)}</span>` : ""}</div><p>${m.focus}</p><div class="home-map-stats">${stat("WAVES", String(m.waves.length))}${stat("CREDITS", String(m.startingCredits), "◇")}${m.circle ? stat("RING LIMIT", String(m.circle.limit)) : stat("REACTOR", String(m.reactorEnergy), "♡")}</div></div>`;
-  // The real terrain fades in over the SVG once it is rendered.
+  // The real terrain fades in over the SVG once it is rendered; not where the layout drops the preview (menu.css).
   const img = map.querySelector<HTMLImageElement>(".home-map-img");
-  if (img && image) fillImage(img, m.map, image);
+  if (img && image && getComputedStyle(map).display !== "none") fillImage(img, m.map, image);
 }
 /** Fills the enemy codex page; called when it opens and on every tab change. */
 export function renderCodex(game: Game, tab: CodexTab = "enemies") {

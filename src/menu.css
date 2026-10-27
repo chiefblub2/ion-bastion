@@ -2960,6 +2960,13 @@ span.world-hop {
     padding: 5px 6px;
   }
 }
+/* Stacked under the menu (tablets and phones) or beside it on a landscape phone, the operation preview would only
+   repeat the primary button's mission, so the home page goes without it there. */
+@media (max-width: 1099px), (orientation: landscape) and (max-height: 540px) {
+  .home-map {
+    display: none;
+  }
+}
 @media (max-width: 1099px) {
   .home-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -3124,9 +3131,22 @@ span.world-hop {
   .home-grid {
     flex: 1;
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-    grid-template-rows: auto auto auto auto minmax(0, 1fr);
+    /* The left column's four pieces sit centred between two spare rows, level with the modes beside them. */
+    grid-template-rows: minmax(0, 1fr) auto auto auto auto minmax(0, 1fr);
     gap: var(--fit-gap) clamp(14px, 2.5vw, 28px);
     align-items: stretch;
+  }
+  .home-main .menu-title {
+    grid-row: 2;
+  }
+  .menu-page p.home-dev {
+    grid-row: 3;
+  }
+  .home-primary {
+    grid-row: 4;
+  }
+  .home-learn {
+    grid-row: 5;
   }
   .home-main {
     display: contents;
@@ -3138,7 +3158,7 @@ span.world-hop {
   .menu-page p.menu-tagline {
     display: none;
   }
-  .menu-page > h1.menu-title {
+  .home-main .menu-title {
     margin: 0;
     font-size: clamp(24px, min(4.4vw, 9vh), 38px);
   }
@@ -3208,69 +3228,6 @@ span.world-hop {
     padding: 0 8px;
     font-size: 13px;
     letter-spacing: 0.03em;
-  }
-  /* The operation preview shrinks to a strip that takes the left column's spare height: map, mission, stats. */
-  .home-map {
-    grid-column: 1;
-    grid-row: -2;
-    display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
-    grid-template-areas: "head head" "view foot";
-    gap: 4px 12px;
-    min-height: 0;
-    padding: 6px 10px 8px;
-    /* Supplementary: on the shortest screens the strip gives up height first, never the controls. */
-    overflow: hidden;
-  }
-  .home-map-head {
-    grid-area: head;
-    margin: 0;
-    font-size: 10px;
-  }
-  .home-map-view {
-    grid-area: view;
-    min-height: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .home-map-view .map-preview {
-    width: 100%;
-    height: 100%;
-    max-height: none;
-  }
-  .home-map-play {
-    display: none;
-  }
-  .home-map-foot {
-    grid-area: foot;
-    align-self: center;
-    min-width: 0;
-    margin: 0;
-  }
-  .home-map-foot strong {
-    font-size: 15px;
-  }
-  .home-map-kind {
-    margin-bottom: 1px;
-    font-size: 10px;
-  }
-  .home-map-stars {
-    font-size: 13px;
-  }
-  .home-map-foot p {
-    display: none;
-  }
-  .home-map-stats {
-    margin-top: 4px;
-    gap: 4px 14px;
-  }
-  .home-map-stats strong {
-    font-size: 16px;
-  }
-  .home-map-stats .stat-label {
-    font-size: 10px;
   }
 
   /* Sector Atlas: a slim header, then the map beside the mission inspector, both as tall as the screen allows. */
