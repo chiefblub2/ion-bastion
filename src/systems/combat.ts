@@ -5,6 +5,7 @@ import { effectiveTowerStats, isAuraSource } from "./auras";
 import { dist, len } from "./path";
 import { isDefused, taunters } from "./traits";
 import { critFactor, overclockRate, synergyFactor } from "./support";
+import { markedFirst, protocolRate } from "./protocols";
 /** Homing projectiles whose target died look for a new one within this radius. */
 export const RETARGET_RADIUS = 1.5;
 /** Every target priority in menu order; the first is the default. */
@@ -33,7 +34,7 @@ export function attackEnemies(sim: Sim, dt: number) {
     // A defuser keeps traps in its radius from triggering, for every enemy.
     if (d.placement === "path" && isDefused(sim, t)) continue;
     // A rate change preserves progress instead of resetting or granting a free shot.
-    t.cooldown = Math.max(0, t.cooldown - (dt * overclockRate(sim, t)) / stats.interval);
+    t.cooldown = Math.max(0, t.cooldown - (dt * overclockRate(sim, t) * protocolRate(sim, t, stats.range)) / stats.interval);
     if (t.cooldown > 0) continue;
     const { attack, specialization: special } = resolveUpgrades(t, sim.content),
       module = attackModule(attack)!,
@@ -50,7 +51,7 @@ export function attackEnemies(sim: Sim, dt: number) {
       .sort(compareTargets(t.priority, t));
     if (!candidates.length) continue;
     // Taunters in reach must be picked among (traps ignore them); volley extras still come from every candidate.
-    const forced = d.placement === "path" ? undefined : taunters(sim, t, candidates),
+    const forced = d.placement === "path" ? undefined : (taunters(sim, t, candidates) ?? markedFirst(sim, t, candidates)),
       pool = forced ?? candidates,
       target = module.choose?.(sim, t.type, { x: t.x, y: t.y }, stats.range, pool, attack, t) ?? pool[0],
       // A volley adds the next candidates in priority order, each a different enemy.

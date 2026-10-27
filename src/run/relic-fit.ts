@@ -42,6 +42,15 @@ export function relicFit(run: Where, id: RelicId, content: ContentPack): RelicFi
       ? { fits: true, towers: fresh, synergy: false, note: `Lifts ${fresh.map((t) => content.towers[t].name).join(", ")} to rank 1.` }
       : { fits: false, towers: [], synergy: false, note: "Every roster tower already holds a rank: it helps the towers you draft later." };
   }
+  if (r.combo && r.comboText) {
+    const [a, b] = r.combo.map((f) => run.roster.filter((t) => f(content.towers[t]))),
+      towers = [...new Set([...a, ...b])],
+      names = (list: TowerId[]) => list.map((t) => content.towers[t].name).join(", ");
+    if (a.length && b.length && (a.length > 1 || b.length > 1 || a[0] !== b[0])) return { fits: true, towers, synergy: true, note: `Fits ${names(towers)}.` };
+    const missing = r.comboText.filter((_, i) => ![a, b][i].length);
+    if (!missing.length) return { fits: false, towers, synergy: false, note: `Needs ${r.comboText[0]} and ${r.comboText[1]} apart; ${names(towers)} alone is both.` };
+    return { fits: false, towers, synergy: false, note: `Needs ${missing.join(" and ")}${towers.length ? `; you have ${names(towers)}` : ""}.` };
+  }
   if (!r.wants || !r.wantsText) return { fits: true, towers: [], synergy: false, note: "Helps every build." };
   const towers = run.roster.filter((t) => r.wants!(content.towers[t]));
   return towers.length

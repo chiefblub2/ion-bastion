@@ -1,4 +1,5 @@
 import type { Enemy, EnemyDefinition, EnemyVisual } from "../core/types";
+import { drawMarked } from "./protocol-fx";
 import type { StatusFlags } from "../systems/status";
 import type { TraitFlags } from "../systems/traits";
 import { arcPath, chamferRect, fillRound, oval, polygon, star, strokeRound, type Ink } from "./shapes";
@@ -589,6 +590,8 @@ function tentacles(g: Ink, { x, y, r, heading, clock, enemy: e, definition: d }:
 }
 /** Status markers stuck on the body: net, bomb, flames. */
 function statusAbove(g: Ink, { x, y, r, status, clock }: EnemyDrawContext) {
+  // Singularity Protocol: the priority target wears a turning reticle.
+  if (status.marked) drawMarked(g, x, y, r, clock);
   // Netted: a mesh drawn over the body.
   if (status.netted) {
     g.lineStyle(1.2, STATUS_COLORS.netted, 0.9);

@@ -14,7 +14,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Page } from "playwright-core";
 import { launch } from "./browser";
-import { runStates } from "./run-states";
+import { bossMapState, runStates } from "./run-states";
 
 const arg = (name: string) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -80,7 +80,7 @@ for (const [w, h] of phones) {
   await page.click('.run-node[data-state="next"]');
   await step(page, size, "run-card", [w, h]);
   const action = await page.$eval(".run-inspector-action .primary", (e) => e.getBoundingClientRect().toJSON());
-  if (action.bottom > h || action.right > w) fail(size, "the Run card's action is off screen");
+  if (action.bottom > h || action.right > w || action.height < 40) fail(size, "the Run card's action is off screen or squashed");
   // Every reward, camp and act decision fits one screen with its options, details and actions on it.
   for (const [name, state] of Object.entries(states)) {
     await page.evaluate((v) => localStorage.setItem("ion-bastion:run", v), JSON.stringify(state));
@@ -131,6 +131,17 @@ for (const [w, h] of phones) {
       if (offers.legendary || offers.doctrine) fail(where, "the act reward left a second pick open");
     }
   }
+  // The act boss's card on the map: its modifiers, the technology it may leave, and Deploy on screen.
+  await page.evaluate((v) => localStorage.setItem("ion-bastion:run", v), JSON.stringify(bossMapState()));
+  await page.goto(`${base}/#run`);
+  await page.reload();
+  await page.waitForTimeout(500);
+  // A single road on opens its card by itself; a tap would close it again.
+  if (!(await page.$(".run-inspector"))) await page.click('.run-node[data-kind="boss"][data-state="next"]');
+  await step(page, size, "run-boss-card", [w, h]);
+  const deploy = await page.$eval(".run-inspector-action .primary", (e) => e.getBoundingClientRect().toJSON());
+  if (deploy.bottom > h || deploy.right > w || deploy.height < 40) fail(size, "the boss card's Deploy is off screen or squashed");
+  if (!(await page.locator(".run-inspector .run-loot").count())) fail(size, "the boss card shows no boss technology");
   await page.evaluate(() => localStorage.removeItem("ion-bastion:run"));
   await page.goto(`${base}/#gegnerakte`);
   await page.waitForTimeout(400);

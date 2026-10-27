@@ -713,6 +713,19 @@
 .run-card[data-rarity="legendary"] {
   border-top-color: var(--m-star);
 }
+.run-card[data-rarity="signature"] {
+  border-top-color: #ff8a3d;
+}
+.run-card[data-rarity="signature"] .choice-index,
+.run-card[data-rarity="signature"] .run-option-text small,
+.run-origin,
+.run-loot b,
+.run-relic[data-rarity="signature"] i {
+  color: #ff8a3d;
+}
+.run-origin {
+  font: 600 12px var(--mono);
+}
 .run-card[data-rarity="cursed"] {
   border-top-color: var(--m-danger);
 }
@@ -1077,12 +1090,51 @@
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
     gap: 12px;
   }
+  /* A mission card: the text runs the card's full height beside the map, Deploy sits under the map. */
+  .run-inspector:has(.run-map) {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    column-gap: 12px;
+  }
+  .run-inspector:has(.run-map) .run-inspector-body {
+    display: contents;
+  }
+  .run-inspector:has(.run-map) .run-map {
+    grid-area: 1 / 1;
+    align-self: stretch;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .run-inspector:has(.run-map) .run-map .map-preview {
+    height: 100%;
+  }
+  .run-inspector:has(.run-map) .run-inspector-text {
+    grid-area: 1 / 2 / 3 / 3;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .run-inspector:has(.run-map) .run-inspector-action {
+    grid-area: 2 / 1;
+  }
+  .run-inspector:has(.run-map) .run-inspector-action .primary {
+    min-width: 0;
+    min-height: 44px;
+    width: 100%;
+  }
   /* "A regular mission…" only repeats the label; the facts and threats need the room. */
   .run-inspector-text h3 + p {
     display: none;
   }
   .run-inspector .run-facts {
     font-size: 11px;
+  }
+  /* Modifiers by name only (the description is the tooltip), so the boss technology stays in view. */
+  .run-inspector .run-mod-text {
+    display: none;
+  }
+  .run-inspector .run-mods li {
+    font-size: 12px;
   }
   .run-inspector-action {
     padding-top: 6px;

@@ -35,6 +35,10 @@ const rich = (run: RunState): RunState => ({
   ranks: Object.fromEntries(run.roster.map((id, i) => [id, RANK_XP[Math.min(3, i)] + 20])) as Partial<Record<TowerId, number>>,
   doctrines: run.roster[0] ? [...run.doctrines.filter((d) => !d.startsWith(`${run.roster[0]}:`))] : run.doctrines,
 });
+/** A run on the act map with the act boss as its next node (the inspector previews the boss's technology). */
+export function bossMapState(): RunState {
+  return rich(walkTo(4, (r) => r.phase === "map" && r.column === 3));
+}
 export function runStates(): Record<string, RunState> {
   const out: Record<string, RunState> = {};
   const draft = walkTo(3, (r) => r.phase === "reward" && !!r.offers.towers);

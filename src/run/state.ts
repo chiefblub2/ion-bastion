@@ -5,7 +5,7 @@ import { threatRules } from "./ascension";
 import { actMap, type MissionKind, type RunLength, type RunNode } from "./map";
 import { rankOf } from "./ranks";
 import { relicFit, usable } from "./relic-fit";
-import { hasFlag, relicOf, relicsOf, type Rarity, type RelicId } from "./relics";
+import { hasFlag, relicOf, relicsOf, signatureOf, type Rarity, type RelicId } from "./relics";
 import { draw, streamOf, type Rng } from "./rng";
 import { sharedTags } from "./tags";
 import { needsOf, rosterCovers, type Need } from "./threats";
@@ -263,6 +263,23 @@ export function prizeOffers(run: RunState, content?: ContentPack): RelicId[] {
   return [...good, ...cursed];
 }
 export const legendaryOffers = (run: RunState, count = 3, content?: ContentPack): RelicId[] => draw(streamOf(run.seed, "legendary", run.act), fresh(run, "legendary", content), count);
+/**
+ * The signature relic of the boss just beaten (the first of its modifiers that has one), when it can still pay off
+ * and fits the roster; a modifier's technology the roster cannot use is not offered.
+ */
+export function signatureOffer(run: RunState, content: ContentPack): RelicId | undefined {
+  for (const mod of run.node?.mods ?? []) {
+    const id = signatureOf(mod);
+    if (id && usable(run, id, content) && relicFit(run, id, content).fits) return id;
+  }
+  return undefined;
+}
+/** The act transition's relics: the boss's signature relic and two legendary ones, or three legendary ones. */
+export function actRelicOffers(run: RunState, content: ContentPack): RelicId[] {
+  const legendary = legendaryOffers(run, 3, content),
+    signature = signatureOffer(run, content);
+  return signature ? [signature, ...legendary.slice(0, 2)] : legendary;
+}
 export const cursedRelic = (run: RunState, key: unknown, content?: ContentPack): RelicId | undefined => draw(streamOf(run.seed, "cursed", key), fresh(run, "cursed", content), 1)[0];
 /** A random roster-free tower of a rarity (events and the shop). */
 export function randomTower(run: RunState, content: ContentPack, rarity: TowerRarity, key: unknown): TowerId | undefined {

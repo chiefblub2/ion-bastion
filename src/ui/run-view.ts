@@ -15,7 +15,7 @@ import type { Journal } from "../run/journal";
 import { isMissionKind, LANES, missionsOf, type NodeKind, type RunNode } from "../run/map";
 import { MAX_RANK, nextRankAt, RANK_TEXT } from "../run/ranks";
 import { relicFit } from "../run/relic-fit";
-import { hasFlag, relicOf, type RelicId } from "../run/relics";
+import { hasFlag, relicOf, signatureOf, type RelicId } from "../run/relics";
 import { rewardProgress, rewardSteps } from "../run/rewards";
 import { parseSeed, seedText } from "../run/rng";
 import {
@@ -419,14 +419,23 @@ function threatChips(r: RunState, node: RunNode) {
     })
     .join("")}</ul>`;
 }
-function modsHtml(node: RunNode) {
+function modsHtml(node: RunNode, r?: RunState) {
+  // An act boss that opens an act transition shows the technology it may leave behind.
+  const transition = r && node.kind === "boss" && r.length === "full",
+    loot = transition ? (node.mods ?? []).map(signatureOf).find((id) => id) : undefined;
   return node.mods?.length
     ? `<ul class="run-mods">${node.mods
         .map((id) => {
           const m = bossModOf(id);
-          return `<li><i aria-hidden="true">${m.icon}</i><b>${escape(m.name)}</b> ${escape(m.description)}</li>`;
+          return `<li title="${escape(m.description)}"><i aria-hidden="true">${m.icon}</i><b>${escape(m.name)}</b> <span class="run-mod-text">${escape(m.description)}</span></li>`;
         })
-        .join("")}</ul>`
+        .join("")}${
+        loot
+          ? `<li class="run-loot" title="${escape(relicOf(loot).description)}"><i aria-hidden="true">${relicOf(loot).icon}</i><b>Boss tech:</b> ${escape(relicOf(loot).name)}${
+              relicFit(r!, loot, host.content).fits ? "" : " (needs " + escape(relicOf(loot).wantsText ?? "a fitting tower") + ")"
+            }</li>`
+          : ""
+      }</ul>`
     : "";
 }
 function missionFacts(r: RunState, node: RunNode) {
@@ -458,7 +467,7 @@ function nodeCard(r: RunState, node: RunNode) {
         ? `<p class="run-note">This mission was interrupted and its record is gone. It counts as lost.</p><button class="primary" data-run="forfeit">End the run</button>`
         : `<button class="primary" data-run="deploy:${node.lane}"${blocked ? " disabled" : ""}>Deploy <span>→</span></button><p class="run-note">${blocked ? "Leave the multiplayer room to play a run." : "Once deployed, it can be resumed but never restarted."}</p>`;
   return {
-    body: `<div class="run-map" data-map="${node.mission}">${mapPreviewSvg(source.map)}<img alt=""></div><div class="run-inspector-text">${head(escape(source.map.name))}<p>${k.note}</p>${modsHtml(node)}${missionFacts(r, node)}${threatChips(r, node)}</div>`,
+    body: `<div class="run-map" data-map="${node.mission}">${mapPreviewSvg(source.map)}<img alt=""></div><div class="run-inspector-text">${head(escape(source.map.name))}<p>${k.note}</p>${modsHtml(node, r)}${missionFacts(r, node)}${threatChips(r, node)}</div>`,
     action,
     // A deployed mission cannot be swapped for another, so its card stays open.
     close: chosen && r.deployed ? "" : close,
@@ -609,7 +618,7 @@ function relicOption(r: RunState, id: RelicId, slot: RelicSlot): Option {
     key: id,
     rarity: relic.rarity,
     label: relic.name,
-    html: `<span class="run-icon run-glyph" aria-hidden="true">${relic.icon}</span><span class="run-option-text"><strong>${escape(relic.name)}</strong><small>${relic.rarity}${slot === "prize" && relic.rarity === "cursed" ? " · +◈ 30" : ""}</small>${
+    html: `<span class="run-icon run-glyph" aria-hidden="true">${relic.icon}</span><span class="run-option-text"><strong>${escape(relic.name)}</strong><small>${relic.rarity === "signature" ? "boss tech" : relic.rarity}${slot === "prize" && relic.rarity === "cursed" ? " · +◈ 30" : ""}</small>${
       relic.wantsText || relic.category === "build" ? `<em class="run-fit" data-fits="${fit.fits}">${fit.fits ? "Fits your build" : "No fit yet"}</em>` : ""
     }</span>`,
   };
@@ -618,7 +627,9 @@ function relicPreview(r: RunState, id: RelicId, slot: RelicSlot) {
   const relic = relicOf(id),
     fit = relicFit(r, id, host.content),
     upside = relic.downside ? relic.description.replace(relic.downside, "").replace(/[;,]\s*(but\s*)?$/i, "").trim().replace(/[^.]$/, "$&.") : relic.description;
-  return `<h3><i aria-hidden="true">${relic.icon}</i> ${escape(relic.name)}</h3><p class="run-upside">${escape(upside)}</p>${
+  return `<h3><i aria-hidden="true">${relic.icon}</i> ${escape(relic.name)}</h3>${
+    relic.boss ? `<p class="run-origin">Boss technology recovered from the ${escape(bossModOf(relic.boss).name)}. Lasts for this run.</p>` : ""
+  }<p class="run-upside">${escape(upside)}</p>${
     relic.downside ? `<p class="run-downside">Price: ${escape(relic.downside)}</p>` : ""
   }${slot === "prize" && relic.rarity === "cursed" ? `<p class="run-gain">Taking it pays 30 Scrap.</p>` : ""}<p class="run-fit-note" data-fits="${fit.fits}">${escape(fit.note)}</p>`;
 }
@@ -690,7 +701,9 @@ function actDecision(r: RunState, head = "") {
     head,
     eyebrow: eyebrow(r, "ACT REWARD"),
     title: "Choose your act reward",
-    note: "A legendary relic or a Doctrine: taking one gives up the other.",
+    note: offers.some((id) => relicOf(id).boss)
+      ? "The boss's technology, a legendary relic or a Doctrine: taking one gives up the others."
+      : "A legendary relic or a Doctrine: taking one gives up the other.",
     options,
     preview: !pick
       ? emptyPreview("Select a relic or the Doctrine to see the details.")

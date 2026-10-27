@@ -16,7 +16,7 @@ import {
   doctrineCandidates,
   doctrinePaths,
   gainRelic,
-  legendaryOffers,
+  actRelicOffers,
   prizeOffers,
   relicOffers,
   removeTower,
@@ -231,9 +231,9 @@ export const pendingPicks = (run: RunState) => !!(run.offers.towers || run.offer
 export function continueRun(run: RunState, content: ContentPack): RunState {
   if (run.phase === "reward") {
     if (run.node?.kind === "boss") {
-      // The act transition: a full repair, then a legendary relic or a Doctrine.
+      // The act transition: a full repair, then the boss's signature relic, a legendary relic or a Doctrine.
       const act: RunState = { ...run, phase: "act", reactor: run.reactorMax, rerolls: 0, offers: {} };
-      return { ...act, offers: withSteps(act, { legendary: legendaryOffers(act, 3, content), doctrine: doctrineCandidates(act, content).length ? true : undefined }) };
+      return { ...act, offers: withSteps(act, { legendary: actRelicOffers(act, content), doctrine: doctrineCandidates(act, content).length ? true : undefined }) };
     }
     return { ...run, phase: "map", node: undefined, offers: {} };
   }

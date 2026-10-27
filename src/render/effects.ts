@@ -5,6 +5,7 @@ import { drawFieldEffect } from "./field-effects";
 import { fadeOut, IMPACTS, impactOf } from "./projectiles";
 import { drawTrapEffect, TRAP_EFFECT_LIFE } from "./trap-effects";
 import { drawCrit } from "./support-fx";
+import { drawProtocol, PROTOCOL_LIFE } from "./protocol-fx";
 import { drawEconomyEffect } from "./economy-effects";
 import { controlBeam, controlChain, drawEcho } from "./control-marks";
 import { arcBand, CELL, disc, hash01, lightning, oval, polygon, px, ring, shade, strip, type Ink, type Pen } from "./shapes";
@@ -41,6 +42,7 @@ export type VisualEvent = Extract<
       // ── new towers: g5 (Support B) ──
       | "recycle" | "barrier" | "discount"
       // ── end g5 ──
+      | "protocol"
   }
 >;
 const VISUAL = new Set<GameEvent["type"]>([
@@ -60,6 +62,7 @@ const VISUAL = new Set<GameEvent["type"]>([
   // ── new towers: g5 (Support B) ──
   "recycle", "barrier", "discount",
   // ── end g5 ──
+  "protocol",
 ]);
 export const isVisual = (e: GameEvent): e is VisualEvent => VISUAL.has(e.type);
 /** Read by the scene when an event arrives, so the effect still knows its source after a sale or a turn of the turret. */
@@ -102,6 +105,8 @@ export function effectLifetime(e: VisualEvent, content: ContentPack) {
     case "upgrade":
     case "sell":
       return TOWER_ACTION_LIFETIME;
+    case "protocol":
+      return PROTOCOL_LIFE[e.protocol];
     case "pulse": {
       const turret = sourceOf(content, e.color);
       return turret === "hammer" ? QUAKE_LIFETIME : turret === "heavy" || turret === "limpet" ? IMPACTS.burst.life : EFFECT_LIFETIME;
@@ -673,6 +678,8 @@ export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: Conte
       return drawCrit(pen, e, age);
     case "recycle": case "barrier": case "discount": // g5
       return drawEconomyEffect(pen, e, age);
+    case "protocol":
+      return drawProtocol(pen, e, age);
     default:
       ring(g, px(e.at.x), px(e.at.y), 6 + age * 65, 2, e.type === "leak" ? DANGER : e.color, alpha);
   }

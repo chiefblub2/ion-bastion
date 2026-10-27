@@ -52,6 +52,9 @@ function cueOf(e: GameEvent, content: ContentPack): { id: CueId; voice: number }
       return BLASTS.has(content.towers[e.tower].attack.kind) ? { id: "blast", voice: 0 } : null;
     case "end":
       return { id: e.result, voice: 0 };
+    // Run protocols borrow the nearest sound: a fracture or broken armor shatters, a mark clicks like a crit, a reload strikes.
+    case "protocol":
+      return { id: e.protocol === "fracture" || e.protocol === "armorbreak" ? "shatter" : e.protocol === "titan" ? "strike" : e.protocol === "singularity" ? "crit" : "evade", voice: 0 };
     default: {
       const id = PLAIN[e.type];
       return id ? { id, voice: 0 } : null;

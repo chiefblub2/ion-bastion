@@ -212,6 +212,6 @@ export function runMission(run: RunState, node: RunNode, base: ContentPack): Run
     availableTowers: [...roster],
   };
   const pack = compose([runPack(run), ...mods.flatMap((m) => (m.content ? [m.content] : []))])(base);
-  const done = applyRelics(pack, mission, run.relics);
+  const done = applyRelics(pack, mission, run.relics, run.reactorMax);
   return { ...done, suppressed };
 }
