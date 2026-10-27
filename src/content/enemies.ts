@@ -40,7 +40,7 @@ export const ENEMY_CONTENT = {
     id: "boss",
     name: "Titan",
     hp: 1600,
-    speed: 0.65,
+    speed: 0.8,
     reward: 100,
     leak: 10,
     color: 0xff647c,
