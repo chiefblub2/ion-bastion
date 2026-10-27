@@ -1881,7 +1881,7 @@ dialog::backdrop {
 }
 /* Phones in landscape: a compact toolbar and tower column so the board gets the height. */
 @media (orientation: landscape) and (max-height: 540px) {
-  /* Only the game view is fitted; the menu pages keep scrolling. */
+  /* The game view locks the page; the menu pages fit themselves (menu.css, "Fitted landscape layout"). */
   :root:is(.is-fullscreen, .is-compact)[data-view="game"],
   :root:is(.is-fullscreen, .is-compact)[data-view="game"] body {
     overflow: hidden;

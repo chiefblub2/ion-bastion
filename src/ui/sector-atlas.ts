@@ -13,6 +13,7 @@ import { type Box, fitBox, headingOf, HORIZON, link, planetLayout, project, type
 import { SYSTEM, type WorldEntry, worldOf, worldsOf } from "./planets";
 import { type BiomeId, biomeGround, type SurfaceSeed } from "./planet-surface";
 import { surfaceImage } from "./planet-texture";
+import { FIT_QUERY } from "../app/compact";
 /**
  * The mission page as a Sector Atlas: a world map with every sector of the mode as a landmass (its terrain, its
  * missions as stations on a route, sea lanes to the next sector) that zooms into the selected sector, then the
@@ -129,8 +130,32 @@ export interface AtlasOptions {
   /** Unlocked mission ids shown before; others play their reveal. Absent: nothing is fresh. */
   seen?: ReadonlySet<string>;
 }
-/** From tablets up the card has room for the enemy list; phones fold it away. */
-const intelOpen = () => matchMedia("(min-width: 700px)").matches;
+/**
+ * From tablets up the card has room for the enemy list; phones in portrait fold it away. The fitted landscape layout
+ * shows it on the inspector's Intel tab instead, so it is always open there (the tab replaces its summary).
+ */
+const intelQuery = `(min-width: 700px), ${FIT_QUERY}`,
+  intelOpen = () => matchMedia(intelQuery).matches;
+// Turning a phone into landscape opens the list the portrait layout had folded away.
+if (typeof matchMedia === "function")
+  matchMedia(FIT_QUERY).addEventListener("change", (e) => {
+    if (e.matches) document.querySelector("#brief-intel details")?.setAttribute("open", "");
+  });
+/** The inspector's tab in the fitted layout: the briefing, or the battlefield and the enemies (Intel). */
+export type BriefTab = "overview" | "intel";
+export function showBriefTab(tab: BriefTab) {
+  const card = $("atlas-card");
+  card.dataset.tab = tab;
+  for (const b of card.querySelectorAll<HTMLElement>("[data-brief-tab]")) b.setAttribute("aria-pressed", String(b.dataset.briefTab === tab));
+}
+/** The mission the briefing shows, so the app can return to it after leaving the page. */
+let featured: MissionDefinition | undefined;
+/** The featured mission and its sector's content index, or undefined before the first render. */
+export function atlasSelection(game: Game) {
+  const sectors = game.content.sectors ?? [],
+    sector = featured && sectorOf(featured, sectors);
+  return featured && sector ? { sector: sectors.indexOf(sector), pick: featured.id, circle: isCircleSector(sector) } : undefined;
+}
 const motion = () => !matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $ = (id: string) => document.getElementById(id)!;
 /** Sets an <img> once the terrain picture is ready; it fades in over the SVG placeholder. */
@@ -164,6 +189,7 @@ export function renderAtlas(game: Game, options: AtlasOptions, sectorIndex?: num
     home = (options.playing ? loaded : undefined) ?? (next ? sectorOf(next, sectors) : undefined) ?? loaded,
     selected = sectors[sectorIndex ?? (home ? sectors.indexOf(home) : 0)];
   entries = worldsOf(sectors);
+  showBriefTab("overview");
   renderHeader(game, !!selected && isCircleSector(selected), options);
   renderWorld(game, (selected && worldOf(entries, selected)) ?? entries[0], options);
   renderSystem(game, options);
@@ -262,8 +288,10 @@ export function fitWorld(smooth = false) {
   // A sector zoom keeps the band under the legend free.
   const narrow = view.clientWidth < 600,
     top = sector ? $("missions-label").parentElement!.offsetHeight + 12 : 0,
+    // A short view (the fitted landscape layout) also keeps the world bar's band free, so labels clear it.
+    bottom = sector && view.clientHeight < 420 ? $("world-nav").offsetHeight + 8 : 0,
     box = sector ? stationBox(world.stations[world.selected], narrow ? 7 : 9, narrow ? 5 : 8) : planetBox(world.regions),
-    fit = fitBox(box, view.clientWidth, view.clientHeight - top);
+    fit = fitBox(box, view.clientWidth, view.clientHeight - top - bottom);
   fit.y += top;
   view.dataset.zoom = zoom === "sector" && !sector ? "planet" : zoom;
   const button = $("world-zoom"),
@@ -664,8 +692,10 @@ export function renderFeatured(game: Game, m: MissionDefinition | undefined, { l
     body = $("brief-body"),
     actions = $("brief-actions"),
     intel = $("brief-intel");
+  featured = m;
   if (!m) {
     body.innerHTML = actions.innerHTML = intel.innerHTML = "";
+    $("brief-intel-count").innerHTML = "";
     return;
   }
   const { content } = game,
@@ -727,9 +757,17 @@ export function renderFeatured(game: Game, m: MissionDefinition | undefined, { l
     fresh = foes.filter((f) => f.isNew).length;
   body.innerHTML = `<p class="brief-kicker">MISSION ${pad(missionNumber(m, missions))}${sector ? ` <span aria-hidden="true">·</span> SECTOR ${numeral}` : ""}</p><h2 id="brief-title">${m.name}</h2><p class="brief-focus">${m.focus}</p><dl class="brief-stats">${stats.join("")}</dl>${rules.length ? `<ul class="brief-rules" aria-label="Special rules">${rules.map((r) => `<li>${r}</li>`).join("")}</ul>` : ""}`;
   intel.innerHTML = `<details class="brief-intel"${intelOpen() ? " open" : ""}><summary><span>Intel</span><small>${foes.length} enemy ${plural(foes.length, "type")}${fresh ? ` · ${fresh} new` : ""}</small></summary><ul class="brief-enemies">${foes.map(({ id, isNew }) => `<li>${enemyIcon(enemies[id].visual, enemies[id].color, id)}<span>${enemies[id].name}</span>${isNew ? '<b class="new-tag">NEW</b>' : ""}</li>`).join("")}</ul>${m.availableTowers ? `<h3>Restricted to these towers</h3><p class="brief-towers">${m.availableTowers.map((id) => towers[id].name).join(" · ")}</p>` : ""}</details>`;
-  actions.innerHTML = lock
-    ? `<p class="mission-lock" id="mission-lock">${lockText(lock, missions, sectors)}</p><button class="primary atlas-start" aria-describedby="mission-lock" disabled>Locked <span aria-hidden="true">${LOCK_ICON}</span></button>`
-    : `${reset ? '<p class="mission-warning">Starting another mission resets your current defense and progress.</p>' : ""}<button class="primary atlas-start" data-mission="${m.id}">${lobby ? "Choose for Room" : "Start Mission"} <span aria-hidden="true">▶</span></button>`;
+  // The Intel tab's count: enemy types, and how many are new ("4 +2").
+  $("brief-intel-count").innerHTML = `${foes.length}${fresh ? ` <b class="brief-new">+${fresh}</b>` : ""}<span class="sr-only"> enemy ${plural(foes.length, "type")}${fresh ? `, ${fresh} new` : ""}</span>`;
+  // Previous and next mission of the sector: the fitted layout's way through small stations (hidden elsewhere).
+  const row = sector?.missions ?? [],
+    at = row.indexOf(m),
+    step = (dir: "prev" | "next", to: MissionDefinition | undefined) =>
+      `<button class="quiet brief-step" data-step="${dir}"${to ? ` data-pick="${to.id}" aria-label="${dir === "prev" ? "Previous" : "Next"} mission: ${escape(to.name)}"` : ` aria-label="${dir === "prev" ? "No previous" : "No next"} mission" disabled`}><span aria-hidden="true">${dir === "prev" ? "‹" : "›"}</span></button>`,
+    start = lock
+      ? `<button class="primary atlas-start" aria-describedby="mission-lock" disabled>Locked <span aria-hidden="true">${LOCK_ICON}</span></button>`
+      : `<button class="primary atlas-start" data-mission="${m.id}">${lobby ? "Choose for Room" : "Start Mission"} <span aria-hidden="true">▶</span></button>`;
+  actions.innerHTML = `${lock ? `<p class="mission-lock" id="mission-lock">${lockText(lock, missions, sectors)}</p>` : reset ? '<p class="mission-warning">Starting another mission resets your current defense and progress.</p>' : ""}<div class="brief-go">${step("prev", row[at - 1])}${start}${step("next", row[at + 1])}</div>`;
   body.scrollTop = 0;
   // Restarts the briefing's entry animation.
   body.classList.remove("is-entering");

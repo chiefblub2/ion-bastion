@@ -8,6 +8,12 @@
  * on the other (style.css, `--inset-l`/`--inset-r`).
  */
 export const COMPACT_QUERY = "(pointer: coarse) and (orientation: landscape) and (max-height: 540px)";
+/**
+ * The fitted menu layout (menu.css): a short landscape viewport, measured by height so every landscape phone from
+ * 667×375 to 956×440 gets it, whatever its width, and a short desktop window too. The home page and the Sector Atlas
+ * then fill the screen without scrolling; the atlas shows the map beside a tabbed mission inspector.
+ */
+export const FIT_QUERY = "(orientation: landscape) and (max-height: 540px)";
 /** The side of the camera cut-out in landscape: rotated a quarter turn counter-clockwise (90°) puts it on the left. */
 export function notchSide(angle: number | undefined): "left" | "right" | undefined {
   const a = (((angle ?? 0) % 360) + 360) % 360;

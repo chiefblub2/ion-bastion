@@ -11,7 +11,7 @@ import { isSupport } from "../systems/attacks";
 import { openUpgrades } from "../core/upgrades";
 import type { MatchCommand } from "../core/match";
 import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderMission, renderTowerCodexPage, TOWER_KEYS } from "../ui/interface";
-import { type AtlasOptions, fitWorld, renderAtlas, selectMission as featureMission, selectSector, selectWorld, toggleWorld } from "../ui/sector-atlas";
+import { type AtlasOptions, atlasSelection, type BriefTab, fitWorld, renderAtlas, selectMission as featureMission, selectSector, selectWorld, showBriefTab, toggleWorld } from "../ui/sector-atlas";
 import { terrainImage } from "../render/terrain-snapshot";
 import { describeResult } from "../ui/messages";
 import { isTouch } from "../ui/touch";
@@ -123,7 +123,12 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     /** The mission page was opened from the multiplayer page; a pick goes back there instead of into the game. */
     forRoom = false,
     /** What the home page's primary button does right now. */
-    primary: HomeAction;
+    primary: HomeAction,
+    /**
+     * The atlas's sector and mission when the player last left it for another menu page, so coming back (Back, the
+     * mode buttons) finds them again. Loading a mission forgets it: the atlas then opens on what is being played.
+     */
+    browsed: ReturnType<typeof atlasSelection>;
   /** The Sector Atlas picks for a multiplayer room while the page was opened from there or from a lobby. */
   const atlas = (): AtlasOptions => {
     const lobby = forRoom || coop.inLobby();
@@ -163,6 +168,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       if (resumeAfterMenu) execute({ type: "pause" });
     }
     coach.refresh();
+    if (from?.view === "menu" && from.page === "missions") browsed = atlasSelection(game) ?? browsed;
     let section: HTMLElement | undefined;
     for (const s of document.querySelectorAll<HTMLElement>("#start-screen .menu-page")) {
       s.hidden = s.dataset.page !== to.page;
@@ -183,7 +189,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     if (to.page !== "missions") forRoom = false;
     if (to.page === "missions") {
       const options = atlas();
-      renderAtlas(game, options, missionSector, missionPick);
+      const back = missionSector === undefined && missionPick === undefined ? browsed : undefined;
+      renderAtlas(game, options, missionSector ?? back?.sector, missionPick ?? back?.pick);
       // Every unlock shown now has had its reveal; the next visit only reveals what a later win opens.
       if (options.locks) rememberUnlocks([...(options.seen ?? []), ...game.content.missions.filter((m) => !options.locks!.has(m.id)).map((m) => m.id)]);
     }
@@ -288,6 +295,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       return;
     }
     execute({ type: "mission", id });
+    browsed = undefined;
     if (!coop.active()) screens.show(GAME);
   }
   /** What the lazily loaded mission editor may do in the app. */
@@ -341,6 +349,11 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
       home = last && sectorOf(last, sectors),
       sector = home && isCircleSector(home) === circle ? home : (circle ? rings : campaign)[0];
     missionSector = sector ? sectors.indexOf(sector) : undefined;
+    // Back on the mode the player was browsing: the same sector and mission.
+    if (browsed?.circle === circle) {
+      missionSector = browsed.sector;
+      missionPick = browsed.pick;
+    }
     screens.show(page("missions"));
   }
   /** Switches the atlas to another sector card or game mode and keeps the focus on the clicked bar. */
@@ -515,7 +528,15 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
     if (b.dataset.planet) return selectWorld(game, Number(b.dataset.planet), atlas());
     if (b.dataset.tower) return choose(b.dataset.tower as TowerId);
     if (b.dataset.mission) return selectMission(b.dataset.mission);
-    if (b.dataset.pick) return pickMission(b.dataset.pick);
+    if (b.dataset.briefTab) return showBriefTab(b.dataset.briefTab as BriefTab);
+    if (b.dataset.pick) {
+      pickMission(b.dataset.pick);
+      // The inspector's previous/next buttons are rendered anew; the focus stays on the same side, or moves to Start
+      // at the sector's first or last mission.
+      if (b.dataset.step)
+        document.querySelector<HTMLElement>(`#brief-actions [data-step="${b.dataset.step}"]:not(:disabled), #brief-actions .atlas-start`)?.focus({ preventScroll: true });
+      return;
+    }
     if (b.dataset.send) return execute({ type: "send", enemy: b.dataset.send as EnemyId });
     if (b.dataset.sector) return showSector(Number(b.dataset.sector), b.parentElement!.id);
     if (b.dataset.codexTab) return showCodexTab(b.dataset.codexTab as CodexTab);
