@@ -15,14 +15,18 @@ export function fail(message: string): never {
  * Phaser's canvas renderer, which ignores sprite tints and texture filtering.
  */
 export const WEBGL_ARGS = ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"];
-/** Fails unless `npm run dev` serves `base`, then starts the browser (`args`: extra Chrome flags). */
+/**
+ * Fails unless `npm run dev` serves `base`, then starts the browser (`args`: extra Chrome flags). `CHROME_PATH` names
+ * a Chrome or Chromium binary instead of the system Chrome (e.g. a Playwright Chromium).
+ */
 export async function launch(base: string, args: string[] = []) {
   try {
     await fetch(base);
   } catch {
     fail(`Kein Dev-Server unter ${base}: erst \`npm run dev\` starten.`);
   }
-  return chromium.launch({ channel: "chrome", headless: true, args });
+  const path = process.env.CHROME_PATH;
+  return chromium.launch({ ...(path ? { executablePath: path } : { channel: "chrome" }), headless: true, args });
 }
 /**
  * The app registers its tools only if this optional browser API exists. Pages run in parallel, so all but one

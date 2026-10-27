@@ -704,3 +704,16 @@
     width: 120px;
   }
 }
+/* The fitted landscape layout (menu.css): the intro's options and Start share rows so the page fits one screen. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .menu-run .run-intro > p {
+    margin: 0;
+    max-width: none;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .run-options,
+  .run-start {
+    margin-top: 10px;
+  }
+}

@@ -1592,13 +1592,14 @@ span.world-hop {
   box-shadow: 0 0 10px var(--m-star);
 }
 /* Mission card: one panel for the picked mission. The map and the briefing sit side by side from 860 px, Intel spans
-   the bottom; only Intel changes height between missions, and nothing sits below it. */
+   the bottom; only Intel changes height between missions, and nothing sits below it. Landscape phones turn it into
+   the inspector beside the world map, with Overview/Intel tabs (the fitted layout at the end of this file). */
 .atlas-card {
   grid-area: card;
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "preview" "brief" "intel";
+  grid-template-areas: "preview" "brief" "actions" "intel";
   gap: 18px 24px;
   padding: 18px;
   background: var(--m-glass);
@@ -1707,7 +1708,7 @@ span.world-hop {
   background: var(--accent) !important;
   box-shadow: 0 0 8px var(--accent);
 }
-/* Briefing: as tall as the map beside it, with Start at its bottom, level with the map's lower edge. */
+/* Briefing: beside the map, with the actions (Start) below it in their own row, level with the map's lower edge. */
 .atlas-brief {
   grid-area: brief;
   min-width: 0;
@@ -1888,11 +1889,22 @@ span.world-hop {
   color: var(--m-text-2);
 }
 .brief-actions {
+  grid-area: actions;
   display: grid;
   justify-items: end;
+  align-self: end;
   gap: 8px;
-  margin-top: auto;
-  padding-top: 16px;
+}
+.brief-go {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+/* The inspector's tabs and the previous/next buttons belong to the fitted landscape layout only. */
+.brief-tabs,
+.brief-step {
+  display: none;
 }
 .brief-actions .mission-warning {
   padding: 7px 10px;
@@ -2266,8 +2278,9 @@ span.world-hop {
     transform: translateY(6px);
   }
 }
-/* Phones: Start belongs to the page and stays at the bottom of the screen while scrolling. */
-@media (max-width: 699px) {
+/* Phones in portrait: Start belongs to the page and stays at the bottom of the screen while scrolling. Landscape
+   phones (shorter than 541 px) get the fitted layout below instead. */
+@media (max-width: 699px) and (orientation: portrait), (max-width: 699px) and (min-height: 541px) {
   .atlas-head {
     flex-wrap: wrap;
   }
@@ -2290,11 +2303,40 @@ span.world-hop {
     flex: 1;
     justify-content: center;
   }
-  /* A taller view, so a zoomed sector fills it; the world view shows numerals and progress only. */
+  /* A taller view, so a zoomed sector fills it. */
   .world-view {
     aspect-ratio: 4 / 3;
     min-height: 0;
   }
+  .start-screen:has(#mission-page:not([hidden])) {
+    padding-bottom: 120px;
+  }
+  /* Start is fixed to the screen's bottom here, so its grid row would only add a gap. */
+  .atlas-card {
+    grid-template-areas: "preview" "brief" "intel";
+    padding: 12px;
+    gap: 14px;
+  }
+  .brief-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .brief-actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    justify-items: stretch;
+    padding: 14px 16px max(14px, env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, transparent, var(--m-bg) 30%);
+  }
+  .start-screen .atlas-start {
+    width: 100%;
+  }
+}
+/* Small maps (phones, and the fitted landscape layout's map panel): the world view shows numerals and progress
+   only, and stations shrink to their badge until picked. */
+@media (max-width: 699px), (orientation: landscape) and (max-height: 540px) {
   .world-view[data-zoom="planet"] .region-label {
     min-width: 0;
     padding: 4px 8px 6px;
@@ -2321,6 +2363,12 @@ span.world-hop {
   .start-screen .world-hop {
     max-width: 96px;
   }
+  /* A finger-sized target beside the world's name plate. */
+  @media (pointer: coarse), (max-height: 540px) {
+    .start-screen .world-hop {
+      min-height: 44px;
+    }
+  }
   .world-name {
     padding: 5px 14px 6px;
   }
@@ -2342,36 +2390,17 @@ span.world-hop {
   .world-view[data-zoom="sector"] .region:not([aria-selected="true"]) .region-label {
     display: none;
   }
-  .start-screen:has(#mission-page:not([hidden])) {
-    padding-bottom: 120px;
-  }
-  .atlas-card {
-    padding: 12px;
-    gap: 14px;
-  }
-  .brief-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .brief-actions {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 3;
-    justify-items: stretch;
-    padding: 14px 16px max(14px, env(safe-area-inset-bottom));
-    background: linear-gradient(180deg, transparent, var(--m-bg) 30%);
-  }
-  .start-screen .atlas-start {
-    width: 100%;
-  }
 }
 /* Wide enough for the map and the briefing side by side. */
 @media (min-width: 860px) {
   .atlas-card {
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-    grid-template-areas: "preview brief" "intel intel";
+    grid-template-rows: minmax(0, 1fr) auto auto;
+    grid-template-areas: "preview brief" "preview actions" "intel intel";
     padding: 20px;
+  }
+  .atlas-preview {
+    align-self: start;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2861,7 +2890,7 @@ span.world-hop {
 #help-page {
   max-width: 800px;
 }
-#help-page > ol {
+#help-page .help-body > ol {
   list-style: none;
   counter-reset: step;
   margin: 24px 0;
@@ -2869,7 +2898,7 @@ span.world-hop {
   display: grid;
   gap: 10px;
 }
-#help-page > ol > li {
+#help-page .help-body > ol > li {
   counter-increment: step;
   position: relative;
   margin: 0;
@@ -2879,7 +2908,7 @@ span.world-hop {
   border-left: 2px solid var(--m-accent);
   border-radius: 0;
 }
-#help-page > ol > li::before {
+#help-page .help-body > ol > li::before {
   content: counter(step, decimal-leading-zero);
   position: absolute;
   left: 16px;
@@ -2901,8 +2930,8 @@ span.world-hop {
   justify-content: center;
 }
 /* Responsive ------------------------------------------------------------------------------------------------- */
-/* Phones in landscape and small tablets: the atlas title gets its own line instead of a narrow column. */
-@media (max-width: 999px) {
+/* Small tablets: the atlas title gets its own line instead of a narrow column (landscape phones keep one row). */
+@media (max-width: 999px) and (min-height: 541px), (max-width: 999px) and (orientation: portrait) {
   .atlas-head {
     flex-wrap: wrap;
   }
@@ -3012,5 +3041,641 @@ span.world-hop {
   }
   .start-screen button {
     transition: none;
+  }
+}
+/* Fitted landscape layout ------------------------------------------------------------------------------------ */
+/*
+ * Landscape phones (and any landscape window shorter than 541 px; `FIT_QUERY` in app/compact.ts): the home page and
+ * the Sector Atlas fill the screen without scrolling, like the game's compact layout. Measured by height, so every
+ * phone from 667×375 to 956×440 gets it whatever its width. The pages sit inside the safe area; the side of the
+ * camera cut-out keeps its inset, the other side only clears the rounded corner (`data-notch`, app/compact.ts).
+ * Panels that could still overflow (very large text) scroll inside themselves; Start never leaves the screen.
+ */
+@media (orientation: landscape) and (max-height: 540px) {
+  :root {
+    --fit-vh: 100vh;
+    --fit-l: max(10px, env(safe-area-inset-left));
+    --fit-r: max(10px, env(safe-area-inset-right));
+    --fit-t: max(6px, env(safe-area-inset-top));
+    --fit-b: max(6px, env(safe-area-inset-bottom));
+    --fit-h: calc(var(--fit-vh) - var(--fit-t) - var(--fit-b));
+    --fit-gap: 8px;
+  }
+  @supports (height: 100dvh) {
+    :root {
+      --fit-vh: 100dvh;
+    }
+  }
+  :root[data-notch="left"] {
+    --fit-r: max(10px, min(16px, env(safe-area-inset-right)));
+  }
+  :root[data-notch="right"] {
+    --fit-l: max(10px, min(16px, env(safe-area-inset-left)));
+  }
+  /* The start screen carries the insets; the body's own notch padding would count them twice. */
+  :root[data-view="menu"] body {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .start-screen {
+    min-height: var(--fit-vh);
+    padding: var(--fit-t) var(--fit-r) var(--fit-b) var(--fit-l);
+  }
+  .menu-page {
+    max-width: none;
+  }
+  /* Shared page header: one slim row (Back, the page's own title, the brand as the Home link). */
+  .menu-page-head {
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+  }
+  .menu-page-head .brand,
+  .atlas-head .brand {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .menu-page > h1 {
+    margin-bottom: 8px;
+    font-size: 22px;
+  }
+  .menu-page .eyebrow {
+    margin-bottom: 2px;
+  }
+  .start-screen .menu-back {
+    flex: none;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+
+  /* Home: the title and the primary action on the left, every mode and utility on the right. */
+  .menu-home {
+    display: flex;
+    height: var(--fit-h);
+    padding-top: 0;
+  }
+  .home-grid {
+    flex: 1;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto minmax(0, 1fr);
+    gap: var(--fit-gap) clamp(14px, 2.5vw, 28px);
+    align-items: stretch;
+  }
+  .home-main {
+    display: contents;
+  }
+  .home-main > * {
+    grid-column: 1;
+  }
+  .home-label,
+  .menu-page p.menu-tagline {
+    display: none;
+  }
+  .menu-page > h1.menu-title {
+    margin: 0;
+    font-size: clamp(24px, min(4.4vw, 9vh), 38px);
+  }
+  .menu-page p.home-dev {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.3;
+  }
+  .home-primary {
+    min-height: clamp(52px, 15vh, 64px);
+    padding: 10px 18px;
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  }
+  .home-primary strong {
+    font-size: clamp(18px, 2.6vw, 22px);
+  }
+  .home-primary small {
+    font-size: 12px;
+  }
+  .home-learn {
+    margin: 0;
+  }
+  .home-training {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+  .start-screen .home-learn .home-rules {
+    padding: 6px 14px;
+  }
+  .home-side {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--fit-gap);
+    min-height: 0;
+  }
+  .home-modes {
+    margin: 0;
+    gap: 6px;
+  }
+  .home-mode {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    min-height: 50px;
+    padding: 6px 14px;
+  }
+  .home-mode strong {
+    font-size: 19px;
+  }
+  .home-mode span {
+    font-size: 11px;
+    text-align: left;
+  }
+  .home-mode:hover {
+    transform: none;
+  }
+  .home-utility {
+    margin: 0;
+    gap: 6px;
+  }
+  .home-utility .quiet {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 8px;
+    font-size: 13px;
+    letter-spacing: 0.03em;
+  }
+  /* The operation preview shrinks to a strip that takes the left column's spare height: map, mission, stats. */
+  .home-map {
+    grid-column: 1;
+    grid-row: -2;
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "head head" "view foot";
+    gap: 4px 12px;
+    min-height: 0;
+    padding: 6px 10px 8px;
+    /* Supplementary: on the shortest screens the strip gives up height first, never the controls. */
+    overflow: hidden;
+  }
+  .home-map-head {
+    grid-area: head;
+    margin: 0;
+    font-size: 10px;
+  }
+  .home-map-view {
+    grid-area: view;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .home-map-view .map-preview {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+  }
+  .home-map-play {
+    display: none;
+  }
+  .home-map-foot {
+    grid-area: foot;
+    align-self: center;
+    min-width: 0;
+    margin: 0;
+  }
+  .home-map-foot strong {
+    font-size: 15px;
+  }
+  .home-map-kind {
+    margin-bottom: 1px;
+    font-size: 10px;
+  }
+  .home-map-stars {
+    font-size: 13px;
+  }
+  .home-map-foot p {
+    display: none;
+  }
+  .home-map-stats {
+    margin-top: 4px;
+    gap: 4px 14px;
+  }
+  .home-map-stats strong {
+    font-size: 16px;
+  }
+  .home-map-stats .stat-label {
+    font-size: 10px;
+  }
+
+  /* Sector Atlas: a slim header, then the map beside the mission inspector, both as tall as the screen allows. */
+  .menu-page.atlas {
+    height: var(--fit-h);
+    grid-template-columns: minmax(0, 1.55fr) minmax(244px, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas: "head head" "world rules" "world card";
+    gap: 0 var(--fit-gap);
+  }
+  .atlas-head {
+    flex-wrap: nowrap;
+    gap: 10px;
+    margin-bottom: var(--fit-gap);
+  }
+  .atlas-title {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .atlas-title h1 {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    white-space: nowrap;
+  }
+  .atlas-context {
+    margin: 1px 0 0;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+  /* The brand's mark alone is the Home link; the wordmark would crowd the header. */
+  .atlas-head .brand > span:last-child {
+    display: none;
+  }
+  .atlas-head .mode-tabs {
+    flex: none;
+  }
+  .start-screen .mode-tab {
+    min-height: 38px;
+    padding: 4px 10px;
+  }
+  .mode-tab strong {
+    font-size: 17px;
+  }
+  .mode-rules {
+    margin: 0 0 var(--fit-gap);
+    padding: 5px 9px;
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+  .atlas-world {
+    min-height: 0;
+    display: flex;
+  }
+  .world-view {
+    flex: 1;
+    aspect-ratio: auto;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    border-radius: 10px;
+  }
+  /* The inspector: Overview or Intel above the actions, which stay at its bottom. The battlefield takes the height
+     the text leaves free (both tabs), and steps aside where that is too little to read. */
+  .atlas-card {
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, auto) minmax(0, 1fr) auto;
+    grid-template-areas: "tabs" "brief" "preview" "actions";
+    gap: var(--fit-gap);
+    padding: 8px;
+    border-radius: 10px;
+  }
+  .atlas-card[data-tab="intel"] {
+    grid-template-rows: auto minmax(0, 1fr) minmax(0, auto) auto;
+    grid-template-areas: "tabs" "preview" "intel" "actions";
+  }
+  .atlas-card[data-tab="overview"] .atlas-intel,
+  .atlas-card[data-tab="intel"] .atlas-brief {
+    display: none;
+  }
+  .brief-tabs {
+    grid-area: tabs;
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+    background: var(--m-bg);
+    border: 1px solid var(--m-border);
+    border-radius: var(--m-radius);
+  }
+  .start-screen .brief-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 8px;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    color: var(--m-text-2);
+    font: 600 15px / 1 "Rajdhani", sans-serif;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .brief-tab small {
+    white-space: nowrap;
+    font: 500 11px var(--mono);
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--muted);
+  }
+  .start-screen .brief-tab:hover {
+    border-color: var(--mode);
+  }
+  .start-screen .brief-tab[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--mode) 16%, var(--m-surface));
+    border-color: var(--mode);
+    color: var(--m-text);
+    box-shadow: inset 0 -2px var(--mode);
+  }
+  .atlas-brief {
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .brief-kicker {
+    margin-bottom: 3px;
+    font-size: 10px;
+  }
+  #brief-title {
+    font-size: clamp(17px, 2.4vw, 22px);
+  }
+  .brief-focus {
+    margin: 4px 0 8px;
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+  .brief-stats {
+    grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
+    margin-bottom: 8px;
+    border-radius: 8px;
+  }
+  .brief-stats div {
+    padding: 4px 8px;
+  }
+  .brief-stats dt {
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+  }
+  .brief-stats dd {
+    font-size: 17px;
+  }
+  .brief-rules {
+    gap: 4px;
+    margin: 0;
+  }
+  .brief-rules li {
+    padding: 2px 8px;
+    font-size: 11px;
+  }
+  .atlas-preview {
+    align-self: stretch;
+    min-height: 0;
+    container-type: size;
+  }
+  @container (max-height: 72px) {
+    .preview-stage {
+      display: none;
+    }
+  }
+  .preview-stage {
+    height: 100%;
+    aspect-ratio: auto;
+    border-radius: 8px;
+  }
+  .preview-legend {
+    left: 6px;
+    bottom: 6px;
+    gap: 10px;
+    padding: 3px 7px;
+    font-size: 9px;
+  }
+  .atlas-intel {
+    min-height: 0;
+    overflow-y: auto;
+    border-top: 0;
+  }
+  /* The tab replaces the summary, and the list is always open here (`intelOpen`). */
+  .brief-intel summary {
+    display: none;
+  }
+  .brief-enemies {
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: 4px;
+    margin: 0;
+  }
+  .brief-enemies li {
+    gap: 6px;
+    padding: 2px 6px 2px 3px;
+    font-size: 11.5px;
+    border-radius: 6px;
+  }
+  .brief-enemies .enemy-icon {
+    width: 22px;
+    height: 22px;
+  }
+  .brief-intel h3 {
+    margin: 6px 0 2px;
+    font-size: 10px;
+  }
+  .brief-towers {
+    margin: 0;
+    font-size: 11.5px;
+  }
+  .brief-actions {
+    justify-items: stretch;
+    gap: 6px;
+  }
+  .brief-actions :is(.mission-warning, .mission-lock) {
+    padding: 4px 8px;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+  .brief-go {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: 6px;
+  }
+  .start-screen .brief-step {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    padding: 0;
+    font-size: 24px;
+  }
+  .start-screen .brief-step:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .start-screen .atlas-start {
+    width: auto;
+    min-height: 46px;
+    gap: 8px;
+    padding: 0 8px;
+    white-space: nowrap;
+    font-size: clamp(13px, 1.7vw, 16px);
+    letter-spacing: 0.08em;
+  }
+}
+.brief-new {
+  font-weight: 600;
+  color: var(--m-warn);
+}
+/*
+ * Fitted landscape layout, the other pages: the page header is one row (Back, eyebrow and title, the brand as Home)
+ * and the long pages (the codices, the field manual) fill the screen with their content as a shelf of pages that
+ * swipes sideways and snaps, instead of a page that scrolls down.
+ */
+@media (orientation: landscape) and (max-height: 540px) {
+  .menu-page:has(> .menu-page-head) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: 14px;
+    align-content: start;
+  }
+  .menu-page:has(> .menu-page-head) > * {
+    grid-column: 1 / -1;
+  }
+  .menu-page-head {
+    display: contents;
+  }
+  .menu-page-head .menu-back {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+  .menu-page-head .brand {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+  .menu-page-head .brand > span:last-child {
+    display: none;
+  }
+  .menu-page:has(> .menu-page-head) > .eyebrow {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+    margin: 0;
+    font-size: 10px;
+  }
+  .menu-page:has(> .menu-page-head) > h1 {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 19px;
+  }
+  /* The header's rule, under the row. */
+  .menu-page:has(> .menu-page-head) > h1 + * {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--m-border);
+    border-image: linear-gradient(90deg, var(--m-accent), var(--m-ring) 60%, transparent) 1;
+  }
+
+  /* Codices: intro and tabs in one band, the cards as swiping columns as tall as the screen allows. */
+  :is(#codex-page, #towers-page) {
+    height: var(--fit-h);
+    grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  }
+  :is(#codex-page, #towers-page) > p {
+    margin-bottom: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .start-screen .codex-tabs {
+    position: static;
+    padding: 0 0 6px;
+    box-shadow: none;
+    background: none;
+  }
+  .start-screen .codex-tab {
+    min-height: 40px;
+  }
+  .start-screen .codex-list {
+    min-height: 0;
+    grid-template-columns: none;
+    grid-template-rows: minmax(0, 1fr);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(250px, calc((100% - 20px) / 3));
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 2px;
+  }
+  .start-screen .tower-codex-list {
+    grid-auto-columns: minmax(300px, calc((100% - 10px) / 2));
+  }
+  .start-screen .codex-list > * {
+    min-height: 0;
+    overflow-y: auto;
+    scroll-snap-align: start;
+  }
+  .start-screen .to-top {
+    display: none;
+  }
+
+  /* Field manual: the text flows through columns that swipe sideways; "Got it" stays on screen. */
+  #help-page {
+    height: var(--fit-h);
+    max-width: none;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+  .help-body {
+    min-height: 0;
+    columns: 290px auto;
+    column-gap: 22px;
+    column-fill: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+  }
+  .help-body > * {
+    break-inside: avoid;
+  }
+  .help-body > p {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  #help-page .help-body > ol {
+    margin: 0 0 10px;
+    gap: 8px;
+  }
+  #help-page .help-body > ol > li {
+    padding: 8px 10px 8px 46px;
+    font-size: 13px;
+    line-height: 1.45;
+    break-inside: avoid;
+  }
+  #help-page .help-body > ol > li::before {
+    left: 10px;
+    top: 7px;
+    font-size: 18px;
+  }
+  #help-page .tip {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.45;
+    break-inside: auto;
+  }
+  #help-page :is(.keyboard-help, .touch-help) {
+    line-height: 1.7;
+  }
+  #help-page > .primary {
+    justify-self: end;
+    width: auto;
+    min-width: 180px;
+    margin-top: 8px;
+  }
+  /* The shelves fade out at the right edge, a hint that more swipes in. */
+  .help-body,
+  .start-screen .codex-list {
+    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), #0000);
   }
 }
