@@ -1,10 +1,9 @@
 /**
- * The Sector Atlas's world map, pure geometry: the mode is one planet's surface (`WORLD_W` × `WORLD_H` units, the
- * SVG's viewBox, with land beyond it up to `SURFACE`), split into territories with shared jagged borders: one per
- * sector, laid out in a serpentine so the campaign reads as one journey from the first sector to the last, with the
- * sector's missions as stations on a route across it, and unclaimed wilds around them. No DOM here;
- * `sector-atlas.ts` draws it. Everything is a pure function of the sector count and index, so the map never moves
- * between visits.
+ * The Sector Atlas's world map, pure geometry: a planet's whole surface as one plane (`WORLD_W` × `WORLD_H` units,
+ * equirectangular: x is longitude, y latitude; `globe.ts` wraps it onto the sphere), split into territories with
+ * shared jagged borders: one per sector, gathered on the face the globe turns to the viewer, with the sector's
+ * missions as stations on a route across it, and unclaimed wilds over the rest of the planet. No DOM here;
+ * `sector-atlas.ts` draws it. Everything is a pure function of the centres, so the map never moves between visits.
  */
 import type { MapTheme } from "../core/types";
 export const WORLD_W = 200;
@@ -45,8 +44,12 @@ export function jitter(a: number, b: number) {
   return (h >>> 0) / 2 ** 32;
 }
 const round = (n: number) => Math.round(n * 100) / 100;
-/** The planet's surface: land beyond the world on every side, so the tilted view and the zoom never show its edge. */
-export const SURFACE: Box = { x: -100, y: -40, w: WORLD_W + 200, h: WORLD_H + 90 };
+/** The planet's whole surface: the plane wraps around in x (longitude) and ends at the poles in y. */
+export const GLOBE_BOX: Box = { x: 0, y: 0, w: WORLD_W, h: WORLD_H };
+/** Plane units painted past the surface's west edge and blended into its east edge, so the picture wraps without a seam. */
+export const WRAP = 20;
+/** Where a world's sectors gather: the face of the globe, within about ±60° longitude and ±45° latitude. */
+export const FRONT: Box = { x: 66, y: 26, w: 68, h: 48 };
 /** The convex cell of `seeds[i]` (all points closer to it than to any other seed) inside `bounds`. */
 export function voronoiCell(seeds: readonly Point[], i: number, bounds: Box): Point[] {
   const s = seeds[i];
@@ -93,7 +96,7 @@ export function valueNoise(x: number, y: number, seed = 0) {
   return top + (bottom - top) * v;
 }
 /** How far a border point moves at most from the straight cell edge, in world units. */
-export const BORDER_WOBBLE = 4.5;
+export const BORDER_WOBBLE = 3.2;
 /**
  * The border warp's displacement at (x, y), in units of `BORDER_WOBBLE`: smooth, and a function of the position
  * only, so both neighbours of an edge move it alike and their borders stay one line. A broad meander, a mid bend and
@@ -154,16 +157,19 @@ export interface Planet {
 }
 /** Rows of a serpentine: one row for up to four sectors, else enough rows for cells about 3:2. */
 export const worldRows = (count: number) => (count <= 4 ? 1 : Math.ceil(Math.sqrt(count / 2)));
-/** Sector centres in a serpentine across the world, for a world without enough hand-placed centres. */
+/** Sector centres in a serpentine across the globe's face, for a world without enough hand-placed centres. */
 export function serpentine(count: number): Point[] {
   const rows = worldRows(count),
     cols = Math.ceil(count / rows),
-    cw = WORLD_W / cols,
-    ch = WORLD_H / rows;
+    cw = FRONT.w / cols,
+    ch = FRONT.h / rows;
   return Array.from({ length: count }, (_, i) => {
     const row = Math.floor(i / cols),
       col = row % 2 === 1 ? cols - 1 - (i % cols) : i % cols;
-    return { x: round(cw * (col + 0.5) + (jitter(i, 1) - 0.5) * cw * 0.2), y: round(ch * (row + 0.5) + (jitter(i, 2) - 0.5) * ch * 0.26) };
+    return {
+      x: round(FRONT.x + cw * (col + 0.5) + (jitter(i, 1) - 0.5) * cw * 0.2),
+      y: round(FRONT.y + ch * (row + 0.5) + (jitter(i, 2) - 0.5) * ch * 0.26),
+    };
   });
 }
 /** The deck of a station in orbit around `c`: a long hull with chamfered ends and a notched spine. */
@@ -196,29 +202,35 @@ function reachUp(p: Point, poly: readonly Point[]) {
   return d;
 }
 /**
- * A world's territories: one per centre in play order, grown into cells that tile the surface together with a ring
- * of wild seeds just outside the world; the `station` centre becomes a deck in orbit instead and splits no land.
+ * The wild seeds around a world's sectors: a ring just beyond the outermost ones, so every territory closes about
+ * half a neighbour's distance past its centre, and a loose lattice over the rest of the planet.
+ */
+function wildSeedsOf(ground: readonly Point[]): Point[] {
+  const cx = ground.reduce((a, p) => a + p.x, 0) / (ground.length || 1),
+    cy = ground.reduce((a, p) => a + p.y, 0) / (ground.length || 1),
+    reach = Math.max(8, ...ground.map((p) => Math.sqrt((p.x - cx) ** 2 + (p.y - cy) ** 2))) + 26,
+    seeds: Point[] = [];
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * 2 * Math.PI + (jitter(i, 36) - 0.5) * 0.3,
+      r = reach + (jitter(i, 37) - 0.5) * 5;
+    seeds.push({ x: round(cx + Math.cos(a) * r), y: round(cy + Math.sin(a) * r * 0.85) });
+  }
+  for (let x = 12; x < WORLD_W; x += 30)
+    for (const y of [10, 50, 90]) {
+      const p = { x: round(x + (jitter(x, y) - 0.5) * 8), y: round(y + (jitter(y, x) - 0.5) * 8) };
+      if (Math.sqrt((p.x - cx) ** 2 + (p.y - cy) ** 2) > reach + 14) seeds.push(p);
+    }
+  return seeds.filter((p) => p.x > 0 && p.x < WORLD_W && p.y > 0 && p.y < WORLD_H);
+}
+/**
+ * A world's territories: one per centre in play order, grown into cells that tile the planet together with the wild
+ * seeds around them (`wildSeedsOf`); the `station` centre becomes a deck in orbit instead and splits no land.
  */
 export function planetLayout(centres: readonly Point[], station?: number): Planet {
   const ground = centres.filter((_, i) => i !== station),
-    wildSeeds: Point[] = [];
-  for (let i = 0; i <= 4; i++) {
-    const x = round((WORLD_W * i) / 4 + (jitter(i, 30) - 0.5) * 10);
-    wildSeeds.push({ x, y: round(-24 - jitter(i, 31) * 5) }, { x: round(x + WORLD_W / 8), y: round(WORLD_H + 24 + jitter(i, 32) * 5) });
-  }
-  for (let i = 0; i < 2; i++) {
-    const y = round(WORLD_H * (0.25 + i * 0.5) + (jitter(i, 33) - 0.5) * 8);
-    wildSeeds.push({ x: round(-30 - jitter(i, 34) * 5), y }, { x: round(WORLD_W + 30 + jitter(i, 35) * 5), y });
-  }
-  for (const [fx, fy] of [
-    [0, 0],
-    [1, 0],
-    [0, 1],
-    [1, 1],
-  ])
-    wildSeeds.push({ x: SURFACE.x + 6 + fx * (SURFACE.w - 12), y: SURFACE.y + 6 + fy * (SURFACE.h - 12) });
+    wildSeeds = wildSeedsOf(ground);
   const seeds = [...ground, ...wildSeeds],
-    border = (i: number) => jaggedBorder(voronoiCell(seeds, i, SURFACE));
+    border = (i: number) => jaggedBorder(voronoiCell(seeds, i, GLOBE_BOX));
   let g = 0;
   const regions = centres.map((c): Region => {
     if (station !== undefined && c === centres[station]) {
@@ -406,16 +418,9 @@ export function headingOf(centres: readonly Point[], i: number): number {
 }
 /** A straight SVG path from `a` to `b`. */
 export const link = (a: Point, b: Point) => `M${a.x} ${a.y}L${b.x} ${b.y}`;
-/**
- * The planet's curve: a circle whose top touches `y` over the world's middle, so the horizon bends down towards
- * the sides; above it is space.
- */
-export const HORIZON = { x: WORLD_W / 2, y: -15, r: 700 };
-/** The whole world with a margin for the labels along its edges and a strip of the horizon above it. */
-export const WORLD_BOX: Box = { x: -4, y: -17, w: WORLD_W + 8, h: WORLD_H + 21 };
-/** Stars above the horizon: position and radius, the same on every visit. */
+/** Stars behind the globe: position as fractions of the view and a radius in px, the same on every visit. */
 export function stars(count: number): (Point & { r: number })[] {
-  return Array.from({ length: count }, (_, i) => ({ x: round(-80 + jitter(i, 40) * 360), y: round(-90 + jitter(i, 41) * 80), r: round(0.12 + jitter(i, 42) ** 3 * 0.35) }));
+  return Array.from({ length: count }, (_, i) => ({ x: round(jitter(i, 40) * 100) / 100, y: round(jitter(i, 41) * 100) / 100, r: round(0.4 + jitter(i, 42) ** 3 * 1.1) }));
 }
 /** What a sector zoom shows: its stations with room around them for the labels (`mx`, `my` world units). */
 export function stationBox(points: readonly Point[], mx: number, my: number): Box {
@@ -424,36 +429,4 @@ export function stationBox(points: readonly Point[], mx: number, my: number): Bo
     x = Math.min(...xs) - mx,
     y = Math.min(...ys) - my;
   return { x, y, w: Math.max(...xs) + mx - x, h: Math.max(...ys) + my * 1.3 - y };
-}
-/** The view's tilt: the surface leans back by `deg` about a point `ox`, `oy` (fractions of the view) seen from `perspective` px. */
-export interface Tilt {
-  deg: number;
-  perspective: number;
-  ox: number;
-  oy: number;
-}
-/** Phones lean the surface less, so the far sectors keep their size. The origin is mirrored in `menu.css` (`.world-tilt`). */
-export const tiltFor = (width: number): Tilt => ({ deg: width < 600 ? 16 : 24, perspective: 1200, ox: 0.5, oy: 0.75 });
-/**
- * Where a world point lands on screen (px from the view's top-left): through the plane's `fit` (`fitBox`), then the
- * view's `tilt`, as CSS `perspective() rotateX()` about the tilt's origin does it.
- */
-export function project(p: Point, fit: { x: number; y: number; scale: number }, width: number, height: number, tilt: Tilt): Point {
-  const unit = (width / WORLD_W) * fit.scale,
-    x = fit.x + p.x * unit - width * tilt.ox,
-    y = fit.y + p.y * unit - height * tilt.oy,
-    a = (tilt.deg * Math.PI) / 180,
-    k = tilt.perspective / (tilt.perspective - y * Math.sin(a));
-  return { x: width * tilt.ox + x * k, y: height * tilt.oy + y * Math.cos(a) * k };
-}
-/**
- * The plane's transform that fits `box` (world units) centred into a `width` × `height` viewport, where the plane is
- * `width` pixels wide at scale 1.
- */
-export function fitBox(box: Box, width: number, height: number) {
-  const unit = width / WORLD_W,
-    scale = Math.min(width / (box.w * unit), height / (box.h * unit)),
-    cx = box.x + box.w / 2,
-    cy = box.y + box.h / 2;
-  return { scale, x: width / 2 - cx * unit * scale, y: height / 2 - cy * unit * scale };
 }

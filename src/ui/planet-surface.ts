@@ -294,3 +294,22 @@ export function paintSurface(seeds: readonly SurfaceSeed[], box: Box, width: num
     }
   return out;
 }
+/**
+ * A picture of `box` that wraps around in x without a seam (the globe's surface): `wrap` plane units are painted
+ * past the west edge and blended into the east edge, so the last column runs on into the first.
+ */
+export function paintWrapped(seeds: readonly SurfaceSeed[], box: Box, width: number, height: number, wrap: number): Uint8ClampedArray {
+  const extra = Math.max(1, Math.round((width * wrap) / box.w)),
+    wide = paintSurface(seeds, { x: box.x - (extra * box.w) / width, y: box.y, w: box.w + (extra * box.w) / width, h: box.h }, width + extra, height),
+    out = new Uint8ClampedArray(width * height * 4),
+    from = width - extra;
+  for (let j = 0; j < height; j++)
+    for (let k = 0; k < width; k++) {
+      const o = (j * width + k) * 4,
+        a = (j * (width + extra) + extra + k) * 4,
+        t = k < from ? 0 : (k - from + 1) / extra,
+        b = (j * (width + extra) + Math.max(0, k - from)) * 4;
+      for (let c = 0; c < 4; c++) out[o + c] = wide[a + c] + (wide[b + c] - wide[a + c]) * t;
+    }
+  return out;
+}

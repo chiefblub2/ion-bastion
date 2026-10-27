@@ -11,7 +11,7 @@ import { isSupport } from "../systems/attacks";
 import { openUpgrades } from "../core/upgrades";
 import type { MatchCommand } from "../core/match";
 import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderMission, renderTowerCodexPage, TOWER_KEYS } from "../ui/interface";
-import { type AtlasOptions, atlasSelection, type BriefTab, fitWorld, renderAtlas, selectMission as featureMission, selectSector, selectWorld, showBriefTab, toggleWorld } from "../ui/sector-atlas";
+import { type AtlasOptions, atlasSelection, bindGlobe, type BriefTab, fitWorld, renderAtlas, selectMission as featureMission, selectSector, selectWorld, showBriefTab, toggleWorld } from "../ui/sector-atlas";
 import { terrainImage } from "../render/terrain-snapshot";
 import { describeResult } from "../ui/messages";
 import { isTouch } from "../ui/touch";
@@ -147,6 +147,8 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
   ui.locks = locks;
   // The world map keeps its sector in view when the page resizes.
   new ResizeObserver(() => fitWorld()).observe(document.getElementById("world-view")!);
+  // A drag turns the atlas's globe.
+  bindGlobe();
   const screens = createScreens(playableMissions(game.content), () => game.mission.id, enter);
   /** A mission this session has played on, which "Resume Game" returns to instead of reloading it. */
   const inProgress = () => coop.active() || game.state.wave > 0 || game.state.towers.length > 0;
