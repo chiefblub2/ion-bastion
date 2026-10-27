@@ -1,5 +1,6 @@
 import type { ContentPack } from "../core/types";
 import { threatRules } from "./ascension";
+import { usable } from "./relic-fit";
 import { hasFlag, relicOf, relicsOf } from "./relics";
 import { draw, streamOf } from "./rng";
 import {
@@ -39,10 +40,10 @@ export const EVENTS: readonly RunEvent[] = [
     id: "depot",
     title: "Derelict depot",
     text: "A supply depot, abandoned in a hurry. Some crates are sealed with warning tape.",
-    choices: (run) => {
+    choices: (run, content) => {
       const r = streamOf(run.seed, "event", ...key(run)),
-        rare = draw(r, relicsOf("rare").filter((id) => !run.relics.includes(id)), 1)[0],
-        cursed = cursedRelic(run, key(run));
+        rare = draw(r, relicsOf("rare").filter((id) => usable(run, id, content)), 1)[0],
+        cursed = cursedRelic(run, key(run), content);
       return [
         { label: rare ? `Take ${relicOf(rare).name}` : "Take the crate", detail: rare ? relicOf(rare).description : "It is empty.", ok: !!rare, apply: (s) => (rare ? gainRelic(s, rare) : s) },
         {
@@ -119,8 +120,8 @@ export const EVENTS: readonly RunEvent[] = [
     id: "smugglers",
     title: "Smugglers",
     text: "Smugglers sell rare hardware, no questions asked.",
-    choices: (run) => {
-      const rare = draw(streamOf(run.seed, "event-smugglers", ...key(run)), relicsOf("rare").filter((id) => !run.relics.includes(id)), 1)[0];
+    choices: (run, content) => {
+      const rare = draw(streamOf(run.seed, "event-smugglers", ...key(run)), relicsOf("rare").filter((id) => usable(run, id, content)), 1)[0];
       return [
         {
           label: rare ? `Buy ${relicOf(rare).name} (40 Scrap)` : "Buy",

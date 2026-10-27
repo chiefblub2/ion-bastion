@@ -36,6 +36,7 @@ export function parseRun(raw: string | null, content: ContentPack): RunState | u
     const offers = isObject(d.offers) ? d.offers : {};
     if (offers.towers !== undefined && !list(offers.towers, tower)) return undefined;
     if (offers.starters !== undefined && !list(offers.starters, (p): p is TowerId[] => list(p, tower))) return undefined;
+    if (offers.steps !== undefined && !int(offers.steps)) return undefined;
     for (const key of ["relics", "prize", "legendary"]) if (offers[key] !== undefined && !list(offers[key], isRelic)) return undefined;
     return { ...(d as unknown as RunState), offers: offers as RunState["offers"] };
   } catch {

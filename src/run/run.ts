@@ -6,6 +6,7 @@ import { actsOf, isMissionKind, missionsOf, nextNodes, type MissionKind, type Ru
 import { rankOf } from "./ranks";
 import { hasFlag, relicOf, type RelicId } from "./relics";
 import { draw, streamOf } from "./rng";
+import { withSteps } from "./rewards";
 import { shopStock } from "./shop";
 import {
   actMapOf,
@@ -84,7 +85,7 @@ export function newRun(seed: number, options: RunOptions = {}, content?: Content
     log: [],
   };
   if (rules.cursedStart) {
-    const cursed = cursedRelic(run, "start");
+    const cursed = cursedRelic(run, "start", content);
     if (cursed) run = gainRelic(run, cursed);
   }
   return run;
@@ -176,10 +177,10 @@ export function finishMission(run: RunState, result: MissionResult, content: Con
   if (isLast(run, node)) return { ...done, phase: "won", offers: {} };
   const cleared = runDepth(done),
     offers: RunOffers = { towers: towerOffers(done, content, kind === "elite" ? 4 : 3, kind === "elite"), rankUps: rankUps.length ? rankUps : undefined };
-  if (cleared % 2 === 0) offers.relics = relicOffers(done);
-  if (kind === "elite") offers.prize = prizeOffers(done);
+  if (cleared % 2 === 0) offers.relics = relicOffers(done, 3, content);
+  if (kind === "elite") offers.prize = prizeOffers(done, content);
   if (cleared === 2 && threatRules(run.threat).freeDoctrine && doctrineCandidates(done, content).length) offers.doctrine = true;
-  return { ...done, phase: "reward", offers };
+  return { ...done, phase: "reward", offers: withSteps(done, offers) };
 }
 const PICK_PHASES = new Set(["reward", "camp", "act"]);
 /** Takes one of the offered towers; at the roster cap `replace` names the tower it replaces. `null` skips for Scrap. */
@@ -232,7 +233,7 @@ export function continueRun(run: RunState, content: ContentPack): RunState {
     if (run.node?.kind === "boss") {
       // The act transition: a full repair, then a legendary relic or a Doctrine.
       const act: RunState = { ...run, phase: "act", reactor: run.reactorMax, rerolls: 0, offers: {} };
-      return { ...act, offers: { legendary: legendaryOffers(act), doctrine: doctrineCandidates(act, content).length ? true : undefined } };
+      return { ...act, offers: withSteps(act, { legendary: legendaryOffers(act, 3, content), doctrine: doctrineCandidates(act, content).length ? true : undefined }) };
     }
     return { ...run, phase: "map", node: undefined, offers: {} };
   }

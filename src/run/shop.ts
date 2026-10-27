@@ -27,7 +27,7 @@ export function shopStock(run: RunState, content: ContentPack, forge: boolean): 
     return [item("doctrine", PRICES.doctrine), item("drill", PRICES.forgeDrill), item("xp", PRICES.xp), item("discount", PRICES.discount)];
   const stock: ShopItem[] = [item("funds", PRICES.funds)];
   if (!hasFlag(run.relics, "zealot")) stock.unshift(item("patch", PRICES.patch));
-  const relic = relicOffers({ ...run, step: run.step + 1000 + run.column }, 1)[0],
+  const relic = relicOffers({ ...run, step: run.step + 1000 + run.column }, 1, content)[0],
     tower = randomTower(run, content, r() < 0.5 ? "rare" : "epic", ["shop", run.act, run.column]),
     extras: ShopItem[] = [item("drill", PRICES.drill)];
   if (relic) extras.push(item("relic", PRICES.relic, { relic }));
