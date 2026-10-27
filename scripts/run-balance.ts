@@ -127,7 +127,9 @@ function playMission(mission: MissionDefinition, pack: ContentPack) {
     stars: won ? missionStars(mission, g.state) : undefined,
     wave: g.state.wave,
   };
-  return { result, waveTimes };
+  // What the mission paid in all (invested in towers plus left over) and what was still unspent at the end.
+  const left = g.state.wallets[0];
+  return { result, waveTimes, left, earned: left + g.state.towers.reduce((n, t) => n + t.spent, 0) };
 }
 // `--mission <id> --roster a,b,c`: one source mission with its own waves, to check the bot itself.
 const only = value("mission");
@@ -190,7 +192,7 @@ function chooseLane(run: RunState, pick: () => number): number {
   return top[Math.floor(pick() * top.length)].lane;
 }
 const total = missionsOf(LENGTH),
-  plays = new Map<string, { won: number; played: number; reactor: number; leak: number }>(),
+  plays = new Map<string, { won: number; played: number; reactor: number; leak: number; left: number[]; earned: number[]; waves: number }>(),
   depths = Array(total + 1).fill(0),
   waveTimes: number[] = [];
 let simSeconds = 0;
@@ -215,12 +217,15 @@ for (let seed = 1; seed <= SEEDS; seed++) {
         { mission, content: pack } = baseline ? { mission: { ...source, availableTowers: run.roster }, content } : generated,
         played = playMission(mission, pack),
         key = `act ${Math.min(node.act, 3) + 1} ${node.kind}`,
-        entry = plays.get(key) ?? { won: 0, played: 0, reactor: 0, leak: 0 };
+        entry = plays.get(key) ?? { won: 0, played: 0, reactor: 0, leak: 0, left: [], earned: [], waves: 0 };
       entry.played++;
+      entry.waves += mission.waves.length;
       if (played.result.won) {
         entry.won++;
         entry.reactor += played.result.lives / run.reactorMax;
         entry.leak += (mission.reactorEnergy - played.result.lives) / run.reactorMax;
+        entry.left.push(played.left);
+        entry.earned.push(played.earned);
       }
       plays.set(key, entry);
       waveTimes.push(...played.waveTimes);
@@ -235,12 +240,13 @@ for (let seed = 1; seed <= SEEDS; seed++) {
   }
   depths[runDepth(run)]++;
 }
+const median = (v: number[]) => (v.length ? [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)] : 0);
 const sorted = [...waveTimes].sort((a, b) => a - b),
   pct = (p: number) => (sorted.length ? sorted[Math.floor(sorted.length * p)].toFixed(1) : "-");
 console.log(`${SEEDS} ${LENGTH} runs at threat ${THREAT}, greedy bot${noRanks ? ", no ranks" : ""}${noDoctrines ? ", no doctrines" : ""}${RELIC ? `, relic ${RELIC}` : ""}`);
 for (const [key, e] of [...plays].sort(([a], [b]) => a.localeCompare(b)))
   console.log(
-    `${key.padEnd(16)} won ${String(e.won).padStart(3)}/${String(e.played).padEnd(3)} ${((100 * e.won) / e.played).toFixed(0).padStart(3)}%${e.won ? `  reactor left ${Math.round((100 * e.reactor) / e.won)}%, lost ${Math.round((100 * e.leak) / e.won)}% per win` : ""}`,
+    `${key.padEnd(16)} won ${String(e.won).padStart(3)}/${String(e.played).padEnd(3)} ${((100 * e.won) / e.played).toFixed(0).padStart(3)}%  ${(e.waves / e.played).toFixed(0).padStart(2)} waves${e.won ? `  reactor left ${Math.round((100 * e.reactor) / e.won)}%, lost ${Math.round((100 * e.leak) / e.won)}% per win; credits per win: earned ${median(e.earned)}, left ${median(e.left)} (median)` : ""}`,
   );
 console.log(`missions won per run: ${depths.map((n, d) => `${d}: ${n}`).join("  ")}`);
 console.log(`completed: ${depths[total]}/${SEEDS} (${Math.round((100 * depths[total]) / SEEDS)}%)`);

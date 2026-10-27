@@ -366,9 +366,15 @@
 }
 /* Learning: Training and the rules (Field Manual) in one quiet line under the primary button, lit up for a
    newcomer (`.fresh` on Training). */
+/* Under the primary button: Play (only when the primary button continues something), learning, utilities. */
+.home-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
 .home-learn {
   display: flex;
-  margin-top: 10px;
   background: var(--m-glass);
   border: 1px dashed var(--m-border);
 }
@@ -512,7 +518,54 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 6px;
+}
+/* Nothing to continue: no preview, the menu alone in a narrower column. */
+.home-map[hidden] {
+  display: none;
+}
+.menu-home:has(.home-map[hidden]) {
+  max-width: 640px;
+}
+.menu-home:has(.home-map[hidden]) .home-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+/* Play: the game modes, one large row each. */
+.menu-play {
+  max-width: 760px;
+}
+.play-modes {
+  margin: 0;
+  gap: 12px;
+}
+.play-modes .home-mode {
+  padding: 18px 20px;
+}
+/* The Codex's two pages, Enemies | Towers, as a segmented switch in the page header. */
+.codex-switch {
+  display: flex;
+  border: 1px solid var(--m-border);
+}
+.start-screen .codex-switch-btn {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--m-text-2);
+  font: 600 14px "Rajdhani", sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.start-screen .codex-switch-btn + .codex-switch-btn {
+  border-left: 1px solid var(--m-border);
+}
+.start-screen .codex-switch-btn[aria-current] {
+  background: color-mix(in srgb, var(--m-accent) 16%, transparent);
+  color: var(--m-accent);
+}
+.start-screen .codex-switch-btn:hover {
+  background: var(--m-hover);
 }
 .home-utility .quiet {
   flex: 1 1 160px;
@@ -2980,6 +3033,18 @@ span.world-hop {
   .start-screen {
     padding: 20px 16px 48px;
   }
+  /* The Codex switch takes its own full-width row under Back and the brand. */
+  .menu-page-head:has(.codex-switch) {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+  .codex-switch {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .start-screen .codex-switch-btn {
+    flex: 1;
+  }
   .menu-home {
     padding-top: 8px;
   }
@@ -3145,9 +3210,6 @@ span.world-hop {
   .home-primary {
     grid-row: 4;
   }
-  .home-learn {
-    grid-row: 5;
-  }
   .home-main {
     display: contents;
   }
@@ -3218,9 +3280,20 @@ span.world-hop {
   .home-mode:hover {
     transform: none;
   }
+  .home-side {
+    margin: 0;
+  }
   .home-utility {
     margin: 0;
     gap: 6px;
+  }
+  .play-modes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .play-modes .home-mode {
+    min-height: 0;
+    padding: 12px 14px;
   }
   .home-utility .quiet {
     flex: 1 1 0;
@@ -3513,6 +3586,18 @@ span.world-hop {
     grid-column: 1;
     grid-row: 1 / span 2;
     align-self: center;
+  }
+  /* The Codex pages get a fourth column for the Enemies | Towers switch, between the title and the brand. */
+  :is(#codex-page, #towers-page) {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+  }
+  .menu-page-head .codex-switch {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+  :is(#codex-page, #towers-page) .menu-page-head .brand {
+    grid-column: 4;
   }
   .menu-page-head .brand {
     grid-column: 3;
