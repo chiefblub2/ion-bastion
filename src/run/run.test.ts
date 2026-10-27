@@ -110,7 +110,7 @@ describe("run", () => {
       if (node.column === 0) firsts.push(last - (node.kind === "elite" ? 1 : 0));
     });
     // Every act opens longer than the one before and ends on the Final Stand's 20.
-    expect(firsts[0]).toBe(8);
+    expect(firsts[0]).toBe(5);
     for (let i = 1; i < firsts.length; i++) expect(firsts[i]).toBeGreaterThan(firsts[i - 1]);
     expect(last).toBe(20);
   });

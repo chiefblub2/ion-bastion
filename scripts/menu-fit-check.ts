@@ -1,6 +1,6 @@
 /**
  * The fitted landscape menus (menu.css, `FIT_QUERY` in app/compact.ts): plays the menu flow on phone-sized landscape
- * viewports and fails when a page scrolls or overflows, Play does not open the mode list, the Codex switch does not
+ * viewports and fails when a page scrolls or overflows (the Run map with a node's card included), Play does not open the mode list, the Codex switch does not
  * swap its pages, Start Mission leaves the screen, a locked mission loses its
  * explanation, Intel is empty, the atlas forgets the browsed mission after Back, or Start does not open the game.
  * Tablet, desktop and portrait sizes are checked for horizontal overflow only (their pages scroll by design).
@@ -70,6 +70,16 @@ for (const [w, h] of phones) {
     await page.goto(`${base}/#${hash}`);
     await step(page, size, hash, [w, h]);
   }
+  // The Run map fits one screen, and a node's card keeps its action on screen.
+  await page.click('#run-page [data-run="new"]');
+  await page.waitForTimeout(400);
+  await page.click('#run-page [data-run^="starter"]');
+  await step(page, size, "run-map", [w, h]);
+  await page.click('.run-node[data-state="next"]');
+  await step(page, size, "run-card", [w, h]);
+  const action = await page.$eval(".run-inspector-action .primary", (e) => e.getBoundingClientRect().toJSON());
+  if (action.bottom > h || action.right > w) fail(size, "the Run card's action is off screen");
+  await page.evaluate(() => localStorage.removeItem("ion-bastion:run"));
   await page.goto(`${base}/#gegnerakte`);
   await page.waitForTimeout(400);
   await page.click('#codex-page [data-codex="towers"]');
