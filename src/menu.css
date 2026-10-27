@@ -3033,6 +3033,18 @@ span.world-hop {
   .start-screen {
     padding: 20px 16px 48px;
   }
+  /* The Codex switch takes its own full-width row under Back and the brand. */
+  .menu-page-head:has(.codex-switch) {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+  .codex-switch {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .start-screen .codex-switch-btn {
+    flex: 1;
+  }
   .menu-home {
     padding-top: 8px;
   }
