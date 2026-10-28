@@ -572,6 +572,9 @@
   left: calc(var(--c) - 81px);
   border-left-color: var(--tip);
 }
+.run-inspector-switch {
+  display: none;
+}
 .start-screen .run-inspector-close {
   position: absolute;
   top: 6px;
@@ -1060,6 +1063,31 @@
     top: 6px;
     bottom: 6px;
     padding: 8px 10px;
+  }
+  /*
+   * On a phone the card opens over the whole route map: beside a middle column it would get only half the width, too
+   * narrow for the map picture. The other choices it covers stay one tap away in its "Also:" row.
+   */
+  .run-inspector[data-side] {
+    left: 6px;
+    right: 6px;
+  }
+  .run-inspector-tip {
+    display: none;
+  }
+  .run-inspector-switch {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+    margin: 0 44px 4px 0;
+    font: 500 11px var(--mono);
+    color: var(--m-text-2);
+  }
+  .start-screen .run-inspector-switch .run-mini {
+    min-height: 40px;
+    padding: 0 8px;
+    font-size: 11px;
   }
   .run-inspector h3 {
     font-size: 19px;

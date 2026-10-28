@@ -14,7 +14,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Page } from "playwright-core";
 import { launch } from "./browser";
-import { bossMapState, runStates } from "./run-states";
+import { bossMapState, midMapState, runStates } from "./run-states";
 
 const arg = (name: string) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -131,6 +131,15 @@ for (const [w, h] of phones) {
       if (offers.legendary || offers.doctrine) fail(where, "the act reward left a second pick open");
     }
   }
+  // A second-column mission's card shows its map too (it used to be squeezed beside the middle column and hid it).
+  await page.evaluate((v) => localStorage.setItem("ion-bastion:run", v), JSON.stringify(midMapState()));
+  await page.goto(`${base}/#run`);
+  await page.reload();
+  await page.waitForTimeout(500);
+  if (!(await page.$(".run-inspector"))) await page.click('.run-node[data-state="next"]');
+  await step(page, size, "run-mid-card", [w, h]);
+  const mid = await page.$eval(".run-inspector .run-map", (e) => e.getBoundingClientRect().width).catch(() => 0);
+  if (mid < 100) fail(size, "the second mission's card shows no map");
   // The act boss's card on the map: its modifiers, the technology it may leave, and Deploy on screen.
   await page.evaluate((v) => localStorage.setItem("ion-bastion:run", v), JSON.stringify(bossMapState()));
   await page.goto(`${base}/#run`);
