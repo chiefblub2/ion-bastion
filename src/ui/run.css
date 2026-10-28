@@ -1157,16 +1157,20 @@
     height: var(--fit-h);
     grid-template-rows: auto auto minmax(0, 1fr);
   }
-  /* The page's own header gives the decision its height: one line, no eyebrow. */
-  #run-page:has(.run-decision) > .eyebrow {
-    display: none;
+  /*
+   * The page's headline ("Ten missions. Three acts. One reactor.") gives its room to the run: hidden on every Run
+   * screen of a phone, but kept for screen readers (the page is labelled by it). Back and the brand stay as one row.
+   */
+  #run-page > :is(.eyebrow, h1) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
-  #run-page:has(.run-decision) > h1 {
-    grid-row: 1 / span 2;
-    align-self: center;
-    font-size: 17px;
-  }
-  #run-page:has(.run-decision) > h1 + * {
+  #run-page > h1 + * {
     margin-top: 6px;
     padding-top: 6px;
   }
