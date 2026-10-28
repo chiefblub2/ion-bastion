@@ -453,7 +453,7 @@ function nodeCard(r: RunState, node: RunNode) {
     close = `<button class="quiet run-inspector-close" data-run="focus:" aria-label="Close">✕</button>`,
     head = (title: string) => `<p class="choice-index">${k.label.toUpperCase()}</p><h3>${title}</h3>`;
   if (!isMissionKind(node.kind))
-    return { body: `${head(`${k.icon} ${k.label}`)}<p>${k.note}</p>`, action: `<button class="primary" data-run="travel:${node.lane}">Go to the ${k.label.toLowerCase()} <span>→</span></button>`, close };
+    return { body: `${switcher(r, node)}${head(`${k.icon} ${k.label}`)}<p>${k.note}</p>`, action: `<button class="primary" data-run="travel:${node.lane}">Go to the ${k.label.toLowerCase()} <span>→</span></button>`, close };
   const { mission } = runMission(r, node, host.content),
     source = host.content.missions.find((m) => m.id === node.mission)!,
     chosen = r.phase === "mission" && r.node?.column === node.column && r.node.lane === node.lane,
@@ -468,11 +468,25 @@ function nodeCard(r: RunState, node: RunNode) {
         ? `<p class="run-note">This mission was interrupted and its record is gone. It counts as lost.</p><button class="primary" data-run="forfeit">End the run</button>`
         : `<button class="primary" data-run="deploy:${node.lane}"${blocked ? " disabled" : ""}>Deploy <span>→</span></button><p class="run-note">${blocked ? "Leave the multiplayer room to play a run." : "Once deployed, it can be resumed but never restarted."}</p>`;
   return {
-    body: `<div class="run-map" data-map="${node.mission}">${mapPreviewSvg(source.map)}<img alt=""></div><div class="run-inspector-text">${head(escape(source.map.name))}<p>${k.note}</p>${modsHtml(node, r)}${missionFacts(r, node)}${threatChips(r, node)}</div>`,
+    body: `<div class="run-map" data-map="${node.mission}">${mapPreviewSvg(source.map)}<img alt=""></div><div class="run-inspector-text">${switcher(r, node)}${head(escape(source.map.name))}<p>${k.note}</p>${modsHtml(node, r)}${missionFacts(r, node)}${threatChips(r, node)}</div>`,
     action,
     // A deployed mission cannot be swapped for another, so its card stays open.
     close: chosen && r.deployed ? "" : close,
   };
+}
+/**
+ * The other nodes the player may walk to, as small buttons inside the card. Phones open the card over the whole route
+ * map (run.css), which hides them; elsewhere the nodes stay in view and this row is hidden.
+ */
+function switcher(r: RunState, node: RunNode) {
+  const others = mapChoices(r, host.content).filter((n) => n.lane !== node.lane);
+  if (!others.length || (r.phase === "mission" && r.deployed)) return "";
+  return `<p class="run-inspector-switch">Also: ${others
+    .map((n) => {
+      const name = n.mission ? host.content.missions.find((m) => m.id === n.mission)?.map.name : KIND[n.kind].label;
+      return `<button class="quiet run-mini" data-run="focus:${n.lane}"><i aria-hidden="true">${KIND[n.kind].icon}</i> ${escape(name ?? "")}</button>`;
+    })
+    .join("")}</p>`;
 }
 /** The lane whose card is open: the player's pick, else the only choice or the chosen mission. */
 function openLane(): number | undefined {

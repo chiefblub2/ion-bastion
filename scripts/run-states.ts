@@ -39,6 +39,10 @@ const rich = (run: RunState): RunState => ({
 export function bossMapState(): RunState {
   return rich(walkTo(4, (r) => r.phase === "map" && r.column === 3));
 }
+/** A run on the act map with the second mission column next (its card sits beside the middle of the map). */
+export function midMapState(): RunState {
+  return rich(walkTo(4, (r) => r.phase === "map" && r.column === 1));
+}
 export function runStates(): Record<string, RunState> {
   const out: Record<string, RunState> = {};
   const draft = walkTo(3, (r) => r.phase === "reward" && !!r.offers.towers);
