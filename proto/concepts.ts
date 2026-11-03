@@ -508,12 +508,149 @@ const acceleratorModel: Model = (pen, x, y, t) => {
   levelBars(L, 21);
 };
 
+
+/** 5 · Reference: stepped octagon plinth with lit panels, chrome column, a U-yoke with hub lights and a ribbed gun. */
+function referenceModel(armour: boolean): Model {
+  return (pen, x, y, t) => {
+    const L = look(pen, x, y, t),
+      { v, a, c, p, charge, level, tip } = L,
+      metal = 0x2f393f,
+      body = armour ? shade(c, -0.38) : 0x4a5961,
+      chrome = 0x8d999f,
+      light = level >= 2 ? p : c,
+      on = 0.45 + 0.07 * level,
+      ca = Math.cos(a),
+      sa = Math.sin(a),
+      T1 = 5,
+      T2 = 8.5,
+      yokeBase = 17,
+      gunH = 28,
+      end = L.end + 4;
+    groundShadow(L, 22, gunH);
+    // Tier 1: wide octagon; glowing panel outlines on the faces turned to the viewer.
+    const o1 = oct(21.5);
+    prism(v, o1, 0, T1, metal, shade(metal, 0.1));
+    for (let i = 0; i < 8; i++) {
+      const [u0, w0] = o1[i],
+        [u1, w1] = o1[(i + 1) % 8];
+      if ((w0 + w1) / 2 < 6) continue;
+      const at = (f: number, h: number) => S(v, u0 + (u1 - u0) * f, w0 + (w1 - w0) * f, h),
+        rect = [at(0.18, 1.3), at(0.82, 1.3), at(0.82, T1 - 1.2), at(0.18, T1 - 1.2)];
+      outline(v.g, rect, shade(light, -0.1), 0.8, on);
+      outline(v.glow, rect, light, 1.6, 0.25 * on);
+    }
+    // Vent grilles on the tier-1 deck at the diagonals.
+    flat(v.g, v, T1, () => {
+      for (let i = 0; i < 4; i++) {
+        const q = Math.PI / 4 + (i * Math.PI) / 2,
+          cx = Math.cos(q) * 18.5,
+          cy = Math.sin(q) * 18.5;
+        for (const k of [-1.6, 0, 1.6]) {
+          v.g.fillStyle(OUTLINE, 0.9);
+          v.g.fillRect(cx - 2.2 - Math.sin(q) * k, cy - 0.45 + Math.cos(q) * k, 4.4, 0.9);
+        }
+      }
+    });
+    // Tier 2 with an inset glowing octagon line, then the path motif.
+    const o2 = oct(15);
+    prism(v, o2, T1, T2, metal, shade(metal, 0.06));
+    const inset = oct(12).map(([u, w]) => S(v, u, w, T2));
+    outline(v.g, inset, light, 1, on);
+    outline(v.glow, inset, light, 2.4, 0.3 * on);
+    const d = content.towers.pulse,
+      motif = L.path ? d.visual.paths?.[L.path]?.motif : undefined;
+    if (motif) {
+      const tier = Math.min(3, Math.max(1, level - 5));
+      for (const ink of [v.g, v.glow]) {
+        ink.save();
+        ink.translateCanvas(v.gx, v.gy - T2 * RISE);
+        ink.scaleCanvas(0.62, 0.62 * SQ);
+      }
+      MOTIFS[motif]({ g: v.g, glow: v.glow, x: 0, y: 0, tower: L.t, definition: d, clock: CLOCK, level, maxed: L.maxed, color: p, path: L.path, kick: L.kick, charge, tip, energy: 0.15, peak: 0.6 }, tier, CLOCK + L.t.id, 0.05 + 0.05 * tier);
+      v.g.restore();
+      v.glow.restore();
+    }
+    // Chrome collar and column.
+    cylinder(v, 0, 0, 7.5, T2, T2 + 2, chrome, shade(chrome, 0.1));
+    cylinder(v, 0, 0, 5, T2 + 2, T2 + 3.2, shade(chrome, -0.15));
+    cylinder(v, 0, 0, 2.8, T2 + 3.2, yokeBase, chrome);
+    // Yoke: a cross plate and two tall arms beside the gun.
+    prism(v, turn(a, [[-4.5, -9.5], [4.5, -9.5], [4.5, 9.5], [-4.5, 9.5]]), yokeBase, yokeBase + 2, body);
+    const arms = [-1, 1].map((s) => ({ s, dv: ca * 7.5 * s })).sort((m, n) => m.dv - n.dv),
+      arm = (s: number) => {
+        prism(v, turn(a, [[-5, 7.2 * s], [4, 7.2 * s], [3, 9.6 * s], [-5, 9.6 * s]].map(([q, r]) => [q, r] as const)), yokeBase + 2, gunH + 5, body);
+        // Hub on the outer face and a light strip above it.
+        const [hx, hy] = S(v, -sa * 9.9 * s, ca * 9.9 * s, gunH);
+        disc(v.g, hx, hy, 2.6, OUTLINE);
+        disc(v.g, hx, hy, 1.9, chrome);
+        ring(v.g, hx, hy, 1.9, 0.7, light, on);
+        disc(v.glow, hx, hy, 3.6, light, 0.22 * on);
+        const [lx0, ly0] = S(v, -sa * 9.9 * s - ca * 1, ca * 9.9 * s - sa * 1, gunH + 2.8),
+          [lx1, ly1] = S(v, -sa * 9.9 * s - ca * 1, ca * 9.9 * s - sa * 1, gunH + 4.6);
+        v.g.lineStyle(0.9, light, on);
+        v.g.lineBetween(lx0, ly0, lx1, ly1);
+      };
+    arm(arms[0].s);
+    const away = sa < 0,
+      gun = () => {
+        const parts = () => {
+          // Receiver: a box with ribs on its roof and charge dashes on its side.
+          prism(v, turn(a, [[-11, -6], [9, -6], [9, 6], [-11, 6]]), gunH - 3.8, gunH + 3.8, body, shade(body, 0.12));
+          for (const q of [-5, -3, -1, 1, 3, 5]) {
+            const rib = turn(a, [[q - 0.4, -5.2], [q + 0.4, -5.2], [q + 0.4, 5.2], [q - 0.4, 5.2]]).map(([u, w]) => S(v, u, w, gunH + 3.8));
+            poly(v.g, rib, OUTLINE, 0.7);
+          }
+          const side = ca >= 0 ? 1 : -1;
+          void side;
+          const vis = Math.cos(a) * 1 >= 0 ? 5.05 : -5.05,
+            faceSide = ca >= 0 ? 6.05 : -6.05;
+          void vis;
+          for (let i = 0; i < 4; i++) {
+            const dd = -6 + i * 2,
+              lit = Math.max(0, Math.min(1, charge * 4 - i)),
+              q = faceSide,
+              p0 = S(v, ca * dd - sa * q, sa * dd + ca * q, gunH - 1.2),
+              p1 = S(v, ca * dd - sa * q, sa * dd + ca * q, gunH + 1.4);
+            v.g.lineStyle(1.1, lit > 0.05 ? shade(c, 0.3) : shade(light, -0.6), 0.6 + 0.4 * lit);
+            v.g.lineBetween(p0[0], p0[1], p1[0], p1[1]);
+            if (lit > 0.05) {
+              v.glow.lineStyle(2.4, c, 0.35 * lit);
+              v.glow.lineBetween(p0[0], p0[1], p1[0], p1[1]);
+            }
+          }
+          // Front extension with ribs.
+          prism(v, turn(a, [[9, -4], [16, -4], [16, 4], [9, 4]]), gunH - 2.6, gunH + 2.6, body, shade(body, 0.1));
+          for (const q of [10.5, 12, 13.5, 15]) {
+            const rib = turn(a, [[q - 0.3, -4.2], [q + 0.3, -4.2], [q + 0.3, 4.2], [q - 0.3, 4.2]]).map(([u, w]) => S(v, u, w, gunH + 2.6));
+            poly(v.g, rib, OUTLINE, 0.75);
+          }
+        },
+          bar = () => {
+            tube(v, 0, 0, gunH, a, 16, end - 4, 1.7, 1.7, chrome);
+            tube(v, 0, 0, gunH, a, end - 4, end, 2.3, 2.3, shade(chrome, -0.35));
+            if (tip !== undefined) tube(v, 0, 0, gunH, a, end - 1.6, end, 2.3, 2.3, tip);
+            if (sa > 0.15) disc3(v, ca * end, sa * end, gunH, a, 2.3, OUTLINE, 1, 0);
+          };
+        if (away) (bar(), parts());
+        else (parts(), bar());
+      };
+    gun();
+    arm(arms[1].s);
+    maxedHalo(L, T2);
+    muzzleFlash(L, gunH, end + 1);
+    levelBars(L, 22);
+  };
+}
+
 const MODELS: { name: string; note: string; draw: Model }[] = [
   { name: "1 · Dome", note: "today's model,\nlifted into the tilt", draw: domeModel },
   { name: "2 · Gimbal", note: "ball head in a yoke,\nlong precise barrel", draw: gimbalModel },
   { name: "3 · Sentry", note: "armoured wedge\nturret, charge slot", draw: sentryModel },
   { name: "4 · Accelerator", note: "capacitor + coils\nthat light up", draw: acceleratorModel },
+  { name: "5a · Reference", note: "gunmetal + mint\nlight trims", draw: referenceModel(false) },
+  { name: "5b · Reference", note: "mint armour\n(Pulse colour)", draw: referenceModel(true) },
 ];
+const ROWS = (params.get("rows") ?? "0,1,2,3,4,5").split(",").map(Number).map((i) => MODELS[i]);
 const current: Model = (pen, x, y, t) => drawTower(pen, x, y, t, content.towers[t.type], CLOCK, badges(t));
 
 const ZOOM = 3,
@@ -537,7 +674,7 @@ class Sheet extends Phaser.Scene {
         { label: "aim W", t: () => built("pulse", 5, undefined, 0, Math.PI) },
       ];
     this.add.text(GAP, 6, "Pulse tower models in tilt A (~35°)", font(10));
-    MODELS.forEach((m, r) => {
+    ROWS.forEach((m, r) => {
       const y = 26 + r * (TILE + GAP);
       this.add.text(GAP, y + 12, m.name, font(9));
       this.add.text(GAP, y + 28, m.note, font(6.5, "#8fa7b6"));
@@ -594,7 +731,7 @@ new Phaser.Game({
   type: Phaser.WEBGL,
   parent: "proto",
   width: board ? 700 * 2 : (LABEL + COLS * (TILE + GAP)) * ZOOM,
-  height: board ? 360 * 2 : (26 + MODELS.length * (TILE + GAP) + 4) * ZOOM,
+  height: board ? 360 * 2 : (26 + ROWS.length * (TILE + GAP) + 4) * ZOOM,
   backgroundColor: "#1b2530",
   banner: false,
   audio: { noAudio: true },
