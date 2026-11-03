@@ -2,27 +2,12 @@ import type { TurretStyle } from "../../core/types";
 import { DARK, LIGHT, OUTLINE, PLATE, SHADOW, dome, facing, halo, led, litBar, plate } from "../material";
 import { MUZZLES } from "../muzzles";
 import { arcBand, chamferRect, disc, hash01, oval, polygon, ring, shade, strip, wedge } from "../shapes";
+import { sentinelTurret } from "./sentinel";
 import { type Drawing, TAU, at, point, quad, tick, pip, bar, loop, block, facets, boss, glowDot, reach, bolt, muzzleGlow, crackle } from "./kit";
 /** Turret drawings of the Attack tab's towers by `visual.turret`; `render/towers.ts` assembles them into `TURRETS`. */
 export const ATTACK_TURRETS = {
-  // A barrel with a muzzle brake on a domed mount; a slot in the dome glows as the next shot charges.
-  barrel: (ctx) => {
-    const { g, glow, x, y, tower: t, definition: d, level, charge, tip, energy } = ctx,
-      a = t.angle,
-      c = d.color,
-      { back, end } = reach(ctx, "barrel"),
-      w = level >= 3 ? 0.5 : 0;
-    litBar(g, x, y, a, back + 3, end - 3.5, 3.5 + w, 2.7 + w, c, { bands: level >= 3 ? [0.45, 0.6] : undefined });
-    litBar(g, x, y, a, end - 4, end, 4 + w, 4 + w, shade(c, -0.3), { bands: [0.5], tip });
-    const bore = at(x, y, a, end - 1.2);
-    disc(g, bore.x, bore.y, 1.6, OUTLINE);
-    dome(g, x, y, 9, c);
-    bar(g, x, y, a, -7.4, -3.6, 1.4, 1.4, OUTLINE, 0.9);
-    bar(g, x, y, a, -7, -4, 0.6, 0.6, shade(c, 0.45), 0.3 + 0.6 * charge);
-    bar(glow, x, y, a, -7.4, -3.6, 1.3, 1.3, c, Math.min(0.6, 0.2 + 0.4 * charge + energy));
-    bolt(ctx);
-    muzzleGlow(ctx, end + 1, 4);
-  },
+  // Pulse: the Hex Sentinel, an armoured turret with one precision barrel in the 3/4 tilt (see `sentinel.ts`).
+  barrel: sentinelTurret,
   // A wide launch tube: the next rocket's nose slides out as it loads, and the rear vents puff on a shot.
   heavy: (ctx) => {
     const { g, glow, x, y, tower: t, definition: d, level, kick, charge, tip } = ctx,

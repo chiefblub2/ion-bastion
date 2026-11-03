@@ -11,13 +11,23 @@ export interface MuzzleSpec {
   /** Fanned barrels: how many and the angle between them. */
   fan?: (level: number) => { count: number; step: number };
   flash: FlashStyle;
+  /**
+   * A turret drawn in the 3/4 tilt (Hex Sentinel): its ground centre sits `drop` px below the cell centre, ground depth is
+   * squashed by `squash` and the barrel axis is `height` px up, so the tip is a projected point.
+   */
+  tilt?: Tilt;
+}
+export interface Tilt {
+  drop: number;
+  squash: number;
+  height: number;
 }
 /**
  * Barrels of the turrets that have one. Turret drawings, muzzle flashes and the starting point of projectiles
  * all read this table, so a flash always sits on the barrel tip. Radial turrets (coil, crystal, emitter, …) have none.
  */
 export const MUZZLES: Partial<Record<TurretStyle, MuzzleSpec>> = {
-  barrel: { reach: (l) => 21 + l, recoil: 5, flash: "gun" },
+  barrel: { reach: (l) => 21 + l, recoil: 5, flash: "gun", tilt: { drop: 5, squash: 0.65, height: 15 } },
   heavy: { reach: (l) => 19 + l, recoil: 7, flash: "heavy" },
   twin: { reach: (l) => 20 + l, recoil: 4, sides: [-4, 4], flash: "gun" },
   rail: { reach: (l) => 25 + l, recoil: 6, flash: "energy" },
@@ -62,6 +72,13 @@ export function muzzleTips(turret: TurretStyle, level: number, x: number, y: num
     });
   }
   const c = Math.cos(angle),
-    s = Math.sin(angle);
+    s = Math.sin(angle),
+    tilt = spec.tilt;
+  if (tilt) return [{ x: x + c * d, y: y + tilt.drop + s * d * tilt.squash - tilt.height }];
   return (spec.sides ?? [0]).map((side) => ({ x: x + c * d - s * side, y: y + s * d + c * side }));
+}
+/** Screen direction a barrel points in when its turret aims at `angle`: the aim itself, foreshortened on a tilted turret. */
+export function muzzleHeading(turret: TurretStyle, angle: number) {
+  const tilt = MUZZLES[turret]?.tilt;
+  return tilt ? Math.atan2(Math.sin(angle) * tilt.squash, Math.cos(angle)) : angle;
 }

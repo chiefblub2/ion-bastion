@@ -8,6 +8,8 @@ import { ATTACK_TURRETS } from "./tower-art/turrets-attack";
 import { CONTROL_TURRETS } from "./tower-art/turrets-control";
 import { TRAPS_TURRETS } from "./tower-art/turrets-traps";
 import { SUPPORT_TURRETS } from "./tower-art/turrets-support";
+import { onDeck } from "./tower-art/sentinel";
+import { MUZZLES } from "./muzzles";
 /** The level a tower's paths branch from: one below its lowest path tier (5 for attack towers and traps, 3 for support). */
 const branches = new WeakMap<Readonly<TowerDefinition>, number>();
 function branchLevel(definition: Readonly<TowerDefinition>) {
@@ -59,12 +61,18 @@ function turretContext(pen: Pen, x: number, y: number, tower: Tower, definition:
     peak: badges.maxed ? 0.42 : 0.6,
   };
 }
+/**
+ * Turrets drawn in the 3/4 tilt (Pulse's Hex Sentinel): their base casts its own shadow and carries its own level
+ * language, so the flat collar, rings, lamps and glint are skipped and the path motif lies on the tilted deck.
+ */
+export const isTilted = (definition: Readonly<TowerDefinition>) => MUZZLES[definition.visual.turret]?.tilt !== undefined;
 /** The part of a tower that holds still on `g`: shadow, base plate, collar and the r14 ring (the base's light is live). */
 function drawBody(ctx: TurretContext) {
   const { g, glow, x, y, definition, level, color: p } = ctx,
     // Traps lie flat on the path: no shadow, no collar and no turret rings.
     trap = definition.placement === "path",
     attack = !trap && definition.targets.length > 0;
+  if (isTilted(definition)) return BASES[definition.visual.turret](ctx);
   if (!trap) {
     oval(g, x + 3, y + 6, 22, 15.5, SHADOW, 0.22);
     oval(g, x + 3, y + 6, 18, 12, SHADOW, 0.3);
@@ -83,19 +91,23 @@ function drawBody(ctx: TurretContext) {
 /** Everything that moves or changes on its own: the glint, motif, lamps, turret, level bars and the aura badge. */
 function drawTop(ctx: TurretContext, badges: TowerBadges) {
   const { g, glow, x, y, tower, definition, clock, level, color: p } = ctx,
-    trap = definition.placement === "path";
+    tilted = isTilted(definition),
+    // Traps lie flat and tilted turrets carry their own lamps: neither gets the collar's glint and lamps.
+    trap = definition.placement === "path",
+    flat = !trap && !tilted;
   if (badges.maxed) halo(glow, x, y, 26, p, 0.12 + 0.04 * Math.sin(clock * 2 + tower.id));
   // A glint sweeps the collar at level 8.
-  if (!trap && level >= 8) arcBand(g, x, y, 17, 1.6, clock * 0.8 + tower.id, clock * 0.8 + tower.id + 0.5, shade(p, 0.8), 0.9);
+  if (flat && level >= 8) arcBand(g, x, y, 17, 1.6, clock * 0.8 + tower.id, clock * 0.8 + tower.id + 0.5, shade(p, 0.8), 0.9);
   // Specialized towers: the path motif turns under the turret, one tier per level above the branch (5, support 3),
   // echoed in light. Aura draws its own.
   const motif = badges.path && definition.attack.kind !== "aura" ? definition.visual.paths?.[badges.path]?.motif : undefined;
   if (motif) {
     const tier = Math.min(3, Math.max(1, level - branchLevel(definition)));
-    MOTIFS[motif](ctx, tier, clock + tower.id, 0.06 + 0.06 * tier);
+    if (tilted) onDeck([g, glow], x, y, () => MOTIFS[motif]({ ...ctx, x: 0, y: 0 }, tier, clock + tower.id, 0.04 + 0.04 * tier));
+    else MOTIFS[motif](ctx, tier, clock + tower.id, 0.06 + 0.06 * tier);
   }
   // One lamp from level 2; from level 4 four of them chase round the collar.
-  if (!trap && level >= 4) {
+  if (flat && level >= 4) {
     g.fillStyle(OUTLINE, 0.9);
     for (let i = 0; i < 4; i++) {
       const q = at(x, y, 0.75 * Math.PI + (i * Math.PI) / 2, 19);
@@ -110,7 +122,7 @@ function drawTop(ctx: TurretContext, badges: TowerBadges) {
       glow.fillStyle(p, 0.3 * on);
       pip(glow, q.x, q.y, 3.6);
     }
-  } else if (!trap && level >= 2) {
+  } else if (flat && level >= 2) {
     const q = at(x, y, 0.75 * Math.PI, 19);
     led(ctx, q.x, q.y, p, 1);
   }

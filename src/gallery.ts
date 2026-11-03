@@ -106,14 +106,11 @@ const query = new URLSearchParams(location.search),
   sound = query.has("sound"),
   /** `?render`: offline music renders for scripts/render-music.ts (see `music-render.ts`); no canvas. */
   render = query.has("render"),
-  /** `?sentinel`: the Hex Sentinel tower experiment beside the current Pulse, with controls (see `sentinel-demo.ts`). */
-  sentinel = query.has("sentinel"),
   pageSize = anim ? animReviewSize : art ? artReviewSize : showcase ? showcaseSize : { width: width * ZOOM, height: height * ZOOM };
 if (render)
   void import("./music-render").then((m) => {
     (window as unknown as { __renderMusic: typeof m.renderMusic }).__renderMusic = m.renderMusic;
   });
-else if (sentinel) void import("./sentinel-demo").then((m) => m.mountSentinelDemo(document.getElementById("gallery")!));
 else if (sound) void import("./sound-board").then((m) => m.mountSoundBoard(document.getElementById("gallery")!));
 else
   new Phaser.Game({

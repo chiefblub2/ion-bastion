@@ -25,12 +25,16 @@ describe("baked tower bodies", () => {
     expect(stillBody(tower("inferno"), DEFAULT_CONTENT.towers.inferno, badges("inferno", 1))).toBe(false);
   });
 
+  it("bakes the Hex Sentinel's tilted foundation (Pulse) like any flat body", () => {
+    for (const level of [1, 5]) expect(stillBody(tower("pulse"), DEFAULT_CONTENT.towers.pulse, badges("pulse", level))).toBe(true);
+  });
+
   it("skips only the body ink of a baked tower and keeps all of its light", () => {
-    const d = DEFAULT_CONTENT.towers.pulse,
+    const d = DEFAULT_CONTENT.towers.blast,
       draw = (baked: boolean) => {
         const g = counter(),
           glow = counter();
-        drawTower({ g: g.ink, glow: glow.ink }, 0, 0, tower("pulse"), d, 1.5, badges("pulse", 5), baked);
+        drawTower({ g: g.ink, glow: glow.ink }, 0, 0, tower("blast"), d, 1.5, badges("blast", 5), baked);
         return { g: g.counts.calls, glow: glow.counts.calls };
       },
       live = draw(false),
