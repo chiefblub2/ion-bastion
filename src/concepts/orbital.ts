@@ -30,7 +30,7 @@ const PYLON = (sx: number, sy: number) => {
 };
 const PYLON_H = 9;
 /** Dish: radius, its rim at `DISH_P` along the axis (behind the pivot); the fork arms either side. */
-const DISH_R = 9.5,
+const DISH_R = 10.5,
   DISH_P = -2.5,
   ARM = 10.6;
 
@@ -112,9 +112,11 @@ export const concept: Concept = {
         plane(g, x, y0, f, p - 0.6, DISH_R, shade(METAL, -0.45), 1, DISH_R, 20);
         if (front) {
           const k = 0.15 * lit(f.du, f.dv, f.dh);
-          plane(g, x, y0, f, p - 0.2, DISH_R - 0.9, shade(METAL, 0.05 + k), 1, DISH_R - 0.9, 20);
-          plane(g, x, y0, f, p - 0.6, DISH_R * 0.68, shade(METAL, -0.12 + k), 1, DISH_R * 0.68, 18);
-          plane(g, x, y0, f, p - 1, DISH_R * 0.32, shade(c, -0.55), 1, DISH_R * 0.32, 12);
+          // The bowl: a bright rim, then darker towards the deep middle, a hub in the tower colour.
+          plane(g, x, y0, f, p - 0.2, DISH_R - 0.7, shade(METAL, 0.2 + k), 1, DISH_R - 0.7, 20);
+          plane(g, x, y0, f, p - 0.6, DISH_R - 2, shade(METAL, -0.15 + k), 1, DISH_R - 2, 20);
+          plane(g, x, y0, f, p - 1, DISH_R * 0.55, shade(METAL, -0.35 + k), 1, DISH_R * 0.55, 18);
+          plane(g, x, y0, f, p - 1.2, DISH_R * 0.24, shade(c, -0.35), 1, DISH_R * 0.24, 12);
           // Level 6+: a ring in the path colour round the bowl.
           if (level >= 6) {
             for (let i = 0; i < 20; i++) {
@@ -149,10 +151,10 @@ export const concept: Concept = {
             g, x, y0,
             f.pu + p0 * f.du + q * f.eu + z * f.nu, f.pv + p0 * f.dv + q * f.ev + z * f.nv, f.ph + p0 * f.dh + z * f.nh,
             f.pu + (end - 2) * f.du, f.pv + (end - 2) * f.dv, f.ph + (end - 2) * f.dh,
-            0.7, METAL,
+            0.5, shade(METAL, -0.1),
           );
         }
-        box(g, x, y0, f, end - 2.6, end, -1.5, 1.5, -1.5, 1.5, shade(METAL, -0.1), tip ?? shade(c, -0.2));
+        box(g, x, y0, f, end - 2.2, end, -1.2, 1.2, -1.2, 1.2, shade(METAL, -0.1), tip ?? shade(c, -0.2));
       };
     const near = ca > 0 ? 1 : -1;
     arm(-near);
