@@ -269,13 +269,20 @@ export interface UpgradeDefinition {
   requires: readonly string[];
   /** Upgrades with different paths exclude each other on one tower. */
   path?: string;
+  /**
+   * Aura only: upgrades with different tracks exclude each other, independently of the path. A track is never a
+   * specialization, so the Run never locks it.
+   */
+  track?: string;
+  /** Available only from this tower level on, whichever upgrades led there (Aura paths after any track's tier III). */
+  minLevel?: number;
   effects: {
     stats?: Partial<TowerStats>;
     aura?: Partial<AuraBonuses>;
     /** Overrides numeric parameters of the tower's attack, e.g. `{ factor: 0.45 }`. */
     attack?: Readonly<Record<string, number>>;
     level?: number;
-    /** Specialization ability (levels 6 to 8); a later tier replaces it completely. */
+    /** Specialization ability of a path tier; a later tier replaces it completely. */
     specialization?: SpecializationSpec;
   };
 }
@@ -367,7 +374,7 @@ export type PathMotif = "blades" | "vortex" | "rings";
 export interface PathVisual {
   color: number;
   motif: PathMotif;
-  /** Display name and tactical role of a specialization path; Aura paths take the name from their upgrades. */
+  /** Display name and tactical role of a specialization path; Aura tracks take the name from their upgrades. */
   name?: string;
   role?: string;
 }
@@ -381,6 +388,8 @@ export interface TowerVisual {
   impact?: "spark" | "burst";
   /** Look per upgrade path, once a tower has chosen one. */
   paths?: Readonly<Record<string, PathVisual>>;
+  /** Aura only: look per track, until a path is chosen. */
+  tracks?: Readonly<Record<string, PathVisual>>;
 }
 export interface TowerDefinition {
   id: string;

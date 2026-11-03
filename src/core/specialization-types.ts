@@ -4,7 +4,7 @@
  */
 export type DamagePredicate = "heavy" | "heavy-air" | "armored" | "isolated" | "burning";
 
-export type SpecializationSpec =
+export type AttackSpecialization =
   /** Hits deal `1 + bonus` times their damage to enemies matching the predicate. */
   | { kind: "conditional-damage"; predicate: DamagePredicate; bonus: number }
   /** Ignores this share of the `armor` trait's reduction. */
@@ -93,8 +93,130 @@ export type SpecializationSpec =
   /** Siphon: each counted slowed enemy also gives the towers around it `bonus` more damage. */
   | { kind: "power-tap"; bonus: number }
   // ── end g2 ──
+  // ── trap paths ──
+  /** Caltrops: bleeding enemies are slowed to `1 - slow` of their speed while they bleed. */
+  | { kind: "hamstring"; slow: number }
+  /** Caltrops: bleeding enemies take `bonus` more damage from every source while they bleed. */
+  | { kind: "open-wounds"; bonus: number }
+  /** Tar Pit: tarred enemies are also oiled (`boost` times burns) for `duration` seconds. */
+  | { kind: "tar-oil"; boost: number; duration: number }
+  /** Spring: thrown enemies take `bonus` more damage for `duration` seconds. */
+  | { kind: "concussion"; bonus: number; duration: number }
+  /** Tripwire: the next shot of each alerted tower deals `bonus` more damage. */
+  | { kind: "alarm-volley"; bonus: number }
+  /** Tripwire: reveals stealthed enemies within its alarm radius for `duration` seconds. */
+  | { kind: "flare"; duration: number }
+  /** Barricade: enemies held at the wall take `bonus` more damage from every source. */
+  | { kind: "held-exposure"; bonus: number }
+  /** Warp Pad: warped enemies are confused for `duration` seconds. */
+  | { kind: "warp-daze"; duration: number }
+  // ── end trap paths ──
   /** An expiring pool erupts once: `factor` of its total burn as an area hit over its radius. */
   | { kind: "eruption"; factor: number };
+
+/**
+ * Specialization abilities of support towers (levels 4 to 6) and Aura (levels 5 to 7). They never travel on a damage
+ * source: the support systems read them from the tower. Each adds one new effect next to the tower's own effect.
+ */
+export type SupportSpecialization =
+  // ── support economy ──
+  /** Beacon: heavy enemies and bosses killed in radius pay `amount` credits, at most `cap` per wave. */
+  | { kind: "big-game"; amount: number; cap: number }
+  /** Beacon: enemies in radius lose `slow` of their speed. */
+  | { kind: "lure"; slow: number }
+  /** Beacon: every `every` kills in radius restore 1 reactor energy, at most 1 per wave. */
+  | { kind: "field-rations"; every: number }
+  /** Refinery: `amount` of the income is paid at wave start instead of wave end. */
+  | { kind: "advance"; amount: number }
+  /** Refinery: +`amount` credits per wave it has stood, at most +`cap`. */
+  | { kind: "compounding"; amount: number; cap: number }
+  /** Refinery: attack towers within `radius` fire `bonus` faster. */
+  | { kind: "fuel-line"; bonus: number; radius: number }
+  /** Vault: a wave without a leak pays `amount` credits. */
+  | { kind: "clean-sheet"; amount: number }
+  /** Vault: `share` of the credits spent during the wave count as unspent for the interest. */
+  | { kind: "investment"; share: number }
+  /** Vault: every `every` interest credits paid restore 1 reactor energy, at most 1 per wave. */
+  | { kind: "reserve-cells"; every: number }
+  /** Workshop: builds in radius cost `share` less. */
+  | { kind: "prefab"; share: number }
+  /** Workshop: towers in radius sell for `share` of what was spent. */
+  | { kind: "refit"; share: number }
+  /** Workshop: towers in radius at their max level deal `bonus` more damage. */
+  | { kind: "calibration"; bonus: number }
+  /** Repair Dock: the first leaks of each wave are refunded right away, up to `amount` energy. */
+  | { kind: "triage"; amount: number }
+  /** Repair Dock: each repair point it cannot use pays `amount` credits. */
+  | { kind: "salvage"; amount: number }
+  /** Repair Dock: below half reactor energy, attack towers within `radius` fire `bonus` faster. */
+  | { kind: "damage-control"; bonus: number; radius: number }
+  /** Shield Generator: refills `amount` absorb points every `every` seconds of a wave. */
+  | { kind: "recharge"; amount: number; every: number }
+  /** Shield Generator: an absorbed hit stuns ground enemies within `radius` of the reactor for `duration` seconds. */
+  | { kind: "shockwave"; duration: number; radius: number }
+  /** Shield Generator: each absorb point left unused at wave end pays `amount` credits. */
+  | { kind: "overflow"; amount: number }
+  // ── end support economy ──
+  // ── support combat ──
+  /** Tracker: marked enemies lose `fraction` of their armor reduction. */
+  | { kind: "weak-point"; fraction: number }
+  /** Tracker: the strongest enemy in radius takes another `bonus` more damage. */
+  | { kind: "hunters-mark"; bonus: number }
+  /** Tracker: the mark stays `duration` seconds after an enemy leaves the radius. */
+  | { kind: "lingering-tag"; duration: number }
+  /** Overclock: after the window, a `boost` fire-rate bonus fades out over `duration` seconds. */
+  | { kind: "afterburn"; boost: number; duration: number }
+  /** Overclock: the window also opens for `duration` seconds when a wave's first enemy enters the radius. */
+  | { kind: "opening-salvo"; duration: number }
+  /** Overclock: shots fired during the window deal `bonus` more damage. */
+  | { kind: "charged-rounds"; bonus: number }
+  /** Fire Control: crits ignore `fraction` of armor. */
+  | { kind: "penetrator"; fraction: number }
+  /** Fire Control: crits slow the target by `slow` for `duration` seconds. */
+  | { kind: "stagger"; slow: number; duration: number }
+  /** Fire Control: a crit marks the target; the next hit by another tower deals `bonus` more. */
+  | { kind: "spotting"; bonus: number }
+  /** Armory: hits strip `fraction` of the target's armor for `duration` seconds. */
+  | { kind: "shred"; fraction: number; duration: number }
+  /** Armory: unarmored targets take `bonus` more damage. */
+  | { kind: "hollow-points"; bonus: number }
+  /** Armory: hits deal `bonus` more damage to shields. */
+  | { kind: "shieldbreaker"; bonus: number }
+  /** Skylink: held flyers lose `slow` of their speed. */
+  | { kind: "downlink"; slow: number }
+  /** Skylink: anti-air towers in radius deal `bonus` more damage to flyers. */
+  | { kind: "flak-relay"; bonus: number }
+  /** Skylink: held flyers take `bonus` more damage from every source. */
+  | { kind: "wing-tag"; bonus: number }
+  /** Nexus: also `bonus` more range per tower type. */
+  | { kind: "nexus-resonance"; bonus: number }
+  /** Nexus: also `bonus` faster fire per tower type. */
+  | { kind: "harmony"; bonus: number }
+  /** Nexus: with at least `min` types in radius, enemies in radius take `bonus` more damage. */
+  | { kind: "diversity"; bonus: number; min: number }
+  /** Detector: revealed stealth enemies take `bonus` more damage. */
+  | { kind: "exposure-scan"; bonus: number }
+  /** Detector: every `every` seconds it disrupts the strongest enemy in radius for `duration` seconds. */
+  | { kind: "static-pulse"; every: number; duration: number }
+  /** Detector: revealed enemies stay revealed `duration` seconds after leaving the radius. */
+  | { kind: "afterimage"; duration: number }
+  /** Recycler: the jump's own overkill jumps once more at `factor`. */
+  | { kind: "cascade"; factor: number }
+  /** Recycler: the jump's target also burns for `factor` of the jump over `duration` seconds. */
+  | { kind: "meltdown"; factor: number; duration: number }
+  /** Recycler: every `every` overkill in radius pays 1 credit, at most `cap` per wave. */
+  | { kind: "scrap-yard"; every: number; cap: number }
+  // ── end support combat ──
+  // ── aura paths ──
+  /** Aura: supported hits ignore `fraction` of armor. */
+  | { kind: "piercing-field"; fraction: number }
+  /** Aura: supported towers deal `bonus` more damage to enemies below `threshold` of their HP. */
+  | { kind: "execution-field"; bonus: number; threshold: number }
+  /** Aura: supported towers also get the two stats of the tracks not taken, `bonus` each. */
+  | { kind: "harmonics"; bonus: number };
+  // ── end aura paths ──
+
+export type SpecializationSpec = AttackSpecialization | SupportSpecialization;
 
 export type SpecializationKind = SpecializationSpec["kind"];
 type Field<K extends SpecializationKind> = Exclude<keyof Extract<SpecializationSpec, { kind: K }>, "kind" | "predicate">;
@@ -148,10 +270,81 @@ const FIELDS: { [K in SpecializationKind]: readonly Field<K>[] } = {
   "siphon-fork": ["radius", "count"],
   "power-tap": ["bonus"],
   // ── end g2 ──
+  // ── trap paths ──
+  hamstring: ["slow"],
+  "open-wounds": ["bonus"],
+  "tar-oil": ["boost", "duration"],
+  concussion: ["bonus", "duration"],
+  "alarm-volley": ["bonus"],
+  flare: ["duration"],
+  "held-exposure": ["bonus"],
+  "warp-daze": ["duration"],
+  // ── end trap paths ──
+  // ── support economy ──
+  "big-game": ["amount", "cap"],
+  lure: ["slow"],
+  "field-rations": ["every"],
+  advance: ["amount"],
+  compounding: ["amount", "cap"],
+  "fuel-line": ["bonus", "radius"],
+  "clean-sheet": ["amount"],
+  investment: ["share"],
+  "reserve-cells": ["every"],
+  prefab: ["share"],
+  refit: ["share"],
+  calibration: ["bonus"],
+  triage: ["amount"],
+  salvage: ["amount"],
+  "damage-control": ["bonus", "radius"],
+  recharge: ["amount", "every"],
+  shockwave: ["duration", "radius"],
+  overflow: ["amount"],
+  // ── end support economy ──
+  // ── support combat ──
+  "weak-point": ["fraction"],
+  "hunters-mark": ["bonus"],
+  "lingering-tag": ["duration"],
+  afterburn: ["boost", "duration"],
+  "opening-salvo": ["duration"],
+  "charged-rounds": ["bonus"],
+  penetrator: ["fraction"],
+  stagger: ["slow", "duration"],
+  spotting: ["bonus"],
+  shred: ["fraction", "duration"],
+  "hollow-points": ["bonus"],
+  shieldbreaker: ["bonus"],
+  downlink: ["slow"],
+  "flak-relay": ["bonus"],
+  "wing-tag": ["bonus"],
+  "nexus-resonance": ["bonus"],
+  harmony: ["bonus"],
+  diversity: ["bonus", "min"],
+  "exposure-scan": ["bonus"],
+  "static-pulse": ["every", "duration"],
+  afterimage: ["duration"],
+  cascade: ["factor"],
+  meltdown: ["factor", "duration"],
+  "scrap-yard": ["every", "cap"],
+  // ── end support combat ──
+  // ── aura paths ──
+  "piercing-field": ["fraction"],
+  "execution-field": ["bonus", "threshold"],
+  harmonics: ["bonus"],
+  // ── end aura paths ──
 };
 
+/** Kinds that belong to support towers (and Aura); every other kind belongs to attack towers and traps. */
+export const SUPPORT_KINDS: ReadonlySet<SpecializationKind> = new Set<SupportSpecialization["kind"]>([
+  "big-game", "lure", "field-rations", "advance", "compounding", "fuel-line", "clean-sheet", "investment", "reserve-cells",
+  "prefab", "refit", "calibration", "triage", "salvage", "damage-control", "recharge", "shockwave", "overflow",
+  "weak-point", "hunters-mark", "lingering-tag", "afterburn", "opening-salvo", "charged-rounds", "penetrator", "stagger",
+  "spotting", "shred", "hollow-points", "shieldbreaker", "downlink", "flak-relay", "wing-tag", "nexus-resonance", "harmony",
+  "diversity", "exposure-scan", "static-pulse", "afterimage", "cascade", "meltdown", "scrap-yard",
+  "piercing-field", "execution-field", "harmonics",
+]);
+
 const COUNT = new Set([
-  "every", "count", "maxPerSalvo", "min",
+  "every", "count", "maxPerSalvo", "min", "amount", "cap",
   // ── new towers: g1 (Attack+Control A) ──
   // ── end g1 ──
   // ── new towers: g2 (Control B) ──
@@ -166,7 +359,7 @@ const POSITIVE = new Set([
   // ── end g2 ──
 ]);
 const NON_NEGATIVE = new Set([
-  "bonus", "bonusPerUnused",
+  "bonus", "bonusPerUnused", "boost",
   // ── new towers: g1 (Attack+Control A) ──
   // ── end g1 ──
   // ── new towers: g2 (Control B) ──

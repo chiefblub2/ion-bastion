@@ -6,6 +6,10 @@ export interface Build {
   tower: TowerId;
   x: number;
   y: number;
+  /** Specialization path whose tiers this build buys; without one it stops at its last plain level. */
+  path?: string;
+  /** Aura only: the track it takes; without one the cheapest track. */
+  track?: string;
 }
 /** Deterministic test player: before each wave it spends all affordable credits. */
 export interface Strategy {
@@ -31,12 +35,14 @@ export function play(
   };
   const upgrade = () => {
     const options = g.state.towers
-      .flatMap((t) =>
-        upgradeOptions(t, g.state.wallets[0])
-          // Specializations stay out of the test strategies, so the balance script keeps measuring the base towers.
-          .filter((o) => o.status === "available" && !isSpecialization(o.definition!))
-          .map((o) => ({ id: t.id, upgrade: o.definition!.id, cost: o.definition!.cost })),
-      )
+      .flatMap((t) => {
+        const plan = strategy!.builds.find((b) => b.x === t.x && b.y === t.y && b.tower === t.type);
+        return upgradeOptions(t, g.state.wallets[0])
+          // A build buys only the path it names (none: no specialization) and, for Aura, only its track.
+          .filter((o) => o.status === "available" && (!isSpecialization(o.definition!) || o.definition!.path === plan?.path))
+          .filter((o) => !o.definition!.track || !plan?.track || o.definition!.track === plan.track)
+          .map((o) => ({ id: t.id, upgrade: o.definition!.id, cost: o.definition!.cost }));
+      })
       .sort((a, b) => a.cost - b.cost);
     return (
       !!options.length &&

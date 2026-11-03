@@ -1,6 +1,7 @@
 import { resolveUpgrades } from "../core/upgrades";
 import { credit } from "../core/economy";
 import type { AttackKind, AttackSpec, CritAttack, DamageSource, Enemy, OverclockAttack, Point, Sim, Tower, TowerId } from "../core/types";
+import type { SupportSpecialization } from "../core/specialization-types";
 import type { Hit } from "./damage";
 import { dist } from "./path";
 import { isNetted } from "./status";
@@ -16,6 +17,39 @@ function strongest(sim: Sim, kind: AttackKind, key: string, e?: Enemy) {
     if (resolved.attack.kind !== kind || (e && dist(e, t) > resolved.stats.range) || isSuppressed(sim, t)) continue;
     best = Math.max(best, (resolved.attack as unknown as Record<string, number>)[key]);
   }
+  return best;
+}
+/** The specialization of kind `kind` a tower holds, if any. */
+export function specialOf<K extends SupportSpecialization["kind"]>(sim: Sim, t: Tower, kind: K): Extract<SupportSpecialization, { kind: K }> | undefined {
+  const special = resolveUpgrades(t, sim.content).specialization;
+  return special?.kind === kind ? (special as Extract<SupportSpecialization, { kind: K }>) : undefined;
+}
+/**
+ * Support paths: calls `fn` for every unsuppressed tower holding the specialization `kind` whose radius reaches
+ * `at` (any distance without `at`). Path effects take the strongest such tower, like the base effects (plan rule 6).
+ */
+export function withSpecial<K extends SupportSpecialization["kind"]>(
+  sim: Sim,
+  kind: K,
+  at: Point | undefined,
+  fn: (special: Extract<SupportSpecialization, { kind: K }>, tower: Tower, range: number) => void,
+) {
+  for (const t of sim.state.towers) {
+    const resolved = resolveUpgrades(t, sim.content);
+    if (resolved.specialization?.kind !== kind) continue;
+    if ((at && dist(at, t) > resolved.stats.range) || isSuppressed(sim, t)) continue;
+    fn(resolved.specialization as Extract<SupportSpecialization, { kind: K }>, t, resolved.stats.range);
+  }
+}
+/** The largest value of `key` among the towers `withSpecial` finds; 0 without one. */
+export function strongestSpecial<K extends SupportSpecialization["kind"]>(
+  sim: Sim,
+  kind: K,
+  key: Exclude<keyof Extract<SupportSpecialization, { kind: K }>, "kind">,
+  at?: Point,
+) {
+  let best = 0;
+  withSpecial(sim, kind, at, (special) => (best = Math.max(best, special[key] as number)));
   return best;
 }
 /** Bounty Beacon: extra credits for a kill in range, rounded so co-op splits stay whole. */

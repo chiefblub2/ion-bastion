@@ -177,9 +177,20 @@ export const RECYCLER_UPGRADES = supportUpgrades([
 ]);
 // ── end g5 ──
 
-/** A trap: an attack tower on a path cell; its trigger radius stays the same at every level. */
+/**
+ * A trap: an attack tower on a path cell; its trigger radius stays the same at every level. Like an attack tower it
+ * branches into three specialization paths (levels 6 to 8) after level 5.
+ */
 export function trapTower<T extends Omit<TowerDefinition, "upgrades" | "attack" | "placement"> & { attack: Exclude<AttackSpec, SupportAttack> }>(definition: T, specials: LevelSpecials = {}) {
-  return { ...definition, placement: "path" as const, upgrades: attackUpgrades(definition, definition.cost, specials, false) };
+  const levels = attackUpgrades(definition, definition.cost, specials, false);
+  const l5 = { damage: definition.damage, range: definition.range, interval: definition.interval, ...levels[levels.length - 1].effects.stats };
+  const paths = specializationVisuals(definition.id);
+  return {
+    ...definition,
+    ...(paths ? { visual: { ...definition.visual, paths } } : {}),
+    placement: "path" as const,
+    upgrades: [...levels, ...specializationUpgrades(definition.id, definition.cost, l5)],
+  };
 }
 
 /**

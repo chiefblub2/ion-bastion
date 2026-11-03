@@ -2,17 +2,17 @@ import type { DamagePredicate } from "../core/specialization-types";
 import type { PathVisual, SpecializationSpec, TowerStats, UpgradeDefinition } from "../core/types";
 
 /**
- * Specializations: after level 5 every attack tower built with `attackTower` picks one of three
- * paths (A, B, C) with three tiers each (levels 6 to 8). Tier values are final values of that
- * tier, never stacked on the previous tier.
+ * Specializations: after level 5 every attack tower built with `attackTower` and every trap built with `trapTower`
+ * picks one of three paths (A, B, C) with three tiers each (levels 6 to 8). Tier values are final values of that
+ * tier, never stacked on the previous tier. Support towers branch after level 3 (`support-specializations.ts`).
  */
-interface Tier {
+export interface Tier {
   description: string;
   stats?: Partial<TowerStats>;
   attack?: Readonly<Record<string, number>>;
   specialization?: SpecializationSpec;
 }
-interface PathData {
+export interface PathData {
   slug: string;
   name: string;
   /** Tactical role shown on the path card. */
@@ -31,13 +31,13 @@ const PATH_LOOKS: readonly Omit<PathVisual, "name" | "role">[] = [
 ];
 const NUMERALS = ["I", "II", "III"] as const;
 
-const pct = (value: number) => `${Math.round(value * 1000) / 10}%`;
-const num = (value: number) => `${Math.round(value * 100) / 100}`;
+export const pct = (value: number) => `${Math.round(value * 1000) / 10}%`;
+export const num = (value: number) => `${Math.round(value * 100) / 100}`;
 const ordinal = (n: number) => (n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`);
 /** Three tiers from three value sets. */
-const tiers = <T,>(values: readonly [T, T, T], tier: (value: T) => Tier) =>
+export const tiers = <T,>(values: readonly [T, T, T], tier: (value: T) => Tier) =>
   values.map(tier) as unknown as readonly [Tier, Tier, Tier];
-const fixed = <T,>(values: readonly [T, T, T], tier: (value: T) => Tier) => () => tiers(values, tier);
+export const fixed = <T,>(values: readonly [T, T, T], tier: (value: T) => Tier) => () => tiers(values, tier);
 
 /** Shorter time between attacks, computed from the level-5 interval. */
 const faster = (cuts: readonly [number, number, number]) => (l5: TowerStats) =>
@@ -525,20 +525,33 @@ export const SPECIALIZATIONS: Readonly<Record<string, readonly [PathData, PathDa
     },
   ],
   // ── end g2 ──
+  // ── trap paths ──
+  // ── end trap paths ──
 };
 
-/** The nine specialization upgrades of a tower, or none if it has no paths. */
-export function specializationUpgrades(id: string, buildCost: number, l5: TowerStats): readonly UpgradeDefinition[] {
-  return (SPECIALIZATIONS[id] ?? []).flatMap(({ slug, name, tiers: make }) =>
-    make(l5).map(({ description, stats, attack, specialization }, index) => ({
+/** Where a tower's paths branch off, and what each tier costs. */
+export interface Branch {
+  /** Level the paths branch from; tier I is level `from + 1`. */
+  from: number;
+  /** Tier I needs this upgrade, or (Aura, whose tracks end in different ids) only the level `from`. */
+  after: string | { minLevel: number };
+  /** Price of tier 1, 2, 3. */
+  costs: readonly [number, number, number];
+}
+
+/** The nine path upgrades of three paths after `branch`. */
+export function pathUpgrades(paths: readonly PathData[], base: TowerStats, branch: Branch): readonly UpgradeDefinition[] {
+  return paths.flatMap(({ slug, name, tiers: make }) =>
+    make(base).map(({ description, stats, attack, specialization }, index) => ({
       id: `${slug}-${index + 1}`,
       label: `${name} ${NUMERALS[index]}`,
       description: index === 0 ? `${description} Locks the other two paths.` : description,
-      cost: Math.round(buildCost * SPECIALIZATION_COSTS[index]),
-      requires: [index === 0 ? "level-5" : `${slug}-${index}`],
+      cost: branch.costs[index],
+      requires: index > 0 ? [`${slug}-${index}`] : typeof branch.after === "string" ? [branch.after] : [],
+      ...(index === 0 && typeof branch.after !== "string" ? { minLevel: branch.after.minLevel } : {}),
       path: slug,
       effects: {
-        level: 6 + index,
+        level: branch.from + 1 + index,
         ...(stats ? { stats } : {}),
         ...(attack ? { attack } : {}),
         ...(specialization ? { specialization } : {}),
@@ -547,8 +560,18 @@ export function specializationUpgrades(id: string, buildCost: number, l5: TowerS
   );
 }
 
+/** The nine specialization upgrades of an attack tower or trap (levels 6 to 8), or none if it has no paths. */
+export function specializationUpgrades(id: string, buildCost: number, l5: TowerStats): readonly UpgradeDefinition[] {
+  const costs = SPECIALIZATION_COSTS.map((factor) => Math.round(buildCost * factor)) as unknown as Branch["costs"];
+  return pathUpgrades(SPECIALIZATIONS[id] ?? [], l5, { from: 5, after: "level-5", costs });
+}
+
+/** Path looks with name and role. */
+export const pathVisuals = (paths: readonly PathData[]): Readonly<Record<string, PathVisual>> =>
+  Object.fromEntries(paths.map(({ slug, name, role }, index) => [slug, { ...PATH_LOOKS[index], name, role }]));
+
 /** Path looks with name and role, or undefined if the tower has no paths. */
 export function specializationVisuals(id: string): Readonly<Record<string, PathVisual>> | undefined {
   const paths = SPECIALIZATIONS[id];
-  return paths && Object.fromEntries(paths.map(({ slug, name, role }, index) => [slug, { ...PATH_LOOKS[index], name, role }]));
+  return paths && pathVisuals(paths);
 }

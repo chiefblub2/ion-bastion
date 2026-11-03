@@ -40,6 +40,9 @@ const FIELDS: Record<string, { label: string; unit: string; scale: number }> = {
   share: { label: "Damage shared", ...SHARE },
   cells: { label: "Knockback", ...CELLS },
   // ── end g2 ──
+  amount: { label: "Amount", ...PLAIN },
+  cap: { label: "Most per wave", ...PLAIN },
+  boost: { label: "Boost", ...SHARE },
 };
 /** Labels that read differently for one kind. */
 const OVERRIDES: Partial<Record<SpecializationSpec["kind"], Record<string, string>>> = {
@@ -69,6 +72,14 @@ const OVERRIDES: Partial<Record<SpecializationSpec["kind"], Record<string, strin
   "siphon-fork": { count: "Extra beams" },
   "power-tap": { bonus: "Damage per enemy" },
   // ── end g2 ──
+  // ── trap paths ──
+  // ── end trap paths ──
+  // ── support economy ──
+  // ── end support economy ──
+  // ── support combat ──
+  // ── end support combat ──
+  // ── aura paths ──
+  // ── end aura paths ──
 };
 const PREDICATES = { heavy: "heavy targets", "heavy-air": "heavy flyers", armored: "armored enemies", isolated: "a lone target", burning: "burning enemies" };
 

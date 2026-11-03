@@ -1,7 +1,7 @@
 import { DEFAULT_CONTENT } from "../content";
-import { attackError, attackOverrideError } from "../systems/attacks";
+import { attackError, attackOverrideError, isSupport } from "../systems/attacks";
 import { ContentError } from "./errors";
-import { specializationError } from "./specialization-types";
+import { specializationError, SUPPORT_KINDS } from "./specialization-types";
 import type { SpecializationSpec } from "./specialization-types";
 import { discountedCost, discountEvent, upgradeDiscount } from "../systems/workshop";
 import type {
@@ -55,8 +55,11 @@ export function upgradeOption(
   if (tower.upgrades.includes(id)) return { definition, status: "purchased" };
   const chosen = towerPath(tower, content);
   if (definition.path && chosen && definition.path !== chosen) return { definition, status: "excluded" };
+  const track = definition.track && towerTrack(tower, content);
+  if (track && definition.track !== track) return { definition, status: "excluded" };
   if (definition.requires.some((required) => !tower.upgrades.includes(required)))
     return { definition, status: "locked" };
+  if (definition.minLevel !== undefined && towerLevel(tower, content) < definition.minLevel) return { definition, status: "locked" };
   if (credits < discountedCost(definition.cost, discount)) return { definition, status: "unaffordable" };
   return { definition, status: "available" };
 }
@@ -75,7 +78,7 @@ export function upgradeOptions(
 export const openUpgrades = (tower: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT) =>
   upgradeOptions(tower, Infinity, content).filter((option) => option.status === "available").map((option) => option.definition!.id);
 
-/** A specialization tier: a level on a path (levels 6 to 8 of attack towers); Aura paths carry no level. */
+/** A specialization tier: a level on a path (levels 6–8, 4–6 for support towers, 5–7 for Aura); Aura's tracks are not. */
 export const isSpecialization = (upgrade: UpgradeDefinition) => upgrade.path !== undefined && upgrade.effects.level !== undefined;
 
 /** The path fixed by the first purchased path upgrade, if any. */
@@ -88,10 +91,20 @@ export function towerPath(tower: UpgradeProgress, content: ContentPack = DEFAULT
   return undefined;
 }
 
-/** Display colour of a built tower: its path colour once chosen. */
+/** Aura: the track fixed by the first purchased track upgrade, if any. */
+export function towerTrack(tower: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT): string | undefined {
+  const upgrades = content.towers[tower.type].upgrades;
+  for (const id of tower.upgrades) {
+    const track = upgrades.find((upgrade) => upgrade.id === id)?.track;
+    if (track) return track;
+  }
+  return undefined;
+}
+
+/** Display colour of a built tower: its path colour once chosen, else its track colour (Aura). */
 export function towerColor(tower: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT): number {
-  const definition = content.towers[tower.type], path = towerPath(tower, content);
-  return (path ? definition.visual.paths?.[path]?.color : undefined) ?? definition.color;
+  const definition = content.towers[tower.type], path = towerPath(tower, content), track = towerTrack(tower, content);
+  return (path ? definition.visual.paths?.[path]?.color : undefined) ?? (track ? definition.visual.tracks?.[track]?.color : undefined) ?? definition.color;
 }
 
 /** Nothing left to buy: every upgrade is owned or excluded by the chosen path. */
@@ -200,7 +213,10 @@ export function validateUpgradeDefinitions(tower: TowerDefinition, path = tower.
     if (!Number.isInteger(upgrade.cost) || upgrade.cost <= 0) fail("Invalid upgrade cost.");
     if (!upgrade.label || !upgrade.description || !Array.isArray(upgrade.requires)) fail("Incomplete upgrade.");
     if (upgrade.path !== undefined && (typeof upgrade.path !== "string" || !upgrade.path)) fail("Invalid upgrade path.");
-    if (upgrade.path && tower.visual?.paths && !tower.visual.paths[upgrade.path]) fail(`Pfad '${upgrade.path}' ohne Optik (visual.paths).`);
+    if (upgrade.path && tower.visual?.paths && !tower.visual.paths[upgrade.path]) fail(`Path '${upgrade.path}' has no look (visual.paths).`);
+    if (upgrade.track !== undefined && (typeof upgrade.track !== "string" || !upgrade.track || upgrade.path !== undefined)) fail("Invalid upgrade track: a non-empty name, never together with a path.");
+    if (upgrade.track && tower.visual?.tracks && !tower.visual.tracks[upgrade.track]) fail(`Track '${upgrade.track}' has no look (visual.tracks).`);
+    if (upgrade.minLevel !== undefined && (!Number.isInteger(upgrade.minLevel) || upgrade.minLevel < 2)) fail("Invalid minimum level: an integer of at least 2.");
     const effects = upgrade.effects;
     if (
       !effects ||
@@ -217,6 +233,9 @@ export function validateUpgradeDefinitions(tower: TowerDefinition, path = tower.
     if (attackProblem) fail(attackProblem);
     const specializationProblem = effects.specialization && specializationError(effects.specialization);
     if (specializationProblem) fail(specializationProblem);
+    if (effects.specialization && tower.attack && SUPPORT_KINDS.has(effects.specialization.kind) !== isSupport(tower.attack))
+      fail(isSupport(tower.attack) ? "Support towers take only support specializations." : "Support specializations belong to support towers.");
+    if (tower.placement === "path" && upgrade.path && effects.stats?.range !== undefined) fail("A trap path never changes the trigger radius.");
     if (effects.level !== undefined && (!Number.isInteger(effects.level) || effects.level < 2))
       fail("Invalid upgrade level.");
     for (const [key, value] of Object.entries(effects.stats ?? {}))
