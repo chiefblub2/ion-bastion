@@ -91,17 +91,19 @@ function turret(ctx: TurretContext) {
       }
     },
   ]);
+  // A collar round each rail per coil, so the channel between the rails stays open.
   for (const p of coils(level))
-    parts.push([
-      depth(a, p, 0),
-      () => {
-        part(g, x, y0, a, rect(p - 1.1, p + 1.1, -4.9, 4.9), RAIL_LOW - 0.6, RAIL_TOP + 1.2, 0, GUN.deep, GUN.side, shade(GUN.metal, -0.2));
-        if (level >= 3) {
-          const [bx, by] = P(p, Math.cos(a) > 0 ? 4 : -4, RAIL_TOP + 1.2);
-          disc(g, bx, by, 0.7, OUTLINE);
-        }
-      },
-    ]);
+    for (const q of [-RAIL_Q, RAIL_Q])
+      parts.push([
+        depth(a, p, q),
+        () => {
+          part(g, x, y0, a, rect(p - 1.1, p + 1.1, q - 2, q + 2), RAIL_LOW - 0.6, RAIL_TOP + 1, 0, GUN.deep, GUN.side, shade(GUN.metal, -0.2));
+          if (level >= 3) {
+            const [bx, by] = P(p, q + (q > 0 ? 1.1 : -1.1), RAIL_TOP + 1);
+            disc(g, bx, by, 0.55, OUTLINE);
+          }
+        },
+      ]);
   paint(parts);
 }
 
@@ -131,14 +133,13 @@ function live(ctx: TurretContext) {
     }
   }
   coils(level).forEach((p, i, all) => {
-    const on = Math.min(1, Math.max(0, charge * all.length - i)),
-      [ax, ay] = P(p, -4.6, RAIL_TOP + 1.3),
-      [bx, by] = P(p, 4.6, RAIL_TOP + 1.3);
+    const on = Math.min(1, Math.max(0, charge * all.length - i));
     if (on <= 0.05) return;
-    g.lineStyle(0.8, shade(c, -0.3 + 0.3 * on), 1);
-    g.lineBetween(ax, ay, bx, by);
-    glow.lineStyle(2.6, c, 0.25 * on);
-    glow.lineBetween(ax, ay, bx, by);
+    for (const q of [-RAIL_Q, RAIL_Q]) {
+      const [lx, ly] = P(p, q, RAIL_TOP + 1.1);
+      disc(g, lx, ly, 0.7, shade(c, -0.5 + 0.5 * on));
+      disc(glow, lx, ly, 2.2, c, 0.25 * on);
+    }
   });
   // The charge runs between the rails; their fronts flare on a shot.
   const run = back + 2 + (end - back - 4) * charge,
