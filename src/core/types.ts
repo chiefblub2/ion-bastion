@@ -842,6 +842,12 @@ export interface Enemy extends Point {
   warped?: true;
   /** Spotting: marked by a crit of tower `by`; the next hit by another tower deals `bonus` more and clears it. */
   spotted?: { by: number; bonus: number };
+  // ── support combat ──
+  /** Tracker Lingering Tag: a mark of `amount` that holds until `until`; absent until a Lingering Tag first marks it. */
+  tag?: { amount: number; until: number };
+  /** Detector Afterimage: stays revealed until this time; absent until an Afterimage first reveals it. */
+  revealUntil?: number;
+  // ── end support combat ──
 }
 export interface Tower extends Point {
   id: number;
@@ -869,6 +875,10 @@ export interface Tower extends Point {
   barrier?: number;
   /** Overclock Opening Salvo: when this wave's salvo window opened; absent until used, cleared after each wave. */
   salvo?: number;
+  // ── support combat ──
+  /** Recycler Scrap Yard: overkill counted towards the next credit and credits paid this wave; absent until used, cleared after each wave. */
+  scrapYard?: { overkill: number; paid: number };
+  // ── end support combat ──
 }
 /** Target selection of an attack tower; ties fall back to path progress, then id. */
 export type TargetPriority = "first" | "last" | "strong" | "weak" | "close";

@@ -9,6 +9,7 @@ import { tickZones } from "../systems/zones";
 import { landStrikes } from "../systems/strikes";
 import { updateDetection } from "../systems/detection";
 import { tickProtocols } from "../systems/protocols";
+import { tickCombatPathsA } from "../systems/combat-paths-a";
 import { stateHash } from "./hash";
 import { spawnEnemies, settleWave } from "../systems/waves";
 import { beginWave, earlyBonus, settleCircle, wavesLeft } from "../systems/circle";
@@ -332,6 +333,7 @@ export class Game implements Sim {
     tickStatus(this, dt);
     moveEnemies(this, dt);
     updateDetection(this);
+    tickCombatPathsA(this, dt); // support combat: lingering marks and reveals, Static Pulse
     tickProtocols(this, dt);
     moveProjectiles(this, dt);
     fireAftershocks(this);

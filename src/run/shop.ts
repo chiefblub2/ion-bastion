@@ -15,7 +15,7 @@ export const SHOP_TEXT: Record<ShopKind, string> = {
   discount: "Prototype discount: a roster tower costs 25% less for the rest of the run.",
   relic: "A relic.",
   tower: "A tower for your roster.",
-  doctrine: "A Doctrine: unlock one specialization path (levels 6–8) of a roster tower.",
+  doctrine: "A Doctrine: unlock one specialization path of a roster tower.",
   xp: `Field drills: +${XP_BOUGHT} rank XP for a roster tower.`,
 };
 /** Items that need a roster tower as their target. */

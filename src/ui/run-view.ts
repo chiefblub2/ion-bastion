@@ -388,7 +388,7 @@ function introHtml() {
         )
         .join("")}</ol>`
     : "";
-  return `<div class="run-intro"><p>Ten missions in three acts and a Final Stand, on campaign maps with waves generated from each map's enemies. You start with three towers. Every win drafts another, earns Scrap and rank XP, and every second one a relic; Doctrines unlock levels 6–8. The reactor's damage carries from mission to mission, and <b>one lost mission ends the run</b>.</p>
+  return `<div class="run-intro"><p>Ten missions in three acts and a Final Stand, on campaign maps with waves generated from each map's enemies. You start with three towers. Every win drafts another, earns Scrap and rank XP, and every second one a relic; Doctrines unlock a tower's specialization path. The reactor's damage carries from mission to mission, and <b>one lost mission ends the run</b>.</p>
 <div class="run-options"><fieldset class="run-length"><legend>Length</legend><label><input type="radio" name="run-length" value="full"${length === "full" && u.full ? " checked" : ""}${u.full ? "" : " disabled"}> Full run <small>10 missions${u.full ? "" : " · win a short run first"}</small></label><label><input type="radio" name="run-length" value="short"${length === "short" || !u.full ? " checked" : ""}> Short run <small>act I, 3 missions</small></label></fieldset>
 <label class="run-threat">Threat <select name="run-threat"${u.threat ? "" : " disabled"}>${levels}</select></label></div>
 <div class="run-start"><button class="primary" data-run="new">New Run <span>→</span></button><form id="run-seed-form" class="run-seed"><label for="run-seed">Seed</label><input id="run-seed" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="4F2K9Q"><button class="quiet">Play seed</button></form>${
@@ -685,7 +685,7 @@ function doctrineDecision(r: RunState, head = "", mode: "reward" | "act" | "shop
         color = v ? `#${v.color.toString(16).padStart(6, "0")}` : "var(--run)";
       return { key: `${tower}:${path}`, label: v?.name ?? path, html: `<span class="run-path-dot" style="--path:${color}" aria-hidden="true"></span><span class="run-option-text"><strong>${escape(v?.name ?? path)}</strong><small>${escape(v?.role ?? "")}</small></span>` };
     });
-  let preview = emptyPreview("A Doctrine unlocks one specialization path (levels 6–8) of a tower type for the rest of the run. Select a path to see its tiers.");
+  let preview = emptyPreview("A Doctrine unlocks one specialization path of a tower type for the rest of the run (levels 6–8; 4–6 for support towers, 5–7 for Aura). Select a path to see its tiers.");
   if (pick) {
     const v = d.visual.paths?.[pick],
       tiers = d.upgrades.filter((u) => isSpecialization(u) && u.path === pick);
@@ -708,7 +708,7 @@ function actDecision(r: RunState, head = "") {
   const offers = r.offers.legendary!,
     options: Option[] = [
       ...offers.map((id) => relicOption(r, id, "legendary")),
-      { key: "doctrine", label: "Doctrine", html: `<span class="run-icon run-glyph" aria-hidden="true">✦</span><span class="run-option-text"><strong>A Doctrine</strong><small>levels 6–8 for a tower</small></span>` },
+      { key: "doctrine", label: "Doctrine", html: `<span class="run-icon run-glyph" aria-hidden="true">✦</span><span class="run-option-text"><strong>A Doctrine</strong><small>a specialization path</small></span>` },
     ],
     pick = selected && (selected === "doctrine" || offers.includes(selected as RelicId)) ? selected : undefined;
   return decisionHtml({
@@ -723,7 +723,7 @@ function actDecision(r: RunState, head = "") {
     preview: !pick
       ? emptyPreview("Select a relic or the Doctrine to see the details.")
       : pick === "doctrine"
-        ? `<h3>✦ A Doctrine</h3><p>Unlock one specialization path (levels 6–8) of a roster tower for the rest of the run. You choose the tower and path next.</p><p class="run-fit-note" data-fits="true">${escape(doctrineCandidates(r, host.content).map(towerName).join(", "))} can take one.</p>`
+        ? `<h3>✦ A Doctrine</h3><p>Unlock one specialization path of a roster tower for the rest of the run. You choose the tower and path next.</p><p class="run-fit-note" data-fits="true">${escape(doctrineCandidates(r, host.content).map(towerName).join(", "))} can take one.</p>`
         : relicPreview(r, pick as RelicId, "legendary"),
     actions: `<button class="quiet" data-run="skip">Skip both</button>${takeButton(pick && (pick === "doctrine" ? "Choose the Doctrine" : `Take ${relicOf(pick as RelicId).name}`))}`,
   });

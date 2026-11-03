@@ -19,6 +19,110 @@ export const SUPPORT_SPECIALIZATIONS: Readonly<Record<string, SupportPaths>> = {
   // ── support economy ──
   // ── end support economy ──
   // ── support combat ──
+  tracker: {
+    costs: [300, 400, 600],
+    paths: [
+      {
+        slug: "weak-point", name: "Weak Point", role: "Armor",
+        tiers: fixed([0.2, 0.3, 0.4] as const, (fraction) => ({
+          specialization: { kind: "weak-point", fraction },
+          description: `Enemies in its radius also lose ${pct(fraction)} of their armor reduction.`,
+        })),
+      },
+      {
+        slug: "hunters-mark", name: "Hunter's Mark", role: "Boss",
+        tiers: fixed([0.1, 0.15, 0.2] as const, (bonus) => ({
+          specialization: { kind: "hunters-mark", bonus },
+          description: `The strongest enemy in its radius (highest max HP) takes another +${pct(bonus)} damage.`,
+        })),
+      },
+      {
+        slug: "lingering-tag", name: "Lingering Tag", role: "Kill zone",
+        tiers: fixed([1, 1.5, 2] as const, (duration) => ({
+          specialization: { kind: "lingering-tag", duration },
+          description: `The mark stays on for ${duration} s after an enemy leaves its radius.`,
+        })),
+      },
+    ],
+  },
+  detector: {
+    costs: [180, 240, 360],
+    paths: [
+      {
+        slug: "exposure-scan", name: "Exposure Scan", role: "Stealth hunt",
+        tiers: fixed([0.1, 0.15, 0.2] as const, (bonus) => ({
+          specialization: { kind: "exposure-scan", bonus },
+          description: `Stealth enemies it reveals take +${pct(bonus)} damage from every source.`,
+        })),
+      },
+      {
+        slug: "static-pulse", name: "Static Pulse", role: "Disruption",
+        tiers: fixed([6, 5, 4] as const, (every) => ({
+          specialization: { kind: "static-pulse", every, duration: 1.5 },
+          description: `Every ${every} s it disrupts the strongest enemy in its radius for 1.5 s, switching off its special abilities.`,
+        })),
+      },
+      {
+        slug: "afterimage", name: "Afterimage", role: "Tracking",
+        tiers: fixed([1, 2, 3] as const, (duration) => ({
+          specialization: { kind: "afterimage", duration },
+          description: `Stealth enemies it reveals stay revealed for ${duration} s after leaving its radius.`,
+        })),
+      },
+    ],
+  },
+  recycler: {
+    costs: [300, 400, 600],
+    paths: [
+      {
+        slug: "cascade", name: "Cascade", role: "Crowds",
+        tiers: fixed([0.3, 0.4, 0.5] as const, (factor) => ({
+          specialization: { kind: "cascade", factor },
+          description: `When a jump kills, ${pct(factor)} of its own overkill jumps once more.`,
+        })),
+      },
+      {
+        slug: "meltdown", name: "Meltdown", role: "Burn",
+        tiers: fixed([0.3, 0.45, 0.6] as const, (factor) => ({
+          specialization: { kind: "meltdown", factor, duration: 3 },
+          description: `The jump's target also burns for ${pct(factor)} of the jump over 3 s.`,
+        })),
+      },
+      {
+        slug: "scrap-yard", name: "Scrap Yard", role: "Economy",
+        tiers: fixed([[60, 8], [50, 10], [40, 12]] as const, ([every, cap]) => ({
+          specialization: { kind: "scrap-yard", every, cap },
+          description: `Every ${every} overkill damage in its radius pays 1 credit, up to ${cap} per wave.`,
+        })),
+      },
+    ],
+  },
+  armory: {
+    costs: [270, 360, 540],
+    paths: [
+      {
+        slug: "shred", name: "Shred", role: "Armor",
+        tiers: fixed([0.1, 0.15, 0.2] as const, (fraction) => ({
+          specialization: { kind: "shred", fraction, duration: 2 },
+          description: `Hits of towers in its radius strip ${pct(fraction)} of an armored target's armor for 2 s, for every tower.`,
+        })),
+      },
+      {
+        slug: "hollow-points", name: "Hollow Points", role: "Raw damage",
+        tiers: fixed([0.06, 0.09, 0.12] as const, (bonus) => ({
+          specialization: { kind: "hollow-points", bonus },
+          description: `Hits of towers in its radius deal +${pct(bonus)} damage to unarmored targets.`,
+        })),
+      },
+      {
+        slug: "shieldbreaker", name: "Shieldbreaker", role: "Shields",
+        tiers: fixed([0.2, 0.35, 0.5] as const, (bonus) => ({
+          specialization: { kind: "shieldbreaker", bonus },
+          description: `Hits of towers in its radius deal +${pct(bonus)} damage to shields.`,
+        })),
+      },
+    ],
+  },
 
   overclock: {
     costs: [330, 440, 660],

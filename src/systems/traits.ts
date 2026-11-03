@@ -6,6 +6,7 @@ import { createEnemy } from "./spawn";
 import { armorDissolved, hasStatus } from "./status";
 import { armoryPierce } from "./support";
 import { critPierce } from "./combat-paths-b";
+import { shieldbreakerBonus, weakPointPierce } from "./combat-paths-a";
 /** Spacing in cells between enemies released by `splitOnDeath`. */
 const SPLIT_SPACING = 0.15;
 interface TraitModule<T extends Trait> {
@@ -39,9 +40,11 @@ const TRAITS: Registry = {
       const special = hit?.special?.kind === "armor-pierce" ? hit.special.fraction : 0,
         // An Armory near the firing tower combines like a second pierce; without one the value stays exactly as before.
         armory = armoryPierce(sim, hit?.tower),
-        // Fire Control Penetrator: a crit ignores another share, combined the same way.
+        // Fire Control Penetrator and Tracker Weak Point ignore further shares, combined the same way; without
+        // either the value stays exactly as before.
         penetrator = critPierce(hit),
-        pierce = armory || penetrator ? 1 - (1 - special) * (1 - armory) * (1 - penetrator) : special;
+        weak = weakPointPierce(sim, e),
+        pierce = armory || penetrator || weak ? 1 - (1 - special) * (1 - armory) * (1 - penetrator) * (1 - weak) : special;
       return amount * (1 - t.reduction * (1 - pierce) * (1 - armorDissolved(e, sim.state.time)));
     },
   },
@@ -80,11 +83,13 @@ const TRAITS: Registry = {
     onSpawn: (t, e) => {
       e.shield = t.capacity * e.maxHp;
     },
-    onDamage: (_, amount, e, sim) => {
+    onDamage: (_, amount, e, sim, dot, hit) => {
       e.lastHit = sim.state.time;
-      const absorbed = Math.min(e.shield ?? 0, amount);
+      // Armory Shieldbreaker: the hit counts `boost` times against the shield; 1 without one, so nothing changes.
+      const boost = 1 + shieldbreakerBonus(sim, dot, hit),
+        absorbed = Math.min(e.shield ?? 0, amount * boost);
       e.shield = (e.shield ?? 0) - absorbed;
-      return amount - absorbed;
+      return amount - absorbed / boost;
     },
     onTick: (t, e, _, sim) => {
       if (sim.state.time - (e.lastHit ?? -Infinity) >= t.delay) e.shield = t.capacity * e.maxHp;
@@ -417,8 +422,9 @@ export function leaderBonus(sim: Sim, e: Enemy) {
 export const isBurrowed = (sim: Sim, e: Enemy) =>
   traitsOf(sim, e).some((t) => (t.kind === "burrow" || t.kind === "tunnel") && e.distance % t.every >= t.every - t.length);
 /** Within the radius of another living undisrupted cloak field carrier and not revealed by a detector. */
-const isCloaked = (sim: Sim, e: Enemy) => {
-  if (e.revealed) return false;
+const isCloaked = (sim: Sim, e: Enemy) => !e.revealed && inCloakField(sim, e);
+/** Within the radius of another living undisrupted cloak field carrier, revealed or not. */
+export const inCloakField = (sim: Sim, e: Enemy) => {
   for (const [c, t] of activeCarriers(sim, "cloakField")) if (c !== e && dist(c, e) <= t.radius) return true;
   return false;
 };

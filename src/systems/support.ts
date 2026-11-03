@@ -7,6 +7,7 @@ import { dist } from "./path";
 import { isNetted } from "./status";
 import { isSuppressed, layerOf } from "./traits";
 import { windowBoost } from "./combat-paths-b";
+import { resetScrapYards, trackerMark } from "./combat-paths-a";
 /**
  * Effects of the passive support towers. Like auras they are derived from the current
  * towers on every query, without a cache, and overlapping towers count only the strongest.
@@ -56,7 +57,8 @@ export function strongestSpecial<K extends SupportSpecialization["kind"]>(
 /** Bounty Beacon: extra credits for a kill in range, rounded so co-op splits stay whole. */
 export const bountyBonus = (sim: Sim, e: Enemy, reward: number) => Math.round(reward * strongest(sim, "bounty", "bonus", e));
 /** Peilsender: damage multiplier for an enemy in range; 1 without a tracker. */
-export const markFactor = (sim: Sim, e: Enemy) => 1 + strongest(sim, "mark", "amount", e);
+// Support combat paths (Lingering Tag, Hunter's Mark) through `trackerMark`; without them exactly the strongest mark.
+export const markFactor = (sim: Sim, e: Enemy) => 1 + trackerMark(sim, e, strongest(sim, "mark", "amount", e));
 /** Reparaturdock: after a completed wave each dock restores energy, never above the mission's start value. */
 export function repairReactor(sim: Sim) {
   const s = sim.state;
@@ -202,5 +204,6 @@ export function absorbLeak(sim: Sim, e: Enemy, leak: number) {
 export function settleEconomy(sim: Sim) {
   payInterest(sim);
   for (const t of sim.state.towers) delete t.barrier;
+  resetScrapYards(sim); // support combat: Scrap Yard
 }
 // ── end g5 ──
