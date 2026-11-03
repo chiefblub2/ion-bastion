@@ -13,14 +13,14 @@ import type { Concept } from "./types";
 const DROP = 6;
 /** Heights: slab, column, arm, the ram's raised and struck bottom and its thickness, the rod sleeves. */
 const SLAB = 4,
-  COLUMN = 29,
-  ARM0 = 28,
-  ARM1 = 31.5,
-  RAISED = 13,
+  POST = 27,
+  BEAM1 = 30.5,
+  ARM0 = 25.5,
+  ARM1 = 29,
+  RAISED = 10.5,
   STRUCK = SLAB + 0.4,
-  RAM = 6.5,
-  SLEEVE = 21,
-  ROD_TOP = 26.6;
+  RAM = 5.5,
+  SLEEVE = 21.5;
 /** Gunmetal, its top, the metallic highlight, the deep pit and the chrome of the rods. */
 const WALL = 0x3a3631,
   TOP = 0x585049,
@@ -30,13 +30,21 @@ const WALL = 0x3a3631,
 
 /** The slab: a square with cut corners, clockwise on the screen. */
 const SLAB_FOOT = [19, -12, 19, 12, 12, 19, -12, 19, -19, 12, -19, -12, -12, -19, 12, -19];
-const COLUMN_FOOT = [-5.5, -17, 5.5, -17, 5.5, -9, -5.5, -9];
-const ARM_FOOT = [-4.2, -15, 4.2, -15, 4.2, 3, -4.2, 3];
-/** Level 5: armour cheeks on both sides of the column. */
-const CHEEKS = [
-  [-7, -16, -5.5, -16, -5.5, -10, -7, -10],
-  [5.5, -16, 7, -16, 7, -10, 5.5, -10],
+/** Two posts at the back corners, the crossbeam on them and the arm reaching forward over the pit. */
+const POSTS = [
+  [-15, -16, -10.5, -16, -10.5, -11.5, -15, -11.5],
+  [10.5, -16, 15, -16, 15, -11.5, 10.5, -11.5],
 ];
+const BEAM = [-15.5, -16.5, 15.5, -16.5, 15.5, -11, -15.5, -11];
+const ARM_FOOT = [-3.8, -13, 3.8, -13, 3.8, 2.5, -3.8, 2.5];
+/** Level 5: armour plates on the outer sides of the posts. */
+const CHEEKS = [
+  [-16.4, -15.6, -15, -15.6, -15, -11.9, -16.4, -11.9],
+  [15, -15.6, 16.4, -15.6, 16.4, -11.9, 15, -11.9],
+];
+/** Front faces of the posts: the across centre of each, for rails and charge slots. */
+const POST_U = [-12.75, 12.75],
+  POST_V = -11.5;
 /** The ram, centred over the pit. */
 const RAM_FOOT = [-7, -3, 7, -3, 7.5, 2.5, 7, 9, -7, 9, -7.5, 2.5];
 const PIT = 7.5,
@@ -87,20 +95,27 @@ function base({ g, x, y, level, color, definition }: TurretContext) {
       disc(g, bx - 0.35, by - 0.35, 0.6, METAL, 0.9);
     }
   });
-  // The column at the back with bronze guide rails on its face, its cheeks from level 5, then the overhanging arm.
-  n = turn(COLUMN_FOOT, 0, FOOT);
-  block(g, x, y0, FOOT, FOOT, n, SLAB - 0.5, COLUMN, 0, WALL, TOP, METAL);
-  for (const u of [-3.8, 3.8]) quad(g, X(x, u) - 0.8, Y(y0, -9, SLAB + 1), X(x, u) + 0.8, Y(y0, -9, SLAB + 1), X(x, u) + 0.8, Y(y0, -9, ARM0 - 1), X(x, u) - 0.8, Y(y0, -9, ARM0 - 1), shade(c, -0.15));
-  // The charge slot between the rails (lit live).
-  quad(g, X(x, -1.4), Y(y0, -9, 7), X(x, 1.4), Y(y0, -9, 7), X(x, 1.4), Y(y0, -9, 25), X(x, -1.4), Y(y0, -9, 25), DEEP);
+  // The posts with a bronze rail and a charge slot on their faces (lit live), cheeks from level 5, beam and arm.
+  for (const post of POSTS) {
+    n = turn(post, 0, FOOT);
+    block(g, x, y0, FOOT, FOOT, n, SLAB - 0.5, POST, 0, WALL, TOP, METAL);
+  }
+  for (const u of POST_U) {
+    const face = (du: number, h: number) => [X(x, u + du), Y(y0, POST_V, h)] as const;
+    quad(g, ...face(-1.6, SLAB + 1), ...face(-0.9, SLAB + 1), ...face(-0.9, POST - 1), ...face(-1.6, POST - 1), shade(c, -0.15));
+    quad(g, ...face(0.1, 7), ...face(1.7, 7), ...face(1.7, 24), ...face(0.1, 24), DEEP);
+  }
   if (level >= 5)
     for (const cheek of CHEEKS) {
       n = turn(cheek, 0, FOOT);
-      block(g, x, y0, FOOT, FOOT, n, SLAB, COLUMN - 4, 0, shade(WALL, 0.1), shade(TOP, 0.08), METAL);
+      block(g, x, y0, FOOT, FOOT, n, SLAB + 2, POST - 3, 0, shade(WALL, 0.1), shade(TOP, 0.08), METAL);
     }
+  n = turn(BEAM, 0, FOOT);
+  turn(BEAM, 0, INSET, 0.9, 0, 0, -0.3);
+  block(g, x, y0, FOOT, INSET, n, POST, BEAM1, 0.8, shade(WALL, 0.05), TOP, METAL);
   n = turn(ARM_FOOT, 0, FOOT);
   turn(ARM_FOOT, 0, INSET, 0.85, 0, 0, -0.4);
-  block(g, x, y0, FOOT, INSET, n, ARM0, ARM1, 0.8, shade(WALL, 0.05), TOP, METAL);
+  block(g, x, y0, FOOT, INSET, n, ARM0, ARM1, 0.8, shade(WALL, 0.08), TOP, METAL);
   // Rod sleeves hanging under the arm.
   for (const u of RODS) tube(g, X(x, u), Y(y0, ROD_V, 0) + 0, 0, SLEEVE, 0, ARM0 - SLEEVE, 1.9, shade(WALL, -0.1), 1, true, Math.PI / 2);
 }
@@ -140,22 +155,23 @@ function turret({ g, x, y, definition, level, kick, color }: TurretContext) {
     }
   // Chrome rods from the ram's top up into the sleeves.
   for (const u of RODS) tube(g, X(x, u), Y(y0, ROD_V, 0), 0, ht, 0, SLEEVE + 0.5 - ht, 1.1, CHROME, 1, true, Math.PI / 2);
-  void ROD_TOP;
 }
 
 function live({ g, glow, x, y, definition, level, kick, charge, energy, clock, color }: TurretContext) {
   const y0 = y + DROP,
     c = definition.color;
-  // The charge slot on the column fills from the bottom as the next strike builds.
-  const top = 7 + 18 * charge;
-  if (charge > 0.02) {
-    quad(g, X(x, -0.8), Y(y0, -9, 7.5), X(x, 0.8), Y(y0, -9, 7.5), X(x, 0.8), Y(y0, -9, top), X(x, -0.8), Y(y0, -9, top), shade(c, -0.05 + 0.45 * charge));
-    quad(glow, X(x, -2.4), Y(y0, -9, 7), X(x, 2.4), Y(y0, -9, 7), X(x, 2.4), Y(y0, -9, top + 1), X(x, -2.4), Y(y0, -9, top + 1), c, Math.min(0.45, 0.12 + 0.25 * charge + energy));
-  }
+  // The charge slots on the posts fill from the bottom as the next strike builds.
+  const top = 7 + 17 * charge;
+  if (charge > 0.02)
+    for (const u of POST_U) {
+      const face = (du: number, h: number) => [X(x, u + du), Y(y0, POST_V, h)] as const;
+      quad(g, ...face(0.5, 7.5), ...face(1.3, 7.5), ...face(1.3, top), ...face(0.5, top), shade(c, -0.05 + 0.45 * charge));
+      quad(glow, ...face(-0.8, 7), ...face(2.6, 7), ...face(2.6, top + 1), ...face(-0.8, top + 1), c, Math.min(0.45, 0.12 + 0.25 * charge + energy));
+    }
   // Lamp on the arm's tip from level 2.
   if (level >= 2) {
     const lx = X(x, 0),
-      ly = Y(y0, 3, ARM1 - 1.6);
+      ly = Y(y0, 2.5, ARM1 - 1.6);
     disc(g, lx, ly, 1.2, OUTLINE);
     disc(g, lx, ly, 0.75, shade(color, 0.2));
     disc(glow, lx, ly, 2.4, color, 0.35);
@@ -186,7 +202,7 @@ function live({ g, glow, x, y, definition, level, kick, charge, energy, clock, c
 export const concept = {
   tower: "quake",
   name: "Pile Driver",
-  idea: "Cracked slab with a column at the back and an arm over the strike pit; a heavy bronze ram on chrome rods hangs raised and slams into the pit on every shockwave.",
+  idea: "Cracked slab with a gantry (two posts, beam, arm) over the strike pit; a heavy bronze ram on chrome rods hangs raised and slams into the pit on every shockwave.",
   tilt: { drop: DROP, squash: SQUASH, height: 0, deck: SLAB },
   base,
   turret,

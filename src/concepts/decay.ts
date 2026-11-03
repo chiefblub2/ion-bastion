@@ -64,18 +64,23 @@ function solid(g: Ink, x: number, y0: number, faces: readonly (readonly P3[])[],
   }
 }
 /** A leaning claw: a frustum from a wide foot at the dais rim to a narrow tip over the well, as faces for `solid`. */
-function clawFaces(t: number, top: number, upTo = 1, grow = 0): P3[][] {
+function clawFaces(t: number, top: number, from = 0, to = 1, grow = 0): P3[][] {
   const cu = Math.cos(t),
     cv = Math.sin(t),
     at = (r: number, w: number, h: number): P3 => [cu * r - cv * w, cv * r + cu * w, h],
-    mix = (a: number, b: number) => a + (b - a) * upTo,
-    foot = [at(18 + grow, -3 - grow, DAIS), at(18 + grow, 3 + grow, DAIS), at(12.5 - grow, 2.6 + grow, DAIS), at(12.5 - grow, -2.6 - grow, DAIS)],
-    tip = [
-      at(mix(18, 12.5) + grow, -mix(3, 1.1) - grow, mix(DAIS, top)),
-      at(mix(18, 12.5) + grow, mix(3, 1.1) + grow, mix(DAIS, top)),
-      at(mix(12.5, 10) - grow, mix(2.6, 0.9) + grow, mix(DAIS, top)),
-      at(mix(12.5, 10) - grow, -mix(2.6, 0.9) - grow, mix(DAIS, top)),
-    ],
+    /** The claw's cross-section at fraction f of its height, widened by `grow`. */
+    section = (f: number) => {
+      const mix = (a: number, b: number) => a + (b - a) * f,
+        h = mix(DAIS, top);
+      return [
+        at(mix(18, 12.5) + grow, -mix(3, 1.1) - grow, h),
+        at(mix(18, 12.5) + grow, mix(3, 1.1) + grow, h),
+        at(mix(12.5, 10) - grow, mix(2.6, 0.9) + grow, h),
+        at(mix(12.5, 10) - grow, -mix(2.6, 0.9) - grow, h),
+      ];
+    },
+    foot = section(from),
+    tip = section(to),
     faces: P3[][] = [tip];
   for (let i = 0; i < 4; i++) {
     const j = (i + 1) % 4;
@@ -143,9 +148,9 @@ function turret({ g, x, y, level, color, definition }: TurretContext) {
     c = definition.color,
     top = level >= 5 ? 15.5 : 13.5;
   for (const t of [...CLAWS].sort((a, b) => Math.sin(a) - Math.sin(b))) {
-    solid(g, x, y0, clawFaces(t, top), 0x726c8a, shade(0x726c8a, 0.3));
+    solid(g, x, y0, clawFaces(t, top), 0x8a84a4, 0x262233);
     // Level 5: an armour band in the tower colour round each claw, a third of the way up.
-    if (level >= 5) solid(g, x, y0, clawFaces(t, top, 0.33, 0.35), shade(c, -0.55), shade(c, -0.15));
+    if (level >= 5) solid(g, x, y0, clawFaces(t, top, 0.3, 0.45, 0.3), shade(c, -0.55), shade(c, -0.15));
     // A spike on each tip, in the path colour from level 6.
     const tx = X(x, Math.cos(t) * 11.2),
       ty = Y(y0, Math.sin(t) * 11.2, top);

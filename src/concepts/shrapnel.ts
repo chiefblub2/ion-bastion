@@ -109,13 +109,13 @@ function turret(ctx: TurretContext) {
     parts.push([
       depth(b, end * 0.6, 0) + 0.01 * i,
       () => {
-        tube(g, x, y0, b, HB, 5 + back, end - 2.6, 1.7, shade(c, -0.15), 1, true);
-        if (level >= 3) tube(g, x, y0, b, HB, (5 + end) / 2 - 0.5, (5 + end) / 2 + 0.5, 1.8, shade(c, -0.55), 1, false);
-        tube(g, x, y0, b, HB, end - 2.6, end, 2.2, shade(GUN.side, -0.05), 1, true);
-        if (tip !== undefined) tube(g, x, y0, b, HB, end - 1, end, 2.2, tip, 1, false);
+        tube(g, x, y0, b, HB, 5 + back, end - 2.6, 1.95, shade(c, -0.15), 1, true);
+        if (level >= 3) tube(g, x, y0, b, HB, (5 + end) / 2 - 0.5, (5 + end) / 2 + 0.5, 2.05, shade(c, -0.55), 1, false);
+        tube(g, x, y0, b, HB, end - 2.6, end, 2.45, shade(GUN.side, -0.05), 1, true);
+        if (tip !== undefined) tube(g, x, y0, b, HB, end - 1, end, 2.45, tip, 1, false);
         if (towardViewer(b) > 0.05) {
-          endFace(g, x, y0, b, HB, end, 2.2, shade(GUN.side, -0.4));
-          endFace(g, x, y0, b, HB, end, 1, OUTLINE);
+          endFace(g, x, y0, b, HB, end, 2.45, shade(GUN.side, -0.4));
+          endFace(g, x, y0, b, HB, end, 1.2, OUTLINE);
         }
       },
     ]);

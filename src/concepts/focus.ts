@@ -6,7 +6,7 @@
 import { halo } from "../render/material";
 import { arcBand, disc, oval, ring, shade } from "../render/shapes";
 import type { TurretContext } from "../render/tower-art/kit";
-import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, towardViewer, tube, turn } from "../render/tower-art/tilt";
+import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, towardViewer, tube, turn } from "../render/tower-art/tilt";
 import type { Concept } from "./types";
 
 const DROP = 5,
@@ -84,7 +84,7 @@ function base({ g, x, y, level, color, definition }: TurretContext) {
   }
 }
 
-function turret({ g, x, y, tower, definition, level, kick, tip, color }: TurretContext) {
+function turret({ g, x, y, tower, definition, level, tip, color }: TurretContext) {
   const a = tower.angle,
     ca = Math.cos(a),
     sa = Math.sin(a),
@@ -148,7 +148,6 @@ function turret({ g, x, y, tower, definition, level, kick, tip, color }: TurretC
   if (level >= 5) for (const s of SHIELDS) parts.push([(s[1] > 0 ? 9.2 : -9.2) * ca + 0.01, () => shield(s)]);
   parts.sort((p, q) => p[0] - q[0]);
   for (const [, draw] of parts) draw();
-  void kick;
 }
 
 function live({ g, glow, x, y, tower, definition, level, kick, energy, clock, color, peak }: TurretContext) {
@@ -193,7 +192,6 @@ function live({ g, glow, x, y, tower, definition, level, kick, energy, clock, co
   // Charge running along the housing's trim stripe.
   glow.lineStyle(2, c, Math.min(0.45, 0.08 + 0.3 * heat + energy));
   glow.lineBetween(X(x, ca * -5.5), Y(y0, sa * -5.5, HB + 1.9), X(x, ca * (lens - 3.5)), Y(y0, sa * (lens - 3.5), HB + 1.9));
-  void quad;
 }
 
 /** Focus: a lens on a fork mount. */
