@@ -2,7 +2,8 @@
  * Strength check for the support and Aura paths: does a path tier III beat the same tower at its last plain level by
  * more than it should? For every mission of a sector, strategy A plays once with one extra support tower at level 3
  * (Aura: track tier III) and once per path with that path's tiers. After wave 1 both runs get the same grant (tower,
- * levels and tiers), so both spend the same: the path run on the tiers, the level-3 run on the strategy's towers.
+ * levels and tiers), so both spend the same: the path run on the tiers, the level-3 run on the strategy's towers. For
+ * economy towers the level-3 run gets only its own levels, so the comparison isolates what the path earns.
  * Usage: npx vite-node scripts/support-check.ts -- <sector module> <strategies module> [sector index] [--tower id,…] [--mission id] [--band 0.25]
  * e.g.   npx vite-node scripts/support-check.ts -- src/content/sectors/frost.ts src/core/strategies/frost.ts --tower beacon,vault
  * WARN: an economy path earns back more than half its price in extra credits while both runs win, or a path
@@ -41,15 +42,17 @@ function bestCell(m: MissionDefinition, builds: readonly Build[]): { x: number; 
 }
 
 /**
- * Plays `strategy`; after wave 1 both runs get the same grant (the support tower, its levels and the path's three
- * tiers) and build the tower at `cell`. With `path` the tower buys the path's tiers; without, it stops at its last
+ * Plays `strategy`; after wave 1 the run gets a grant (the support tower, its levels and, except for an economy
+ * tower's level-3 run, the path's three tiers) and builds the tower at `cell`. With `path` the tower buys the path's tiers; without, it stops at its last
  * plain level (Aura: its first track's tier III) and the strategy spends the rest.
  */
 function result(m: MissionDefinition, strategy: Strategy, tower: TowerId, cell: { x: number; y: number }, path: string, withPath: boolean) {
   const d = towers[tower],
     plain = d.upgrades.filter((u) => !u.path && (!u.track || u.track === d.upgrades.find((v) => v.track)?.track)),
     tiers = d.upgrades.filter((u) => u.path === path && isSpecialization(u)),
-    grant = d.cost + [...plain, ...tiers].reduce((sum, u) => sum + u.cost, 0);
+    // Economy towers: the level-3 run gets no credits beyond its own levels, so only what the path itself earns
+    // differs (spent elsewhere, the credits would move kills in and out of a Beacon's radius).
+    grant = d.cost + [...plain, ...(withPath || !ECONOMY.has(tower) ? tiers : [])].reduce((sum, u) => sum + u.cost, 0);
   let peak = 0,
     given = false;
   const { game } = play(
