@@ -1,17 +1,24 @@
-import type { Sheet, TiltedArt } from "./tilted";
+import type { TiltedArt } from "./tilted";
+import { MUZZLES, TILTS } from "../muzzles";
 import { halo } from "../material";
 import { disc, oval, shade, strokeOval } from "../shapes";
 import type { TurretContext } from "./kit";
 import { OUTLINE, SQUASH, X, Y, drum, onGround, quad } from "./tilt";
-import { GUN, SHADOW_INK, castShadow, depth, framer, lamp, paint, part, rect } from "./tilt-parts";
+import { GUN, SHADOW_INK, castShadow, depth, framer, lampInk, lampLight, paint, part, rect } from "./tilt-parts";
 
-// Lance: the Railspear, two long rails on a low cradle over a round plinth ringed with capacitor cells at the back;
-// coils clamp the rails and light up one after another as the shot charges.
-const TILT = { drop: 5, squash: SQUASH, height: 10, deck: 3.5 },
+/**
+ * Railspear: Lance's look in the slight 3/4 tilt (see `tilt.ts`): two long rails on a low cradle with a capacitor block
+ * at the back and coils clamping the rails, over a round plinth ringed with capacitor cells. The projection lives in
+ * `TILTS.rail` and the reach in `MUZZLES.rail`, so the beam leaves between the rails' ends. The plinth (`base`) bakes per
+ * level and trim colour; the turret's ink is cached per aim step (`turret`); the capacitor cells (`below`) and the
+ * block's lamps, the coils' lights, the charge running between the rails and the muzzle flare (`above`) are live.
+ */
+const TILT = TILTS.rail!,
+  SPEC = MUZZLES.rail!,
   DROP = TILT.drop,
   HB = TILT.height,
-  RECOIL = 6,
-  reach = (l: number) => 25 + l;
+  RECOIL = SPEC.recoil,
+  reach = SPEC.reach;
 const PLINTH_R = 19,
   PLINTH_TOP = 3.5,
   RING_TOP = 5.5;
@@ -59,6 +66,7 @@ function base({ g, x, y, level, definition, color }: TurretContext) {
   drum(g, x, y0, 8.5, PLINTH_TOP, RING_TOP, GUN.deep, shade(GUN.deep, 0.18), 14);
 }
 
+/** The turret's ink (cached per aim step and recoil): skirts, cradle, both rails, the capacitor block and the coils. */
 function turret(ctx: TurretContext) {
   const { g, x, y, tower, definition, level, kick, tip, color } = ctx,
     a = tower.angle,
@@ -89,6 +97,8 @@ function turret(ctx: TurretContext) {
         const s = [P(-9.8, -1, CAP_TOP + 1), P(-5.2, -1, CAP_TOP + 1), P(-5.2, 1, CAP_TOP + 1), P(-9.8, 1, CAP_TOP + 1)];
         quad(g, ...s[0], ...s[1], ...s[2], ...s[3], color);
       }
+      // The block's lamp from level 2 (its light is live).
+      if (level >= 2) lampInk(g, ...lampAt(P, a), color);
     },
   ]);
   // A collar round each rail per coil, so the channel between the rails stays open.
@@ -107,15 +117,14 @@ function turret(ctx: TurretContext) {
   paint(parts);
 }
 
-function live(ctx: TurretContext) {
-  const { g, glow, x, y, tower, definition, level, kick, charge, energy, clock, color } = ctx,
-    a = tower.angle,
-    c = definition.color,
-    y0 = y + DROP,
-    P = framer(x, y0, a),
-    back = -6 - kick * RECOIL,
-    end = reach(level) - kick * RECOIL;
-  // Capacitor glass: dim at rest, lit with the charge; from level 4 the light chases round the cells.
+/** The block lamp's spot at its back edge, on the side turned to the viewer. */
+const lampAt = (P: ReturnType<typeof framer>, a: number) => P(-10.4, Math.cos(a) > 0 ? -3.6 : 3.6, CAP_TOP);
+
+/** Live, under the turret: the capacitor cells' glass, dim at rest and lit with the charge (the rails sweep over them). */
+function below({ g, glow, x, y, definition, level, charge, clock }: TurretContext) {
+  const c = definition.color,
+    y0 = y + DROP;
+  // Dim at rest, lit with the charge; from level 4 the light chases round the cells.
   CELLS.forEach((t, i) => {
     const chase = level >= 4 ? 0.4 * Math.max(0, Math.sin(4 * clock - i * 1.3)) : 0,
       on = Math.min(1, 0.2 + 0.8 * Math.max(0, Math.min(1, charge * 5 - i)) * 0.7 + chase),
@@ -124,6 +133,20 @@ function live(ctx: TurretContext) {
     oval(g, cx, cy, 1.5, 1.5 * SQUASH, shade(c, -0.6 + 0.6 * on));
     if (on > 0.35) disc(glow, cx, cy, 2.8, c, 0.25 * on);
   });
+}
+
+/**
+ * Live, over the turret: three lamps per side on the capacitor block's roof (the highest face) and the coils' lights
+ * fill with the charge, the charge runs between the rails, their fronts flare on a shot; the block lamp's light.
+ */
+function above(ctx: TurretContext) {
+  const { g, glow, x, y, tower, definition, level, kick, charge, energy, color } = ctx,
+    a = tower.angle,
+    c = definition.color,
+    y0 = y + DROP,
+    P = framer(x, y0, a),
+    back = -6 - kick * RECOIL,
+    end = reach(level) - kick * RECOIL;
   // Three lamps per side on the capacitor block fill with the charge; the coils glow one after another.
   for (let i = 0; i < 3; i++) {
     const on = Math.min(1, Math.max(0, charge * 3 - i));
@@ -155,22 +178,8 @@ function live(ctx: TurretContext) {
     halo(glow, mx, my, 5 * (1 + kick), c, 0.3 * kick);
   }
   if (energy > 0) disc(glow, mx, my, 2.6, c, energy);
-  if (level >= 2) {
-    const [lx, ly] = P(-10.4, Math.cos(a) > 0 ? -3.6 : 3.6, CAP_TOP);
-    lamp(g, glow, lx, ly, color);
-  }
+  if (level >= 2) lampLight(glow, ...lampAt(P, a), color);
 }
 
-const sheet: Sheet = {
-  tower: "lance",
-  name: "Railspear",
-  idea: "Two long rails on a low cradle over a round plinth; capacitor cells ring the back and fill with the charge, coils on the rails light in turn.",
-  tilt: TILT,
-  reach,
-  recoil: RECOIL,
-  base,
-  turret,
-  live,
-};
-/** Railspear in the four parts of a tilted tower (`tilted.ts`). */
-export const railspear: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };
+/** Lance's Railspear in the four parts of a tilted tower (`tilted.ts`). */
+export const railspear: TiltedArt = { base, below, turret, above };

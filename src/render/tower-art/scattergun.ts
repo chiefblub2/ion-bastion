@@ -1,18 +1,25 @@
-import type { Sheet, TiltedArt } from "./tilted";
+import type { TiltedArt } from "./tilted";
+import { MUZZLES, TILTS } from "../muzzles";
 import { halo, LIGHT } from "../material";
 import { arcBand, disc, oval, shade } from "../shapes";
 import type { TurretContext } from "./kit";
 import { OUTLINE, SQUASH, X, Y, drum, onGround, quad, towardViewer, tube, endFace } from "./tilt";
-import { GUN, SHADOW_INK, castShadow, depth, framer, lamp, paint, part, rect } from "./tilt-parts";
+import { GUN, SHADOW_INK, castShadow, depth, framer, lampInk, lampLight, paint, part } from "./tilt-parts";
 
-// Shrapnel: the Scattergun, a squat fan-fronted housing on a round pedestal, its short barrels spread in a fan and fed
-// by a revolver drum at the back that turns one chamber per salvo.
-const TILT = { drop: 5, squash: SQUASH, height: 11, deck: 5 },
+/**
+ * Scattergun: Shrapnel's look in the slight 3/4 tilt (see `tilt.ts`): a breech block with a revolver drum at the back and
+ * a low fan-shaped deck in front, its short barrels spread in a fan (3, from level 4 five), on a round pedestal. The
+ * projection lives in `TILTS.scatter` and the fan in `MUZZLES.scatter`, so every barrel flashes. The pedestal (`base`)
+ * bakes per level and trim colour; the turret's ink is cached per aim step (`turret`); the pedestal's vents (`below`)
+ * and the drum's chambers, the lamp's light and the hot muzzles (`above`) are live.
+ */
+const TILT = TILTS.scatter!,
+  SPEC = MUZZLES.scatter!,
   DROP = TILT.drop,
   HB = TILT.height,
-  RECOIL = 3,
-  reach = (l: number) => 18 + l,
-  fan = (l: number) => ({ count: l >= 4 ? 5 : 3, step: 0.32 });
+  RECOIL = SPEC.recoil,
+  reach = SPEC.reach,
+  fan = SPEC.fan!;
 const PED_R = 18,
   PED_TOP = 5,
   BEAR_TOP = 7;
@@ -64,6 +71,7 @@ function base({ g, x, y, level, definition, color }: TurretContext) {
   drum(g, x, y0, 10, PED_TOP, BEAR_TOP, GUN.deep, shade(GUN.deep, 0.18), 14);
 }
 
+/** The turret's ink (cached per aim step and recoil): the drum, deck, breech block and the fanned barrels, back to front. */
 function turret(ctx: TurretContext) {
   const { g, x, y, tower, definition, level, kick, tip, color } = ctx,
     a = tower.angle,
@@ -115,6 +123,8 @@ function turret(ctx: TurretContext) {
           disc(g, bx, by, 0.8, OUTLINE);
           disc(g, bx - 0.3, by - 0.3, 0.35, GUN.metal);
         }
+      // The housing's lamp from level 2 (its light is live).
+      if (level >= 2) lampInk(g, ...lampAt(P, a), color);
     },
   ]);
   for (let i = 0; i < count; i++) {
@@ -137,15 +147,13 @@ function turret(ctx: TurretContext) {
   paint(parts);
 }
 
-function live(ctx: TurretContext) {
-  const { g, glow, x, y, tower, definition, level, kick, charge, energy, clock, color } = ctx,
-    a = tower.angle,
-    c = definition.color,
-    y0 = y + DROP,
-    P = framer(x, y0, a),
-    end = reach(level) - kick * RECOIL,
-    { count, step } = fan(level);
-  // Pedestal vents: hot after a salvo; from level 4 a light chases along them.
+/** The housing lamp's spot on the roof, on the side turned to the viewer. */
+const lampAt = (P: ReturnType<typeof framer>, a: number) => P(-6, Math.cos(a) > 0 ? 5 : -5, H_TOP + 1.6);
+
+/** Live, under the turret: the pedestal's vents, hot after a salvo; from level 4 a light chases along them. */
+function below({ g, glow, x, y, definition, level, kick, clock, color }: TurretContext) {
+  const y0 = y + DROP,
+    c = definition.color;
   VENTS.forEach((t, i) => {
     const vx = X(x, Math.cos(t) * (PED_R + 0.2)),
       vy = Y(y0, Math.sin(t) * (PED_R + 0.2), PED_TOP / 2),
@@ -154,7 +162,20 @@ function live(ctx: TurretContext) {
     quad(g, vx - 1, vy - 0.5, vx + 1, vy - 0.5, vx + 1, vy + 0.5, vx - 1, vy + 0.5, shade(kick > chase ? c : color, -0.6 + 0.7 * on));
     if (on > 0.4) disc(glow, vx, vy, 2.6, kick > chase ? c : color, 0.3 * on);
   });
-  // The revolver drum's chambers on its top, turning one chamber per salvo with the charge; the loaded one glows.
+}
+
+/**
+ * Live, over the turret: the revolver drum's chambers on its top (the highest face), turning one chamber per salvo
+ * with the charge, the loaded one glowing; the lamp's light and the hot muzzles.
+ */
+function above(ctx: TurretContext) {
+  const { g, glow, x, y, tower, definition, level, kick, charge, energy, color } = ctx,
+    a = tower.angle,
+    c = definition.color,
+    y0 = y + DROP,
+    P = framer(x, y0, a),
+    end = reach(level) - kick * RECOIL,
+    { count, step } = fan(level);
   const [dx, dy] = P(DRUM_AT, 0, DRUM_TOP);
   for (let k = 0; k < 6; k++) {
     const t = a + charge * (Math.PI / 3) + (k * Math.PI) / 3,
@@ -163,10 +184,7 @@ function live(ctx: TurretContext) {
     disc(g, cx, cy, 0.75, k === 0 && charge > 0.9 ? shade(c, 0.4) : OUTLINE);
   }
   if (charge > 0.9) disc(glow, dx, dy, 3, c, 0.25);
-  if (level >= 2) {
-    const [lx, ly] = P(-6, Math.cos(a) > 0 ? 5 : -5, H_TOP + 1.6);
-    lamp(g, glow, lx, ly, color);
-  }
+  if (level >= 2) lampLight(glow, ...lampAt(P, a), color);
   for (let i = 0; i < count; i++) {
     const b = a + (i - (count - 1) / 2) * step,
       mx = X(x, Math.cos(b) * end),
@@ -176,17 +194,5 @@ function live(ctx: TurretContext) {
   }
 }
 
-const sheet: Sheet = {
-  tower: "shrapnel",
-  name: "Scattergun",
-  idea: "Fan-fronted housing on a round pedestal: 3 (L4: 5) short barrels in a fan, a revolver drum at the back turns a chamber per salvo; vents flare.",
-  tilt: TILT,
-  reach,
-  recoil: RECOIL,
-  fan,
-  base,
-  turret,
-  live,
-};
-/** Scattergun in the four parts of a tilted tower (`tilted.ts`). */
-export const scattergun: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };
+/** Shrapnel's Scattergun in the four parts of a tilted tower (`tilted.ts`). */
+export const scattergun: TiltedArt = { base, below: below, turret: turret, above: above };

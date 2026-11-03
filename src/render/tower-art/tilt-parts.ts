@@ -73,8 +73,16 @@ export function castShadow(g: Ink, x: number, y0: number, a: number, shape: read
 }
 /** A small lamp: dark socket, lit glass and its light. */
 export function lamp(g: Ink, glow: Ink, lx: number, ly: number, color: number, on = 1) {
+  lampInk(g, lx, ly, color, on);
+  lampLight(glow, lx, ly, color, on);
+}
+/** A lamp's socket and glass alone: still at a steady `on`, so a turret may draw it into its cached ink. */
+export function lampInk(g: Ink, lx: number, ly: number, color: number, on = 1) {
   disc(g, lx, ly, 1.35, OUTLINE);
   disc(g, lx, ly, 0.85, shade(color, -0.5 + 0.7 * on));
+}
+/** A lamp's light alone (glow), for the live part over a cached turret. */
+export function lampLight(glow: Ink, lx: number, ly: number, color: number, on = 1) {
   if (on > 0.3) disc(glow, lx, ly, 2.6, color, 0.35 * on);
 }
 

@@ -1,18 +1,26 @@
-import type { Sheet, TiltedArt } from "./tilted";
-import { GUN, SHADOW_INK, castShadow, depth, endAt, framer, lamp, muzzleAt, paint, part, rect, tubeAt, turnAbout } from "./tilt-parts";
-import { facing, halo } from "../material";
-import { disc, oval, shade, type Ink } from "../shapes";
+import type { TiltedArt } from "./tilted";
+import { MUZZLES, TILTS } from "../muzzles";
+import { GUN, SHADOW_INK, castShadow, depth, endAt, framer, lampInk, lampLight, muzzleAt, paint, part, rect, tubeAt } from "./tilt-parts";
+import { halo } from "../material";
+import { disc, oval, shade } from "../shapes";
 import type { TurretContext } from "./kit";
-import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, towardViewer, tube } from "./tilt";
+import { OUTLINE, X, Y, drum, onGround, quad, towardViewer } from "./tilt";
 
-// --- Flak: the Skyguard, twin AA guns on a yoke over a cross-braced plinth. ------------------------------------------
-const TILT = { drop: 5, squash: SQUASH, height: 14, pitch: 0.42, deck: 6 },
+/**
+ * Skyguard: Flak's look in the slight 3/4 tilt (see `tilt.ts`): twin anti-air guns pitched high on a yoke between two
+ * cheek plates, an ammo box behind them, over a chamfered plinth with outriggers on the four axes. The projection lives in
+ * `TILTS.twin` and the barrels in `MUZZLES.twin` (`sides`), so shots and flashes leave both muzzles. The plinth
+ * (`base`) bakes per level and trim colour; the turret's ink is cached per aim step (`turret`); the plinth's wall slots
+ * (`below`) and the belt rounds, lamp light and hot muzzles (`above`) are live.
+ */
+const TILT = TILTS.twin!,
+  SPEC = MUZZLES.twin!,
   DROP = TILT.drop,
   HB = TILT.height,
-  PITCH = TILT.pitch,
-  SIDES = [-4, 4] as const,
-  RECOIL = 4,
-  reach = (l: number) => 20 + l;
+  PITCH = TILT.pitch ?? 0,
+  SIDES = SPEC.sides!,
+  RECOIL = SPEC.recoil,
+  reach = SPEC.reach;
 /** Plinth: an octagon with long chamfers; outriggers reach out on the four axes. */
 const PLINTH = [-14, -9, -9, -14, 9, -14, 14, -9, 14, 9, 9, 14, -9, 14, -14, 9];
 const PLINTH_TOP = 4.5,
@@ -35,7 +43,7 @@ const YOKE_TOP = 10.5,
   BOX_TOP = 16,
   CHEEK_TOP = 18;
 
-function flakBase({ g, x, y, level, definition, color }: TurretContext) {
+function base({ g, x, y, level, definition, color }: TurretContext) {
   const y0 = y + DROP,
     c = definition.color;
   onGround(g, x, y0, 0, () => {
@@ -77,7 +85,8 @@ function flakBase({ g, x, y, level, definition, color }: TurretContext) {
   drum(g, x, y0, 10, DECK, DECK + 2.2, GUN.deep, shade(GUN.deep, 0.18), 14);
 }
 
-function flakTurret(ctx: TurretContext) {
+/** The turret's ink (cached per aim step and recoil): the yoke, ammo box, cheek plates and the twin guns, back to front. */
+function turret(ctx: TurretContext) {
   const { g, x, y, tower, definition, level, kick, tip, color } = ctx,
     a = tower.angle,
     c = definition.color,
@@ -104,6 +113,8 @@ function flakTurret(ctx: TurretContext) {
             const [bx, by] = P(-12.6, q, BOX_TOP);
             disc(g, bx, by, 0.8, OUTLINE);
           }
+        // The box's lamp from level 2 (its light is live).
+        if (level >= 2) lampInk(g, ...P(-12.6, Math.cos(a) > 0 ? 3.6 : -3.6, BOX_TOP + 0.2), color);
       },
     ],
   ];
@@ -141,14 +152,9 @@ function flakTurret(ctx: TurretContext) {
   paint(parts);
 }
 
-function flakLive(ctx: TurretContext) {
-  const { g, glow, x, y, tower, definition, level, kick, charge, energy, clock, color } = ctx,
-    a = tower.angle,
-    c = definition.color,
-    y0 = y + DROP,
-    P = framer(x, y0, a),
-    end = reach(level) - kick * RECOIL;
-  // Plinth slots: steady and dim, from level 4 a light chases across them.
+/** Live, under the turret: the plinth's wall slots, steady and dim; from level 4 a light chases across them. */
+function below({ g, glow, x, y, level, clock, color }: TurretContext) {
+  const y0 = y + DROP;
   SLOTS.forEach(([u0, v0, u1, v1], i) => {
     const on = level >= 4 ? 0.3 + 0.7 * Math.max(0, Math.sin(4 * clock - i * 1.4)) : 0.35,
       ax = X(x, u0 + (u1 - u0) * 0.3),
@@ -162,11 +168,20 @@ function flakLive(ctx: TurretContext) {
       glow.lineBetween(ax, ay, bx, by);
     }
   });
-  // The ammo box's lamp (one from level 2) and the rounds in the belt slot, filling as the guns reload.
-  if (level >= 2) {
-    const [lx, ly] = P(-12.6, Math.cos(a) > 0 ? 3.6 : -3.6, BOX_TOP + 0.2);
-    lamp(g, glow, lx, ly, color);
-  }
+}
+
+/**
+ * Live, over the turret: the rounds in the belt slot on the ammo box's roof (filling as the guns reload; the roof is
+ * never covered by the guns, which rise in front of it or behind it), the box lamp's light and the hot muzzles.
+ */
+function above(ctx: TurretContext) {
+  const { g, glow, x, y, tower, definition, level, kick, charge, energy, color } = ctx,
+    a = tower.angle,
+    c = definition.color,
+    y0 = y + DROP,
+    P = framer(x, y0, a),
+    end = reach(level) - kick * RECOIL;
+  if (level >= 2) lampLight(glow, ...P(-12.6, Math.cos(a) > 0 ? 3.6 : -3.6, BOX_TOP + 0.2), color);
   const rounds = Math.round(charge * 4);
   for (let i = 0; i < 4; i++) {
     const [rx, ry] = P(-11.4 + i * 1.3, 0, BOX_TOP + 0.3);
@@ -178,20 +193,7 @@ function flakLive(ctx: TurretContext) {
     if (kick > 0) halo(glow, mx, my, 4.5 * (1 + kick), c, 0.3 * kick);
     if (energy > 0) disc(glow, mx, my, 2.4, c, energy);
   }
-  void facing;
 }
 
-const sheet: Sheet = {
-  tower: "flak",
-  name: "Skyguard",
-  idea: "Twin AA guns on a yoke, pitched high; ammo box behind, belt rounds refill with the charge. Plinth with outriggers on the axes.",
-  tilt: TILT,
-  reach,
-  recoil: RECOIL,
-  sides: SIDES,
-  base: flakBase,
-  turret: flakTurret,
-  live: flakLive,
-};
-/** Skyguard in the four parts of a tilted tower (`tilted.ts`). */
-export const skyguard: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };
+/** Flak's Skyguard in the four parts of a tilted tower (`tilted.ts`). */
+export const skyguard: TiltedArt = { base, below: below, turret: turret, above: above };

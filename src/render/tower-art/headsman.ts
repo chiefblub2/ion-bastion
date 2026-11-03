@@ -1,17 +1,24 @@
-import type { Sheet, TiltedArt } from "./tilted";
+import type { TiltedArt } from "./tilted";
+import { MUZZLES, TILTS } from "../muzzles";
 import { halo } from "../material";
 import { disc, oval, shade, type Ink } from "../shapes";
 import type { TurretContext } from "./kit";
 import { OUTLINE, SQUASH, X, Y, block, drum, fillPoints, onGround, point, quad, FOOT, turn } from "./tilt";
-import { GUN, SHADOW_INK, castShadow, depth, framer, lamp, paint, part, rect } from "./tilt-parts";
+import { GUN, SHADOW_INK, castShadow, depth, framer, lamp, lampInk, lampLight, paint, part, rect } from "./tilt-parts";
 
-// Executioner: the Headsman, a glaive launcher on a stepped scaffold: a long arm with a counterweight carries the blade
-// flat in a cradle at its tip; once charged a spinning glaive waits at the hilt.
-const TILT = { drop: 5, squash: SQUASH, height: 11, deck: 6 },
+/**
+ * Headsman: Executioner's look in the slight 3/4 tilt (see `tilt.ts`): a glaive launcher on a stepped diamond scaffold,
+ * a long arm with a counterweight carrying the crimson blade flat in a cradle at its tip. The projection lives in
+ * `TILTS.blade` and the reach in `MUZZLES.blade`. The scaffold (`base`) bakes per level and trim colour; the turret's ink
+ * is cached per aim step (`turret`); the posts' lamps (`below`) and the blade's edge glow, the counterweight lamp's
+ * light, the glaive spinning over the hub once charged and the hot tip (`above`) are live.
+ */
+const TILT = TILTS.blade!,
+  SPEC = MUZZLES.blade!,
   DROP = TILT.drop,
   HB = TILT.height,
-  RECOIL = 5,
-  reach = (l: number) => 22 + l;
+  RECOIL = SPEC.recoil,
+  reach = SPEC.reach;
 /** Stepped scaffold: a wide diamond, a narrower one on it, and two posts on the side corners. */
 const LOWER = [-22, 0, 0, -22, 22, 0, 0, 22],
   UPPER = [-15, 0, 0, -15, 15, 0, 0, 15];
@@ -120,6 +127,7 @@ function blade(g: Ink, x: number, y0: number, a: number, d0: number, d1: number,
   }
 }
 
+/** The turret's ink (cached per aim step and recoil): the counterweight, the arm with the blade in its cradle, the hub cap. */
 function turret(ctx: TurretContext) {
   const { g, x, y, tower, definition, level, kick, tip, color } = ctx,
     a = tower.angle,
@@ -149,6 +157,8 @@ function turret(ctx: TurretContext) {
           const s = [P(-8.2, -3.2, ht), P(-7.2, -3.2, ht), P(-7.2, 3.2, ht), P(-8.2, 3.2, ht)];
           quad(g, ...s[0], ...s[1], ...s[2], ...s[3], color);
         }
+        // The counterweight's lamp from level 2 (its light is live).
+        if (level >= 2) lampInk(g, ...lampAt(P, a), color);
       },
     ],
     [
@@ -171,30 +181,35 @@ function turret(ctx: TurretContext) {
   oval(g, hx - 0.3, hy - 0.3, 3.2, 3.2 * SQUASH, shade(c, -0.4));
 }
 
-function live(ctx: TurretContext) {
+/** The counterweight lamp's spot on its roof, on the side turned to the viewer. */
+const lampAt = (P: ReturnType<typeof framer>, a: number) => P(-12, Math.cos(a) > 0 ? 3.2 : -3.2, COUNTER_TOP + 1.3);
+
+/** Live, under the turret: from level 4 two lamps on the scaffold's posts blink in turn (the arm sweeps over them). */
+function below({ g, glow, x, y, level, clock, color }: TurretContext) {
+  if (level < 4) return;
+  const y0 = y + DROP;
+  [-19.25, 19.25].forEach((u, i) => {
+    const on = 0.3 + 0.7 * Math.max(0, Math.sin(4 * clock - i * Math.PI));
+    lamp(g, glow, X(x, u), Y(y0, 0, 9.4), color, on);
+  });
+}
+
+/**
+ * Live, over the turret: the blade's edge glowing with the charge, the counterweight lamp's light, the glaive spinning
+ * over the hub once charged (it hovers above the arm) and the hot tip after a throw.
+ */
+function above(ctx: TurretContext) {
   const { g, glow, x, y, tower, definition, level, kick, charge, energy, clock, color } = ctx,
     a = tower.angle,
     c = definition.color,
     y0 = y + DROP,
     P = framer(x, y0, a),
     end = reach(level) - kick * RECOIL;
-  // The edge glows with the charge, brighter from level 5.
   const e0 = P(10, 0, HB),
     e1 = P(end - 1, 0, HB);
   glow.lineStyle(3, shade(c, 0.4), Math.min(0.5, 0.12 + 0.25 * charge + energy));
   glow.lineBetween(e0[0], e0[1], e1[0], e1[1]);
-  if (level >= 2) {
-    const [lx, ly] = P(-12, Math.cos(a) > 0 ? 3.2 : -3.2, COUNTER_TOP + 1.3);
-    lamp(g, glow, lx, ly, color);
-  }
-  // From level 4 two lamps on the posts blink in turn.
-  if (level >= 4)
-    [-19.25, 19.25].forEach((u, i) => {
-      const on = 0.3 + 0.7 * Math.max(0, Math.sin(4 * clock - i * Math.PI)),
-        px = X(x, u),
-        py = Y(y0, 0, 9.4);
-      lamp(g, glow, px, py, color, on);
-    });
+  if (level >= 2) lampLight(glow, ...lampAt(P, a), color);
   // Charged: a glaive of three curved blades spins over the hub, ready to be thrown.
   if (charge >= 0.95) {
     const [hx, hy] = P(0, 0, HUB_TOP + 4),
@@ -221,16 +236,6 @@ function live(ctx: TurretContext) {
   }
 }
 
-const sheet: Sheet = {
-  tower: "executioner",
-  name: "Headsman",
-  idea: "Glaive launcher on a stepped diamond scaffold: a counterweighted arm carries the long blade flat in a cradle; a glaive spins at the hilt once charged.",
-  tilt: TILT,
-  reach,
-  recoil: RECOIL,
-  base,
-  turret,
-  live,
-};
-/** Headsman in the four parts of a tilted tower (`tilted.ts`). */
-export const headsman: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };
+
+/** Executioner's Headsman in the four parts of a tilted tower (`tilted.ts`). */
+export const headsman: TiltedArt = { base, below, turret, above };

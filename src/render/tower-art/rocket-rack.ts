@@ -1,15 +1,24 @@
-import type { Sheet, TiltedArt } from "./tilted";
-import { SX, SY, box, frame, lit, plane, project, rod, seen } from "./tilt-frame";
-import { facing, halo } from "../material";
-import { disc, oval, shade, type Ink } from "../shapes";
+/**
+ * Rocket Rack: Skyburst's look in the 3/4 tilt (see `tilt.ts`): a four-tube pod raised on an elevating cradle between
+ * two cheeks, over a chamfered plinth. The plinth (`base`) bakes per level and trim colour; the cradle, pod and tubes
+ * (`turret`) depend only on the aim and recoil and are cached per angle (`TurretCache`); the plinth's chasing lights
+ * (`below`) and the warhead noses, spinning radar, lamp light and tube heat (`above`) are live. The projection lives in
+ * `TILTS.battery`, the barrels in `MUZZLES.battery`.
+ */
+import { MUZZLES, TILTS } from "../muzzles";
+import type { TiltedArt } from "./tilted";
+import { SX, SY, box, frame, project, rod } from "./tilt-frame";
+import { halo } from "../material";
+import { disc, oval, shade } from "../shapes";
 import type { TurretContext } from "./kit";
 import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, towardViewer, tube, turn } from "./tilt";
 
 // --- Skyburst: a four-tube rocket rack on an elevating cradle. --------------------------------------------------------
-const TILT = { drop: 5, squash: SQUASH, height: 13, pitch: 0.5, deck: 6 },
-  SIDES = [-5.4, -1.8, 1.8, 5.4] as const,
-  reach = (l: number) => 15 + l,
-  RECOIL = 3;
+const TILT = TILTS.battery!,
+  SPEC = MUZZLES.battery!,
+  SIDES = SPEC.sides!,
+  reach = SPEC.reach,
+  RECOIL = SPEC.recoil;
 const GUN = 0x3b4549,
   GUN_TOP = 0x56646a,
   METAL = 0x8a9a9c,
@@ -29,14 +38,30 @@ const FRONT_LIGHTS = [
   [15.5, 15.5],
 ];
 
-const sheet: Sheet = {
-  tower: "skyburst",
-  name: "Skyburst Rack",
-  idea: "Four-tube rocket rack raised at 30° on a cradle over a chamfered plinth; noses return per reload quarter, radar spins at the back.",
-  tilt: TILT,
-  reach,
-  recoil: RECOIL,
-  sides: SIDES,
+/** Pitch, aim and the pod's frame of a tower, shared by the turret and its live parts. */
+function geometry({ y, tower, level, kick }: TurretContext) {
+  const a = tower.angle,
+    pitch = TILT.pitch ?? 0;
+  return {
+    a,
+    pitch,
+    y0: y + TILT.drop,
+    HB: TILT.height,
+    ca: Math.cos(a),
+    sa: Math.sin(a),
+    end: reach(level) - kick * RECOIL,
+    back: -kick * RECOIL,
+    f: frame(a, pitch, TILT.height),
+    toward: towardViewer(a, pitch) > 0.02,
+  };
+}
+/** The pod's back corner lamp, on the side turned to the viewer (from level 2). */
+const lampAt = (x: number, y0: number, f: ReturnType<typeof frame>, back: number, ca: number) => {
+  project(x, y0, f, -6.4 + back, ca > 0 ? 6.4 : -6.4, 3.3, 1);
+  return [SX[1], SY[1]] as const;
+};
+
+export const rocketRack: TiltedArt = {
   base: ({ g, x, y, level, definition, color }) => {
     const y0 = y + TILT.drop,
       c = definition.color;
@@ -84,19 +109,23 @@ const sheet: Sheet = {
         block(g, x, y0, FOOT, FOOT, m, 0.5, PLINTH_H - 0.5, 0, shade(c, -0.55), shade(c, -0.3), shade(c, 0.2));
       }
   },
-  turret: ({ g, x, y, tower, definition, level, kick, tip, color }) => {
-    const a = tower.angle,
-      y0 = y + TILT.drop,
+  // Live, under the turret: from level 4 the lights in the plinth's front faces chase round.
+  below: ({ g, glow, x, y, level, clock, color }) => {
+    if (level < 4) return;
+    const y0 = y + TILT.drop;
+    FRONT_LIGHTS.forEach(([u, v], i) => {
+      const on = 0.3 + 0.7 * Math.max(0, Math.sin(4 * clock - i * 1.2)),
+        lx = X(x, u),
+        ly = Y(y0, v, PLINTH_H / 2);
+      quad(g, lx - 0.9, ly - 0.5, lx + 0.9, ly - 0.5, lx + 0.9, ly + 0.5, lx - 0.9, ly + 0.5, shade(color, -0.6 + 0.7 * on));
+      if (on > 0.5) disc(glow, lx, ly, 2.4, color, 0.25 * on);
+    });
+  },
+  turret: (ctx) => {
+    const { g, x, definition, level, tip, color } = ctx,
+      { a, pitch, y0, HB, ca, sa, end, back, f, toward } = geometry(ctx),
       c = definition.color,
-      pitch = TILT.pitch,
-      HB = TILT.height,
-      end = reach(level) - kick * RECOIL,
-      back = -kick * RECOIL,
-      ca = Math.cos(a),
-      sa = Math.sin(a),
-      f = frame(a, pitch, HB),
-      podFront = end - 3.5,
-      toward = towardViewer(a, pitch) > 0.02;
+      podFront = end - 3.5;
     // Shadow of the pod on the deck.
     onGround(g, x, y0, DECK + 1.8, () => {
       const s = turn([-8, -8, podFront * 0.85, -8, podFront * 0.85, 8, -8, 8], a, FOOT);
@@ -154,6 +183,12 @@ const sheet: Sheet = {
         // Radar mast at the back of the pod (its dish is live).
         project(x, y0, f, -5 + back, 0, 3.2, 0);
         rod(g, SX[0], SY[0], 0, 0, 0, 0, 0, 3.5, 1.2, METAL);
+        // Level 2: the lamp's socket and glass at the pod's back corner (its light is live).
+        if (level >= 2) {
+          const [lx, ly] = lampAt(x, y0, f, back, ca);
+          disc(g, lx, ly, 1.3, OUTLINE);
+          disc(g, lx, ly, 0.8, shade(color, 0.2));
+        }
       };
     const near = ca > 0 ? 1 : -1;
     cheek(-near);
@@ -166,18 +201,11 @@ const sheet: Sheet = {
     }
     cheek(near);
   },
-  live: ({ g, glow, x, y, tower, definition, level, kick, charge, clock, color, energy }) => {
-    const a = tower.angle,
-      y0 = y + TILT.drop,
-      c = definition.color,
-      pitch = TILT.pitch,
-      HB = TILT.height,
-      end = reach(level) - kick * RECOIL,
-      back = -kick * RECOIL,
-      ca = Math.cos(a),
-      sa = Math.sin(a),
-      f = frame(a, pitch, HB),
-      toward = towardViewer(a, pitch) > 0.02;
+  // Live, over the turret: warhead noses in the frontmost tube mouths, the radar dish, lamp light and tube heat.
+  above: (ctx) => {
+    const { g, glow, x, tower, definition, level, kick, charge, clock, color, energy } = ctx,
+      { a, pitch, y0, HB, ca, sa, end, back, f, toward } = geometry(ctx),
+      c = definition.color;
     // Warhead noses return one per quarter of the reload.
     SIDES.forEach((s, i) => {
       if (!toward || charge < 0.25 * (i + 1)) return;
@@ -190,22 +218,7 @@ const sheet: Sheet = {
       spin = clock * 3 + tower.id;
     oval(g, rx, ry, 3.4, 1.2 + 1.6 * Math.abs(Math.cos(spin)), OUTLINE, 1, Math.sin(spin) * 0.4);
     oval(g, rx, ry, 2.8, 0.8 + 1.4 * Math.abs(Math.cos(spin)), shade(c, 0.1), 1, Math.sin(spin) * 0.4);
-    // Level 2: a lamp at the back corner of the pod.
-    if (level >= 2) {
-      project(x, y0, f, -6.4 + back, ca > 0 ? 6.4 : -6.4, 3.3, 1);
-      disc(g, SX[1], SY[1], 1.3, OUTLINE);
-      disc(g, SX[1], SY[1], 0.8, shade(color, 0.2));
-      disc(glow, SX[1], SY[1], 2.6, color, 0.35);
-    }
-    // Level 4: lights in the plinth's front faces chase round.
-    if (level >= 4)
-      FRONT_LIGHTS.forEach(([u, v], i) => {
-        const on = 0.3 + 0.7 * Math.max(0, Math.sin(4 * clock - i * 1.2)),
-          lx = X(x, u),
-          ly = Y(y0, v, PLINTH_H / 2);
-        quad(g, lx - 0.9, ly - 0.5, lx + 0.9, ly - 0.5, lx + 0.9, ly + 0.5, lx - 0.9, ly + 0.5, shade(color, -0.6 + 0.7 * on));
-        if (on > 0.5) disc(glow, lx, ly, 2.4, color, 0.25 * on);
-      });
+    if (level >= 2) disc(glow, ...lampAt(x, y0, f, back, ca), 2.6, color, 0.35);
     // Heat in the tubes right after a salvo; a glow on the mouths from level 5.
     for (const s of SIDES) {
       project(x, y0, { ...f, pu: -sa * s, pv: ca * s }, end, 0, 0, 2);
@@ -214,5 +227,3 @@ const sheet: Sheet = {
     }
   },
 };
-/** RocketRack in the four parts of a tilted tower (`tilted.ts`). */
-export const rocketRack: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };

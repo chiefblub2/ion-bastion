@@ -1,13 +1,22 @@
-import type { Sheet, TiltedArt } from "./tilted";
+/**
+ * Pit Mortar: Mortar's look in the 3/4 tilt (see `tilt.ts`): a fat, short tube at a steep pitch on a bipod and breech
+ * cradle, in a sandbagged pit round a bolted turntable. The pit (`base`) bakes per level and trim colour; cradle, tube
+ * and bipod (`turret`) depend only on the aim and recoil and are cached per angle (`TurretCache`); the turntable's
+ * chasing lights (`below`) and the shell nose, smoke, heat and lamp light (`above`) are live. The projection lives in
+ * `TILTS.mortar`, the tube in `MUZZLES.mortar`.
+ */
+import { MUZZLES, TILTS } from "../muzzles";
+import type { TurretContext } from "./kit";
+import type { TiltedArt } from "./tilted";
 import { facing, halo } from "../material";
 import { disc, oval, shade, type Ink } from "../shapes";
-import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, towardViewer, tube, turn } from "./tilt";
+import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, towardViewer, tube, turn } from "./tilt";
 import { SX, SY, frame, project, rod } from "./tilt-frame";
 
 // Mortar: a fat, short tube at a steep pitch on a bipod, in a sandbagged pit round a bolted turntable.
-const TILT = { drop: 5, squash: SQUASH, height: 6, pitch: 0.9, deck: 0.6 },
-  reach = (l: number) => 12 + l,
-  RECOIL = 5;
+const TILT = TILTS.mortar!,
+  reach = MUZZLES.mortar!.reach,
+  RECOIL = MUZZLES.mortar!.recoil;
 const GUN = 0x3a4549,
   GUN_TOP = 0x56646a,
   METAL = 0x8a9a9c,
@@ -30,13 +39,16 @@ function bag(g: Ink, x: number, y0: number, t: number, h: number, c: number) {
   oval(g, bx - 0.6, by - 0.8, 3, 1.2, shade(c, 0.25), 0.8, rot);
 }
 
-const sheet: Sheet = {
-  tower: "mortar",
-  name: "Pit Mortar",
-  idea: "A fat tube raised at ~50° on a bipod over a bolted turntable, sunk in a ring of sandbags; a shell nose shows in the bore once loaded.",
-  tilt: TILT,
-  reach,
-  recoil: RECOIL,
+/** Aim, pitch, the tube's frame and its muzzle distance, shared by the turret and its live parts. */
+function geometry({ y, tower, level, kick }: TurretContext) {
+  const a = tower.angle,
+    pitch = TILT.pitch ?? 0;
+  return { a, pitch, y0: y + TILT.drop, HB: TILT.height, ca: Math.cos(a), sa: Math.sin(a), end: reach(level) - kick * RECOIL, back: -kick * RECOIL, f: frame(a, pitch, TILT.height) };
+}
+/** The lamp on the cradle's back (from level 2), shown while the back is not turned away. */
+const lampAt = (x: number, y0: number, ca: number, sa: number) => [X(x, -ca * 5.6), Y(y0, -sa * 5.6, CRADLE_H + 0.8)] as const;
+
+export const pitMortar: TiltedArt = {
   base: ({ g, x, y, level, definition, color }) => {
     const y0 = y + TILT.drop,
       c = definition.color,
@@ -74,17 +86,23 @@ const sheet: Sheet = {
     const n = turn([-17, -11, -11, -11, -11, -6, -17, -6], 0, FOOT);
     block(g, x, y0, FOOT, FOOT, n, 0, 3, 0, shade(c, -0.5), shade(c, -0.3), shade(c, 0.1));
   },
-  turret: ({ g, x, y, tower, definition, level, kick, tip, color }) => {
-    const a = tower.angle,
-      y0 = y + TILT.drop,
+  // Live, under the turret: from level 4 lights in the turntable's front rim chase round.
+  below: ({ g, glow, x, y, level, clock, color }) => {
+    if (level < 4) return;
+    const y0 = y + TILT.drop;
+    [0.25, 0.42, 0.58, 0.75].forEach((k, i) => {
+      const t = Math.PI * k,
+        on = 0.3 + 0.7 * Math.max(0, Math.sin(4 * clock - i * 1.1)),
+        lx = X(x, Math.cos(t) * 10.6),
+        ly = Y(y0, Math.sin(t) * 10.6, 1.1);
+      disc(g, lx, ly, 0.8, shade(color, -0.6 + 0.7 * on));
+      if (on > 0.5) disc(glow, lx, ly, 2.2, color, 0.25 * on);
+    });
+  },
+  turret: (ctx) => {
+    const { g, x, definition, level, tip, color } = ctx,
+      { a, pitch, y0, HB, ca, sa, end, back, f } = geometry(ctx),
       c = definition.color,
-      pitch = TILT.pitch,
-      HB = TILT.height,
-      end = reach(level) - kick * RECOIL,
-      back = -kick * RECOIL,
-      ca = Math.cos(a),
-      sa = Math.sin(a),
-      f = frame(a, pitch, HB),
       away = sa < -0.05,
       R = 4.3;
     // The tube's shadow, long and to the lower right.
@@ -105,6 +123,12 @@ const sheet: Sheet = {
           disc(g, wx, wy, 2.4, OUTLINE);
           disc(g, wx, wy, 1.8, shade(METAL, -0.2));
           disc(g, wx, wy, 0.7, DEEP);
+        }
+        // Level 2: the lamp's socket and glass on the cradle's back (its light is live).
+        if (level >= 2 && sa < 0.3) {
+          const [lx, ly] = lampAt(x, y0, ca, sa);
+          disc(g, lx, ly, 1.2, OUTLINE);
+          disc(g, lx, ly, 0.75, shade(color, 0.2));
         }
       },
       barrel = () => {
@@ -152,48 +176,21 @@ const sheet: Sheet = {
       bipod();
     }
   },
-  live: ({ g, glow, x, y, tower, definition, level, kick, charge, clock, color, energy }) => {
-    const a = tower.angle,
-      y0 = y + TILT.drop,
-      c = definition.color,
-      pitch = TILT.pitch,
-      HB = TILT.height,
-      end = reach(level) - kick * RECOIL,
-      f = frame(a, pitch, HB),
-      ca = Math.cos(a),
-      sa = Math.sin(a);
+  // Live, over the turret: the shell nose in the bore once loaded, smoke and heat after a shot, the lamp's light.
+  above: (ctx) => {
+    const { g, glow, x, definition, level, kick, charge, color, energy } = ctx,
+      { a, pitch, y0, HB, ca, sa, end, f } = geometry(ctx),
+      c = definition.color;
     project(x, y0, f, end, 0, 0, 0);
     const mx = SX[0],
       my = SY[0];
-    // Loaded: the shell's nose shows in the bore.
     if (charge > 0.85 && kick === 0 && towardViewer(a, pitch) > 0.02) endFace(g, x, y0, a, HB, end - 1.2, 2.2, shade(0xc9a25a, 0.1), pitch);
-    // Smoke rising from the muzzle after a shot, and heat in the tube.
     if (kick > 0) {
       const drift = 1 - kick;
       halo(glow, mx, my, 6 * (1 + kick), c, 0.3 * kick);
       for (const k of [0, 1]) disc(g, mx + (k ? 3 : -2) * drift, my - 4 - 10 * drift - k * 3, 2 + 3.5 * drift, 0x8f989e, 0.4 * kick);
     }
     if (energy > 0) disc(glow, mx, my, 3.5, c, energy);
-    // Level 2: a lamp on the cradle's back; level 4: lights in the front sandbag gaps chase round.
-    if (level >= 2) {
-      const lx = X(x, -ca * 5.6),
-        ly = Y(y0, -sa * 5.6, CRADLE_H + 0.8);
-      if (sa < 0.3) {
-        disc(g, lx, ly, 1.2, OUTLINE);
-        disc(g, lx, ly, 0.75, shade(color, 0.2));
-        disc(glow, lx, ly, 2.4, color, 0.35);
-      }
-    }
-    if (level >= 4)
-      [0.25, 0.42, 0.58, 0.75].forEach((k, i) => {
-        const t = Math.PI * k,
-          on = 0.3 + 0.7 * Math.max(0, Math.sin(4 * clock - i * 1.1)),
-          lx = X(x, Math.cos(t) * 10.6),
-          ly = Y(y0, Math.sin(t) * 10.6, 1.1);
-        disc(g, lx, ly, 0.8, shade(color, -0.6 + 0.7 * on));
-        if (on > 0.5) disc(glow, lx, ly, 2.2, color, 0.25 * on);
-      });
+    if (level >= 2 && sa < 0.3) disc(glow, ...lampAt(x, y0, ca, sa), 2.4, color, 0.35);
   },
 };
-/** PitMortar in the four parts of a tilted tower (`tilted.ts`). */
-export const pitMortar: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };
