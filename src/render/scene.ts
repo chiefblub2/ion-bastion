@@ -606,7 +606,7 @@ export class Battlefield extends Phaser.Scene {
     const s = this.sim.state,
       content = this.sim.content;
     let origin: EffectOrigin | undefined;
-    if (event.type === "shot" || event.type === "beam") {
+    if (event.type === "shot" || event.type === "beam" || event.type === "chain") {
       const { x, y } = event.from,
         tower = s.towers.find((t) => t.x === x && t.y === y);
       // The drawn turret snapped onto the shot this frame, so this is the barrel the shot left.

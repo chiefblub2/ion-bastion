@@ -2,6 +2,19 @@ import type { TurretStyle } from "../../core/types";
 import type { Drawing } from "./kit";
 import { sentinelAbove, sentinelBase, sentinelBelow, sentinelTurret } from "./sentinel";
 import { siegeAbove, siegeBase, siegeBelow, siegeTurret } from "./siege";
+import { coilSpire } from "./coil-spire";
+import { furnaceTorch } from "./furnace-torch";
+import { headsman } from "./headsman";
+import { hydraulicPress } from "./hydraulic-press";
+import { lensFork } from "./lens-fork";
+import { pitMortar } from "./pit-mortar";
+import { prismCradle } from "./prism-cradle";
+import { railspear } from "./railspear";
+import { reagentFlask } from "./reagent-flask";
+import { rocketRack } from "./rocket-rack";
+import { scattergun } from "./scattergun";
+import { skyguard } from "./skyguard";
+import { uplinkArray } from "./uplink-array";
 /**
  * A tower drawn in the 3/4 tilt (projection in `TILTS`), in four parts drawn bottom to top:
  * - `base`: still, depends only on level and trim colour; baked like every tower body (`TowerBodies`).
@@ -17,11 +30,35 @@ export interface TiltedArt {
   turret: Drawing;
   above: Drawing;
 }
+/**
+ * A tilted tower as it came from the concept sheet: three drawings, with everything live in `live` (drawn above the
+ * turret) until it is split into `below` and `above`. Transitional; every module ends as a plain `TiltedArt`.
+ */
+export interface Sheet {
+  [field: string]: unknown;
+  base: Drawing;
+  below?: Drawing;
+  turret: Drawing;
+  live: Drawing;
+}
 export const TILTED: Partial<Record<TurretStyle, TiltedArt>> = {
   // Pulse: the Hex Sentinel.
   barrel: { base: sentinelBase, below: sentinelBelow, turret: sentinelTurret, above: sentinelAbove },
   // Nova: the Siege Cannon.
   heavy: { base: siegeBase, below: siegeBelow, turret: siegeTurret, above: siegeAbove },
+  twin: skyguard,
+  scatter: scattergun,
+  blade: headsman,
+  rail: railspear,
+  battery: rocketRack,
+  mortar: pitMortar,
+  flask: reagentFlask,
+  uplink: uplinkArray,
+  flame: furnaceTorch,
+  lens: lensFork,
+  coil: coilSpire,
+  prism: prismCradle,
+  hammer: hydraulicPress,
 };
 /** The whole live turret of a tilted tower: its three layers in order. */
 export const liveTurret =

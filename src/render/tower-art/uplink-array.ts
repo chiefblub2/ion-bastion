@@ -1,8 +1,8 @@
-import { halo } from "../render/material";
-import { arcBand, disc, oval, shade } from "../render/shapes";
-import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, onGround, tube, turn } from "../render/tower-art/tilt";
-import { SX, SY, box, frame, lit, plane, project, rod } from "./skyburst";
-import type { Concept } from "./types";
+import type { Sheet, TiltedArt } from "./tilted";
+import { halo } from "../material";
+import { arcBand, disc, oval, shade } from "../shapes";
+import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, onGround, tube, turn } from "./tilt";
+import { SX, SY, box, frame, lit, plane, project, rod } from "./tilt-frame";
 
 // Orbital: an uplink dish looking up at the sky, leaning a little towards the target, on a fork over a mast; under it a
 // level designator laser is the muzzle. A calm octagonal pad with two short antenna posts at the back.
@@ -36,7 +36,7 @@ const PYLON_H = 8;
 const DISH_R = 11,
   ARM = 10.8;
 
-export const concept: Concept = {
+const sheet: Sheet = {
   tower: "orbital",
   name: "Uplink Array",
   idea: "An uplink dish looking up at the sky, leaning towards the target, over a level designator laser on a fork; a calm octagonal pad with two antenna posts and a countdown gauge.",
@@ -186,3 +186,5 @@ export const concept: Concept = {
     if (kick > 0) halo(glow, SX[1], SY[1], 8 * (0.5 + kick), c, 0.3 * kick);
   },
 };
+/** UplinkArray in the four parts of a tilted tower (`tilted.ts`). */
+export const uplinkArray: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };

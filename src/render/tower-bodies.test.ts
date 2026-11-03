@@ -22,8 +22,8 @@ describe("baked tower bodies", () => {
   });
 
   it("keeps a base whose metal moves with time live", () => {
-    // Inferno's vents flicker on its plate, not only in its light.
-    expect(stillBody(tower("inferno"), DEFAULT_CONTENT.towers.inferno, badges("inferno", 1))).toBe(false);
+    // Aura's base turns with time on its plate, not only in its light.
+    expect(stillBody(tower("aura"), DEFAULT_CONTENT.towers.aura, badges("aura", 1))).toBe(false);
   });
 
   it("bakes the tilted foundations (Pulse, Nova) like any flat body, whatever was drawn before", () => {

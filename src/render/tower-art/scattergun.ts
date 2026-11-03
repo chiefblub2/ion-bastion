@@ -1,9 +1,9 @@
-import { halo, LIGHT } from "../render/material";
-import { arcBand, disc, oval, shade } from "../render/shapes";
-import type { TurretContext } from "../render/tower-art/kit";
-import { OUTLINE, SQUASH, X, Y, drum, onGround, quad, towardViewer, tube, endFace } from "../render/tower-art/tilt";
-import type { Concept } from "./types";
-import { GUN, SHADOW_INK, castShadow, depth, framer, lamp, paint, part, rect } from "./flak";
+import type { Sheet, TiltedArt } from "./tilted";
+import { halo, LIGHT } from "../material";
+import { arcBand, disc, oval, shade } from "../shapes";
+import type { TurretContext } from "./kit";
+import { OUTLINE, SQUASH, X, Y, drum, onGround, quad, towardViewer, tube, endFace } from "./tilt";
+import { GUN, SHADOW_INK, castShadow, depth, framer, lamp, paint, part, rect } from "./tilt-parts";
 
 // Shrapnel: the Scattergun, a squat fan-fronted housing on a round pedestal, its short barrels spread in a fan and fed
 // by a revolver drum at the back that turns one chamber per salvo.
@@ -176,7 +176,7 @@ function live(ctx: TurretContext) {
   }
 }
 
-export const concept: Concept = {
+const sheet: Sheet = {
   tower: "shrapnel",
   name: "Scattergun",
   idea: "Fan-fronted housing on a round pedestal: 3 (L4: 5) short barrels in a fan, a revolver drum at the back turns a chamber per salvo; vents flare.",
@@ -188,3 +188,5 @@ export const concept: Concept = {
   turret,
   live,
 };
+/** Scattergun in the four parts of a tilted tower (`tilted.ts`). */
+export const scattergun: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };

@@ -1,9 +1,9 @@
-import { halo } from "../render/material";
-import { disc, oval, shade, strokeOval } from "../render/shapes";
-import type { TurretContext } from "../render/tower-art/kit";
-import { OUTLINE, SQUASH, X, Y, drum, onGround, quad } from "../render/tower-art/tilt";
-import type { Concept } from "./types";
-import { GUN, SHADOW_INK, castShadow, depth, framer, lamp, paint, part, rect } from "./flak";
+import type { Sheet, TiltedArt } from "./tilted";
+import { halo } from "../material";
+import { disc, oval, shade, strokeOval } from "../shapes";
+import type { TurretContext } from "./kit";
+import { OUTLINE, SQUASH, X, Y, drum, onGround, quad } from "./tilt";
+import { GUN, SHADOW_INK, castShadow, depth, framer, lamp, paint, part, rect } from "./tilt-parts";
 
 // Lance: the Railspear, two long rails on a low cradle over a round plinth ringed with capacitor cells at the back;
 // coils clamp the rails and light up one after another as the shot charges.
@@ -161,7 +161,7 @@ function live(ctx: TurretContext) {
   }
 }
 
-export const concept: Concept = {
+const sheet: Sheet = {
   tower: "lance",
   name: "Railspear",
   idea: "Two long rails on a low cradle over a round plinth; capacitor cells ring the back and fill with the charge, coils on the rails light in turn.",
@@ -172,3 +172,5 @@ export const concept: Concept = {
   turret,
   live,
 };
+/** Railspear in the four parts of a tilted tower (`tilted.ts`). */
+export const railspear: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };

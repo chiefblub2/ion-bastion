@@ -1,3 +1,4 @@
+import type { Sheet, TiltedArt } from "./tilted";
 /**
  * Quake concept, "Hydraulic Press": a low octagonal plinth with a round strike plate, three hydraulic legs leaning in
  * from the sides and the back to a crown over the plate (still), a squat bronze hammer head on a short chrome piston
@@ -5,11 +6,10 @@
  * pressure lights, lamps, strike dust and plate glow (live). No aim: the tower ignores `tower.angle`, and its pulse
  * is centred on the ground.
  */
-import { facing, halo } from "../render/material";
-import { disc, oval, ring, shade } from "../render/shapes";
-import type { TurretContext } from "../render/tower-art/kit";
-import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, onGround, quad, tube, turn } from "../render/tower-art/tilt";
-import type { Concept } from "./types";
+import { facing, halo } from "../material";
+import { disc, oval, ring, shade } from "../shapes";
+import type { TurretContext } from "./kit";
+import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, onGround, quad, tube, turn } from "./tilt";
 
 const DROP = 6;
 /** Heights: plinth, crown, the hammer's raised and struck bottom, its thickness and where the piston meets the crown. */
@@ -205,7 +205,7 @@ function live({ g, glow, x, y, definition, level, kick, charge, energy, clock, c
 }
 
 /** Quake: a hydraulic press. */
-export const concept = {
+const sheet: Sheet = {
   tower: "quake",
   name: "Hydraulic Press",
   idea: "Low octagonal plinth with a round strike plate; three hydraulic legs lean in to a crown, and a squat bronze hammer on a short piston slams onto the plate on every shockwave.",
@@ -213,4 +213,6 @@ export const concept = {
   base,
   turret,
   live,
-} satisfies Concept;
+};
+/** HydraulicPress in the four parts of a tilted tower (`tilted.ts`). */
+export const hydraulicPress: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };

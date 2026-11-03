@@ -1,13 +1,13 @@
+import type { Sheet, TiltedArt } from "./tilted";
 /**
  * Ember concept, "Furnace Torch": a squat flamethrower in the 3/4 tilt. An octagonal furnace plinth with glowing
  * vents (still), a low turning body with two fuel tanks on its back and a short flared nozzle (turret), the pilot
  * flame, vent glow, fuel gauge and lamps (live).
  */
-import { halo } from "../render/material";
-import { disc, oval, ring, shade } from "../render/shapes";
-import type { TurretContext } from "../render/tower-art/kit";
-import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, towardViewer, tube, turn } from "../render/tower-art/tilt";
-import type { Concept } from "./types";
+import { halo } from "../material";
+import { disc, oval, ring, shade } from "../shapes";
+import type { TurretContext } from "./kit";
+import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, towardViewer, tube, turn } from "./tilt";
 
 const DROP = 5,
   HB = 10.5,
@@ -218,7 +218,7 @@ function live({ g, glow, x, y, tower, definition, level, kick, charge, energy, c
 }
 
 /** Ember: a squat flamethrower. */
-export const concept = {
+const sheet: Sheet = {
   tower: "inferno",
   name: "Furnace Torch",
   idea: "Squat flamethrower: octagonal furnace plinth with glowing vents, low body with twin fuel tanks, short flared nozzle with a pilot flame.",
@@ -228,4 +228,6 @@ export const concept = {
   base,
   turret,
   live,
-} satisfies Concept;
+};
+/** FurnaceTorch in the four parts of a tilted tower (`tilted.ts`). */
+export const furnaceTorch: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };

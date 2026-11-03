@@ -3,6 +3,7 @@ import { DARK, OUTLINE, PLATE, SHADOW, facing, led, litBar, plate, rivets, sunke
 import { arcBand, chamferRect, disc, oval, polygon, ring, shade } from "../shapes";
 import { sentinelBase } from "./sentinel";
 import { siegeBase } from "./siege";
+import { TILTED } from "./tilted";
 import { type Drawing, TAU, PTS, put, at, quad, tick, pip, facets, inlay, base, trapFrame, hexLine, CORNERS } from "./kit";
 /** Base plates by `visual.turret`: the raised plate with its deck, studs and trim. */
 export const BASES: Record<TurretStyle, Drawing> = {
@@ -10,25 +11,10 @@ export const BASES: Record<TurretStyle, Drawing> = {
   barrel: sentinelBase,
   // Nova: the Siege Cannon's four legs and amber drum, drawn in the 3/4 tilt (see `siege.ts`).
   heavy: siegeBase,
-  twin: (ctx) => {
-    const { g, x, y, definition: d } = ctx;
-    // Outrigger legs under the plate.
-    g.fillStyle(shade(d.color, -0.6));
-    for (let i = 0; i < 4; i++) tick(g, x, y, Math.PI / 4 + (i * Math.PI) / 2, 12, 20, 3.2);
-    base(ctx, { n: 4 }, 23, 17);
-  },
-  coil: (ctx) => {
-    const { g, glow, x, y, definition: d, charge } = ctx,
-      bells = [0, 1, 2, 3, 4, 5].map((i) => at(x, y, (i * Math.PI) / 3, 19.3));
-    base(ctx, "disc", 21, 17);
-    // Insulator bells on the rim; their glass glows with the stored charge.
-    g.fillStyle(shade(d.color, -0.55));
-    for (const p of bells) pip(g, p.x, p.y, 2.7);
-    g.fillStyle(shade(d.color, -0.05));
-    for (const p of bells) pip(g, p.x - 0.5, p.y - 0.5, 1.4);
-    glow.fillStyle(d.color, 0.1 + 0.2 * charge);
-    for (const p of bells) pip(glow, p.x, p.y, 2.4);
-  },
+  // Flak: the Skyguard's foundation in the 3/4 tilt (see `skyguard.ts`).
+  twin: TILTED.twin!.base,
+  // Tesla: the Coil Spire's foundation in the 3/4 tilt (see `coil-spire.ts`).
+  coil: TILTED.coil!.base,
   crystal: (ctx) => {
     const { g, x, y, level, color } = ctx;
     // Six facets, each shaded by where its edge faces.
@@ -37,23 +23,10 @@ export const BASES: Record<TurretStyle, Drawing> = {
     sunken(g, x, y, { n: 6 }, 18, DARK);
     if (level >= 4) inlay(g, x, y, { n: 6 }, 21.4, shade(color, -0.35));
   },
-  rail: (ctx) => {
-    base(ctx, { n: 6 }, 23, 19);
-    rivets(ctx.g, ctx.x, ctx.y, 21, 2, 0, shade(ctx.definition.color, -0.55));
-  },
-  flame: (ctx) => {
-    const { g, glow, x, y, tower: t, definition: d, clock, energy } = ctx,
-      heat = 0.75 + 0.25 * Math.sin(clock * 13 + t.id * 1.7),
-      vents = [0, 1, 2, 3].map((i) => Math.PI / 4 + (i * Math.PI) / 2);
-    base(ctx, { n: 8, rot: Math.PI / 8 }, 23, 19);
-    // Heat vents with the furnace glowing behind them.
-    g.fillStyle(OUTLINE);
-    for (const a of vents) tick(g, x, y, a, 16.5, 21, 2.8);
-    g.fillStyle(shade(d.color, -0.25), 0.45 + 0.35 * heat);
-    for (const a of vents) tick(g, x, y, a, 17.2, 20.3, 1.2);
-    glow.fillStyle(d.color, 0.1 + 0.1 * heat + energy);
-    for (const a of vents) tick(glow, x, y, a, 16.8, 20.7, 2.2);
-  },
+  // Lance: the Railspear's foundation in the 3/4 tilt (see `railspear.ts`).
+  rail: TILTED.rail!.base,
+  // Ember: the Furnace Torch's foundation in the 3/4 tilt (see `furnace-torch.ts`).
+  flame: TILTED.flame!.base,
   emitter: (ctx) => {
     const { g, x, y, definition: d } = ctx,
       nodes = [0, 1, 2].map((i) => at(x, y, -Math.PI / 2 + (i * TAU) / 3, 20));
@@ -67,15 +40,8 @@ export const BASES: Record<TurretStyle, Drawing> = {
     base(ctx, { cut: 0.3 }, 21, 17);
     rivets(ctx.g, ctx.x, ctx.y, 22.4, 4, Math.PI / 4, shade(ctx.definition.color, -0.55));
   },
-  prism: (ctx) => {
-    const { g, x, y, definition: d } = ctx;
-    base(ctx, { n: 12 }, 23, 19);
-    for (let i = 0; i < 3; i++) {
-      const a = Math.PI / 2 + (i * TAU) / 3,
-        p = at(x, y, a, 21);
-      polygon(g, p.x, p.y, 2.6, 3, shade(d.color, -0.35 + 0.2 * facing(a)), a);
-    }
-  },
+  // Decay: the Prism Cradle's foundation in the 3/4 tilt (see `prism-cradle.ts`).
+  prism: TILTED.prism!.base,
   refinery: (ctx) => {
     const { g, x, y, definition: d } = ctx;
     base(ctx, { cut: 0.12 }, 22, 18, { cut: 0.35 });
@@ -96,29 +62,15 @@ export const BASES: Record<TurretStyle, Drawing> = {
     g.fillStyle(shade(d.color, -0.35));
     for (let i = 0; i < 8; i++) tick(g, x, y, (i * Math.PI) / 4, 18.8, 21.5, 1.5);
   },
-  // Octagon with four lens mounts.
-  lens: (ctx) => {
-    base(ctx, { n: 8 }, 23, 19);
-    rivets(ctx.g, ctx.x, ctx.y, 21, 4, 0, shade(ctx.definition.color, -0.5));
-  },
+  // Focus: the Lens Fork's foundation in the 3/4 tilt (see `lens-fork.ts`).
+  lens: TILTED.lens!.base,
   // Round plate with an orbit track.
   gravity: (ctx) => {
     base(ctx, "disc", 22, 18);
     ring(ctx.g, ctx.x, ctx.y, 20, 1, shade(ctx.definition.color, -0.4), 0.9);
   },
-  // Heavy square emplacement: a notched turntable and stacked sandbags in the corners.
-  mortar: (ctx) => {
-    const { g, x, y, definition: d } = ctx,
-      c = d.color;
-    base(ctx, { cut: 0.32 }, 22, 18, "disc");
-    g.fillStyle(OUTLINE, 0.8);
-    for (let i = 0; i < 8; i++) tick(g, x, y, (i * Math.PI) / 4 + Math.PI / 8, 14.8, 17.2, 1);
-    for (const [sx, sy] of CORNERS) {
-      const rot = (-sx * sy * Math.PI) / 4;
-      oval(g, x + sx * 17.6 + 0.6, y + sy * 17.6 + 1, 5.4, 3.3, shade(c, -0.6), 1, rot);
-      oval(g, x + sx * 17.2 - 0.4, y + sy * 17.2 - 0.6, 4.4, 2.5, shade(c, -0.2), 1, rot);
-    }
-  },
+  // Mortar: the Pit Mortar's foundation in the 3/4 tilt (see `pit-mortar.ts`).
+  mortar: TILTED.mortar!.base,
   mine: (ctx) => trapFrame(ctx, 15),
   spikes: (ctx) => trapFrame(ctx, 19),
   tar: ({ g, x, y, definition: d, level }) => {
@@ -153,66 +105,21 @@ export const BASES: Record<TurretStyle, Drawing> = {
     g.fillStyle(shade(d.color, -0.3));
     for (const sx of [-1, 1]) g.fillRect(x + sx * 16 - 3, y - 4, 6, 1.4);
   },
-  // Cracked stone slab.
-  hammer: (ctx) => {
-    const { g, x, y } = ctx;
-    base(ctx, { n: 8, rot: Math.PI / 8 }, 24, 20);
-    // Each crack is a dark split with a lit lip along its lower-right edge.
-    for (const lip of [0.7, 0]) {
-      g.lineStyle(lip ? 0.9 : 1.5, lip ? shade(DARK, 0.4) : OUTLINE, lip ? 0.85 : 0.9);
-      g.beginPath();
-      for (let i = 0; i < 4; i++) {
-        const a = Math.PI / 4 + (i * Math.PI) / 2;
-        g.moveTo(x + Math.cos(a) * 12.5 + lip, y + Math.sin(a) * 12.5 + lip);
-        g.lineTo(x + Math.cos(a + 0.16) * 16.2 + lip, y + Math.sin(a + 0.16) * 16.2 + lip);
-        g.lineTo(x + Math.cos(a + 0.05) * 19.8 + lip, y + Math.sin(a + 0.05) * 19.8 + lip);
-      }
-      g.strokePath();
-    }
-  },
-  // Narrow diamond plate.
-  blade: (ctx) => {
-    base(ctx, { n: 4 }, 25, 20);
-    rivets(ctx.g, ctx.x, ctx.y, 21.5, 4, 0, shade(ctx.definition.color, -0.45));
-  },
-  // Round plate with vents for the fragments; they glow after a shot.
-  scatter: (ctx) => {
-    const { g, glow, x, y, definition: d, kick } = ctx,
-      vents = [0, 1, 2, 3, 4].map((i) => at(x, y, -Math.PI / 2 + (i * TAU) / 5, 20));
-    base(ctx, "disc", 22, 18);
-    g.fillStyle(OUTLINE);
-    for (const p of vents) pip(g, p.x, p.y, 1.8);
-    if (kick > 0) {
-      glow.fillStyle(d.color, 0.3 * kick);
-      for (const p of vents) pip(glow, p.x, p.y, 3);
-    }
-  },
+  // Quake: the Hydraulic Press's foundation in the 3/4 tilt (see `hydraulic-press.ts`).
+  hammer: TILTED.hammer!.base,
+  // Executioner: the Headsman's foundation in the 3/4 tilt (see `headsman.ts`).
+  blade: TILTED.blade!.base,
+  // Shrapnel: the Scattergun's foundation in the 3/4 tilt (see `scattergun.ts`).
+  scatter: TILTED.scatter!.base,
   // Triangle mast base.
   antenna: (ctx) => {
     base(ctx, { n: 3, rot: -Math.PI / 2 }, 25, 20);
     rivets(ctx.g, ctx.x, ctx.y, 19, 3, -Math.PI / 2, shade(ctx.definition.color, -0.4));
   },
-  // Chamfered square emplacement with a stud in each corner.
-  battery: (ctx) => {
-    const { g, x, y, definition: d } = ctx;
-    base(ctx, { cut: 0.3 }, 23, 18, "disc");
-    g.fillStyle(shade(d.color, -0.55));
-    for (const [sx, sy] of CORNERS) pip(g, x + sx * 16.5, y + sy * 16.5, 1.8);
-    g.fillStyle(shade(PLATE, 0.45), 0.8);
-    for (const [sx, sy] of CORNERS) pip(g, x + sx * 16.5 - 0.5, y + sy * 16.5 - 0.5, 0.7);
-  },
-  // Hexagonal bench with three spare vials in a rack, their reagent glowing as the next dart brews.
-  flask: (ctx) => {
-    const { g, glow, x, y, definition: d, charge } = ctx,
-      spares = [0, 1, 2].map((i) => at(x, y, Math.PI / 6 + (i * TAU) / 3, 19));
-    base(ctx, { n: 6 }, 23, 18);
-    g.fillStyle(OUTLINE);
-    for (const p of spares) pip(g, p.x, p.y, 3);
-    g.fillStyle(shade(d.color, -0.15));
-    for (const p of spares) pip(g, p.x - 0.3, p.y - 0.3, 1.9);
-    glow.fillStyle(d.color, 0.08 + 0.14 * charge);
-    for (const p of spares) pip(glow, p.x, p.y, 2.6);
-  },
+  // Skyburst: the Rocket Rack's foundation in the 3/4 tilt (see `rocket-rack.ts`).
+  battery: TILTED.battery!.base,
+  // Catalyst: the Reagent Flask's foundation in the 3/4 tilt (see `reagent-flask.ts`).
+  flask: TILTED.flask!.base,
   // Octagonal casemate with four coolant vents; the vents glow from the plasma reservoir below.
   caster: (ctx) => {
     const { g, glow, x, y, definition: d, energy } = ctx,
@@ -270,22 +177,8 @@ export const BASES: Record<TurretStyle, Drawing> = {
       led(ctx, p.x, p.y, c, i < level ? 1 : 0);
     }
   },
-  // Square uplink pad on a round deck: a targeting scale round the deck and four corner pylons whose lamps blink in turn.
-  uplink: (ctx) => {
-    const { g, glow, x, y, tower: t, definition: d, clock } = ctx,
-      lit = Math.floor(clock * 2 + t.id) % 4;
-    base(ctx, { cut: 0.22 }, 23, 18, "disc");
-    g.fillStyle(shade(d.color, -0.45));
-    for (let i = 0; i < 16; i++) tick(g, x, y, (i * TAU) / 16, 15.4, i % 4 ? 16.6 : 17.8, 1);
-    CORNERS.forEach(([sx, sy], i) => {
-      const cx = x + sx * 18.4,
-        cy = y + sy * 18.4;
-      polygon(g, cx, cy, 3.3, 4, OUTLINE, Math.PI / 4, 0.9);
-      polygon(g, cx - 0.4, cy - 0.4, 2.5, 4, shade(PLATE, 0.18), Math.PI / 4);
-      disc(g, cx, cy, 1.1, i === lit ? shade(d.color, 0.3) : shade(d.color, -0.6));
-      if (i === lit) disc(glow, cx, cy, 3.4, d.color, 0.28);
-    });
-  },
+  // Orbital: the Uplink Array's foundation in the 3/4 tilt (see `uplink-array.ts`).
+  uplink: TILTED.uplink!.base,
   // Round plate with a spiral groove cut into its deck and three violet eyes staring out of the rim.
   spiral: (ctx) => {
     const { g, glow, x, y, definition: d, charge } = ctx,

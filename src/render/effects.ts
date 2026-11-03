@@ -550,9 +550,18 @@ export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: Conte
     case "warp":
     case "breach":
       return drawTrapEffect(pen, e, age);
-    case "chain":
-      chain(pen, sourceOf(content, e.color), px(e.from.x), px(e.from.y), px(e.to.x), px(e.to.y), e.color, age);
+    case "chain": {
+      const turret = sourceOf(content, e.color);
+      let fx = px(e.from.x),
+        fy = px(e.from.y);
+      // From a tilted tower (the first hop): the arc leaves its raised emit point or barrel tip.
+      if (turret && TILTS[turret] && origin.angle !== undefined) {
+        const tip = muzzleTips(turret, origin.level ?? 1, fx, fy, origin.angle)[0];
+        if (tip) ({ x: fx, y: fy } = tip);
+      }
+      chain(pen, turret, fx, fy, px(e.to.x), px(e.to.y), e.color, age);
       return;
+    }
     case "beam": {
       const turret = sourceOf(content, e.color),
         tx = px(e.to.x),
@@ -645,7 +654,9 @@ export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: Conte
         aim = Math.atan2(ty - fy, tx - fx);
       // Tesla: lightning leaps from the rim of the coil.
       if (d.visual.muzzle === "bolt") {
-        lightning(pen, fx + Math.cos(aim) * 10, fy + Math.sin(aim) * 10, tx, ty, e.color, alpha, hash01(tx, ty, Math.floor(age * 20)));
+        // A tilted coil fires from its raised top (`TILTS.coil.emit`), a flat one from its rim.
+        const top = TILTS[d.visual.turret] ? muzzleTips(d.visual.turret, origin.level ?? 1, fx, fy, aim)[0] : undefined;
+        lightning(pen, top?.x ?? fx + Math.cos(aim) * 10, top?.y ?? fy + Math.sin(aim) * 10, tx, ty, e.color, alpha, hash01(tx, ty, Math.floor(age * 20)));
         halo(glow, tx, ty, 7, e.color, 0.5 * alpha);
         return;
       }

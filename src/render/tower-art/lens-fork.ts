@@ -1,13 +1,13 @@
+import type { Sheet, TiltedArt } from "./tilted";
 /**
  * Focus concept, "Lens Fork": a stepped diamond plinth with a bearing post (still), a fork yoke holding a short
  * optics housing with a big pink lens at its front (turret), and the lens charge, heat ring and lamps (live). The beam
  * leaves the lens centre, so `reach` ends there.
  */
-import { halo } from "../render/material";
-import { arcBand, disc, oval, ring, shade } from "../render/shapes";
-import type { TurretContext } from "../render/tower-art/kit";
-import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, towardViewer, tube, turn } from "../render/tower-art/tilt";
-import type { Concept } from "./types";
+import { halo } from "../material";
+import { arcBand, disc, oval, ring, shade } from "../shapes";
+import type { TurretContext } from "./kit";
+import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, towardViewer, tube, turn } from "./tilt";
 
 const DROP = 5,
   HB = 17,
@@ -204,7 +204,7 @@ function live({ g, glow, x, y, tower, definition, level, kick, energy, clock, co
 }
 
 /** Focus: a lens on a fork mount. */
-export const concept = {
+const sheet: Sheet = {
   tower: "focus",
   name: "Lens Fork",
   idea: "Stepped diamond plinth with a bearing post; a fork yoke holds a short optics barrel with a cooling shroud and a big hooded pink lens. Heat ring and lens glow follow the focus charge.",
@@ -214,4 +214,6 @@ export const concept = {
   base,
   turret,
   live,
-} satisfies Concept;
+};
+/** LensFork in the four parts of a tilted tower (`tilted.ts`). */
+export const lensFork: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };

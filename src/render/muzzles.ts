@@ -35,6 +35,32 @@ export interface Tilt {
 export const TILTS: Partial<Record<TurretStyle, Tilt>> = {
   barrel: { drop: 5, squash: 0.65, height: 15, deck: 7 },
   heavy: { drop: 6, squash: 0.65, height: 14, pitch: 0.35, deck: 0.5 },
+  // Flak: the Skyguard's twin guns.
+  twin: { drop: 5, squash: 0.65, height: 14, pitch: 0.42, deck: 6 },
+  // Shrapnel: the Scattergun's fan.
+  scatter: { drop: 5, squash: 0.65, height: 11, deck: 5 },
+  // Executioner: the Headsman's glaive arm.
+  blade: { drop: 5, squash: 0.65, height: 11, deck: 6 },
+  // Lance: the Railspear's rails.
+  rail: { drop: 5, squash: 0.65, height: 10, deck: 3.5 },
+  // Skyburst: the Rocket Rack's four tubes.
+  battery: { drop: 5, squash: 0.65, height: 13, pitch: 0.5, deck: 6 },
+  // Mortar: the Pit Mortar's steep tube.
+  mortar: { drop: 5, squash: 0.65, height: 6, pitch: 0.9, deck: 0.6 },
+  // Catalyst: the Reagent Flask's neck.
+  flask: { drop: 5, squash: 0.65, height: 14, pitch: 0.18, deck: 5.5 },
+  // Orbital: the Uplink Array's designator laser.
+  uplink: { drop: 6, squash: 0.65, height: 10.5, deck: 4.5 },
+  // Ember: the Furnace Torch's nozzle.
+  flame: { drop: 5, squash: 0.65, height: 10.5, deck: 6.2 },
+  // Focus: the Lens Fork's lens.
+  lens: { drop: 5, squash: 0.65, height: 17, deck: 7.5 },
+  // Tesla: the Coil Spire; chains leave from its top ball.
+  coil: { drop: 6, squash: 0.65, height: 29.5, deck: 4.8, emit: 33.5 },
+  // Decay: the Prism Cradle; orbs leave from the floating crystal.
+  prism: { drop: 6, squash: 0.65, height: 22, deck: 3.6, emit: 22 },
+  // Quake: the Hydraulic Press; its wave starts on the ground.
+  hammer: { drop: 6, squash: 0.65, height: 0, deck: 4 },
 };
 /**
  * Barrels of the turrets that have one. Turret drawings, muzzle flashes and the starting point of projectiles
@@ -45,18 +71,18 @@ export const MUZZLES: Partial<Record<TurretStyle, MuzzleSpec>> = {
   heavy: { reach: (l) => 22 + l, recoil: 6, flash: "heavy" },
   twin: { reach: (l) => 20 + l, recoil: 4, sides: [-4, 4], flash: "gun" },
   rail: { reach: (l) => 25 + l, recoil: 6, flash: "energy" },
-  flame: { reach: (l) => 15 + l, recoil: 3, flash: "flame" },
-  mortar: { reach: (l) => 12 + l, recoil: 7, flash: "heavy" },
+  flame: { reach: (l) => 15 + 0.5 * l, recoil: 3, flash: "flame" },
+  mortar: { reach: (l) => 12 + l, recoil: 5, flash: "heavy" },
   blade: { reach: (l) => 22 + l, recoil: 5, flash: "gun" },
-  scatter: { reach: (l) => 15 + l, recoil: 3, fan: (l) => ({ count: l >= 4 ? 5 : 3, step: 0.32 }), flash: "gun" },
+  scatter: { reach: (l) => 18 + l, recoil: 3, fan: (l) => ({ count: l >= 4 ? 5 : 3, step: 0.32 }), flash: "gun" },
   launcher: { reach: (l) => 15 + l, recoil: 4, sides: [-4, 4], flash: "gun" },
   vat: { reach: (l) => 17 + l, recoil: 4, flash: "spray" },
-  lens: { reach: (l) => 16 + l, recoil: 0, flash: "energy" },
+  lens: { reach: (l) => 14 + 0.4 * l, recoil: 0, flash: "energy" },
   flask: { reach: (l) => 15 + l, recoil: 2, flash: "spray" },
   caster: { reach: (l) => 14 + l, recoil: 6, flash: "heavy" },
   battery: { reach: (l) => 15 + l, recoil: 3, sides: [-5.4, -1.8, 1.8, 5.4], flash: "heavy" },
   // ── new towers: g1 (Attack+Control A) ──
-  uplink: { reach: (l) => 15 + l, recoil: 1, flash: "energy" },
+  uplink: { reach: (l) => 13 + l, recoil: 1, flash: "energy" },
   spiral: { reach: (l) => 15 + l, recoil: 1, flash: "energy" },
   resin: { reach: (l) => 15 + l, recoil: 3, flash: "spray" },
   // ── end g1 ──

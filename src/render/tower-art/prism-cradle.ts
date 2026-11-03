@@ -1,13 +1,13 @@
+import type { Sheet, TiltedArt } from "./tilted";
 /**
  * Decay concept, the Prism Cradle: a round dais (still) with three claws leaning in (the turret: still, a radial tower
  * never aims) and a triangular bipyramid crystal that floats, turns and bobs between them (live), with motes drifting
  * into it. The orb leaves the crystal's centre.
  */
-import { facing, halo } from "../render/material";
-import { disc, oval, ring, shade, type Ink } from "../render/shapes";
-import type { TurretContext } from "../render/tower-art/kit";
-import { OUTLINE, SQUASH, X, Y, drum, fillPoints, onGround, point } from "../render/tower-art/tilt";
-import type { Concept } from "./types";
+import { facing, halo } from "../material";
+import { disc, oval, ring, shade, type Ink } from "../shapes";
+import type { TurretContext } from "./kit";
+import { OUTLINE, SQUASH, X, Y, drum, fillPoints, onGround, point } from "./tilt";
 
 const DROP = 6;
 /** Dais and crystal heights. */
@@ -211,7 +211,7 @@ function live({ g, glow, x, y, tower, level, color, definition, clock, charge, k
   if (kick > 0) ring(glow, x, cy, 9 + (1 - kick) * 7, 1.5, 0xffffff, 0.35 * kick);
 }
 
-export const concept: Concept = {
+const sheet: Sheet = {
   tower: "decay",
   name: "Prism Cradle",
   idea: "Round stone dais with a glyph ring and three claws; a triangular crystal floats, turns and bobs between them.",
@@ -221,3 +221,5 @@ export const concept: Concept = {
   turret,
   live,
 };
+/** PrismCradle in the four parts of a tilted tower (`tilted.ts`). */
+export const prismCradle: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };

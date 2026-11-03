@@ -1,13 +1,13 @@
+import type { Sheet, TiltedArt } from "./tilted";
 /**
  * Tesla concept, the Coil Spire: a stepped twelve-sided plinth ringed by insulator bells (still), a pylon carrying a
  * copper-wound coil with a grading torus and a top ball (the turret: still too, a radial tower never aims), and live
  * charge in the bells, arcs crawling over the coil and the ball flashing white on a discharge. Chains leave the torus.
  */
-import { LIGHT, facing, halo } from "../render/material";
-import { arcBand, disc, hash01, oval, ring, shade, type Ink } from "../render/shapes";
-import type { TurretContext } from "../render/tower-art/kit";
-import { OUTLINE, SQUASH, X, Y, block, drum, onGround } from "../render/tower-art/tilt";
-import type { Concept } from "./types";
+import { LIGHT, facing, halo } from "../material";
+import { arcBand, disc, hash01, oval, ring, shade, type Ink } from "../shapes";
+import type { TurretContext } from "./kit";
+import { OUTLINE, SQUASH, X, Y, block, drum, onGround } from "./tilt";
 
 const DROP = 6;
 /** Plinth tiers, pylon, coil, torus and ball heights. */
@@ -194,7 +194,7 @@ function live({ g, glow, x, y, tower, level, color, definition, clock, charge, k
   }
 }
 
-export const concept: Concept = {
+const sheet: Sheet = {
   tower: "tesla",
   name: "Coil Spire",
   idea: "Stepped 12-sided plinth with six insulator bells, a copper-wound coil, grading torus and top ball; arcs crawl over the coil.",
@@ -204,3 +204,5 @@ export const concept: Concept = {
   turret,
   live,
 };
+/** CoilSpire in the four parts of a tilted tower (`tilted.ts`). */
+export const coilSpire: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };

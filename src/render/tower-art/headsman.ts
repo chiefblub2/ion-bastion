@@ -1,9 +1,9 @@
-import { halo } from "../render/material";
-import { disc, oval, shade, type Ink } from "../render/shapes";
-import type { TurretContext } from "../render/tower-art/kit";
-import { OUTLINE, SQUASH, X, Y, block, drum, fillPoints, onGround, point, quad, FOOT, turn } from "../render/tower-art/tilt";
-import type { Concept } from "./types";
-import { GUN, SHADOW_INK, castShadow, depth, framer, lamp, paint, part, rect } from "./flak";
+import type { Sheet, TiltedArt } from "./tilted";
+import { halo } from "../material";
+import { disc, oval, shade, type Ink } from "../shapes";
+import type { TurretContext } from "./kit";
+import { OUTLINE, SQUASH, X, Y, block, drum, fillPoints, onGround, point, quad, FOOT, turn } from "./tilt";
+import { GUN, SHADOW_INK, castShadow, depth, framer, lamp, paint, part, rect } from "./tilt-parts";
 
 // Executioner: the Headsman, a glaive launcher on a stepped scaffold: a long arm with a counterweight carries the blade
 // flat in a cradle at its tip; once charged a spinning glaive waits at the hilt.
@@ -221,7 +221,7 @@ function live(ctx: TurretContext) {
   }
 }
 
-export const concept: Concept = {
+const sheet: Sheet = {
   tower: "executioner",
   name: "Headsman",
   idea: "Glaive launcher on a stepped diamond scaffold: a counterweighted arm carries the long blade flat in a cradle; a glaive spins at the hilt once charged.",
@@ -232,3 +232,5 @@ export const concept: Concept = {
   turret,
   live,
 };
+/** Headsman in the four parts of a tilted tower (`tilted.ts`). */
+export const headsman: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };

@@ -1,8 +1,8 @@
-import { facing, halo } from "../render/material";
-import { disc, oval, shade } from "../render/shapes";
-import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, towardViewer, tube, turn } from "../render/tower-art/tilt";
-import { SX, SY, frame, project, rod } from "./skyburst";
-import type { Concept } from "./types";
+import type { Sheet, TiltedArt } from "./tilted";
+import { facing, halo } from "../material";
+import { disc, oval, shade, type Ink } from "../shapes";
+import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, towardViewer, tube, turn } from "./tilt";
+import { SX, SY, frame, project, rod } from "./tilt-frame";
 
 // Mortar: a fat, short tube at a steep pitch on a bipod, in a sandbagged pit round a bolted turntable.
 const TILT = { drop: 5, squash: SQUASH, height: 6, pitch: 0.9, deck: 0.6 },
@@ -20,7 +20,7 @@ const RING_R = 17.5;
 const CRADLE = [-6.5, -5.5, 3.5, -6.5, 5.5, -4.5, 5.5, 4.5, 3.5, 6.5, -6.5, 5.5];
 const CRADLE_H = 6.5;
 
-function bag(g: Parameters<Concept["base"]>[0]["g"], x: number, y0: number, t: number, h: number, c: number) {
+function bag(g: Ink, x: number, y0: number, t: number, h: number, c: number) {
   const bx = X(x, Math.cos(t) * RING_R),
     by = Y(y0, Math.sin(t) * RING_R, h),
     rot = Math.atan2(Math.cos(t) * SQUASH, -Math.sin(t)),
@@ -30,7 +30,7 @@ function bag(g: Parameters<Concept["base"]>[0]["g"], x: number, y0: number, t: n
   oval(g, bx - 0.6, by - 0.8, 3, 1.2, shade(c, 0.25), 0.8, rot);
 }
 
-export const concept: Concept = {
+const sheet: Sheet = {
   tower: "mortar",
   name: "Pit Mortar",
   idea: "A fat tube raised at ~50° on a bipod over a bolted turntable, sunk in a ring of sandbags; a shell nose shows in the bore once loaded.",
@@ -195,3 +195,5 @@ export const concept: Concept = {
       });
   },
 };
+/** PitMortar in the four parts of a tilted tower (`tilted.ts`). */
+export const pitMortar: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };

@@ -1,9 +1,9 @@
-import { LIGHT, halo } from "../render/material";
-import { arcBand, disc, oval, shade, type Ink } from "../render/shapes";
-import type { TurretContext } from "../render/tower-art/kit";
-import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, towardViewer, tube, turn } from "../render/tower-art/tilt";
-import { SX, SY, frame, project } from "./skyburst";
-import type { Concept } from "./types";
+import type { Sheet, TiltedArt } from "./tilted";
+import { LIGHT, halo } from "../material";
+import { arcBand, disc, oval, shade, type Ink } from "../shapes";
+import type { TurretContext } from "./kit";
+import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, towardViewer, tube, turn } from "./tilt";
+import { SX, SY, frame, project } from "./tilt-frame";
 
 // Catalyst: a glass flask on a cup cradle whose neck is the barrel; the reagent level inside is the charge.
 const HS = 14,
@@ -57,7 +57,7 @@ function reagent(g: Ink, cx: number, cy: number, r: number, fill: number, color:
   fillPoints(g, n, color, alpha);
 }
 
-export const concept: Concept = {
+const sheet: Sheet = {
   tower: "catalyst",
   name: "Reagent Flask",
   idea: "A round glass flask on a cup cradle over a lab bench; its neck is the barrel, the reagent level rises with the charge, spare vials stand in a rack.",
@@ -196,3 +196,5 @@ export const concept: Concept = {
     }
   },
 };
+/** ReagentFlask in the four parts of a tilted tower (`tilted.ts`). */
+export const reagentFlask: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };
