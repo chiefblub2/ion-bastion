@@ -27,7 +27,7 @@ describe("tower card content", () => {
     expect(towerCardHtml(tower("pulse", LEVELS), [], options())).toContain("card-spec-changes");
     expect(towerCardHtml(tower("pulse", LEVELS), [], options({ slim: true }))).not.toContain("card-spec-changes");
   });
-  it("offers the three Aura paths before the first purchase", () => {
+  it("offers the three Aura tracks before the first purchase", () => {
     expect(cardChoices(tower("aura"), [], 500)).toHaveLength(3);
   });
   it("shows Max level, and no targeting for support towers", () => {

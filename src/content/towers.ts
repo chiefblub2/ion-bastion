@@ -62,7 +62,7 @@ export const TOWER_CONTENT = {
     id: "aura",
     name: "Aura",
     role: "SUPPORT",
-    description: "Boosts attack towers in its radius. Pick one of three upgrade paths with three tiers each; no attack of its own.",
+    description: "Boosts attack towers in its radius. Pick one of three tracks with three tiers each, then one of three paths; no attack of its own.",
     cost: 160,
     damage: 0,
     range: 3,
@@ -73,7 +73,7 @@ export const TOWER_CONTENT = {
     visual: {
       icon: "◎",
       turret: "aura",
-      paths: {
+      tracks: {
         damage: { color: 0xff7a5c, motif: "blades" },
         speed: { color: 0xffd166, motif: "vortex" },
         range: { color: 0x8ef0a8, motif: "rings" },

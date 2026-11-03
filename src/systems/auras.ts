@@ -6,6 +6,7 @@ import type { AuraBonuses, AuraStat, ContentPack, Point, Sim, TowerId } from "..
 import { isSuppressed, towerDebuffs } from "./traits";
 import { siphonBoost } from "./siphon";
 import { nexusBoost } from "./combat-paths-b";
+import { fieldBonuses } from "./aura-paths";
 
 export const AURA_STATS: readonly AuraStat[] = ["damage", "speed", "range"];
 const emptyBonuses = (): AuraBonuses => ({ damage: 0, speed: 0, range: 0 });
@@ -38,7 +39,7 @@ export function receivedAuraBonuses(
   const combined = emptyBonuses();
   for (const source of towers) {
     if (!isInAura(source, target, content) || (sim && isSuppressed(sim, source))) continue;
-    const bonuses = auraBonuses(source, content);
+    const bonuses = fieldBonuses(source, target, content); // Harmonics: also the stats of the tracks not taken
     for (const key of AURA_STATS) combined[key] = Math.max(combined[key], bonuses[key]);
   }
   return combined;

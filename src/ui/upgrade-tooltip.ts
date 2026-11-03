@@ -10,9 +10,9 @@ import { escape, number, statValue } from "./format";
 const row = (label: string, before: number, after: number, unit = "") =>
   `<div class="upgrade-change"><span>${label}</span><span class="upgrade-before">${number(before)}${unit}</span><span aria-label="becomes">→</span><strong>${number(after)}${unit}</strong></div>`;
 
-/** Inline accent for path upgrades, taken from the tower's path visuals. */
-const pathColorFor = (definition: TowerDefinition) => (path?: string) => {
-  const color = path ? definition.visual.paths?.[path]?.color : undefined;
+/** Inline accent for path upgrades (and Aura's tracks), taken from the tower's path or track visuals. */
+const pathColorFor = (definition: TowerDefinition) => (upgrade: UpgradeDefinition) => {
+  const color = upgrade.path ? definition.visual.paths?.[upgrade.path]?.color : upgrade.track ? definition.visual.tracks?.[upgrade.track]?.color : undefined;
   return color === undefined ? "" : ` style="--path-color:#${color.toString(16).padStart(6, "0")}"`;
 };
 
@@ -48,16 +48,18 @@ export function upgradeControl(tower: Tower, towers: readonly Tower[] = [], cont
       : specialized ? `${escape(path?.role ?? "")} · Level ${upgrade.effects.level}` : "";
     const title = specialized
       ? `${escape(upgrade.label)} · Level ${towerLevel(tower, content)} → ${towerLevel(nextTower, content)}`
-      : upgrade.effects.level !== undefined
+      : upgrade.effects.level !== undefined && !upgrade.track
       ? `Level ${towerLevel(tower, content)} → ${towerLevel(nextTower, content)}`
       : `${escape(upgrade.label)}${purchased ? " · active" : ""}`;
     const tooltipId = `upgrade-tooltip-${upgrade.id}`;
     const unchanged = describeAttack(resolveUpgrades(tower, content).attack).filter(r => !changedAttack.includes(r.key));
     const special = support
-      ? `${tower.upgrades.length ? "" : "The first purchase sets the path; the other paths are locked. "}The Aura radius stays at ${number(current.range)} cells. Only the strongest Aura bonus applies per stat.`
+      ? specialized
+        ? "The Aura's track bonus stays as it is. The path reaches only attack towers in its radius; overlapping Auras count the strongest per path."
+        : `${tower.upgrades.length ? "" : "The first purchase sets the track; the other tracks are locked. After tier III the Aura picks one of three paths. "}The Aura radius stays at ${number(current.range)} cells. Only the strongest Aura bonus applies per stat.`
       : unchanged.length ? `Unchanged: ${unchanged.map(r => `${r.label} ${statValue(r)}`).join(", ")}.` : "";
     return `<div class="upgrade-control">
-      <button class="upgrade ${support || specialized ? "aura-upgrade" : ""}" data-upgrade="${upgrade.id}"${pathColor(upgrade.path)} aria-describedby="${tooltipId}" ${purchased ? "disabled" : ""}>
+      <button class="upgrade ${support || specialized ? "aura-upgrade" : ""}" data-upgrade="${upgrade.id}"${pathColor(upgrade)} aria-describedby="${tooltipId}" ${purchased ? "disabled" : ""}>
         ${support || specialized ? `<span>${escape(upgrade.label)}<small>${summary}</small></span><b>${purchased ? "✓" : `◇ ${price(upgrade.cost)}`}</b>` : `${upgrade.effects.level !== undefined ? "Upgrade" : escape(upgrade.label)} · ◇ ${price(upgrade.cost)}`}
       </button>
       <button class="upgrade-info" aria-label="Explain ${escape(upgrade.label)}" aria-controls="${tooltipId}" aria-expanded="false" aria-describedby="${tooltipId}">ⓘ</button>

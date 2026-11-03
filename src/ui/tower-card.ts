@@ -1,7 +1,7 @@
 import { DEFAULT_CONTENT } from "../content";
 import { sellValue } from "../core/game";
 import type { ContentPack, GameState, Tower } from "../core/types";
-import { isSpecialization, maxTowerLevel, towerLevel, towerPath, upgradeOptions } from "../core/upgrades";
+import { isSpecialization, maxTowerLevel, towerLevel, towerPath, towerTrack, upgradeOptions } from "../core/upgrades";
 import { isSupport } from "../systems/attacks";
 import { TARGET_PRIORITIES } from "../systems/combat";
 import { discountedCost, upgradeDiscount } from "../systems/workshop";
@@ -21,7 +21,7 @@ export function cardTower(state: GameState, selected: number | null, over = fals
 export interface CardChoice {
   id: string;
   label: string;
-  /** Role of a specialization path or the bonus of an Aura path; empty for a plain level. */
+  /** Role of a specialization path or the bonus of an Aura track; empty for a plain level. */
   detail: string;
   /** Price after the Workshop discount. */
   price: number;
@@ -42,7 +42,8 @@ export function cardChoices(tower: Tower, towers: readonly Tower[], credits: num
       const upgrade = u!,
         aura = Object.entries(upgrade.effects.aura ?? {})[0],
         price = discountedCost(upgrade.cost, discount);
-      const label = !upgrade.path && upgrade.effects.level !== undefined ? `Upgrade → Lv ${upgrade.effects.level}` : upgrade.label;
+      // Plain levels read "Upgrade → Lv n"; Aura's tracks and every path tier keep their own names.
+      const label = !upgrade.path && !upgrade.track && upgrade.effects.level !== undefined ? `Upgrade → Lv ${upgrade.effects.level}` : upgrade.label;
       const detail = isSpecialization(upgrade)
         ? (definition.visual.paths?.[upgrade.path!]?.role ?? "")
         : aura
@@ -70,14 +71,8 @@ export interface CardOptions {
 }
 export function towerCardHtml(tower: Tower, towers: readonly Tower[], options: CardOptions, content: ContentPack = DEFAULT_CONTENT): string {
   const definition = content.towers[tower.type],
-    locked = options.owner ? " disabled" : "",
-    path = towerPath(tower, content);
-  const sub =
-    definition.attack.kind === "aura"
-      ? path
-        ? escape(definition.upgrades.find((u) => u.path === path)!.label)
-        : "Choose path"
-      : `Lv ${towerLevel(tower, content)}/${maxTowerLevel(tower.type, content)}`;
+    locked = options.owner ? " disabled" : "";
+  const sub = definition.attack.kind === "aura" ? auraSub(tower, content) : `Lv ${towerLevel(tower, content)}/${maxTowerLevel(tower.type, content)}`;
   const choices = cardChoices(tower, towers, options.credits, content);
   const upgrades = choices.length
     ? choices
@@ -108,6 +103,18 @@ export function towerCardHtml(tower: Tower, towers: readonly Tower[], options: C
   return `<div class="card-head"><strong>${escape(definition.name)}</strong> <span>${sub}</span><button class="card-close" data-deselect aria-label="Deselect (Esc)">✕</button></div>${
     options.owner ? `<p class="card-owner">Owned by ${escape(options.owner)}</p>` : ""
   }<div class="card-upgrades">${upgrades}</div>${target}<button class="card-sell" data-sell${locked}>Sell · ◇ ${sellValue(tower)}</button>`;
+}
+
+/** Aura: first a track, then (after any track's tier III) a path; the newest tier names where it stands. */
+function auraSub(tower: Tower, content: ContentPack) {
+  const definition = content.towers[tower.type],
+    owned = definition.upgrades.filter((u) => tower.upgrades.includes(u.id)),
+    newest = owned.reduce<(typeof owned)[number] | undefined>((best, u) => ((u.effects.level ?? 0) > (best?.effects.level ?? 0) ? u : best), undefined),
+    level = `Lv ${towerLevel(tower, content)}/${maxTowerLevel(tower.type, content)}`;
+  if (!towerTrack(tower, content)) return "Choose track";
+  if (!towerPath(tower, content) && upgradeOptions(tower, Infinity, content).some((o) => o.status === "available" && o.definition!.path))
+    return `${escape(newest!.label)} · Choose path`;
+  return `${escape(newest!.label)} · ${level}`;
 }
 
 const changeText = (c: UpgradeChange) => `${c.label}: ${c.before === undefined ? "–" : `${number(c.before)}${c.unit}`} → ${number(c.after)}${c.unit}`;

@@ -37,8 +37,9 @@ export function attackUpgrades(base: TowerStats, buildCost: number, specials: Le
 }
 
 /**
- * Per aura stat: one path of three tiers, each requiring the previous one. Tier 1 keeps the
- * plain stat ID and fixes the tower's path; the other paths are excluded from then on.
+ * Per aura stat: one track of three tiers (levels 2 to 4), each requiring the previous one. Tier 1 keeps the
+ * plain stat ID and fixes the tower's track; the other tracks are excluded from then on. After any track's
+ * tier III the Aura picks one of three paths (levels 5 to 7, `support-specializations.ts`).
  */
 const AURA_TRACKS = [
   { stat: "damage", label: "Damage", tiers: [[100, 0.25], [180, 0.40], [300, 0.55]], effect: "damage for supported attack towers" },
@@ -55,11 +56,11 @@ export const AURA_UPGRADES: readonly UpgradeDefinition[] = AURA_TRACKS.flatMap((
     label: `${label}${["", " II", " III"][index]}`,
     cost,
     requires: index === 0 ? [] : [auraId(stat, index)],
-    path: stat,
+    track: stat,
     description: index === 0
-      ? `Locks in the path: +${pct(value)} ${effect}. The other paths are locked for this tower.`
+      ? `Locks in the track: +${pct(value)} ${effect}. The other tracks are locked for this tower.`
       : `Raises the bonus from +${pct(tiers[index - 1][1])} to +${pct(value)} ${effect}.`,
-    effects: { aura: { [stat]: value } },
+    effects: { level: index + 2, aura: { [stat]: value } },
   })),
 );
 
