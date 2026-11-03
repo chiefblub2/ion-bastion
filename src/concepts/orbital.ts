@@ -6,8 +6,8 @@ import type { Concept } from "./types";
 
 // Orbital: an uplink dish raised steeply at the sky on a fork over a mast, a feed horn at its focus, on a square pad
 // with four corner pylons whose lamps blink in turn.
-const HB = 15,
-  TILT = { drop: 6, squash: SQUASH, height: HB, pitch: 0.85, deck: 4.5 },
+const HB = 13,
+  TILT = { drop: 6, squash: SQUASH, height: HB, pitch: 1.1, deck: 4.5 },
   reach = (l: number) => 9 + l,
   RECOIL = 1;
 const GUN = 0x3a4549,
