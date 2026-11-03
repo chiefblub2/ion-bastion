@@ -4,6 +4,7 @@ import { settleEconomy } from "./support";
 import { payIncome } from "./waves";
 import { restoreBarricades } from "./barricade";
 import { resetSalvos } from "./combat-paths-b";
+import { payAdvance } from "./economy-paths";
 /** Pays a wave's bonus and the refineries; on a ring this happens when the next wave starts. */
 function payWave(sim: Sim, wave: number) {
   const bonus = sim.mission.waves[wave - 1].bonus;
@@ -39,6 +40,7 @@ export function beginWave(sim: Sim) {
   s.queue = (circle ? [...s.queue, ...spawns] : spawns).sort((a, b) => a.at - b.at);
   if (circle) s.circle = { next: circle.interval };
   s.events.push({ type: "waveStart", wave: s.wave });
+  payAdvance(sim); // Refinery path: Advance
 }
 /** Waves still to start on a ring. */
 export const wavesLeft = (sim: Sim) => sim.mission.waves.length - sim.state.wave;

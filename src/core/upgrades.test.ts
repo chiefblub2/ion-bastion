@@ -194,7 +194,8 @@ describe("late levels 4 and 5", () => {
     expect(attack("decay", 5)).toMatchObject({ percent: 0.06 });
   });
   it("the refinery has three levels that raise its income", () => {
-    expect(maxTowerLevel("refinery")).toBe(3);
+    // Three plain levels, then the three paths (levels 4 to 6).
+    expect(maxTowerLevel("refinery")).toBe(6);
     const income = (upgrades: string[]) => resolveUpgrades({ type: "refinery", upgrades }).attack;
     expect(income([])).toMatchObject({ amount: 25 });
     expect(income(["level-2"])).toMatchObject({ amount: 40 });

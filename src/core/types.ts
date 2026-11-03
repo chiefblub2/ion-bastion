@@ -885,6 +885,30 @@ export interface Tower extends Point {
   /** Tripwire with Flare only: time until which its alarm radius stays lit; absent until it fires, cleared after each wave. */
   flare?: number;
   // ── end trap paths ──
+  /** Support economy paths: counters of this tower (`systems/economy-paths.ts`); absent until a path first uses one. */
+  economy?: TowerEconomy;
+}
+/** Per-tower counters of the support economy paths; each field stays absent until used. */
+export interface TowerEconomy {
+  /** Big Game: credits paid this wave. */
+  bounty?: number;
+  /** Field Rations (kills) and Reserve Cells (interest credits) counted toward the next energy point. */
+  count?: number;
+  /** Advance: credits of this wave's income already paid at its start. */
+  advanced?: number;
+  /** Compounding: waves completed since the path was taken. */
+  waves?: number;
+}
+/** Per-wave state of the support economy paths; absent while unused, cleared after each wave. */
+export interface WaveEconomy {
+  /** Clean Sheet: the reactor took damage this wave. */
+  leaked?: true;
+  /** Triage: energy refunded this wave. */
+  triage?: number;
+  /** Field Rations: energy restored this wave. */
+  rations?: true;
+  /** Investment Account: credits each player spent on builds and upgrades during the wave (by wallet index). */
+  spent?: number[];
 }
 /** Target selection of an attack tower; ties fall back to path progress, then id. */
 export type TargetPriority = "first" | "last" | "strong" | "weak" | "close";
@@ -987,6 +1011,8 @@ export interface GameState {
   zones?: Zone[];
   /** Orbital strikes still to land, in firing order; absent while none is coming. */
   strikes?: Strike[];
+  /** Support economy paths: per-wave counters; absent while unused. */
+  economy?: WaveEconomy;
 }
 /** A Plasma pool; its source is frozen on landing, so it keeps burning after a sale. */
 export interface Zone {

@@ -3,6 +3,7 @@ import { earn } from "../core/economy";
 import { absorbEncased } from "./encase";
 import { damageTaken, hasStatus, statusDeath } from "./status";
 import { bountyBonus, markFactor } from "./support";
+import { economyKill } from "./economy-paths";
 import { skylinkFactor } from "./support";
 import { recycleOverkill } from "./recycler";
 import { afterHit, hasTrait, layerOf, linkedGroup, modifyDamage, onDeath } from "./traits";
@@ -118,6 +119,7 @@ function deal(sim: Sim, src: DamageSource, e: Enemy, amount: number, dot: boolea
     // Enemies sent by an opponent in versus pay nothing.
     reward = e.sentBy === undefined ? d.reward + bountyBonus(sim, e, d.reward) : 0;
   earn(s, reward);
+  economyKill(sim, e); // Beacon paths: Big Game, Field Rations
   s.kills++;
   const tower = s.towers.find((t) => t.id === src.tower);
   if (tower) tower.kills++;
