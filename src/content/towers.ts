@@ -32,7 +32,7 @@ export const TOWER_CONTENT = {
     attack: { kind: "splash", radius: 1.25 },
     targets: ["ground"],
     projectile: { speed: 6 },
-    visual: { icon: "✦", turret: "heavy", projectile: "rocket", impact: "burst" },
+    visual: { icon: "✦", turret: "heavy", projectile: "siege", impact: "burst" },
   }),
   frost: attackTower({
     id: "frost",

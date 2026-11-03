@@ -22,6 +22,8 @@ export interface ProjectileLook {
   trail?: TrailSpec;
   /** Lobbed on a visible arc: drawn raised above its shadow. */
   arc?: true;
+  /** Height of that arc relative to the Mortar's lob (default 1). */
+  arcHeight?: number;
   /** Drawing when it lands; absent: the tower's `visual.impact` look. */
   impact?: ImpactDrawing;
 }
@@ -189,6 +191,33 @@ export const PROJECTILES: Record<ProjectileStyle, ProjectileLook> = {
       draw: ({ g, glow }, t, c, busy) => {
         puffs(g, t, 0.45, 2.4, 6.5, SMOKE, 0.24, 6, busy);
         streak(glow, t, 14, 2.4, shade(c, 0.2), 0.45);
+      },
+    },
+  },
+  // Nova: a heavy cannon shell on a short arc: a dark casing with an amber band, its glowing base and a smoke trail.
+  siege: {
+    arc: true,
+    arcHeight: 0.4,
+    body: ({ g, glow }, p, c) => {
+      const co = Math.cos(p.angle),
+        si = Math.sin(p.angle),
+        P = (d: number, l: number) => along(p.x, p.y, co, si, d, l),
+        lit = facing(p.angle + Math.PI / 2) > 0 ? 1 : -1;
+      oval(g, p.gx + 1, p.gy + 2, 4.6 * (1 - 0.35 * p.lift), 2.3 * (1 - 0.35 * p.lift), SHADOW, 0.4 - 0.18 * p.lift);
+      halo(glow, ...P(-5, 0), 6, shade(c, 0.2), 0.4);
+      disc(g, ...P(-4.6, 0), 1.6, 0xfff0d0);
+      strip(g, p.x, p.y, co, si, -4.5, 2.5, -2.4, 2.4, -2.4, 2.4, 0x3b464b);
+      strip(g, p.x, p.y, co, si, -4.5, 2.5, lit * 2.4, lit * 0.9, lit * 2.4, lit * 0.9, 0x5f6e74);
+      strip(g, p.x, p.y, co, si, -1.6, 0, -2.5, 2.5, -2.5, 2.5, c);
+      strip(g, p.x, p.y, co, si, 2.5, 5.5, -2.4, 2.4, -0.6, 0.6, shade(c, -0.25));
+      strip(g, p.x, p.y, co, si, 2.5, 5.5, lit * 2.4, lit * 0.8, lit * 0.6, lit * 0.2, shade(c, 0.3));
+    },
+    trail: {
+      life: 0.4,
+      step: 5,
+      draw: ({ g, glow }, t, c, busy) => {
+        puffs(g, t, 0.4, 2, 5.5, SMOKE, 0.22, 5, busy);
+        streak(glow, t, 10, 2, shade(c, 0.2), 0.35);
       },
     },
   },

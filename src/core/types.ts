@@ -358,6 +358,7 @@ export type ProjectileStyle =
   | "orb"
   | "net"
   | "rocket"
+  | "siege"
   | "lob"
   | "glaive"
   | "shard"

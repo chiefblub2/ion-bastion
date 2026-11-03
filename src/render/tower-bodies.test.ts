@@ -25,8 +25,14 @@ describe("baked tower bodies", () => {
     expect(stillBody(tower("inferno"), DEFAULT_CONTENT.towers.inferno, badges("inferno", 1))).toBe(false);
   });
 
-  it("bakes the Hex Sentinel's tilted foundation (Pulse) like any flat body", () => {
-    for (const level of [1, 5]) expect(stillBody(tower("pulse"), DEFAULT_CONTENT.towers.pulse, badges("pulse", level))).toBe(true);
+  it("bakes the tilted foundations (Pulse, Nova) like any flat body, whatever was drawn before", () => {
+    for (const id of ["pulse", "blast"] as const)
+      for (const level of [1, 5]) {
+        // A turret drawn first leaves its corners in the shared scratch buffers; the base must not pick them up.
+        const ink = counter().ink;
+        drawTower({ g: ink, glow: ink }, 0, 0, { ...tower(id), angle: 2.2 }, DEFAULT_CONTENT.towers[id], 0.7, badges(id, level));
+        expect(stillBody({ ...tower(id), id: 40 + level }, DEFAULT_CONTENT.towers[id], badges(id, level))).toBe(true);
+      }
   });
 
   it("skips only the body ink of a baked tower and keeps all of its light", () => {
