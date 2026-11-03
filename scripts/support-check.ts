@@ -5,7 +5,7 @@
  * levels and tiers), so both spend the same: the path run on the tiers, the level-3 run on the strategy's towers.
  * Usage: npx vite-node scripts/support-check.ts -- <sector module> <strategies module> [sector index] [--tower id,…] [--mission id] [--band 0.25]
  * e.g.   npx vite-node scripts/support-check.ts -- src/content/sectors/frost.ts src/core/strategies/frost.ts --tower beacon,vault
- * WARN: an economy path ends with more credits (earned in total) than level 3 plus 5 % while both runs win, or a path
+ * WARN: an economy path earns back more than half its price in extra credits while both runs win, or a path
  * does better than spending its price elsewhere: a loss turns into a win, or reactor energy left (on a ring: the peak
  * crowd) improves by more than `band` of the start. The same changes for the worse print as "weak". Missions whose
  * strategy A loses on its own are skipped.
@@ -20,6 +20,8 @@ import type { MissionDefinition, MissionSector, TowerId } from "../src/core/type
 import type { Strategies } from "../src/core/strategies/build";
 
 const ECONOMY: ReadonlySet<string> = new Set(["beacon", "refinery", "vault", "workshop", "dock", "shieldgen"]);
+/** Share of its price an economy path may earn back in extra credits before it counts as too strong. */
+const PAYBACK = 0.5;
 const towers = DEFAULT_CONTENT.towers;
 const supportIds = (Object.keys(towers) as TowerId[]).filter((id) => isSupport(towers[id].attack) && towers[id].upgrades.some(isSpecialization));
 const pathsOf = (id: TowerId) => [...new Set(towers[id].upgrades.filter(isSpecialization).map((u) => u.path!))];
@@ -110,14 +112,16 @@ for (const m of sector.missions) {
       const flags: string[] = [],
         weaker: string[] = [],
         better = m.circle ? base.lives - tiered.lives : tiered.lives - base.lives;
-      if (ECONOMY.has(id) && base.won && tiered.won && tiered.economy > base.economy * 1.05)
-        flags.push(`credits +${Math.round((tiered.economy / Math.max(1, base.economy) - 1) * 100)} %`);
+      // Payback: the extra credits the path earned as a share of its price. Kill credits also move with where the
+      // kills happen, so only a large share means the path pays for itself.
+      const payback = (tiered.economy - base.economy) / cost;
+      if (ECONOMY.has(id) && base.won && tiered.won && payback > PAYBACK) flags.push(`pays back ${Math.round(payback * 100)} % of its price`);
       if (tiered.won !== base.won) (tiered.won ? flags : weaker).push(tiered.won ? "turns a loss into a win" : "turns a win into a loss");
       if (Math.abs(better) > start * band) (better > 0 ? flags : weaker).push(`${m.circle ? "peak" : "energy"} ${base.lives} → ${tiered.lives}`);
       if (flags.length) warnings++;
       const note = [...flags, ...weaker.map((w) => `weaker: ${w}`)];
       lines.push(
-        `${flags.length ? "WARN" : weaker.length ? "weak" : "ok  "} ${id}:${path} (${tiered.upgrades} upgrades, ◇${cost})  ${m.circle ? "peak" : "energy"} ${base.lives} → ${tiered.lives}  credits ${base.economy} → ${tiered.economy}${base.won && tiered.won ? "" : `  won ${base.won} → ${tiered.won}`}${note.length ? `  (${note.join(", ")})` : ""}`,
+        `${flags.length ? "WARN" : weaker.length ? "weak" : "ok  "} ${id}:${path} (${tiered.upgrades} upgrades, ◇${cost})  ${m.circle ? "peak" : "energy"} ${base.lives} → ${tiered.lives}  credits ${base.economy} → ${tiered.economy}${ECONOMY.has(id) ? ` (payback ${Math.round(((tiered.economy - base.economy) / cost) * 100)} %)` : ""}${base.won && tiered.won ? "" : `  won ${base.won} → ${tiered.won}`}${note.length ? `  (${note.join(", ")})` : ""}`,
       );
     }
     console.log(lines.join("\n"));

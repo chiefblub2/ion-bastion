@@ -142,7 +142,7 @@ Run is a single-player roguelite mode on the home page: ten missions in three ac
 - Every second win offers a relic, elites and act transitions rarer ones. Offers skip relics that could no longer pay off, and one card always fits your roster; each card says which of your towers it works with. Some relics change combat itself: Thermal Fracture shatters slowed enemies with explosives, Kill Box makes traps hit held enemies harder, Singularity Protocol marks the toughest enemy for your precision towers, and the cursed Unstable Reactor trades reactor capacity for damage as the reactor drains.
 - Rewards come one decision at a time: pick a card, read the details, then take it or skip it.
 - Beating an act boss can leave its technology behind: each boss modifier has a signature relic (Armorbreaker Matrix, Swarm Replicator, Skyhunter Array, Titan Reactor Core, Spectral Scanner), offered at the act transition beside two legendary relics. The transition still pays one reward: a relic or a Doctrine, unless Master License grants both. Boss technology lasts for the run only.
-- Levels 6–8 need a Doctrine: it unlocks one specialization path of one tower type for the rest of the run. The first is free after mission 2; more come from act transitions, Forges and events.
+- Specialization paths need a Doctrine: it unlocks one path of one tower type for the rest of the run. The first is free after mission 2; more come from act transitions, Forges and events.
 - One lost mission ends the run. A mission can be resumed after a reload, but never restarted. Every run has a six-character seed; typing it in plays the same map, offers and waves again.
 - A short run (act I only) unlocks the full run and the daily run (the same seed for everyone, once per day). Each full run won unlocks the next of ten threat levels.
 
@@ -152,8 +152,8 @@ Sixty towers sit on four tabs in the build menu: Attack, Control, Traps and Supp
 
 - **Traps** go on free path tiles (not the entry or the reactor) and trigger when a ground enemy walks onto them, even a stealthed one. Flyers pass over them; only the Harpoon catches flyers.
 - **Levels:** attack towers and traps have five levels; levels 4 and 5 are expensive but bring more damage per credit than extra towers. Support towers and the Refinery have three.
-- **Specializations (levels 6–8):** after level 5 every attack and control tower offers three paths. The first tier commits the tower to that path; the tiers cost 2.5, 4 and 6 times the build cost.
-- **Aura:** its first purchase commits it to damage, attack speed or range. Overlapping Auras apply the largest bonus per stat.
+- **Specializations:** after level 5 every attack, control and trap tower offers three paths (levels 6–8). The first tier commits the tower to that path; the tiers cost 2.5, 4 and 6 times the build cost. Support towers branch the same way after level 3 (levels 4–6): each path adds a new effect beside the tower's own and never takes anything away.
+- **Aura:** its first purchase commits it to a track: damage, attack speed or range (levels 2–4). Overlapping Auras apply the largest bonus per stat. After a track's third tier it picks one of three paths (levels 5–7).
 - **Target priority:** First (default), Last, Strongest, Weakest or Closest, set in the tower card or cycled with `T`.
 
 ## Enemies

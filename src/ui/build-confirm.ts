@@ -1,6 +1,7 @@
 import type { Game } from "../core/game";
 import type { Point } from "../core/types";
 import type { ViewState } from "../render/scene";
+import { buildPrice } from "../systems/economy-paths";
 /** Space between the cell and the buttons, in CSS pixels. */
 const GAP = 6;
 interface Box {
@@ -46,11 +47,13 @@ export class BuildConfirm {
       show = !!pending && !!build && status !== "won" && status !== "lost" && document.documentElement.dataset.view === "game";
     this.el.hidden = !show;
     if (!show) return;
+    // The price on this cell: a Workshop's Prefab path makes builds in its radius cheaper.
     const d = this.game.content.towers[build],
-      key = `${build}|${d.cost}`;
+      { price } = buildPrice(build, pending, this.game.state.towers, this.game.content),
+      key = `${build}|${price}`;
     if (key !== this.key) {
       this.key = key;
-      this.el.innerHTML = `<button class="primary" data-confirm="build" aria-label="Build ${d.name} for ${d.cost} credits">✓ <span>◇ ${d.cost}</span></button><button class="quiet" data-confirm="cancel" aria-label="Cancel">✕</button>`;
+      this.el.innerHTML = `<button class="primary" data-confirm="build" aria-label="Build ${d.name} for ${price} credits">✓ <span>◇ ${price}</span></button><button class="quiet" data-confirm="cancel" aria-label="Cancel">✕</button>`;
     }
     this.place();
   }
