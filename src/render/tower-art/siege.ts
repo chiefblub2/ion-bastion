@@ -1,15 +1,16 @@
 /**
  * Siege Cannon: Nova's look in the slight 3/4 tilt (see `tilt.ts`): four armoured legs and an amber drum (still, baked
- * per level and trim colour), a toothed bearing ring and a turning armoured housing with an elevated cannon (live).
- * The cannon's pivot height and elevation live in `MUZZLES.heavy.tilt`, so shells, flashes and smoke leave its muzzle.
+ * per level and trim colour), a toothed bearing ring and a turning armoured housing with an elevated cannon (its ink
+ * cached per aim angle and recoil, `siegeTurret`; lights and smoke live in `siegeBelow` and `siegeAbove`).
+ * The cannon's pivot height and elevation live in `TILTS.heavy`, so shells, flashes and smoke leave its muzzle.
  */
 import { facing, halo } from "../material";
-import { MUZZLES } from "../muzzles";
+import { MUZZLES, TILTS } from "../muzzles";
 import { disc, oval, polygon, shade } from "../shapes";
 import type { TurretContext } from "./kit";
 import { FOOT, INSET, OUTLINE, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, towardViewer, tube, turn } from "./tilt";
 
-const TILT = MUZZLES.heavy!.tilt!,
+const TILT = TILTS.heavy!,
   RECOIL = MUZZLES.heavy!.recoil,
   DROP = TILT.drop,
   HB = TILT.height,
@@ -93,30 +94,48 @@ export function siegeBase({ g, x, y, level, definition, color }: TurretContext) 
   drum(g, x, y0, 9.5, RING, PLATE, CASING, shade(CASING, 0.2), 12);
 }
 
-/**
- * The live part: notch lights, the turning bearing teeth, the turret's shadow, the housing with its vent slats and the
- * loading hatch, the mantlet, breech, the elevated barrel (an under-barrel tube from level 5) and the vents' smoke.
- */
-export function siegeTurret(ctx: TurretContext) {
-  const { g, glow, x, y, tower, definition, level, charge, kick, tip, energy, clock, color } = ctx,
-    a = tower.angle,
-    c = definition.color,
-    y0 = y + DROP,
+const geometry = ({ x, y, tower, level, kick }: TurretContext) => {
+  const a = tower.angle,
     ca = Math.cos(a),
     sa = Math.sin(a),
-    end = MUZZLES.heavy!.reach(level) - kick * RECOIL,
-    back = -kick * RECOIL,
-    away = sa < 0,
-    P = (p: number, q: number, h: number) => [X(x, p * ca - q * sa), Y(y0, p * sa + q * ca, h)] as const;
-  // From level 4 the drum's notch lights chase round in the trim colour (below, they are baked with the drum).
-  if (level >= 4)
-    NOTCHES.forEach((t, i) => {
-      const on = 0.3 + 0.7 * Math.max(0, Math.sin(4 * clock - i * 1.1)),
-        nx = X(x, Math.cos(t) * 12.7),
-        ny = Y(y0, Math.sin(t) * 12.7, 3.5);
-      quad(g, nx - 0.6, ny - 0.8, nx + 0.6, ny - 0.8, nx + 0.6, ny + 0.8, nx - 0.6, ny + 0.8, shade(color, -0.6 + 0.7 * on));
-      if (on > 0.5) quad(glow, nx - 1.8, ny - 2, nx + 1.8, ny - 2, nx + 1.8, ny + 2, nx - 1.8, ny + 2, color, 0.22 * on);
-    });
+    y0 = y + DROP;
+  return {
+    a,
+    ca,
+    sa,
+    y0,
+    end: MUZZLES.heavy!.reach(level) - kick * RECOIL,
+    back: -kick * RECOIL,
+    /** Point `p` along the aim, `q` across it, at height `h`. */
+    P: (p: number, q: number, h: number) => [X(x, p * ca - q * sa), Y(y0, p * sa + q * ca, h)] as const,
+  };
+};
+/** The flank the vent slats sit on: the one turned to the viewer. */
+const slatSide = (ca: number) => (ca > 0 ? 9.6 : -9.6);
+
+/** Live, under the turret: from level 4 the drum's notch lights chase round in the trim colour (below, they bake with the drum). */
+export function siegeBelow({ g, glow, x, y, level, clock, color }: TurretContext) {
+  if (level < 4) return;
+  const y0 = y + DROP;
+  NOTCHES.forEach((t, i) => {
+    const on = 0.3 + 0.7 * Math.max(0, Math.sin(4 * clock - i * 1.1)),
+      nx = X(x, Math.cos(t) * 12.7),
+      ny = Y(y0, Math.sin(t) * 12.7, 3.5);
+    quad(g, nx - 0.6, ny - 0.8, nx + 0.6, ny - 0.8, nx + 0.6, ny + 0.8, nx - 0.6, ny + 0.8, shade(color, -0.6 + 0.7 * on));
+    if (on > 0.5) quad(glow, nx - 1.8, ny - 2, nx + 1.8, ny - 2, nx + 1.8, ny + 2, nx - 1.8, ny + 2, color, 0.22 * on);
+  });
+}
+
+/**
+ * The turret's ink (cached per aim angle and recoil): the turning bearing teeth, the housing's shadow, the housing with
+ * its dark vent slats and the loading hatch, the mantlet, breech, the elevated barrel (an under-barrel tube from level
+ * 5). Reads no clock and no charge, and no glow.
+ */
+export function siegeTurret(ctx: TurretContext) {
+  const { g, x, level, tip, definition, color } = ctx,
+    { a, ca, sa, y0, end, back, P } = geometry(ctx),
+    c = definition.color,
+    away = sa < 0;
   // Teeth on the bearing ring, turning with the aim.
   for (let i = 0; i < 12; i++) {
     const t = a + (i * Math.PI) / 6,
@@ -149,42 +168,18 @@ export function siegeTurret(ctx: TurretContext) {
       const n = turn(HOUSING, a, FOOT);
       turn(HOUSING, a, INSET, 0.8, -0.5);
       block(g, x, y0, FOOT, INSET, n, PLATE, TOP, BEVEL, wall, top, shade(c, 0.45));
-      // Vent slats on the flank turned to the viewer, lit one after another as the next shell loads.
-      const side = ca > 0 ? 9.6 : -9.6;
-      [-6, -4, -2].forEach((p, i) => {
-        const [sx0, sy0] = P(p, side, PLATE + 1.8),
-          [sx1, sy1] = P(p, side, TOP - 1.6),
-          on = Math.max(0, Math.min(1, charge * 3 - i));
-        g.lineStyle(1.3, DARK, 1);
-        g.lineBetween(sx0, sy0, sx1, sy1);
-        if (on <= 0.05) return;
-        g.lineStyle(0.7, shade(c, -0.2 + 0.4 * on), 1);
-        g.lineBetween(sx0, sy0, sx1, sy1);
-        glow.lineStyle(2.4, c, 0.25 * on);
-        glow.lineBetween(sx0, sy0, sx1, sy1);
-      });
+      // Dark vent slats on the flank turned to the viewer; the charge lights them live (`siegeAbove`).
+      g.lineStyle(1.3, DARK, 1);
+      for (const p of [-6, -4, -2]) g.lineBetween(...P(p, slatSide(ca), PLATE + 1.8), ...P(p, slatSide(ca), TOP - 1.6));
       plates(true);
-      // Loading hatch along the roof: the next shell slides forward into the breech as the cycle charges.
+      // Loading hatch along the roof; the next shell slides into it live.
       const slot = [P(-6.5, -1.4, ht), P(3, -1.4, ht), P(3, 1.4, ht), P(-6.5, 1.4, ht)];
       quad(g, ...slot[0], ...slot[1], ...slot[2], ...slot[3], shade(c, -0.7));
-      const load = Math.max(0, Math.min(1, (charge - 0.2) / 0.8)),
-        nose = -1.5 + 4.5 * load;
-      if (charge < 1 && kick === 0) {
-        const s0 = P(nose - 4.5, -0.9, ht + 0.3),
-          s1 = P(nose, -0.9, ht + 0.3),
-          s2 = P(nose, 0.9, ht + 0.3),
-          s3 = P(nose - 4.5, 0.9, ht + 0.3);
-        quad(g, ...s0, ...s1, ...s2, ...s3, 0xc9a25a);
-        const n0 = P(nose + 1.4, 0, ht + 0.3);
-        g.fillStyle(shade(c, 0.1));
-        g.fillTriangle(...s1, ...s2, ...n0);
-      }
-      // A lamp at the back corner from level 2, a bolt on each front corner from level 3.
+      // A lamp at the back corner from level 2 (its light is live), a bolt on each front corner from level 3.
       if (level >= 2) {
         const [lx, ly] = P(-6.5, ca > 0 ? 6 : -6, ht);
         disc(g, lx, ly, 1.4, OUTLINE);
         disc(g, lx, ly, 0.9, shade(color, 0.2));
-        disc(glow, lx, ly, 2.6, color, 0.35);
       }
       if (level >= 3)
         for (const q of [-6.2, 6.2]) {
@@ -195,15 +190,10 @@ export function siegeTurret(ctx: TurretContext) {
     },
     breech = () => {
       part(BREECH, PLATE + 1, TOP - 1.5, DARK, shade(DARK, 0.2));
-      // Exhaust vents on the breech's back face: hot and smoking right after a shot.
+      // Exhaust vents on the breech's back face (hot and smoking right after a shot, live).
       for (const q of [-2.4, 2.4]) {
         const [vx, vy] = P(-13.2, q, 12.5);
         disc(g, vx, vy, 1.1, OUTLINE);
-        if (kick <= 0) continue;
-        disc(glow, vx, vy, 3.4, c, 0.4 * kick);
-        const drift = 1 - kick,
-          [sx, sy] = P(-13.2 - 6 * drift, q * (1 + drift), 12.5 + 9 * drift);
-        disc(g, sx, sy, 1.6 + 3.4 * drift, 0x8f989e, 0.45 * kick);
       }
     },
     mantlet = () => part(MANTLET, 10.5, TOP + 1, DARK, shade(DARK, 0.25)),
@@ -222,10 +212,6 @@ export function siegeTurret(ctx: TurretContext) {
         endFace(g, x, y0, a, HB, end, 3.5, shade(c, -0.6), PITCH);
         endFace(g, x, y0, a, HB, end, 2.2, OUTLINE, PITCH);
       }
-      // Heat in the barrel right after a shot, and a glow on the muzzle from level 5.
-      const [mx, my] = P(Math.cos(PITCH) * end, 0, HB + Math.sin(PITCH) * end);
-      if (kick > 0) halo(glow, mx, my, 5 * (1.2 + kick), c, 0.3 * kick);
-      if (energy > 0) disc(glow, mx, my, 3, c, energy);
     };
   if (away) {
     under();
@@ -240,4 +226,51 @@ export function siegeTurret(ctx: TurretContext) {
     under();
     barrel();
   }
+}
+
+/**
+ * Live, over the turret: the vent slats lit one after another as the next shell loads, the shell sliding into the
+ * hatch, the lamp's light, the breech's hot vents and smoke, the heat in the barrel and the muzzle glow.
+ */
+export function siegeAbove(ctx: TurretContext) {
+  const { g, glow, level, charge, kick, energy, color, definition } = ctx,
+    { ca, end, P } = geometry(ctx),
+    c = definition.color,
+    ht = TOP + BEVEL;
+  [-6, -4, -2].forEach((p, i) => {
+    const on = Math.max(0, Math.min(1, charge * 3 - i));
+    if (on <= 0.05) return;
+    const [sx0, sy0] = P(p, slatSide(ca), PLATE + 1.8),
+      [sx1, sy1] = P(p, slatSide(ca), TOP - 1.6);
+    g.lineStyle(0.7, shade(c, -0.2 + 0.4 * on), 1);
+    g.lineBetween(sx0, sy0, sx1, sy1);
+    glow.lineStyle(2.4, c, 0.25 * on);
+    glow.lineBetween(sx0, sy0, sx1, sy1);
+  });
+  // The next shell slides forward into the breech as the cycle charges.
+  const load = Math.max(0, Math.min(1, (charge - 0.2) / 0.8)),
+    nose = -1.5 + 4.5 * load;
+  if (charge < 1 && kick === 0) {
+    const s0 = P(nose - 4.5, -0.9, ht + 0.3),
+      s1 = P(nose, -0.9, ht + 0.3),
+      s2 = P(nose, 0.9, ht + 0.3),
+      s3 = P(nose - 4.5, 0.9, ht + 0.3);
+    quad(g, ...s0, ...s1, ...s2, ...s3, 0xc9a25a);
+    const n0 = P(nose + 1.4, 0, ht + 0.3);
+    g.fillStyle(shade(c, 0.1));
+    g.fillTriangle(...s1, ...s2, ...n0);
+  }
+  if (level >= 2) disc(glow, ...P(-6.5, ca > 0 ? 6 : -6, ht), 2.6, color, 0.35);
+  if (kick > 0)
+    for (const q of [-2.4, 2.4]) {
+      const [vx, vy] = P(-13.2, q, 12.5);
+      disc(glow, vx, vy, 3.4, c, 0.4 * kick);
+      const drift = 1 - kick,
+        [sx, sy] = P(-13.2 - 6 * drift, q * (1 + drift), 12.5 + 9 * drift);
+      disc(g, sx, sy, 1.6 + 3.4 * drift, 0x8f989e, 0.45 * kick);
+    }
+  // Heat in the barrel right after a shot, and a glow on the muzzle from level 5.
+  const [mx, my] = P(Math.cos(PITCH) * end, 0, HB + Math.sin(PITCH) * end);
+  if (kick > 0) halo(glow, mx, my, 5 * (1.2 + kick), c, 0.3 * kick);
+  if (energy > 0) disc(glow, mx, my, 3, c, energy);
 }

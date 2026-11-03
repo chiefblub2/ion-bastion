@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { MUZZLES, muzzleHeading, muzzleTips } from "./muzzles";
+import { MUZZLES, TILTS, muzzleHeading, muzzleTips } from "./muzzles";
 
 describe("muzzle tips", () => {
   it("project a tilted barrel (Pulse) onto its raised, foreshortened tip", () => {
-    const { tilt, reach } = MUZZLES.barrel!,
+    const { reach } = MUZZLES.barrel!,
+      tilt = TILTS.barrel,
       d = reach(3);
     expect(muzzleTips("barrel", 3, 100, 100, 0)[0]).toEqual({ x: 100 + d, y: 100 + tilt!.drop - tilt!.height });
     const south = muzzleTips("barrel", 3, 100, 100, Math.PI / 2)[0];
@@ -14,7 +15,8 @@ describe("muzzle tips", () => {
   });
 
   it("raise a pitched barrel (Nova) by its elevation and shorten it on the ground", () => {
-    const { tilt, reach } = MUZZLES.heavy!,
+    const { reach } = MUZZLES.heavy!,
+      tilt = TILTS.heavy,
       d = reach(1),
       p = tilt!.pitch!;
     expect(muzzleTips("heavy", 1, 0, 0, 0)[0].x).toBeCloseTo(d * Math.cos(p));
@@ -23,10 +25,34 @@ describe("muzzle tips", () => {
     expect(muzzleHeading("heavy", 0)).toBeLessThan(0);
   });
 
+  it("lay parallel barrels of a tilted turret across the aim on the ground plane", () => {
+    const tilt = TILTS.barrel!,
+      saved = MUZZLES.barrel!.sides;
+    MUZZLES.barrel!.sides = [-4, 4];
+    try {
+      // Aimed east, the offsets run north-south: squashed on the screen, both at barrel height.
+      const [a, b] = muzzleTips("barrel", 1, 0, 0, 0);
+      expect(a.x).toBeCloseTo(b.x);
+      expect(b.y - a.y).toBeCloseTo(8 * tilt.squash);
+      // Aimed south, they run east-west at full width.
+      const [c, e] = muzzleTips("barrel", 1, 0, 0, Math.PI / 2);
+      expect(c.x - e.x).toBeCloseTo(8);
+    } finally {
+      MUZZLES.barrel!.sides = saved;
+    }
+  });
+
+  it("send shots of a tilted turret without a barrel from its emit point", () => {
+    const tilt = TILTS.coil!;
+    expect(muzzleTips("coil", 1, 10, 10, 1)).toEqual([{ x: 10, y: 10 + tilt.drop - tilt.emit! }]);
+    // A flat radial turret has neither.
+    expect(muzzleTips("emitter", 1, 10, 10, 1)).toEqual([]);
+  });
+
   it("keep flat barrels on the aim", () => {
-    const [tip] = muzzleTips("rail", 1, 0, 0, Math.PI / 2);
+    const [tip] = muzzleTips("tether", 1, 0, 0, Math.PI / 2);
     expect(tip.x).toBeCloseTo(0);
-    expect(tip.y).toBeCloseTo(MUZZLES.rail!.reach(1));
-    expect(muzzleHeading("rail", 1)).toBe(1);
+    expect(tip.y).toBeCloseTo(MUZZLES.tether!.reach(1));
+    expect(muzzleHeading("tether", 1)).toBe(1);
   });
 });

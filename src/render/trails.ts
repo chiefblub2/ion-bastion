@@ -71,13 +71,15 @@ class Trail implements TrailView {
     private readonly cy: number,
     private ox: number,
     private oy: number,
+    /** How far the barrel tip sits above its ground point on screen (tilted turrets); fades over the whole flight. */
+    private rise: number,
     /** Point-aimed shells: total distance to the fixed target. */
     private readonly total: number,
     private readonly born: number,
     seed: number,
     readonly radius: number,
   ) {
-    this.pose = { x: cx + ox, y: cy + oy, gx: cx + ox, gy: cy + oy, angle: 0, progress: 0, lift: 0, age: 0, seed };
+    this.pose = { x: cx + ox, y: cy + oy - rise, gx: cx + ox, gy: cy + oy, angle: 0, progress: 0, lift: 0, age: 0, seed };
   }
   get count() {
     return this.endedAt === undefined ? this.stored + 1 : this.stored;
@@ -110,9 +112,10 @@ class Trail implements TrailView {
   /** Still merging from the barrel tip into its true path (set by `update`). */
   easing = true;
   /** Moves the barrel tip the shot leaves from, while the turret it left is still turning. */
-  aimFrom(ox: number, oy: number) {
+  aimFrom(ox: number, oy: number, rise: number) {
     this.ox = ox;
     this.oy = oy;
+    this.rise = rise;
   }
   /** Follows the simulation: eases out of the barrel, lifts arcing shells and records trail samples. */
   update(p: Projectile, now: number, busy: boolean) {
@@ -142,7 +145,9 @@ class Trail implements TrailView {
     pose.gx = sx + this.ox * ease;
     pose.gy = sy + this.oy * ease;
     pose.x = pose.gx;
-    pose.y = pose.gy - height;
+    // A tilted barrel's height above the ground fades over the whole flight, so the shot keeps the barrel's line
+    // instead of diving to the ground right after the muzzle.
+    pose.y = pose.gy - height - this.rise * (1 - progress);
     pose.angle = angle;
     pose.progress = progress;
     pose.lift = lift;
@@ -176,20 +181,33 @@ class Trail implements TrailView {
 }
 /** Absolute angle between two directions, 0 to π. */
 const turn = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
-/** Offset of the barrel tip a projectile leaves from, with the turret drawn at `angle`. */
-function barrelOffset(p: Projectile, tower: Tower, content: ContentPack, angle: number): Point {
+/**
+ * Offset of the barrel tip a projectile leaves from, with the turret drawn at `angle`: its ground point (`x`, `y`, on
+ * the board under the tip) and, on a tilted turret, how far the drawn tip rises above it on screen (`rise`).
+ */
+function barrelOffset(p: Projectile, tower: Tower, content: ContentPack, angle: number): Point & { rise: number } {
   const d = content.towers[p.type],
     cx = px(tower.x),
     cy = px(tower.y),
-    tips = muzzleTips(d.visual.turret, towerLevel(tower, content), cx, cy, angle),
+    level = towerLevel(tower, content),
+    tips = muzzleTips(d.visual.turret, level, cx, cy, angle),
+    ground = muzzleTips(d.visual.turret, level, cx, cy, angle, 0, true),
     flight = Math.atan2(p.ty - tower.y, p.tx - tower.x);
-  if (!tips.length) return { x: 0, y: 0 };
+  if (!tips.length) return { x: 0, y: 0, rise: 0 };
   // Fanned barrels: the one pointing closest to this shot; parallel barrels: between them.
   const off = (q: Point) => turn(Math.atan2(q.y - cy, q.x - cx), flight),
-    tip = MUZZLES[d.visual.turret]?.fan
-      ? tips.reduce((best, q) => (off(q) < off(best) ? q : best))
-      : { x: tips.reduce((s, q) => s + q.x, 0) / tips.length, y: tips.reduce((s, q) => s + q.y, 0) / tips.length };
-  return { x: tip.x - cx, y: tip.y - cy };
+    mean = (qs: readonly Point[]) => ({ x: qs.reduce((s, q) => s + q.x, 0) / qs.length, y: qs.reduce((s, q) => s + q.y, 0) / qs.length });
+  let tip: Point, base: Point;
+  if (MUZZLES[d.visual.turret]?.fan) {
+    const i = ground.reduce((best, q, k) => (off(q) < off(ground[best]) ? k : best), 0);
+    tip = tips[i];
+    base = ground[i];
+  } else {
+    tip = mean(tips);
+    // No barrel (an emit point): the shot rises from the tower centre.
+    base = ground.length ? mean(ground) : { x: cx, y: cy };
+  }
+  return { x: base.x - cx, y: base.y - cy, rise: base.y - tip.y };
 }
 /**
  * Render-side memory of the projectiles in flight: where each one left its barrel, its recent positions for the
@@ -228,7 +246,7 @@ export class Trails {
         const tower = towers.find((q) => q.id === p.tower);
         if (tower) {
           const o = barrelOffset(p, tower, content, angleOf(tower));
-          t.aimFrom(o.x, o.y);
+          t.aimFrom(o.x, o.y, o.rise);
         }
       }
       t.update(p, now, busy);
@@ -253,10 +271,10 @@ export class Trails {
       tower = towers.find((t) => t.id === p.tower),
       cx = tower ? px(tower.x) : px(p.x),
       cy = tower ? px(tower.y) : px(p.y);
-    const { x: ox, y: oy } = tower ? barrelOffset(p, tower, content, angleOf(tower)) : { x: 0, y: 0 };
+    const { x: ox, y: oy, rise } = tower ? barrelOffset(p, tower, content, angleOf(tower)) : { x: 0, y: 0, rise: 0 };
     const total = p.target === null ? Math.hypot(px(p.tx) - cx, px(p.ty) - cy) : 0,
       radius = "radius" in p.attack ? p.attack.radius : 0;
-    return new Trail(p.type, p.tower, look, d.color, cx, cy, ox, oy, total, now, p.id, radius);
+    return new Trail(p.type, p.tower, look, d.color, cx, cy, ox, oy, rise, total, now, p.id, radius);
   }
   /** Trails first (landed ones included), then the projectiles on top. */
   draw(pen: Pen, now: number) {

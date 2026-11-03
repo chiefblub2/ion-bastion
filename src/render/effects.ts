@@ -1,6 +1,6 @@
 import type { ContentPack, GameEvent, TurretStyle } from "../core/types";
 import { glowLine, halo, SHADOW } from "./material";
-import { MUZZLES, muzzleHeading, muzzleTips, type FlashStyle } from "./muzzles";
+import { MUZZLES, TILTS, muzzleHeading, muzzleTips, type FlashStyle } from "./muzzles";
 import { drawFieldEffect } from "./field-effects";
 import { fadeOut, IMPACTS, impactOf } from "./projectiles";
 import { drawTrapEffect, TRAP_EFFECT_LIFE } from "./trap-effects";
@@ -550,9 +550,18 @@ export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: Conte
     case "warp":
     case "breach":
       return drawTrapEffect(pen, e, age);
-    case "chain":
-      chain(pen, sourceOf(content, e.color), px(e.from.x), px(e.from.y), px(e.to.x), px(e.to.y), e.color, age);
+    case "chain": {
+      const turret = sourceOf(content, e.color);
+      let fx = px(e.from.x),
+        fy = px(e.from.y);
+      // From a tilted tower (the first hop): the arc leaves its raised emit point or barrel tip.
+      if (turret && TILTS[turret] && origin.angle !== undefined) {
+        const tip = muzzleTips(turret, origin.level ?? 1, fx, fy, origin.angle)[0];
+        if (tip) ({ x: fx, y: fy } = tip);
+      }
+      chain(pen, turret, fx, fy, px(e.to.x), px(e.to.y), e.color, age);
       return;
+    }
     case "beam": {
       const turret = sourceOf(content, e.color),
         tx = px(e.to.x),
@@ -645,7 +654,9 @@ export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: Conte
         aim = Math.atan2(ty - fy, tx - fx);
       // Tesla: lightning leaps from the rim of the coil.
       if (d.visual.muzzle === "bolt") {
-        lightning(pen, fx + Math.cos(aim) * 10, fy + Math.sin(aim) * 10, tx, ty, e.color, alpha, hash01(tx, ty, Math.floor(age * 20)));
+        // A tilted coil fires from its raised top (`TILTS.coil.emit`), a flat one from its rim.
+        const top = TILTS[d.visual.turret] ? muzzleTips(d.visual.turret, origin.level ?? 1, fx, fy, aim)[0] : undefined;
+        lightning(pen, top?.x ?? fx + Math.cos(aim) * 10, top?.y ?? fy + Math.sin(aim) * 10, tx, ty, e.color, alpha, hash01(tx, ty, Math.floor(age * 20)));
         halo(glow, tx, ty, 7, e.color, 0.5 * alpha);
         return;
       }
@@ -654,7 +665,7 @@ export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: Conte
       // The flash sits on every barrel tip, as the turret pointed when it fired.
       const angle = origin.angle ?? aim;
       for (const tip of muzzleTips(d.visual.turret, origin.level ?? 1, fx, fy, angle)) {
-        const heading = spec.tilt ? muzzleHeading(d.visual.turret, angle) : Math.atan2(tip.y - fy, tip.x - fx);
+        const heading = TILTS[d.visual.turret] ? muzzleHeading(d.visual.turret, angle) : Math.atan2(tip.y - fy, tip.x - fx);
         FLASHES[spec.flash](pen, tip.x, tip.y, heading, age, e.color, d.visual.turret === "mortar");
         // A soft afterglow lingers at the muzzle once the flash is gone.
         if (age < AFTERGLOW) halo(glow, tip.x, tip.y, 7, e.color, 0.12 * fadeOut(age / AFTERGLOW));

@@ -10,8 +10,14 @@ export const DEPTH = {
   hints: 1.5,
   /** Baked still tower bodies (one Image per tower, `TowerBodies`), below the live turrets. */
   towerBodies: 1.8,
-  /** `towerInk`, then its additive `towerGlow`. */
+  /** `towerInk`: flat towers, the light of baked bodies, the live parts under tilted turrets. */
   towers: 2,
+  /** Cached pictures of tilted turrets (`TurretCache`), one Image per tower, raised slightly per row (north first). */
+  towerTurrets: 2.1,
+  /** `towerTop`: live parts over tilted turrets, level bars and badges of cached ones; then the placing ghost. */
+  towerTop: 2.2,
+  /** `towerGlow`, the additive light of every tower. */
+  towerGlow: 2.3,
   enemyUnderlay: 3,
   /** Procedural bodies (Graphics). */
   enemyBody: 4,
