@@ -75,6 +75,24 @@ const OVERRIDES: Partial<Record<SpecializationSpec["kind"], Record<string, strin
   // ── trap paths ──
   // ── end trap paths ──
   // ── support economy ──
+  "big-game": { amount: "Credits per heavy kill" },
+  lure: { slow: "Slow in radius" },
+  "field-rations": { every: "Kills per energy" },
+  advance: { amount: "Paid at wave start" },
+  compounding: { amount: "Credits per wave", cap: "Most bonus per wave" },
+  "fuel-line": { bonus: "Fire rate", radius: "Reach" },
+  "clean-sheet": { amount: "Credits per clean wave" },
+  investment: { share: "Spending counted" },
+  "reserve-cells": { every: "Interest per energy" },
+  prefab: { share: "Build discount" },
+  refit: { share: "Sale share" },
+  calibration: { bonus: "Bonus damage at max level" },
+  triage: { amount: "Energy refunded per wave" },
+  salvage: { amount: "Credits per unused point" },
+  "damage-control": { bonus: "Fire rate below 50%", radius: "Reach" },
+  recharge: { amount: "Points refilled", every: "Seconds between refills" },
+  shockwave: { duration: "Stun", radius: "Reach around the reactor" },
+  overflow: { amount: "Credits per unused point" },
   // ── end support economy ──
   // ── support combat ──
   // ── end support combat ──

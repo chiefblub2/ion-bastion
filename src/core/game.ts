@@ -15,6 +15,7 @@ import { beginWave, earlyBonus, settleCircle, wavesLeft } from "../systems/circl
 import { balance, credit, earn, startingWallets } from "./economy";
 import { purchaseUpgrade } from "./upgrades";
 import { validateMission } from "./validation";
+import { buildPrice, noteSpending, refitShare, tickEconomy } from "../systems/economy-paths";
 import type {
   Command,
   CommandResult,
@@ -31,7 +32,9 @@ import type {
 export const FIXED_STEP = 1 / 30;
 /** Share of the total investment (build plus upgrades) returned on sale. */
 export const SELL_REFUND = 0.7;
-export const sellValue = (tower: Tower) => Math.floor(tower.spent * SELL_REFUND);
+/** Refund of a sale; with the board, a Workshop on the Refit path may raise the share. */
+export const sellValue = (tower: Tower, towers?: readonly Tower[], content: ContentPack = DEFAULT_CONTENT) =>
+  Math.floor(tower.spent * (towers ? Math.max(SELL_REFUND, refitShare(tower, towers, content)) : SELL_REFUND));
 export function initialState(mission: MissionDefinition, players = 1): GameState {
   return {
     status: "ready",
@@ -163,11 +166,15 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
       const d = g.content.towers[c.tower];
       if (!g.availableTowers().includes(c.tower)) return fail("tower-unavailable", { tower: d.name });
       if (!g.canBuild(c.x, c.y, c.tower)) return fail(d.placement === "path" ? "trap-off-path" : "cell-blocked");
-      if (balance(s, player) < d.cost) return fail("credits-missing");
+      // Prefab (Workshop path) may lower the price.
+      const { price, event } = buildPrice(c.tower, c, s.towers, g.content);
+      if (balance(s, player) < price) return fail("credits-missing");
       const id = s.nextId++;
-      s.wallets[player] -= d.cost;
-      s.towers.push({ id, type: c.tower, x: c.x, y: c.y, upgrades: [], cooldown: 0, spent: d.cost, angle: -Math.PI / 2, kills: 0, owner: player });
+      s.wallets[player] -= price;
+      s.towers.push({ id, type: c.tower, x: c.x, y: c.y, upgrades: [], cooldown: 0, spent: price, angle: -Math.PI / 2, kills: 0, owner: player });
+      if (event) s.events.push(event);
       s.events.push({ type: "build", at: { x: c.x, y: c.y }, tower: c.tower, color: d.color });
+      noteSpending(g, player, price); // Investment Account
       return ok("tower-built", { tower: d.name }, id);
     },
   },
@@ -177,7 +184,7 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
       const s = g.state,
         t = ownTower(g, c.id, c.player);
       if (!("owner" in t)) return t;
-      const refund = sellValue(t);
+      const refund = sellValue(t, s.towers, g.content);
       credit(s, t.owner, refund);
       s.towers = s.towers.filter((v) => v.id !== t.id);
       s.events.push({ type: "sell", at: { x: t.x, y: t.y }, tower: t.type, color: g.content.towers[t.type].color });
@@ -189,7 +196,10 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
     run: (g, c) => {
       const t = ownTower(g, c.id, c.player);
       if (!("owner" in t)) return t;
-      return purchaseUpgrade(g.state, t, c.upgrade, g.content);
+      const before = g.state.wallets[t.owner],
+        result = purchaseUpgrade(g.state, t, c.upgrade, g.content);
+      if (result.ok) noteSpending(g, t.owner, before - g.state.wallets[t.owner]); // Investment Account
+      return result;
     },
   },
   target: {
@@ -337,6 +347,7 @@ export class Game implements Sim {
     fireAftershocks(this);
     landStrikes(this);
     tickZones(this);
+    tickEconomy(this, dt); // Shield Generator path: Recharge
     attackEnemies(this, dt);
     s.enemies = s.enemies.filter((e) => e.hp > 0);
     if (this.mission.circle) settleCircle(this, dt);

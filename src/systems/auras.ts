@@ -5,6 +5,7 @@ import { isSupport } from "./attacks";
 import type { AuraBonuses, AuraStat, ContentPack, Point, Sim, TowerId } from "../core/types";
 import { isSuppressed, towerDebuffs } from "./traits";
 import { siphonBoost } from "./siphon";
+import { economyBoost } from "./economy-paths";
 
 export const AURA_STATS: readonly AuraStat[] = ["damage", "speed", "range"];
 const emptyBonuses = (): AuraBonuses => ({ damage: 0, speed: 0, range: 0 });
@@ -57,11 +58,13 @@ export function effectiveTowerStats(
     debuffs = sim && d.placement !== "path" && !isSupport(d.attack) ? towerDebuffs(sim, target) : { range: 0, interval: 0 };
   // Siphon: hindered enemies near a Siphon speed up the attack towers around it (Power Tap: and strengthen them).
   const siphon = sim && d.placement !== "path" && !isSupport(d.attack) ? siphonBoost(sim, target) : { rate: 0, damage: 0 };
+  // Economy paths: Fuel Line and Damage Control (fire rate), Calibration (damage).
+  const economy = sim ? economyBoost(sim, target) : { rate: 0, damage: 0 };
   return {
     base,
     bonuses,
-    damage: base.damage * (1 + bonuses.damage) * (1 + siphon.damage),
+    damage: base.damage * (1 + bonuses.damage) * (1 + siphon.damage) * (1 + economy.damage),
     range: base.range * (1 + bonuses.range) * (1 - debuffs.range),
-    interval: (base.interval / (1 + bonuses.speed)) * (1 + debuffs.interval) / (1 + siphon.rate),
+    interval: (base.interval / (1 + bonuses.speed)) * (1 + debuffs.interval) / (1 + siphon.rate) / (1 + economy.rate),
   };
 }

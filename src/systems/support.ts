@@ -6,6 +6,7 @@ import type { Hit } from "./damage";
 import { dist } from "./path";
 import { isNetted } from "./status";
 import { isSuppressed, layerOf } from "./traits";
+import { closeEconomyWave, interestBase, payCleanSheet, payOverflow, reserveCells, salvage, shockwave } from "./economy-paths";
 /**
  * Effects of the passive support towers. Like auras they are derived from the current
  * towers on every query, without a cache, and overlapping towers count only the strongest.
@@ -63,6 +64,7 @@ export function repairReactor(sim: Sim) {
     const attack = resolveUpgrades(t, sim.content).attack;
     if (attack.kind !== "repair") continue;
     const amount = Math.min(attack.amount, sim.mission.reactorEnergy - s.lives);
+    salvage(sim, t, attack.amount - Math.max(0, amount)); // Dock path: Salvage
     if (amount <= 0) continue;
     s.lives += amount;
     s.events.push({ type: "repair", at: { x: t.x, y: t.y }, amount, color: sim.content.towers[t.type].color });
@@ -168,12 +170,14 @@ export function payInterest(sim: Sim) {
   for (const t of s.towers) {
     const attack = resolveUpgrades(t, sim.content).attack;
     if (attack.kind !== "interest") continue;
-    const amount = interestOn(s.wallets[t.owner] ?? 0, attack.rate, attack.cap);
+    const amount = interestOn(interestBase(sim, t), attack.rate, attack.cap); // Investment Account
     if (amount > (best.get(t.owner)?.amount ?? 0)) best.set(t.owner, { tower: t, amount });
   }
+  const restored = { done: false };
   for (const [owner, { tower: t, amount }] of best) {
     credit(s, owner, amount);
     s.events.push({ type: "income", at: { x: t.x, y: t.y }, amount, color: sim.content.towers[t.type].color });
+    reserveCells(sim, t, amount, restored); // Vault path: Reserve Cells
   }
 }
 /** Shield Generator: charge left this wave. */
@@ -188,19 +192,25 @@ export const barrierLeft = (sim: Sim, t: Pick<Tower, "type" | "upgrades" | "barr
 export function absorbLeak(sim: Sim, e: Enemy, leak: number) {
   const s = sim.state;
   let rest = leak;
+  const takers: Tower[] = [];
   for (const t of s.towers) {
     if (rest <= 0) break;
     const take = Math.min(rest, barrierLeft(sim, t));
     if (take <= 0) continue;
+    takers.push(t);
     t.barrier = (t.barrier ?? 0) + take;
     rest -= take;
     s.events.push({ type: "barrier", from: { x: t.x, y: t.y }, at: { x: e.x, y: e.y }, amount: take, color: sim.content.towers[t.type].color });
   }
+  if (takers.length) shockwave(sim, takers); // Shield Generator path: Shockwave
   return rest;
 }
 /** After a completed wave: Vault interest, then every Shield Generator recharges. */
 export function settleEconomy(sim: Sim) {
   payInterest(sim);
+  payCleanSheet(sim); // Vault path: Clean Sheet
+  payOverflow(sim, (t) => barrierLeft(sim, t)); // Shield Generator path: Overflow
   for (const t of sim.state.towers) delete t.barrier;
+  closeEconomyWave(sim);
 }
 // ── end g5 ──
