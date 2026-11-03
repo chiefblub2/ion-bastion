@@ -102,7 +102,7 @@ export function towerCardHtml(tower: Tower, towers: readonly Tower[], options: C
         ).join("")}</div>`;
   return `<div class="card-head"><strong>${escape(definition.name)}</strong> <span>${sub}</span><button class="card-close" data-deselect aria-label="Deselect (Esc)">✕</button></div>${
     options.owner ? `<p class="card-owner">Owned by ${escape(options.owner)}</p>` : ""
-  }<div class="card-upgrades">${upgrades}</div>${target}<button class="card-sell" data-sell${locked}>Sell · ◇ ${sellValue(tower)}</button>`;
+  }<div class="card-upgrades">${upgrades}</div>${target}<button class="card-sell" data-sell${locked}>Sell · ◇ ${sellValue(tower, towers, content)}</button>`;
 }
 
 /** Aura: first a track, then (after any track's tier III) a path; the newest tier names where it stands. */

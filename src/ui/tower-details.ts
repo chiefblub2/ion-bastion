@@ -88,5 +88,5 @@ export function towerDetails(
   const cancelLabel = tower ? "Deselect (Esc)" : "Exit build mode (Esc)";
   return `<div class="selection-heading"><span>${tower ? "TOWER SELECTED" : "BUILD MODE"}</span><span class="selection-actions"><b>${heading}</b><button id="cancel-selection" class="cancel-selection" title="${cancelLabel}" aria-label="${cancelLabel}">✕</button></span></div>
     <p>${definition.description}</p>${isSupport(definition.attack) ? "" : `<p class="tower-targets">Targets: <b>${targets(definition.targets)}</b>${attackSummary(type, tower, content)}${tower ? ` · Kills <b id="tower-kills">${tower.kills}</b>` : ""}</p>`}${values}
-    ${tower ? `${isSupport(definition.attack) ? "" : priorityControl(tower)}${upgradeControl(tower, towers, content)}<button id="sell-btn" class="sell">Sell · +${sellValue(tower)} credits</button>` : placementNote(definition.placement === "path")}`;
+    ${tower ? `${isSupport(definition.attack) ? "" : priorityControl(tower)}${upgradeControl(tower, towers, content)}<button id="sell-btn" class="sell">Sell · +${sellValue(tower, towers, content)} credits</button>` : placementNote(definition.placement === "path")}`;
 }

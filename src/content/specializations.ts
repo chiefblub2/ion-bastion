@@ -641,7 +641,7 @@ export const SPECIALIZATIONS: Readonly<Record<string, readonly [PathData, PathDa
   ],
   pit: [
     {
-      slug: "abyss", name: "Abyss", role: "Swallow more",
+      slug: "sinkhole", name: "Sinkhole", role: "Swallow more",
       tiers: fixed([[0.29, "Thornbacks, Crystal Wardens and Decoys"], [0.3, "Bulwarks, Commanders, Hydras and Piston Tanks"], [0.31, "Nautili and Pressure Bunkers"]] as const, ([size, more]) => ({
         attack: { size },
         description: `Also swallows ${more}. Berserkers and Titans never fall in.`,
@@ -657,7 +657,7 @@ export const SPECIALIZATIONS: Readonly<Record<string, readonly [PathData, PathDa
     { slug: "quick-cover", name: "Quick Cover", role: "Swarms", tiers: faster([0.15, 0.25, 0.35]) },
   ],
   tripwire: [
-    { slug: "full-alert", name: "Full Alert", role: "Wide alarm", tiers: fixed([4, 4.5, 5] as const, (radius) => ({ attack: { radius }, description: `Alerts towers in radius ${radius}.` })) },
+    { slug: "wide-alert", name: "Wide Alert", role: "Wide alarm", tiers: fixed([4, 4.5, 5] as const, (radius) => ({ attack: { radius }, description: `Alerts towers in radius ${radius}.` })) },
     {
       slug: "volley-signal", name: "Volley Signal", role: "Alpha strike",
       tiers: fixed([0.5, 0.75, 1] as const, (bonus) => ({
@@ -708,7 +708,7 @@ export const SPECIALIZATIONS: Readonly<Record<string, readonly [PathData, PathDa
   ],
   arc: [
     {
-      slug: "storm-floor", name: "Storm Floor", role: "Swarm chain",
+      slug: "tempest-grid", name: "Tempest Grid", role: "Swarm chain",
       tiers: fixed([[6, 0.87], [7, 0.9], [8, 0.92]] as const, ([jumps, falloff]) => ({
         attack: { jumps, falloff },
         description: `The lightning jumps to ${jumps} more enemies and keeps ${pct(falloff)} of its damage per jump.`,
@@ -724,7 +724,7 @@ export const SPECIALIZATIONS: Readonly<Record<string, readonly [PathData, PathDa
     { slug: "overcharge", name: "Overcharge", role: "Boss", tiers: conditional("heavy", [0.25, 0.45, 0.7], "against heavy targets (1,000+ max HP)") },
   ],
   oil: [
-    { slug: "naphtha", name: "Naphtha", role: "Fire combo", tiers: fixed([2.9, 3.2, 3.5] as const, (boost) => ({ attack: { boost }, description: `Burns on oiled enemies deal ${boost} times.` })) },
+    { slug: "accelerant", name: "Accelerant", role: "Fire combo", tiers: fixed([2.9, 3.2, 3.5] as const, (boost) => ({ attack: { boost }, description: `Burns on oiled enemies deal ${boost} times.` })) },
     {
       slug: "wide-spill", name: "Wide Spill", role: "Spread",
       tiers: fixed([[1.8, 5.5], [2, 6], [2.2, 7]] as const, ([radius, duration]) => ({
@@ -741,7 +741,7 @@ export const SPECIALIZATIONS: Readonly<Record<string, readonly [PathData, PathDa
     },
   ],
   grinder: [
-    { slug: "meat-mill", name: "Meat Mill", role: "Held enemies", tiers: fixed([4.5, 5, 6] as const, (bonus) => ({ attack: { bonus }, description: `Up to ${bonus + 1} times the damage on held enemies.` })) },
+    { slug: "mulcher", name: "Mulcher", role: "Held enemies", tiers: fixed([4.5, 5, 6] as const, (bonus) => ({ attack: { bonus }, description: `Up to ${bonus + 1} times the damage on held enemies.` })) },
     { slug: "shredder", name: "Shredder", role: "Armor", tiers: pierce },
     {
       slug: "bonesaw", name: "Bonesaw", role: "Boss",
@@ -753,7 +753,7 @@ export const SPECIALIZATIONS: Readonly<Record<string, readonly [PathData, PathDa
   ],
   harpoon: [
     {
-      slug: "whaler", name: "Whaler", role: "Long hold",
+      slug: "deep-barb", name: "Deep Barb", role: "Long hold",
       tiers: fixed([[1.8, 4.5], [2, 5], [2.3, 5.5]] as const, ([pin, duration]) => ({
         attack: { pin, duration },
         description: `Pins for ${pin} s and keeps the flyer netted for ${duration} s.`,

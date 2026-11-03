@@ -58,7 +58,7 @@ describe("tower specializations: content", () => {
   it("gives traps levels 6–8 and support towers levels 4–6 after their last plain level, never changing a trap's radius", () => {
     for (const type of Object.keys(TOWERS) as TowerId[]) {
       const definition: TowerDefinition = TOWERS[type], tiers = definition.upgrades.filter((u) => u.path && u.effects.level !== undefined);
-      if (!tiers.length || (definition.placement !== "path" && !isSupport(definition.attack))) continue;
+      if (definition.placement !== "path" && !isSupport(definition.attack)) continue;
       const trap = definition.placement === "path";
       expect(tiers, type).toHaveLength(9);
       expect(new Set(tiers.map((u) => u.path)).size, type).toBe(3);
