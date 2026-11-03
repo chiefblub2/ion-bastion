@@ -2,6 +2,7 @@ import type { BlockAttack } from "../../core/types";
 import { isBlocked, wallShare } from "../barricade";
 import { applyDamage, hitOf } from "../damage";
 import { dist } from "../path";
+import { holdExposure } from "../trap-paths";
 import { canTarget } from "./targeting";
 import type { AttackModule } from "./types";
 /**
@@ -20,7 +21,10 @@ export const block: AttackModule<BlockAttack> = {
     if (!from || !reach || !wall || wallShare(wall, sim.content) <= 0) return;
     // A copy: enemies released on death must not catch the same strike.
     for (const target of [...sim.state.enemies])
-      if (target.hp > 0 && canTarget(sim, src.type, target) && dist(target, from) <= reach && isBlocked(sim, target))
+      if (target.hp > 0 && canTarget(sim, src.type, target) && dist(target, from) <= reach && isBlocked(sim, target)) {
+        // Choke Point: weakened first, so the spikes' own hit counts too.
+        holdExposure(sim, target, src.special);
         applyDamage(sim, src, target, damage, false, hitOf("block", src));
+      }
   },
 };

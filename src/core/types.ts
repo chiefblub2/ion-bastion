@@ -856,6 +856,12 @@ export interface Tower extends Point {
   critCount?: number;
   /** Shield Generator only: reactor damage absorbed in the current wave; absent while untouched, cleared after each wave. */
   barrier?: number;
+  // ── trap paths ──
+  /** Volley Signal: bonus of the tower's next shot after a Tripwire alerted it; absent until alerted, cleared after each wave. */
+  alerted?: number;
+  /** Tripwire with Flare only: time until which its alarm radius stays lit; absent until it fires, cleared after each wave. */
+  flare?: number;
+  // ── end trap paths ──
 }
 /** Target selection of an attack tower; ties fall back to path progress, then id. */
 export type TargetPriority = "first" | "last" | "strong" | "weak" | "close";

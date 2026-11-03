@@ -35,7 +35,7 @@ describe("trap placement", () => {
   it("keeps the trigger radius at every level", () => {
     const { g, tower } = trap("mine");
     for (const level of [2, 3, 4, 5]) expect(g.command({ type: "upgrade", id: tower.id, upgrade: `level-${level}` }).ok).toBe(true);
-    expect(TOWERS.mine.upgrades.every((u) => u.effects.stats?.range === TOWERS.mine.range)).toBe(true);
+    expect(TOWERS.mine.upgrades.every((u) => (u.effects.stats?.range ?? TOWERS.mine.range) === TOWERS.mine.range)).toBe(true);
   });
 });
 describe("traps", () => {

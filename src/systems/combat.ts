@@ -6,6 +6,7 @@ import { dist, len } from "./path";
 import { isDefused, taunters } from "./traits";
 import { critFactor, overclockRate, synergyFactor } from "./support";
 import { markedFirst, protocolRate } from "./protocols";
+import { volleyFactor } from "./trap-paths";
 /** Homing projectiles whose target died look for a new one within this radius. */
 export const RETARGET_RADIUS = 1.5;
 /** Every target priority in menu order; the first is the default. */
@@ -59,7 +60,7 @@ export function attackEnemies(sim: Sim, dt: number) {
       targets = extra > 0 ? [target, ...candidates.filter((c) => c !== target).slice(0, extra)] : [target];
     t.angle = Math.atan2(target.y - t.y, target.x - t.x);
     t.cooldown = 1;
-    stats.damage *= critFactor(sim, t, target) * synergyFactor(sim, t);
+    stats.damage *= critFactor(sim, t, target) * synergyFactor(sim, t) * volleyFactor(t);
     const src: DamageSource = special ? { tower: t.id, type: t.type, special } : { tower: t.id, type: t.type },
       proc = fireProc(t, special, extra + 1 - targets.length),
       // Overload: a lone enemy in range at fire time strengthens the whole salvo.
