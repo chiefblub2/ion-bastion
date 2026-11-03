@@ -30,17 +30,6 @@ export interface TiltedArt {
   turret: Drawing;
   above: Drawing;
 }
-/**
- * A tilted tower as it came from the concept sheet: three drawings, with everything live in `live` (drawn above the
- * turret) until it is split into `below` and `above`. Transitional; every module ends as a plain `TiltedArt`.
- */
-export interface Sheet {
-  [field: string]: unknown;
-  base: Drawing;
-  below?: Drawing;
-  turret: Drawing;
-  live: Drawing;
-}
 export const TILTED: Partial<Record<TurretStyle, TiltedArt>> = {
   // Pulse: the Hex Sentinel.
   barrel: { base: sentinelBase, below: sentinelBelow, turret: sentinelTurret, above: sentinelAbove },

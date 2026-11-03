@@ -3,7 +3,7 @@ import { Game } from "./core/game";
 import { DEFAULT_CONTENT } from "./content";
 import { towerColor } from "./core/upgrades";
 import { CELL, type Pen } from "./render/shapes";
-import { drawTower } from "./render/towers";
+import { drawTower, isTilted } from "./render/towers";
 import { drawEnemy } from "./render/enemies";
 import { AnimReview, animReviewSize } from "./anim-review";
 import { ArtReview, artReviewSize } from "./art-review";
@@ -25,6 +25,9 @@ const TOWER_TILE = CELL + 4,
   ENEMY_TILE = 64,
   ENEMY_RADIUS = 15;
 const GAP = 6;
+/** Tilted towers in their tiles: scale and downward shift (see `Gallery.tower`). */
+const TILTED_SCALE = 0.8,
+  TILTED_SHIFT = 7;
 /** Fixed animation time, so every run draws the same frame. */
 const CLOCK = 0.6;
 /** Area traits are drawn as fields several cells wide; in a tile they shrink to a ring around the body. */
@@ -76,6 +79,11 @@ class Gallery extends Phaser.Scene {
   private tower(pen: Pen, x: number, y: number, type: TowerId) {
     const definition = DEFAULT_CONTENT.towers[type],
       tower = { id: 0, type, x: 0, y: 0, upgrades: [], cooldown: 0, spent: 0, angle: -Math.PI / 4, kills: 0, owner: 0 };
+    // A tilted tower reaches well into the cell above (up to about 48 px over its centre): shrunk and lowered, it fits its tile.
+    if (isTilted(definition)) {
+      for (const ink of [pen.g, pen.glow]) (ink as Phaser.GameObjects.Graphics).setPosition(x, y + TILTED_SHIFT).setScale(TILTED_SCALE);
+      x = y = 0;
+    }
     drawTower(pen, x, y, tower, definition, CLOCK, { markers: 1, maxed: false, boosted: false, color: towerColor(tower) });
   }
   private enemy({ g }: Pen, x: number, y: number, type: EnemyId) {

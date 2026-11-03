@@ -48,9 +48,20 @@ The 13 towers, grouped by what they need from the kit:
 
   The frame rate under SwiftShader barely moves (~13.5 fps either way): there the GPU itself is emulated on the CPU and
   filling the turret pictures costs about what rasterising their triangles did. On a real GPU that part is cheap.
-- **Next:** the shared kit helpers the concept agents each wrote for themselves (barrels offset across the aim,
-  back-to-front part sorting, pitched boxes, a general convex solid), then Phase 3 batch by batch: each concept's
-  `live` split into `below`/`above`.
+- **Phase 3 done:** all 13 concepts are real towers (`render/tower-art/<look>.ts`, registered in `TILTS`, `MUZZLES`
+  and `TILTED`), each split into `base`/`below`/`turret`/`above`, the flat drawings deleted, the concept page turned
+  into the review sheet `/gallery.html?tilt`, codex icons regenerated. Tesla's bolts and chains leave from its emit
+  point. The still-checks now record only the corners a call uses (leftovers in the shared scratch buffers had made
+  equal drawings look different). Bench with 43 extra towers mixed from the 13 new ones at L5:
+
+  | | draw avg / p95 ms | render avg / p95 ms |
+  | --- | --- | --- |
+  | cached | 7.8–8.3 / 14–17 | 6.5–6.7 / 12–14 |
+  | live (`--live-turrets`) | 11.6 / 18 | 9.7–10.8 / 19–21 |
+
+- **Known flaws:** Executioner aimed north draws its spinning glaive (live, above) over the counterweight's front edge.
+  Batch C keeps small local exact-length shape helpers that the recorder fix made unnecessary.
+- **Later:** Control, Traps and Support could follow with the same kit and cache.
 
 ## Phase 0: kit and measurement
 
