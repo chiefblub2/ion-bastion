@@ -1,22 +1,26 @@
-import type { Sheet, TiltedArt } from "./tilted";
 /**
- * Tesla concept, the Coil Spire: a stepped twelve-sided plinth ringed by insulator bells (still), a pylon carrying a
- * copper-wound coil with a grading torus and a top ball (the turret: still too, a radial tower never aims), and live
- * charge in the bells, arcs crawling over the coil and the ball flashing white on a discharge. Chains leave the torus.
+ * Coil Spire: Tesla's look in the 3/4 tilt (see `tilt.ts`). A stepped twelve-sided plinth ringed by insulator bells
+ * (`base`, baked per level and trim colour); a pylon carrying a copper-wound coil, a grading torus and the top ball
+ * (`turret`: a radial tower never aims, so the cache holds one picture per recoil step); the bell caps' stored charge
+ * and the plinth lamp under it (`below`); the glow of torus and ball, arcs crawling over the coil and the discharge over
+ * it (`above`). Bolts and chains leave the ball: `TILTS.coil.emit`.
  */
+import type { TiltedArt } from "./tilted";
 import { LIGHT, facing, halo } from "../material";
 import { arcBand, disc, hash01, oval, ring, shade, type Ink } from "../shapes";
 import type { TurretContext } from "./kit";
 import { OUTLINE, SQUASH, X, Y, block, drum, onGround } from "./tilt";
+import { TILTS } from "../muzzles";
 
-const DROP = 6;
-/** Plinth tiers, pylon, coil, torus and ball heights. */
+const TILT = TILTS.coil!,
+  DROP = TILT.drop;
+/** Plinth tiers (the upper one is the motif's deck), pylon, coil, torus and ball (the emit point) heights. */
 const LOW = 2.6,
-  HIGH = 4.8,
+  HIGH = TILT.deck,
   PYLON = 9,
   COIL_TOP = 27,
-  TORUS = 29.5,
-  BALL = 33.5;
+  TORUS = TILT.height,
+  BALL = TILT.emit!;
 const STEEL = 0x3d474d,
   STEEL_TOP = 0x5a676d,
   DEEP = 0x1c2429,
@@ -100,8 +104,10 @@ function base({ g, x, y, level, color, definition }: TurretContext) {
 }
 
 /** The still spire (no aim): pylon, buttresses, the wound coil, the grading ring from level 3, the torus and the ball. */
-function turret({ g, x, y, level, color, definition, kick }: TurretContext) {
-  const y0 = y + DROP,
+function turret(ctx: TurretContext) {
+  const { x, y, level, color, definition, kick } = ctx,
+    g = ctx.g,
+    y0 = y + DROP,
     c = definition.color;
   drum(g, x, y0, 7.5, HIGH, PYLON, STEEL, STEEL_TOP, 12);
   if (level >= 5)
@@ -139,11 +145,11 @@ function turret({ g, x, y, level, color, definition, kick }: TurretContext) {
   disc(g, x - 0.9, by - 0.9, 1.6, shade(c, 0.35 + 0.6 * kick));
 }
 
-function live({ g, glow, x, y, tower, level, color, definition, clock, charge, kick, energy, peak }: TurretContext) {
+/** Under the spire: the bell caps hold the stored charge (a light chases round them from level 4); the plinth lamp from level 2. */
+function below({ g, glow, x, y, level, color, definition, clock, charge }: TurretContext) {
   const y0 = y + DROP,
     c = definition.color,
     stored = Math.min(1, 0.2 + 0.8 * charge);
-  // Bell caps hold the stored charge; from level 4 a brighter light chases round them.
   BELLS.forEach((t, i) => {
     const chase = level >= 4 ? 0.5 * Math.max(0, Math.sin(4 * clock - i * 1.05)) : 0,
       on = Math.min(1, stored * 0.7 + chase),
@@ -152,7 +158,6 @@ function live({ g, glow, x, y, tower, level, color, definition, clock, charge, k
     disc(g, bx, by, 0.8, shade(c, -0.4 + 0.7 * on));
     disc(glow, bx, by, 2.6, c, 0.12 + 0.25 * on);
   });
-  // Level 2: a lamp on the front of the upper tier.
   if (level >= 2) {
     const lx = X(x, 0),
       ly = Y(y0, 13.5, HIGH - 1.4);
@@ -160,6 +165,12 @@ function live({ g, glow, x, y, tower, level, color, definition, clock, charge, k
     disc(g, lx, ly, 0.85, shade(color, 0.2));
     disc(glow, lx, ly, 2.5, color, 0.35);
   }
+}
+
+/** Over the spire: torus and ball glow with the charge, arcs crawl over the coil and jump from the ball, the discharge. */
+function above({ g, glow, x, y, tower, definition, clock, charge, kick, energy, peak }: TurretContext) {
+  const y0 = y + DROP,
+    c = definition.color;
   // The torus and ball glow with the charge.
   const by = Y(y0, 0, BALL);
   onGround(glow, x, y0, TORUS + 1, () => ring(glow, 0, 0, 7.6, 2.4, c, Math.min(peak, 0.08 + 0.22 * charge + energy)));
@@ -194,15 +205,4 @@ function live({ g, glow, x, y, tower, level, color, definition, clock, charge, k
   }
 }
 
-const sheet: Sheet = {
-  tower: "tesla",
-  name: "Coil Spire",
-  idea: "Stepped 12-sided plinth with six insulator bells, a copper-wound coil, grading torus and top ball; arcs crawl over the coil.",
-  tilt: { drop: DROP, squash: SQUASH, height: TORUS, deck: HIGH },
-  emit: BALL,
-  base,
-  turret,
-  live,
-};
-/** CoilSpire in the four parts of a tilted tower (`tilted.ts`). */
-export const coilSpire: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };
+export const coilSpire: TiltedArt = { base, below, turret, above };

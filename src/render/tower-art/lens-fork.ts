@@ -1,17 +1,30 @@
-import type { Sheet, TiltedArt } from "./tilted";
 /**
- * Focus concept, "Lens Fork": a stepped diamond plinth with a bearing post (still), a fork yoke holding a short
- * optics housing with a big pink lens at its front (turret), and the lens charge, heat ring and lamps (live). The beam
- * leaves the lens centre, so `reach` ends there.
+ * Lens Fork: Focus's look in the 3/4 tilt (see `tilt.ts`, projection in `TILTS.lens`). A stepped diamond plinth with a
+ * bearing post and lens studs (`base`, baked per level and trim colour), the heat ring round the post and the studs'
+ * chasing light (`below`), a fork yoke holding a short optics housing with a big pink lens (`turret`, cached per aim
+ * angle), and the lens core, its halo, the charge along the trim and the lamp's light (`above`). The beam leaves the
+ * lens centre, so `MUZZLES.lens.reach` ends there.
  */
 import { halo } from "../material";
 import { arcBand, disc, oval, ring, shade } from "../shapes";
 import type { TurretContext } from "./kit";
-import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, towardViewer, tube, turn } from "./tilt";
+import { FOOT, INSET, OUTLINE, X, Y, block, drum, endFace, fillPoints, onGround, point, towardViewer, tube, turn } from "./tilt";
+import { MUZZLES, TILTS } from "../muzzles";
+import type { TiltedArt } from "./tilted";
+import type { Ink } from "../shapes";
 
-const DROP = 5,
-  HB = 17,
-  reach = (l: number) => 14 + 0.4 * l;
+const TILT = TILTS.lens!,
+  DROP = TILT.drop,
+  HB = TILT.height,
+  reach = MUZZLES.lens!.reach;
+/**
+ * A filled circle through the kit's exact-length corners (`fillPoints`), for the cached turret: the shared `disc`
+ * hands Phaser its whole scratch buffer, so a recording of the turret (`stillTurret`) would pick up stale corners.
+ */
+function dot(g: Ink, cx: number, cy: number, r: number, color: number, n = 10) {
+  for (let i = 0; i < n; i++) point(i, cx + Math.cos((i * 2 * Math.PI) / n) * r, cy + Math.sin((i * 2 * Math.PI) / n) * r);
+  fillPoints(g, n, color);
+}
 /** Plinth: lower and upper diamond radius and their heights; the bearing post; the yoke. */
 const R0 = 21,
   R1 = 14,
@@ -108,17 +121,26 @@ function turret({ g, x, y, tower, definition, level, tip, color }: TurretContext
       if (bevel) turn(shape, a, INSET, 0.8);
       block(g, x, y0, FOOT, bevel ? INSET : FOOT, n, h0, h1, bevel, wall, top, METAL);
     },
-    crossbar = () => part(CROSSBAR, BAR0, BAR1, WALL, TOP, 0.8),
+    crossbar = () => {
+      part(CROSSBAR, BAR0, BAR1, WALL, TOP, 0.8);
+      // A lamp on the crossbar's back from level 2 (its light is live), covered by the housing where they overlap.
+      if (level >= 2) {
+        const bx = X(x, -ca * 3.2),
+          by = Y(y0, -sa * 3.2, BAR1 + 0.8);
+        dot(g, bx, by, 1.1, OUTLINE);
+        dot(g, bx, by, 0.7, shade(color, 0.2), 8);
+      }
+    },
     yokeArm = (shape: readonly number[]) => {
       part(shape, BAR1, ARM_TOP, shade(WALL, 0.05), TOP);
       // Trunnion cap on the outside of the arm at the pivot.
       const q = shape[1] > 0 ? 11.6 : -11.6,
         cx = X(x, -sa * q),
         cy = Y(y0, ca * q, HB);
-      disc(g, cx, cy, 2.8, OUTLINE);
-      disc(g, cx, cy, 2.2, shade(METAL, -0.25));
-      disc(g, cx, cy, 1.1, shade(c, -0.5));
-      if (level >= 3) disc(g, cx - 0.6, cy - 0.6, 0.6, METAL);
+      dot(g, cx, cy, 2.8, OUTLINE, 12);
+      dot(g, cx, cy, 2.2, shade(METAL, -0.25), 12);
+      dot(g, cx, cy, 1.1, shade(c, -0.5), 8);
+      if (level >= 3) dot(g, cx - 0.6, cy - 0.6, 0.6, METAL, 6);
     },
     shield = (shape: readonly number[]) => part(shape, BAR1 + 1, ARM_TOP - 1, shade(WALL, 0.12), shade(TOP, 0.1)),
     housing = () => {
@@ -159,19 +181,11 @@ function turret({ g, x, y, tower, definition, level, tip, color }: TurretContext
   for (const [, draw] of parts) draw();
 }
 
-function live({ g, glow, x, y, tower, definition, level, kick, energy, clock, color, peak }: TurretContext) {
-  const a = tower.angle,
-    ca = Math.cos(a),
-    sa = Math.sin(a),
-    y0 = y + DROP,
+/** Live, under the turret: the heat ring round the post filling with the focus charge, and the corner studs' light. */
+function below({ g, glow, x, y, tower, definition, level, clock, color }: TurretContext) {
+  const y0 = y + DROP,
     c = definition.color,
-    heat = Math.min(1, (tower.focus?.stacks ?? 0) / 10),
-    lit = Math.max(heat, kick),
-    lens = reach(level),
-    toward = towardViewer(a),
-    lx = X(x, ca * lens),
-    ly = Y(y0, sa * lens, HB);
-  // Heat ring round the post on the upper step: fills with the focus charge.
+    heat = Math.min(1, (tower.focus?.stacks ?? 0) / 10);
   onGround(g, x, y0, H1 + 1, () => {
     ring(g, 0, 0, 10.5, 1.2, DEEP, 0.9);
     if (heat > 0) arcBand(g, 0, 0, 10.5, 1, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * heat, c);
@@ -187,33 +201,27 @@ function live({ g, glow, x, y, tower, definition, level, kick, energy, clock, co
     disc(g, sx, sy, 0.8, shade(color, -0.5 + 0.6 * on));
     if (on > 0.4) disc(glow, sx, sy, 2.4, color, 0.3 * on);
   });
-  // Lamp on the crossbar's back from level 2.
-  if (level >= 2) {
-    const bx = X(x, -ca * 3.2),
-      by = Y(y0, -sa * 3.2, BAR1 + 0.8);
-    disc(g, bx, by, 1.1, OUTLINE);
-    disc(g, bx, by, 0.7, shade(color, 0.2));
-    disc(glow, bx, by, 2.2, color, 0.35);
-  }
-  // The lens: a hot core on the glass when it faces the viewer, light round it either way.
+}
+
+/** Live, over the turret: the hot core on the lens (it is the turret's front), its halo, the charge along the trim, the lamp's light. */
+function above({ g, glow, x, y, tower, definition, level, kick, energy, color, peak }: TurretContext) {
+  const a = tower.angle,
+    ca = Math.cos(a),
+    sa = Math.sin(a),
+    y0 = y + DROP,
+    c = definition.color,
+    heat = Math.min(1, (tower.focus?.stacks ?? 0) / 10),
+    lit = Math.max(heat, kick),
+    lens = reach(level),
+    toward = towardViewer(a),
+    lx = X(x, ca * lens),
+    ly = Y(y0, sa * lens, HB);
+  if (level >= 2) disc(glow, X(x, -ca * 3.2), Y(y0, -sa * 3.2, BAR1 + 0.8), 2.2, color, 0.35);
   if (toward > 0.05) disc(g, lx - 0.9, ly - 0.9, 1.4 + 1.6 * lit, shade(c, 0.5 + 0.3 * lit));
   halo(glow, lx, ly, 7 + 4 * lit, c, Math.min(peak, 0.15 + 0.35 * lit + energy));
-  // Charge running along the housing's trim stripe.
   glow.lineStyle(2, c, Math.min(0.45, 0.08 + 0.3 * heat + energy));
   glow.lineBetween(X(x, ca * (BACK + 9)), Y(y0, sa * (BACK + 9), HB + BODY - 0.6), X(x, ca * (lens - 4.5)), Y(y0, sa * (lens - 4.5), HB + BODY - 0.6));
 }
 
-/** Focus: a lens on a fork mount. */
-const sheet: Sheet = {
-  tower: "focus",
-  name: "Lens Fork",
-  idea: "Stepped diamond plinth with a bearing post; a fork yoke holds a short optics barrel with a cooling shroud and a big hooded pink lens. Heat ring and lens glow follow the focus charge.",
-  tilt: { drop: DROP, squash: SQUASH, height: HB, deck: H1 + 1 },
-  reach,
-  recoil: 0,
-  base,
-  turret,
-  live,
-};
-/** LensFork in the four parts of a tilted tower (`tilted.ts`). */
-export const lensFork: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };
+/** Focus's Lens Fork in the four parts of a tilted tower (`tilted.ts`). */
+export const lensFork: TiltedArt = { base, below, turret, above };

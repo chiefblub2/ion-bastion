@@ -1,19 +1,23 @@
-import type { Sheet, TiltedArt } from "./tilted";
 /**
- * Decay concept, the Prism Cradle: a round dais (still) with three claws leaning in (the turret: still, a radial tower
- * never aims) and a triangular bipyramid crystal that floats, turns and bobs between them (live), with motes drifting
- * into it. The orb leaves the crystal's centre.
+ * Prism Cradle: Decay's look in the 3/4 tilt (see `tilt.ts`). A round stone dais with a glyph ring and a dark well
+ * (`base`, baked per level and trim colour); three claws leaning in (`turret`: a radial tower never aims, so the cache
+ * holds one picture per look); the dais lights, the well's glow and the crystal's shadow in it (`below`); and over the
+ * claws a triangular bipyramid crystal that floats, turns and bobs, with motes drifting in, shards orbiting from level
+ * 3 and a flare on each shot (`above`). Orbs leave the crystal's centre: `TILTS.prism.emit`.
  */
+import type { TiltedArt } from "./tilted";
 import { facing, halo } from "../material";
 import { disc, oval, ring, shade, type Ink } from "../shapes";
 import type { TurretContext } from "./kit";
 import { OUTLINE, SQUASH, X, Y, drum, fillPoints, onGround, point } from "./tilt";
+import { TILTS } from "../muzzles";
 
-const DROP = 6;
-/** Dais and crystal heights. */
-const DAIS = 3.6,
+const TILT = TILTS.prism!,
+  DROP = TILT.drop;
+/** Dais (the motif's deck) and crystal (the emit point) heights. */
+const DAIS = TILT.deck,
   RIM = 1.8,
-  CRYSTAL = 22,
+  CRYSTAL = TILT.emit!,
   CLAW_R = 15.5;
 const STONE = 0x3b3846,
   STONE_TOP = 0x585468,
@@ -161,13 +165,11 @@ function turret({ g, x, y, level, color, definition }: TurretContext) {
   }
 }
 
-function live({ g, glow, x, y, tower, level, color, definition, clock, charge, kick, energy, maxed, peak }: TurretContext) {
+/** Under the claws: the level lights in the dais wall (lit from 2, chasing from 4), the well's glow and the crystal's shadow. */
+function below({ g, glow, x, y, tower, level, color, definition, clock, charge, energy }: TurretContext) {
   const y0 = y + DROP,
     c = definition.color,
-    spin = clock * 0.6 + tower.id,
-    lift = Math.sin(clock * 2 + tower.id) * 1.5,
-    hc = CRYSTAL + lift;
-  // Level lights in the dais wall: dim at level 1, lit from 2, chasing from 4.
+    lift = Math.sin(clock * 2 + tower.id) * 1.5;
   for (let i = 0; i < 5; i++) {
     const t = Math.PI * (0.2 + i * 0.15),
       chase = level >= 4 ? 0.6 * Math.max(0, Math.sin(4 * clock - i * 1.1)) : 0,
@@ -181,6 +183,15 @@ function live({ g, glow, x, y, tower, level, color, definition, clock, charge, k
   // The well glows, and the crystal casts a shadow into it that shrinks as it rises.
   onGround(glow, x, y0, DAIS, () => disc(glow, 0, 0, 8, c, 0.08 + 0.15 * charge + energy * 0.5));
   onGround(g, x, y0, DAIS, () => disc(g, 2, 3, 5.5 - 0.4 * lift, 0x050b10, 0.4 - 0.04 * lift));
+}
+
+/** Over the claws: the floating crystal with its core and halo, the motes drifting into it, the orbiting shards, the shot's flare. */
+function above({ g, glow, x, y, tower, level, definition, clock, charge, kick, energy, maxed, peak }: TurretContext) {
+  const y0 = y + DROP,
+    c = definition.color,
+    spin = clock * 0.6 + tower.id,
+    lift = Math.sin(clock * 2 + tower.id) * 1.5,
+    hc = CRYSTAL + lift;
   // The crystal: a glowing heart behind the faces, the faces, a core facet and a halo with the charge.
   halo(glow, x, Y(y0, 0, hc), 13, c, Math.min(peak, 0.08 + 0.16 * charge + energy));
   solid(g, x, y0, crystalFaces(spin, 7, hc, 3, 6, 7.5), shade(c, -0.15), shade(c, 0.45));
@@ -211,15 +222,4 @@ function live({ g, glow, x, y, tower, level, color, definition, clock, charge, k
   if (kick > 0) ring(glow, x, cy, 9 + (1 - kick) * 7, 1.5, 0xffffff, 0.35 * kick);
 }
 
-const sheet: Sheet = {
-  tower: "decay",
-  name: "Prism Cradle",
-  idea: "Round stone dais with a glyph ring and three claws; a triangular crystal floats, turns and bobs between them.",
-  tilt: { drop: DROP, squash: SQUASH, height: CRYSTAL, deck: DAIS },
-  emit: CRYSTAL,
-  base,
-  turret,
-  live,
-};
-/** PrismCradle in the four parts of a tilted tower (`tilted.ts`). */
-export const prismCradle: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };
+export const prismCradle: TiltedArt = { base, below, turret, above };

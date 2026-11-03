@@ -1,17 +1,46 @@
-import type { Sheet, TiltedArt } from "./tilted";
 /**
- * Quake concept, "Hydraulic Press": a low octagonal plinth with a round strike plate, three hydraulic legs leaning in
- * from the sides and the back to a crown over the plate (still), a squat bronze hammer head on a short chrome piston
- * that hangs raised and slams onto the plate on every shockwave (turret, its height follows `kick` only), and the
- * pressure lights, lamps, strike dust and plate glow (live). No aim: the tower ignores `tower.angle`, and its pulse
- * is centred on the ground.
+ * Hydraulic Press: Quake's look in the 3/4 tilt (see `tilt.ts`, projection in `TILTS.hammer`). A low octagonal plinth
+ * with a round strike plate and three hydraulic legs leaning in from the sides and the back to a crown over the plate
+ * (`base`, baked per level and trim colour); the crown's pressure lights and lamp, the plinth's chasing lights and the
+ * strike ring on the plate (`below`); a squat bronze hammer on a short chrome piston that hangs raised and slams onto
+ * the plate on every shockwave (`turret`: its height follows `kick` alone, so the cache holds one picture per recoil
+ * step); and the plate's flare and the strike dust (`above`). No aim: the tower ignores `tower.angle`, and its pulse is
+ * centred on the ground (no barrel and no `emit`).
  */
 import { facing, halo } from "../material";
 import { disc, oval, ring, shade } from "../shapes";
 import type { TurretContext } from "./kit";
-import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, onGround, quad, tube, turn } from "./tilt";
+import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, fillPoints, onGround, point, quad, tube, turn } from "./tilt";
+import { TILTS } from "../muzzles";
+import type { TiltedArt } from "./tilted";
+import type { Ink } from "../shapes";
 
-const DROP = 6;
+const DROP = TILTS.hammer!.drop;
+/**
+ * An ellipse through the kit's exact-length corners (`fillPoints`), for the cached turret: the shared `oval` (also
+ * inside the kit's `drum`) hands Phaser its whole scratch buffer, so a recording (`stillTurret`) would pick up stale corners.
+ */
+function ellipse(g: Ink, cx: number, cy: number, rx: number, ry: number, color: number, alpha = 1, n = 18) {
+  for (let i = 0; i < n; i++) point(i, cx + Math.cos((i * 2 * Math.PI) / n) * rx, cy + Math.sin((i * 2 * Math.PI) / n) * ry);
+  fillPoints(g, n, color, alpha);
+}
+/** The kit's `drum` drawn with `ellipse`: an upright cylinder from h0 to h1, its shaded front half, then its top. */
+function cylinder(g: Ink, x: number, y0: number, r: number, h0: number, h1: number, color: number, top: number, segments: number) {
+  ellipse(g, x, Y(y0, 0, h0), r + 0.7, r * SQUASH + 0.7, OUTLINE, 0.95);
+  for (let i = 0; i < segments; i++) {
+    const t0 = (i / segments) * Math.PI,
+      t1 = ((i + 1) / segments) * Math.PI;
+    quad(
+      g,
+      X(x, Math.cos(t0) * r), Y(y0, Math.sin(t0) * r, h0),
+      X(x, Math.cos(t1) * r), Y(y0, Math.sin(t1) * r, h0),
+      X(x, Math.cos(t1) * r), Y(y0, Math.sin(t1) * r, h1),
+      X(x, Math.cos(t0) * r), Y(y0, Math.sin(t0) * r, h1),
+      shade(color, -0.2 + 0.35 * facing((t0 + t1) / 2)),
+    );
+  }
+  ellipse(g, x, Y(y0, 0, h1), r, r * SQUASH, top);
+}
 /** Heights: plinth, crown, the hammer's raised and struck bottom, its thickness and where the piston meets the crown. */
 const SLAB = 4,
   CROWN0 = 23,
@@ -131,12 +160,12 @@ function turret({ g, x, y, definition, level, kick, color }: TurretContext) {
     k = (h0 - STRUCK) / (RAISED - STRUCK),
     trim = level >= 6 ? color : shade(c, 0.15);
   // The hammer's shadow on the plate, sharper and closer the lower it hangs.
-  onGround(g, x, y0, SLAB, () => oval(g, 1.5 + 3 * k, 1.5 + 3.5 * k, HAMMER - 0.5 * k, HAMMER - 0.5 * k, 0x050b10, 0.5 - 0.2 * k));
+  onGround(g, x, y0, SLAB, () => ellipse(g, 1.5 + 3 * k, 1.5 + 3.5 * k, HAMMER - 0.5 * k, HAMMER - 0.5 * k, 0x050b10, 0.5 - 0.2 * k));
   // The piston, then the head: a dark striking shoe, the bronze body with hazard stripes on its front and a trim rim.
   tube(g, x, y0, 0, h1, 0, PISTON_TOP - h1, 1.8, CHROME, 1, true, Math.PI / 2);
   tube(g, x, y0, 0, h1, 0, 1.4, 2.6, shade(WALL, -0.1), 1, false, Math.PI / 2);
-  drum(g, x, y0, HAMMER + 0.4, h0, h0 + 1.4, DEEP, shade(DEEP, 0.25), 14);
-  drum(g, x, y0, HAMMER, h0 + 1.4, h1, shade(c, -0.2), shade(c, 0.08), 14);
+  cylinder(g, x, y0, HAMMER + 0.4, h0, h0 + 1.4, DEEP, shade(DEEP, 0.25), 14);
+  cylinder(g, x, y0, HAMMER, h0 + 1.4, h1, shade(c, -0.2), shade(c, 0.08), 14);
   for (const t of [0.75, 1.2, 1.65, 2.1, 2.55]) {
     const t1 = t + 0.18;
     quad(
@@ -148,24 +177,28 @@ function turret({ g, x, y, definition, level, kick, color }: TurretContext) {
       DEEP,
     );
   }
-  oval(g, x, Y(y0, 0, h1), HAMMER - 0.6, (HAMMER - 0.6) * SQUASH, trim);
-  oval(g, x, Y(y0, 0, h1), HAMMER - 1.8, (HAMMER - 1.8) * SQUASH, shade(c, 0.08));
+  ellipse(g, x, Y(y0, 0, h1), HAMMER - 0.6, (HAMMER - 0.6) * SQUASH, trim);
+  ellipse(g, x, Y(y0, 0, h1), HAMMER - 1.8, (HAMMER - 1.8) * SQUASH, shade(c, 0.08));
   if (level >= 3)
     for (const t of [Math.PI * 0.85, Math.PI * 0.15, -Math.PI / 2]) {
       const bx = X(x, Math.cos(t) * (HAMMER - 1.2)),
         by = Y(y0, Math.sin(t) * (HAMMER - 1.2), h1);
-      disc(g, bx, by, 0.9, shade(c, -0.6));
-      disc(g, bx - 0.3, by - 0.3, 0.4, METAL);
+      ellipse(g, bx, by, 0.9, 0.9, shade(c, -0.6), 1, 8);
+      ellipse(g, bx - 0.3, by - 0.3, 0.4, 0.4, METAL, 1, 6);
     }
   // The piston collar on the head's top.
   tube(g, x, y0, 0, h1, 0, 1, 2.4, shade(WALL, 0.1), 1, false, Math.PI / 2);
 }
 
-function live({ g, glow, x, y, definition, level, kick, charge, energy, clock, color }: TurretContext) {
+/**
+ * Live, under the turret: pressure lights on the crown's front (one more per fifth of the charge), the crown lamp from
+ * level 2, the plinth's chasing lights from level 4, and the ring running out over the plate on a strike (under the
+ * hammer that just landed).
+ */
+function below({ g, glow, x, y, definition, level, kick, charge, energy, clock, color }: TurretContext) {
   const y0 = y + DROP,
-    c = definition.color;
-  // Pressure lights on the crown's front: one more lights up per fifth of the charge.
-  const lit = Math.floor(charge * 5 + 0.001);
+    c = definition.color,
+    lit = Math.floor(charge * 5 + 0.001);
   for (let i = 0; i < 5; i++) {
     const t = Math.PI * (0.2 + 0.15 * i),
       lx = X(x, Math.cos(t) * (CROWN_R + 0.1)),
@@ -174,15 +207,12 @@ function live({ g, glow, x, y, definition, level, kick, charge, energy, clock, c
     disc(g, lx, ly, 0.75, on ? shade(c, 0.35) : shade(c, -0.65));
     if (on) disc(glow, lx, ly, 2, c, Math.min(0.45, 0.2 + energy + 0.1 * charge));
   }
-  // Lamp on top of the crown from level 2.
   if (level >= 2) {
-    const lx = x,
-      ly = Y(y0, 0, CROWN1) - 0.6;
-    disc(g, lx, ly, 1.2, OUTLINE);
-    disc(g, lx, ly, 0.75, shade(color, 0.2));
-    disc(glow, lx, ly, 2.4, color, 0.35);
+    const ly = Y(y0, 0, CROWN1) - 0.6;
+    disc(g, x, ly, 1.2, OUTLINE);
+    disc(g, x, ly, 0.75, shade(color, 0.2));
+    disc(glow, x, ly, 2.4, color, 0.35);
   }
-  // From level 4 three lights chase along the plinth's front faces.
   if (level >= 4)
     [-6, 0, 6].forEach((u, i) => {
       const on = 0.25 + 0.75 * Math.max(0, Math.sin(4 * clock - i * 1.3)),
@@ -191,28 +221,22 @@ function live({ g, glow, x, y, definition, level, kick, charge, energy, clock, c
       quad(g, lx - 1.2, ly - 0.6, lx + 1.2, ly - 0.6, lx + 1.2, ly + 0.6, lx - 1.2, ly + 0.6, shade(color, -0.6 + 0.7 * on));
       if (on > 0.5) disc(glow, lx, ly, 2.2, color, 0.3 * on);
     });
-  // The strike: the plate flares, dust puffs and a ring runs out over the plinth.
-  if (kick > 0) {
-    const spread = 1 - kick;
-    onGround(glow, x, y0, SLAB, () => halo(glow, 0, 0, 11 + 6 * spread, c, 0.4 * kick));
-    onGround(g, x, y0, SLAB, () => ring(g, 0, 0, 11 + 10 * spread, 1 + 1.5 * kick, shade(c, 0.4), 0.7 * kick));
-    for (let i = 0; i < 4; i++) {
-      const a = Math.PI / 4 + (i * Math.PI) / 2,
-        r = 11 + 7 * spread;
-      disc(g, X(x, Math.cos(a) * r), Y(y0, Math.sin(a) * r, SLAB + 2 * spread), 1.6 + 2.6 * spread, 0x9c8f82, 0.5 * kick);
-    }
+  if (kick > 0) onGround(g, x, y0, SLAB, () => ring(g, 0, 0, 11 + 10 * (1 - kick), 1 + 1.5 * kick, shade(c, 0.4), 0.7 * kick));
+}
+
+/** Live, over the turret: on a strike the plate flares and dust puffs out round the hammer. */
+function above({ g, glow, x, y, definition, kick }: TurretContext) {
+  if (kick <= 0) return;
+  const y0 = y + DROP,
+    c = definition.color,
+    spread = 1 - kick;
+  onGround(glow, x, y0, SLAB, () => halo(glow, 0, 0, 11 + 6 * spread, c, 0.4 * kick));
+  for (let i = 0; i < 4; i++) {
+    const a = Math.PI / 4 + (i * Math.PI) / 2,
+      r = 11 + 7 * spread;
+    disc(g, X(x, Math.cos(a) * r), Y(y0, Math.sin(a) * r, SLAB + 2 * spread), 1.6 + 2.6 * spread, 0x9c8f82, 0.5 * kick);
   }
 }
 
-/** Quake: a hydraulic press. */
-const sheet: Sheet = {
-  tower: "quake",
-  name: "Hydraulic Press",
-  idea: "Low octagonal plinth with a round strike plate; three hydraulic legs lean in to a crown, and a squat bronze hammer on a short piston slams onto the plate on every shockwave.",
-  tilt: { drop: DROP, squash: SQUASH, height: 0, deck: SLAB },
-  base,
-  turret,
-  live,
-};
-/** HydraulicPress in the four parts of a tilted tower (`tilted.ts`). */
-export const hydraulicPress: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };
+/** Quake's Hydraulic Press in the four parts of a tilted tower (`tilted.ts`). */
+export const hydraulicPress: TiltedArt = { base, below, turret, above };

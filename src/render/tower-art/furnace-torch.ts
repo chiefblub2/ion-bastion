@@ -1,18 +1,30 @@
-import type { Sheet, TiltedArt } from "./tilted";
 /**
- * Ember concept, "Furnace Torch": a squat flamethrower in the 3/4 tilt. An octagonal furnace plinth with glowing
- * vents (still), a low turning body with two fuel tanks on its back and a short flared nozzle (turret), the pilot
- * flame, vent glow, fuel gauge and lamps (live).
+ * Furnace Torch: Ember's look, a squat flamethrower in the 3/4 tilt (see `tilt.ts`, projection in `TILTS.flame`).
+ * The octagonal furnace plinth with its vent slits (`base`, baked per level and trim colour), the embers breathing in
+ * the vents (`below`), the low turning body with two fuel tanks on its back and a short flared nozzle (`turret`, cached
+ * per aim angle and recoil step), and the fuel gauge, grille glow, lamp light, pilot flame and heat (`above`).
  */
 import { halo } from "../material";
 import { disc, oval, ring, shade } from "../shapes";
 import type { TurretContext } from "./kit";
 import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, towardViewer, tube, turn } from "./tilt";
+import { MUZZLES, TILTS } from "../muzzles";
+import type { TiltedArt } from "./tilted";
+import type { Ink } from "../shapes";
 
-const DROP = 5,
-  HB = 10.5,
-  RECOIL = 3,
-  reach = (l: number) => 15 + 0.5 * l;
+const TILT = TILTS.flame!,
+  DROP = TILT.drop,
+  HB = TILT.height,
+  RECOIL = MUZZLES.flame!.recoil,
+  reach = MUZZLES.flame!.reach;
+/**
+ * A filled circle through the kit's exact-length corners (`fillPoints`), for the cached turret: the shared `disc`
+ * hands Phaser its whole scratch buffer, so a recording of the turret (`stillTurret`) would pick up stale corners.
+ */
+function dot(g: Ink, cx: number, cy: number, r: number, color: number, n = 10) {
+  for (let i = 0; i < n; i++) point(i, cx + Math.cos((i * 2 * Math.PI) / n) * r, cy + Math.sin((i * 2 * Math.PI) / n) * r);
+  fillPoints(g, n, color);
+}
 /** Plinth: octagon radius and height; turntable top; body heights. */
 const R = 20,
   H = 5,
@@ -112,11 +124,19 @@ function turret({ g, x, y, tower, definition, level, kick, tip, color }: TurretC
       g.lineStyle(0.6, shade(c, -0.35), 1);
       for (const q of [-1.6, 0, 1.6]) g.lineBetween(...S(1.6, q * 1.4), ...S(4.6, q));
       quad(g, ...S(5.4, -2.8), ...S(6.2, -2.6), ...S(6.2, 2.6), ...S(5.4, 2.8), trim);
+      // The fuel gauge's slot (filled live) and the lamps on the back corners in the trim colour: one at level 1,
+      // two from level 2 (their light is live).
+      quad(g, ...S(-6.2, -0.9), ...S(-1.5, -0.9), ...S(-1.5, 0.9), ...S(-6.2, 0.9), DEEP);
+      for (const q of level >= 2 ? [-4.6, 4.6] : [4.6]) {
+        const [lx, ly] = S(-6.8, q);
+        dot(g, lx, ly, 1.2, OUTLINE);
+        dot(g, lx, ly, 0.75, shade(color, 0.2), 8);
+      }
       if (level >= 3)
         for (const q of [-4.4, 4.4]) {
           const [bx, by] = S(-5.5, q);
-          disc(g, bx, by, 0.9, shade(WALL, -0.5));
-          disc(g, bx - 0.3, by - 0.3, 0.4, METAL);
+          dot(g, bx, by, 0.9, shade(WALL, -0.5), 8);
+          dot(g, bx - 0.3, by - 0.3, 0.4, METAL, 6);
         }
     },
     skirt = (plate: readonly number[]) => {
@@ -162,16 +182,11 @@ function turret({ g, x, y, tower, definition, level, kick, tip, color }: TurretC
   for (const [, draw] of parts) draw();
 }
 
-function live({ g, glow, x, y, tower, definition, level, kick, charge, energy, clock, color }: TurretContext) {
-  const a = tower.angle,
-    ca = Math.cos(a),
-    sa = Math.sin(a),
-    y0 = y + DROP,
+/** Live, under the turret: embers breathing behind the furnace vents; from level 4 their glow chases round. */
+function below({ g, glow, x, y, tower, definition, level, kick, energy, clock }: TurretContext) {
+  const y0 = y + DROP,
     c = definition.color,
-    flicker = 0.75 + 0.25 * Math.sin(clock * 13 + tower.id * 1.7),
-    end = reach(level) - kick * RECOIL,
-    back = -kick * RECOIL * 0.4;
-  // Furnace vents: embers breathing behind the slits; from level 4 the glow chases round.
+    flicker = 0.75 + 0.25 * Math.sin(clock * 13 + tower.id * 1.7);
   VENTS.forEach((i, k) => {
     const [u0, v0] = oct(i),
       [u1, v1] = oct(i + 1),
@@ -184,22 +199,27 @@ function live({ g, glow, x, y, tower, definition, level, kick, charge, energy, c
       quad(glow, u - 1.6, Y(y0, v, 0.6), u + 1.6, Y(y0, v, 0.6), u + 1.6, Y(y0, v, H - 0.6), u - 1.6, Y(y0, v, H - 0.6), c, 0.18 * on + energy * 0.5);
     }
   });
-  const ht = BODY_TOP + BEVEL,
+}
+
+/**
+ * Live, over the turret: the fuel gauge filling on the roof (the body's highest face, never covered by its own
+ * parts), the grille's and lamps' light, the pilot flame licking from the nozzle and the heat along it after a burst.
+ */
+function above({ g, glow, x, y, tower, definition, level, kick, charge, energy, clock, color }: TurretContext) {
+  const a = tower.angle,
+    ca = Math.cos(a),
+    sa = Math.sin(a),
+    y0 = y + DROP,
+    c = definition.color,
+    flicker = 0.75 + 0.25 * Math.sin(clock * 13 + tower.id * 1.7),
+    end = reach(level) - kick * RECOIL,
+    back = -kick * RECOIL * 0.4,
+    ht = BODY_TOP + BEVEL,
     S = (p: number, q: number, h = ht) => [X(x, (p + back) * ca - q * sa), Y(y0, (p + back) * sa + q * ca, h)] as const;
-  // Fuel gauge on the roof: fills as the next burst charges.
   const fill = -6 + 4.5 * charge;
-  quad(g, ...S(-6.2, -0.9), ...S(-1.5, -0.9), ...S(-1.5, 0.9), ...S(-6.2, 0.9), DEEP);
   if (charge > 0.02) quad(g, ...S(-6, -0.5), ...S(fill, -0.5), ...S(fill, 0.5), ...S(-6, 0.5), shade(c, -0.1 + 0.4 * charge));
-  // The burner grille glows with the furnace.
   quad(glow, ...S(1, -3.4), ...S(5, -2.2), ...S(5, 2.2), ...S(1, 3.4), c, 0.12 + 0.1 * flicker + energy);
-  // Lamps on the back corners in the trim colour: one at level 1, two from level 2.
-  for (const q of level >= 2 ? [-4.6, 4.6] : [4.6]) {
-    const [lx, ly] = S(-6.8, q);
-    disc(g, lx, ly, 1.2, OUTLINE);
-    disc(g, lx, ly, 0.75, shade(color, 0.2));
-    disc(glow, lx, ly, 2.3, color, 0.35);
-  }
-  // Pilot flame licking from the nozzle, a bigger tongue right after a burst.
+  for (const q of level >= 2 ? [-4.6, 4.6] : [4.6]) disc(glow, ...S(-6.8, q), 2.3, color, 0.35);
   const toward = towardViewer(a),
     px = X(x, ca * (end + 1.5)),
     py = Y(y0, sa * (end + 1.5), HB),
@@ -209,25 +229,11 @@ function live({ g, glow, x, y, tower, definition, level, kick, charge, energy, c
     disc(g, px + ca * lick * 0.4, py + sa * lick * 0.4 * SQUASH, 0.9 + 0.5 * flicker + kick, shade(c, 0.55));
     disc(g, px, py, 0.7 + 0.3 * flicker, 0xfff1c0);
   }
-  // Heat along the nozzle after a burst.
   if (kick > 0) {
-    const [hx, hy] = [X(x, ca * (end - 2)), Y(y0, sa * (end - 2), HB)];
     glow.lineStyle(3, c, 0.35 * kick);
-    glow.lineBetween(X(x, ca * 7), Y(y0, sa * 7, HB), hx, hy);
+    glow.lineBetween(X(x, ca * 7), Y(y0, sa * 7, HB), X(x, ca * (end - 2)), Y(y0, sa * (end - 2), HB));
   }
 }
 
-/** Ember: a squat flamethrower. */
-const sheet: Sheet = {
-  tower: "inferno",
-  name: "Furnace Torch",
-  idea: "Squat flamethrower: octagonal furnace plinth with glowing vents, low body with twin fuel tanks, short flared nozzle with a pilot flame.",
-  tilt: { drop: DROP, squash: SQUASH, height: HB, deck: H + 1.2 },
-  reach,
-  recoil: RECOIL,
-  base,
-  turret,
-  live,
-};
-/** FurnaceTorch in the four parts of a tilted tower (`tilted.ts`). */
-export const furnaceTorch: TiltedArt = { base: sheet.base, below: sheet.below ?? (() => {}), turret: sheet.turret, above: sheet.live };
+/** Ember's Furnace Torch in the four parts of a tilted tower (`tilted.ts`). */
+export const furnaceTorch: TiltedArt = { base, below, turret, above };

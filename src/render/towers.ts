@@ -11,6 +11,14 @@ import { SUPPORT_TURRETS } from "./tower-art/turrets-support";
 import { onDeck } from "./tower-art/tilt";
 import { TILTED } from "./tower-art/tilted";
 import { TILTS } from "./muzzles";
+/**
+ * Arguments of a drawing call as Phaser reads them: `fillPoints`/`strokePoints` with an end index (the shared scratch
+ * corners of `shapes.ts` and `tilt.ts`) only use the first points, so leftovers of an earlier drawing are dropped.
+ */
+function used(name: string, args: unknown[]) {
+  if ((name === "fillPoints" || name === "strokePoints") && Array.isArray(args[0]) && typeof args[3] === "number") return JSON.stringify([args[0].slice(0, args[3]), ...args.slice(1)]);
+  return JSON.stringify(args);
+}
 /** The level a tower's paths branch from: one below its lowest path tier (5 for attack towers and traps, 3 for support). */
 const branches = new WeakMap<Readonly<TowerDefinition>, number>();
 function branchLevel(definition: Readonly<TowerDefinition>) {
@@ -182,7 +190,7 @@ function recordTurret(tower: Tower, definition: Readonly<TowerDefinition>, clock
       const ink: Ink = new Proxy({} as Ink, { get: (_, name) => (name === "then" ? undefined : (...args: unknown[]) => (onCall(String(name), args), ink)) });
       return ink;
     },
-    g = trace((name, args) => log.push(name, JSON.stringify(args)));
+    g = trace((name, args) => log.push(name, used(name, args)));
   let glow = true;
   const art = TILTED[definition.visual.turret]!;
   art.turret({ ...turretContext({ g, glow: trace(() => (glow = false)) }, 0, 0, tower, definition, clock, badges), kick });
@@ -218,7 +226,7 @@ const lit = new Set<string>();
 /** Every call `drawBody` makes on `g`, with its arguments as they were at the call; `light` once it drew on `glow`. */
 function record(tower: Tower, definition: Readonly<TowerDefinition>, clock: number, badges: TowerBadges) {
   const log: string[] = [],
-    ink: Ink = new Proxy({} as Ink, { get: (_, name) => (name === "then" ? undefined : (...args: unknown[]) => (log.push(String(name), JSON.stringify(args)), ink)) });
+    ink: Ink = new Proxy({} as Ink, { get: (_, name) => (name === "then" ? undefined : (...args: unknown[]) => (log.push(String(name), used(String(name), args)), ink)) });
   let light = false;
   const glow: Ink = new Proxy({} as Ink, { get: (_, name) => (name === "then" ? undefined : () => ((light = true), glow)) });
   drawBody(turretContext({ g: ink, glow }, 0, 0, tower, definition, clock, badges));
