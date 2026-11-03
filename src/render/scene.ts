@@ -30,6 +30,8 @@ import { drawAmbient, drawGates, drawTerrain, themeAccent, themeGlow } from "./t
 import { FrameStats } from "./frame-stats";
 import { drawTower, type TowerBadges } from "./towers";
 import { TowerBodies } from "./tower-bodies";
+import { TurretCache, snapAngle, snapKick } from "./turret-cache";
+import { isTilted } from "./towers";
 import { ScreenFx } from "./screen-fx";
 import { loadGraphics } from "./graphics-settings";
 import { Trails } from "./trails";
@@ -177,9 +179,18 @@ export class Battlefield extends Phaser.Scene {
   private trails = new Trails();
   private aim = new TurretAim();
   private scorches = new Scorches();
-  private angleOf = (t: Tower) => this.aim.angle(t);
+  /** The angle a turret is drawn at: the aim, snapped to the cached steps on a tilted turret, so flashes and shots match its picture. */
+  private angleOf = (t: Tower) => {
+    const angle = this.aim.angle(t);
+    return isTilted(this.sim.content.towers[t.type]) ? snapAngle(angle) : angle;
+  };
   /** Still tower bodies baked into textures; only turrets, lamps and light are drawn per frame. */
   private bodies = new TowerBodies(this);
+  /** Pictures of tilted turrets per aim step; `?turrets=live` (dev builds) draws them live for comparisons. */
+  private turrets = new TurretCache(this);
+  private liveTurrets = import.meta.env.DEV && typeof location !== "undefined" && new URLSearchParams(location.search).get("turrets") === "live";
+  /** Live parts over the cached turret pictures, their level bars and badges. */
+  private towerTop!: Phaser.GameObjects.Graphics;
   /**
    * Badges per tower id, recomputed only when a tower is built, sold or upgraded (`key`): they need the upgrade
    * resolution and the aura query, too costly to run for every tower in every frame.
@@ -233,6 +244,7 @@ export class Battlefield extends Phaser.Scene {
       this.enemySprites.reset();
       this.enemyFeedback.reset();
       this.bodies.reset();
+      this.turrets.reset();
       this.screenFx.reset();
       // A resize between shutdown and the next `create` must not bake the destroyed terrain of the old mission.
       this.terrainParts = [];
@@ -269,9 +281,10 @@ export class Battlefield extends Phaser.Scene {
     // Additive light is dimmed on light ground, so it never washes out.
     const glow = themeGlow(this.sim.map);
     this.towerInk = this.add.graphics().setDepth(DEPTH.towers);
-    this.towerGlow = this.add.graphics().setDepth(DEPTH.towers).setBlendMode(Phaser.BlendModes.ADD).setAlpha(glow);
+    this.towerTop = this.add.graphics().setDepth(DEPTH.towerTop);
+    this.towerGlow = this.add.graphics().setDepth(DEPTH.towerGlow).setBlendMode(Phaser.BlendModes.ADD).setAlpha(glow);
     this.hints = this.add.graphics().setDepth(DEPTH.hints);
-    this.ghost = this.add.graphics().setDepth(DEPTH.towers).setAlpha(0.55);
+    this.ghost = this.add.graphics().setDepth(DEPTH.towerTop).setAlpha(0.55);
     this.buildCells = { key: "", cells: [] };
     this.enemyUnderlay = this.add.graphics().setDepth(DEPTH.enemyUnderlay);
     this.enemyBody = this.add.graphics().setDepth(DEPTH.enemyBody);
@@ -307,6 +320,7 @@ export class Battlefield extends Phaser.Scene {
     this.hooks.refresh();
     // Dev builds only: the sprite manager for QA scripts (live and dying counts); stripped from `vite build`.
     if (import.meta.env.DEV) (window as unknown as { __enemySprites: EnemySprites }).__enemySprites = this.enemySprites;
+    if (import.meta.env.DEV) (window as unknown as { __turretCache: TurretCache }).__turretCache = this.turrets;
     if (this.stats && !this.statsHooked) {
       const stats = this.stats;
       let start = 0;
@@ -365,6 +379,7 @@ export class Battlefield extends Phaser.Scene {
     this.sharpenText();
     this.bakeTerrain();
     this.bodies.setZoom(zoom);
+    this.turrets.setZoom(zoom);
     this.screenFx.setZoom(camera.zoomX);
     if (!!this.view.zoomed !== zoomed) {
       if (zoomed) this.view.zoomed = true;
@@ -546,6 +561,7 @@ export class Battlefield extends Phaser.Scene {
       this.enemySprites.reset();
       this.enemyFeedback.reset();
       this.bodies.reset();
+      this.turrets.reset();
       this.looks.key = "";
       for (const f of this.effects) f.label?.destroy();
       this.effects = [];
@@ -594,7 +610,7 @@ export class Battlefield extends Phaser.Scene {
       const { x, y } = event.from,
         tower = s.towers.find((t) => t.x === x && t.y === y);
       // The drawn turret snapped onto the shot this frame, so this is the barrel the shot left.
-      if (tower) origin = { level: towerLevel(tower, content), angle: this.aim.angle(tower) };
+      if (tower) origin = { level: towerLevel(tower, content), angle: this.angleOf(tower) };
       // A salvo flashes once per barrel, not once per target.
       if (event.type === "shot" && content.towers[event.tower].visual.muzzle !== "bolt") {
         if (flashed.has(`${x},${y}`)) return;
@@ -713,7 +729,7 @@ export class Battlefield extends Phaser.Scene {
       { towers, enemies } = content,
       towerPen: Pen = { g: this.towerInk, glow: this.towerGlow },
       pen: Pen = { g: this.ink, glow: this.glow };
-    for (const layer of [this.towerInk, this.towerGlow, this.hints, this.ghost, this.enemyUnderlay, this.enemyBody, this.enemyOverlay, this.ink, this.glow]) layer.clear();
+    for (const layer of [this.towerInk, this.towerTop, this.towerGlow, this.hints, this.ghost, this.enemyUnderlay, this.enemyBody, this.enemyOverlay, this.ink, this.glow]) layer.clear();
     for (const layer of [this.towerGlow, this.glow]) this.screenFx.prime(layer, this.sim.map.columns * CELL, this.sim.map.rows * CELL);
     this.ambient.clear();
     this.scorches.draw({ g: this.hints, glow: this.towerGlow }, this.fxClock);
@@ -801,27 +817,38 @@ export class Battlefield extends Phaser.Scene {
     order.length = 0;
     for (const t of s.towers) order.push(t);
     order.sort(northFirst);
+    this.turrets.begin();
     for (const t of order) {
       const d = towers[t.type],
         badges = looks.get(t.id)!,
         x = px(t.x),
         y = px(t.y),
-        angle = this.aim.angle(t);
-      drawTower(towerPen, x, y, angle === t.angle ? t : { ...t, angle }, d, this.clock, badges, this.bodies.place(t, d, badges, x, y));
+        angle = this.angleOf(t),
+        baked = this.bodies.place(t, d, badges, x, y),
+        shown = angle === t.angle ? t : { ...t, angle };
+      if (isTilted(d) && !this.liveTurrets) {
+        // The live parts use the same recoil step as the picture, so a hot muzzle sits on its barrel.
+        const kick = snapKick(Math.max(0, (t.cooldown - 0.7) / 0.3) ** 2),
+          cached = this.turrets.place(shown, d, badges, x, y, kick);
+        drawTower(towerPen, x, y, shown, d, this.clock, badges, { baked, top: cached ? this.towerTop : undefined, kick });
+      } else drawTower(towerPen, x, y, shown, d, this.clock, badges, { baked });
       const family = familyOf(d),
         age = family ? pulses[family] : undefined;
       // The music visibly comes from the towers: a soft halo when their family's note sounds.
       if (age !== undefined && age < PULSE && !this.still.matches) halo(this.towerGlow, x, y, CELL * 0.6, badges.color, 0.6 * (1 - age / PULSE));
       // Co-op: a corner mark in the owner's colour.
+      // On the top layer: a tilted turret reaching into the cell above must not hide it.
       if (this.sim.players > 1) {
-        const color = PLAYER_COLORS[t.owner] ?? 0xffffff;
-        g.fillStyle(0x050b10, 0.8);
-        fillRound(g, x - CELL / 2 + 7, y - CELL / 2 + 7, 5.5);
-        g.fillStyle(color, 1);
-        fillRound(g, x - CELL / 2 + 7, y - CELL / 2 + 7, 3.5);
+        const color = PLAYER_COLORS[t.owner] ?? 0xffffff,
+          top = this.towerTop;
+        top.fillStyle(0x050b10, 0.8);
+        fillRound(top, x - CELL / 2 + 7, y - CELL / 2 + 7, 5.5);
+        top.fillStyle(color, 1);
+        fillRound(top, x - CELL / 2 + 7, y - CELL / 2 + 7, 3.5);
       }
     }
     this.bodies.sweep();
+    this.turrets.sweep();
     this.enemyLook.now = this.fxClock;
     const units = s.enemies.map((e) =>
       enemyContext(px(e.x), px(e.y), CELL, e, enemies[e.type], this.heading(e.distance), statusFlags(e, s.time), traitFlags(this.sim, e), this.clock),

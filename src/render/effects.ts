@@ -1,6 +1,6 @@
 import type { ContentPack, GameEvent, TurretStyle } from "../core/types";
 import { glowLine, halo, SHADOW } from "./material";
-import { MUZZLES, muzzleHeading, muzzleTips, type FlashStyle } from "./muzzles";
+import { MUZZLES, TILTS, muzzleHeading, muzzleTips, type FlashStyle } from "./muzzles";
 import { drawFieldEffect } from "./field-effects";
 import { fadeOut, IMPACTS, impactOf } from "./projectiles";
 import { drawTrapEffect, TRAP_EFFECT_LIFE } from "./trap-effects";
@@ -654,7 +654,7 @@ export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: Conte
       // The flash sits on every barrel tip, as the turret pointed when it fired.
       const angle = origin.angle ?? aim;
       for (const tip of muzzleTips(d.visual.turret, origin.level ?? 1, fx, fy, angle)) {
-        const heading = spec.tilt ? muzzleHeading(d.visual.turret, angle) : Math.atan2(tip.y - fy, tip.x - fx);
+        const heading = TILTS[d.visual.turret] ? muzzleHeading(d.visual.turret, angle) : Math.atan2(tip.y - fy, tip.x - fx);
         FLASHES[spec.flash](pen, tip.x, tip.y, heading, age, e.color, d.visual.turret === "mortar");
         // A soft afterglow lingers at the muzzle once the flash is gone.
         if (age < AFTERGLOW) halo(glow, tip.x, tip.y, 7, e.color, 0.12 * fadeOut(age / AFTERGLOW));

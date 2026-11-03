@@ -2,15 +2,14 @@ import type { TurretStyle } from "../../core/types";
 import { DARK, LIGHT, OUTLINE, PLATE, SHADOW, dome, facing, halo, led, litBar, plate } from "../material";
 import { MUZZLES } from "../muzzles";
 import { arcBand, chamferRect, disc, hash01, oval, polygon, ring, shade, strip, wedge } from "../shapes";
-import { sentinelTurret } from "./sentinel";
-import { siegeTurret } from "./siege";
+import { TILTED, liveTurret } from "./tilted";
 import { type Drawing, TAU, at, point, quad, pip, bar, loop, block, facets, boss, glowDot, reach, bolt, muzzleGlow, crackle } from "./kit";
 /** Turret drawings of the Attack tab's towers by `visual.turret`; `render/towers.ts` assembles them into `TURRETS`. */
 export const ATTACK_TURRETS = {
   // Pulse: the Hex Sentinel, an armoured turret with one precision barrel in the 3/4 tilt (see `sentinel.ts`).
-  barrel: sentinelTurret,
+  barrel: liveTurret(TILTED.barrel!),
   // Nova: the Siege Cannon, an armoured housing with an elevated cannon in the 3/4 tilt (see `siege.ts`).
-  heavy: siegeTurret,
+  heavy: liveTurret(TILTED.heavy!),
   // Twin guns on a chamfered yoke, fed from an ammo box on the left.
   twin: (ctx) => {
     const { g, x, y, tower: t, definition: d, level, tip } = ctx,

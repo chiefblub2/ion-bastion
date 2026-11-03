@@ -32,6 +32,26 @@ The 13 towers, grouped by what they need from the kit:
 | | Decay (`prism`) | A prism floating above a pylon | no barrel, raised `emit` |
 | | Quake (`hammer`) | Piston rig whose ram strikes the ground | no barrel, no aim |
 
+## Status (2026-11-03)
+
+- **Concepts:** all 13 drawn on `/gallery.html?concepts` (`src/concepts/`, throwaway), with Orbital, Focus, Quake and
+  Shrapnel revised once.
+- **Phases 0 and 1 done:** `TILTS` (with `sides`/`fan` projection and `emit`), the four-part `TiltedArt`
+  (`base`/`below`/`turret`/`above`), `TurretCache`, Pulse and Nova on it. On top of that, baked bodies without light
+  are no longer traced every frame (`bodyLight`). Same bench, 43 extra Pulse/Nova at L5:
+
+  | | draw avg / p95 ms | render avg / p95 ms |
+  | --- | --- | --- |
+  | before (live turrets) | 13.1–13.8 / 22–24 | 8.4–9.0 / 16–17 |
+  | now (cached) | 5.5–5.6 / 10 | 6.1 / 11 |
+  | flat Flak + Lance, now | 7.5–8.1 / 13–14 | 6.5–7.0 / 11 |
+
+  The frame rate under SwiftShader barely moves (~13.5 fps either way): there the GPU itself is emulated on the CPU and
+  filling the turret pictures costs about what rasterising their triangles did. On a real GPU that part is cheap.
+- **Next:** the shared kit helpers the concept agents each wrote for themselves (barrels offset across the aim,
+  back-to-front part sorting, pitched boxes, a general convex solid), then Phase 3 batch by batch: each concept's
+  `live` split into `below`/`above`.
+
 ## Phase 0: kit and measurement
 
 1. **Tilt independent of barrels.** Move `Tilt` into its own table `TILTS: Partial<Record<TurretStyle, Tilt>>`
