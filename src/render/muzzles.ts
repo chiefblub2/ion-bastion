@@ -20,15 +20,20 @@ export interface MuzzleSpec {
 export interface Tilt {
   drop: number;
   squash: number;
+  /** Height of the barrel's pivot above the ground centre. */
   height: number;
+  /** Elevation of the barrel in radians (Nova's cannon), 0 for a level barrel. */
+  pitch?: number;
+  /** Height of the plane the path motif lies on (Pulse's deck, Nova's ground between its legs). */
+  deck: number;
 }
 /**
  * Barrels of the turrets that have one. Turret drawings, muzzle flashes and the starting point of projectiles
  * all read this table, so a flash always sits on the barrel tip. Radial turrets (coil, crystal, emitter, …) have none.
  */
 export const MUZZLES: Partial<Record<TurretStyle, MuzzleSpec>> = {
-  barrel: { reach: (l) => 21 + l, recoil: 5, flash: "gun", tilt: { drop: 5, squash: 0.65, height: 15 } },
-  heavy: { reach: (l) => 19 + l, recoil: 7, flash: "heavy" },
+  barrel: { reach: (l) => 21 + l, recoil: 5, flash: "gun", tilt: { drop: 5, squash: 0.65, height: 15, deck: 7 } },
+  heavy: { reach: (l) => 22 + l, recoil: 6, flash: "heavy", tilt: { drop: 6, squash: 0.65, height: 14, pitch: 0.35, deck: 0.5 } },
   twin: { reach: (l) => 20 + l, recoil: 4, sides: [-4, 4], flash: "gun" },
   rail: { reach: (l) => 25 + l, recoil: 6, flash: "energy" },
   flame: { reach: (l) => 15 + l, recoil: 3, flash: "flame" },
@@ -74,11 +79,17 @@ export function muzzleTips(turret: TurretStyle, level: number, x: number, y: num
   const c = Math.cos(angle),
     s = Math.sin(angle),
     tilt = spec.tilt;
-  if (tilt) return [{ x: x + c * d, y: y + tilt.drop + s * d * tilt.squash - tilt.height }];
+  if (tilt) {
+    const p = tilt.pitch ?? 0,
+      ground = d * Math.cos(p);
+    return [{ x: x + c * ground, y: y + tilt.drop + s * ground * tilt.squash - tilt.height - d * Math.sin(p) }];
+  }
   return (spec.sides ?? [0]).map((side) => ({ x: x + c * d - s * side, y: y + s * d + c * side }));
 }
 /** Screen direction a barrel points in when its turret aims at `angle`: the aim itself, foreshortened on a tilted turret. */
 export function muzzleHeading(turret: TurretStyle, angle: number) {
   const tilt = MUZZLES[turret]?.tilt;
-  return tilt ? Math.atan2(Math.sin(angle) * tilt.squash, Math.cos(angle)) : angle;
+  if (!tilt) return angle;
+  const p = tilt.pitch ?? 0;
+  return Math.atan2(Math.sin(angle) * Math.cos(p) * tilt.squash - Math.sin(p), Math.cos(angle) * Math.cos(p));
 }

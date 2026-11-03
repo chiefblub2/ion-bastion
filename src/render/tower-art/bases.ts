@@ -2,18 +2,14 @@ import type { TurretStyle } from "../../core/types";
 import { DARK, OUTLINE, PLATE, SHADOW, facing, led, litBar, plate, rivets, sunken } from "../material";
 import { arcBand, chamferRect, disc, oval, polygon, ring, shade } from "../shapes";
 import { sentinelBase } from "./sentinel";
+import { siegeBase } from "./siege";
 import { type Drawing, TAU, PTS, put, at, quad, tick, pip, facets, inlay, base, trapFrame, hexLine, CORNERS } from "./kit";
 /** Base plates by `visual.turret`: the raised plate with its deck, studs and trim. */
 export const BASES: Record<TurretStyle, Drawing> = {
   // Pulse: the Hex Sentinel's extruded foundation, drawn in the 3/4 tilt (see `sentinel.ts`).
   barrel: sentinelBase,
-  heavy: (ctx) => {
-    const { g, x, y } = ctx;
-    base(ctx, { n: 8, rot: Math.PI / 8 }, 24, 18);
-    // Seams between the armour panels.
-    g.fillStyle(OUTLINE, 0.75);
-    for (let i = 0; i < 8; i++) tick(g, x, y, (i * Math.PI) / 4, 18.6, 23, 1.2);
-  },
+  // Nova: the Siege Cannon's four legs and amber drum, drawn in the 3/4 tilt (see `siege.ts`).
+  heavy: siegeBase,
   twin: (ctx) => {
     const { g, x, y, definition: d } = ctx;
     // Outrigger legs under the plate.

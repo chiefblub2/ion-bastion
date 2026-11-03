@@ -132,7 +132,7 @@ class Trail implements TrailView {
       lift = 0,
       height = 0;
     if (this.look.arc && this.total > 0) {
-      const peak = Math.min(60, Math.max(18, 0.32 * this.total)),
+      const peak = Math.min(60, Math.max(18, 0.32 * this.total)) * (this.look.arcHeight ?? 1),
         heading = Math.atan2(ty - this.cy, tx - this.cx);
       height = 4 * peak * progress * (1 - progress);
       lift = height / peak;

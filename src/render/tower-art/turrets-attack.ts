@@ -3,42 +3,14 @@ import { DARK, LIGHT, OUTLINE, PLATE, SHADOW, dome, facing, halo, led, litBar, p
 import { MUZZLES } from "../muzzles";
 import { arcBand, chamferRect, disc, hash01, oval, polygon, ring, shade, strip, wedge } from "../shapes";
 import { sentinelTurret } from "./sentinel";
-import { type Drawing, TAU, at, point, quad, tick, pip, bar, loop, block, facets, boss, glowDot, reach, bolt, muzzleGlow, crackle } from "./kit";
+import { siegeTurret } from "./siege";
+import { type Drawing, TAU, at, point, quad, pip, bar, loop, block, facets, boss, glowDot, reach, bolt, muzzleGlow, crackle } from "./kit";
 /** Turret drawings of the Attack tab's towers by `visual.turret`; `render/towers.ts` assembles them into `TURRETS`. */
 export const ATTACK_TURRETS = {
   // Pulse: the Hex Sentinel, an armoured turret with one precision barrel in the 3/4 tilt (see `sentinel.ts`).
   barrel: sentinelTurret,
-  // A wide launch tube: the next rocket's nose slides out as it loads, and the rear vents puff on a shot.
-  heavy: (ctx) => {
-    const { g, glow, x, y, tower: t, definition: d, level, kick, charge, tip } = ctx,
-      a = t.angle,
-      c = d.color,
-      { back, end } = reach(ctx, "heavy"),
-      w = level >= 3 ? 0.8 : 0,
-      out = 5 * Math.min(1, Math.max(0, (charge - 0.3) / 0.7));
-    if (out > 0.3) {
-      const ca = Math.cos(a),
-        sa = Math.sin(a),
-        lit = facing(a + Math.PI / 2) < 0 ? -1 : 1;
-      strip(g, x, y, ca, sa, end - 2, end + out, -3.3, 3.3, -0.7, 0.7, shade(c, 0.35));
-      strip(g, x, y, ca, sa, end - 2, end + out, 0, lit * 3.3, 0, lit * 0.7, shade(c, 0.6));
-    }
-    litBar(g, x, y, a, back + 4, end - 3, 5.5 + w, 5 + w, c, { bands: level >= 3 ? [0.25, 0.4, 0.75] : [0.3] });
-    litBar(g, x, y, a, end - 3, end, 6.5 + w, 6.5 + w, shade(c, -0.25), { tip });
-    boss(g, x, y, 10, shade(c, -0.05));
-    // Rear vents; they glow and puff smoke right after a shot.
-    const vents = [-1, 1].map((sign) => a + Math.PI + sign * 0.6);
-    g.fillStyle(shade(c, -0.7));
-    for (const va of vents) tick(g, x, y, va, 5.5, 8.5, 1.6);
-    if (kick > 0) {
-      glow.fillStyle(c, 0.3 * kick);
-      for (const va of vents) tick(glow, x, y, va, 5, 9, 3);
-      g.fillStyle(0x8f989e, 0.5 * kick);
-      for (const va of vents) pip(g, x + Math.cos(va) * (9 + 7 * (1 - kick)), y + Math.sin(va) * (9 + 7 * (1 - kick)), 1.5 + 3 * (1 - kick));
-    }
-    bolt(ctx, 3.2);
-    muzzleGlow(ctx, end + 2, 6);
-  },
+  // Nova: the Siege Cannon, an armoured housing with an elevated cannon in the 3/4 tilt (see `siege.ts`).
+  heavy: siegeTurret,
   // Twin guns on a chamfered yoke, fed from an ammo box on the left.
   twin: (ctx) => {
     const { g, x, y, tower: t, definition: d, level, tip } = ctx,

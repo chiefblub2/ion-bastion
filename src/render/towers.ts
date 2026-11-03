@@ -8,7 +8,7 @@ import { ATTACK_TURRETS } from "./tower-art/turrets-attack";
 import { CONTROL_TURRETS } from "./tower-art/turrets-control";
 import { TRAPS_TURRETS } from "./tower-art/turrets-traps";
 import { SUPPORT_TURRETS } from "./tower-art/turrets-support";
-import { onDeck } from "./tower-art/sentinel";
+import { onDeck } from "./tower-art/tilt";
 import { MUZZLES } from "./muzzles";
 /** The level a tower's paths branch from: one below its lowest path tier (5 for attack towers and traps, 3 for support). */
 const branches = new WeakMap<Readonly<TowerDefinition>, number>();
@@ -103,7 +103,8 @@ function drawTop(ctx: TurretContext, badges: TowerBadges) {
   const motif = badges.path && definition.attack.kind !== "aura" ? definition.visual.paths?.[badges.path]?.motif : undefined;
   if (motif) {
     const tier = Math.min(3, Math.max(1, level - branchLevel(definition)));
-    if (tilted) onDeck([g, glow], x, y, () => MOTIFS[motif]({ ...ctx, x: 0, y: 0 }, tier, clock + tower.id, 0.04 + 0.04 * tier));
+    const tilt = MUZZLES[definition.visual.turret]?.tilt;
+    if (tilt) onDeck([g, glow], x, y + tilt.drop, tilt.deck, () => MOTIFS[motif]({ ...ctx, x: 0, y: 0 }, tier, clock + tower.id, 0.04 + 0.04 * tier));
     else MOTIFS[motif](ctx, tier, clock + tower.id, 0.06 + 0.06 * tier);
   }
   // One lamp from level 2; from level 4 four of them chase round the collar.
