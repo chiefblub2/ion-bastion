@@ -77,13 +77,19 @@ function variants(type: TowerId): { label: string; tower: Tower }[] {
       ...paths.map((p, i) => ({ label: `L7 ${d.visual.paths![p].name ?? p}`, tower: built(type, "max", p, 0, undefined, tracks[i]) })),
     ];
   }
-  if (paths.length)
+  if (paths.length) {
+    // The last plain level (5, support towers 3), then every path at its last tier.
+    const plain = Math.max(1, ...d.upgrades.filter((u) => !u.path).map((u) => u.effects.level ?? 1));
     return [
       { label: "L1", tower: built(type, 1) },
       { label: "L1 fire", tower: built(type, 1, undefined, 0.92) },
-      { label: "L5", tower: built(type, 5) },
-      ...paths.map((p) => ({ label: `L8 ${d.visual.paths![p].name ?? p}`, tower: built(type, "max", p) })),
+      { label: `L${plain}`, tower: built(type, plain) },
+      ...paths.map((p) => {
+        const t = built(type, "max", p);
+        return { label: `L${towerLevel(t, content)} ${d.visual.paths![p].name ?? p}`, tower: t };
+      }),
     ];
+  }
   return [
     { label: "L1", tower: built(type, 1) },
     { label: "L1 fire", tower: built(type, 1, undefined, 0.92) },

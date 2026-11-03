@@ -38,7 +38,7 @@ const GRENZZONE: Strategies = {
     A: {
       builds: [
         b("pulse", 10, 5), b("pulse", 12, 5), b("frost", 13, 6), b("blast", 8, 5),
-        b("aura", 11, 5), b("flak", 9, 5), b("pulse", 6, 5), b("blast", 12, 8), b("pulse", 9, 6),
+        b("aura", 11, 5, "harmonics"), b("flak", 9, 5), b("pulse", 6, 5), b("blast", 12, 8), b("pulse", 9, 6),
       ],
     },
     // Novas on the corners and edge positions, upgrades first.
@@ -81,7 +81,7 @@ const GRENZZONE: Strategies = {
     B: {
       upgradeFirst: true,
       builds: [
-        b("blast", 13, 3), b("pulse", 13, 2), b("frost", 11, 3), b("aura", 12, 3),
+        b("blast", 13, 3), b("pulse", 13, 2), b("frost", 11, 3), b("aura", 12, 3, "harmonics"),
         b("flak", 13, 4), b("blast", 15, 8), b("tesla", 16, 8), b("frost", 15, 7),
         b("blast", 4, 7), b("pulse", 13, 10),
       ],
@@ -92,14 +92,14 @@ const GRENZZONE: Strategies = {
     A: {
       builds: [
         b("pulse", 15, 3), b("pulse", 10, 3), b("frost", 14, 8), b("blast", 15, 8),
-        b("aura", 14, 6), b("flak", 9, 8), b("blast", 6, 6), b("tesla", 8, 6),
+        b("aura", 14, 6, "harmonics"), b("flak", 9, 8), b("blast", 6, 6), b("tesla", 8, 6),
         b("pulse", 6, 8), b("pulse", 11, 6), b("blast", 5, 2),
       ],
     },
     // Concentrated core around the reactor, plus outer support.
     B: {
       builds: [
-        b("blast", 8, 6), b("pulse", 6, 6), b("pulse", 10, 6), b("aura", 8, 5),
+        b("blast", 8, 6), b("pulse", 6, 6), b("pulse", 10, 6), b("aura", 8, 5, "harmonics"),
         b("frost", 11, 5), b("blast", 5, 6), b("tesla", 10, 8), b("flak", 4, 6),
         b("blast", 15, 3), b("pulse", 15, 5), b("frost", 7, 9),
       ],

@@ -8,6 +8,16 @@ import { ATTACK_TURRETS } from "./tower-art/turrets-attack";
 import { CONTROL_TURRETS } from "./tower-art/turrets-control";
 import { TRAPS_TURRETS } from "./tower-art/turrets-traps";
 import { SUPPORT_TURRETS } from "./tower-art/turrets-support";
+/** The level a tower's paths branch from: one below its lowest path tier (5 for attack towers and traps, 3 for support). */
+const branches = new WeakMap<Readonly<TowerDefinition>, number>();
+function branchLevel(definition: Readonly<TowerDefinition>) {
+  let from = branches.get(definition);
+  if (from === undefined) {
+    const levels = definition.upgrades.filter((u) => u.path && u.effects.level !== undefined).map((u) => u.effects.level!);
+    branches.set(definition, (from = levels.length ? Math.min(...levels) - 1 : 5));
+  }
+  return from;
+}
 /**
  * Turret drawings by `visual.turret`, one module per build-menu tab (`tower-art/turrets-*.ts`). A new look is one entry
  * in its tab's module; this type fails to compile while a style has no drawing.
@@ -77,10 +87,11 @@ function drawTop(ctx: TurretContext, badges: TowerBadges) {
   if (badges.maxed) halo(glow, x, y, 26, p, 0.12 + 0.04 * Math.sin(clock * 2 + tower.id));
   // A glint sweeps the collar at level 8.
   if (!trap && level >= 8) arcBand(g, x, y, 17, 1.6, clock * 0.8 + tower.id, clock * 0.8 + tower.id + 0.5, shade(p, 0.8), 0.9);
-  // Specialized attack towers: the path motif turns under the turret, one tier per level above 5, echoed in light.
+  // Specialized towers: the path motif turns under the turret, one tier per level above the branch (5, support 3),
+  // echoed in light. Aura draws its own.
   const motif = badges.path && definition.attack.kind !== "aura" ? definition.visual.paths?.[badges.path]?.motif : undefined;
   if (motif) {
-    const tier = Math.min(3, Math.max(1, level - 5));
+    const tier = Math.min(3, Math.max(1, level - branchLevel(definition)));
     MOTIFS[motif](ctx, tier, clock + tower.id, 0.06 + 0.06 * tier);
   }
   // One lamp from level 2; from level 4 four of them chase round the collar.

@@ -9,6 +9,8 @@
  * --curve credits=680-780,waves=17-20[,growth=1.1-1.2] WARNs about values outside the range (growth as factor, 1.1 = 110 %).
  * --tune scales the HP of every wave by a factor f and bisects the window in which A and B still win
  * and the thin, Nova-only and empty defenses still lose (about 40 runs per mission; best with --mission).
+ * Strategy builds may name a specialization path (traps, support towers, Aura), whose tiers they then buy;
+ * --no-paths plays them without, to show how much the tiers add.
  */
 import { resolve } from "node:path";
 import { Game } from "../src/core/game";
@@ -143,9 +145,14 @@ const argv = process.argv.slice(2).filter((a) => a !== "--"),
   ) as Record<string, { lo: number; hi: number }>;
 const [sectorPath, strategiesPath, sectorIndex = "0"] = positional;
 const sectorModule = await import(resolve(sectorPath));
-const strategies: Strategies = Object.values(await import(resolve(strategiesPath))).find(
+const loaded: Strategies = Object.values(await import(resolve(strategiesPath))).find(
   (v) => v && typeof v === "object",
 ) as Strategies;
+// --no-paths: the strategies without their builds' specialization paths and Aura tracks, as before the tiers existed.
+const strip = (st: Strategy): Strategy => ({ ...st, builds: st.builds.map(({ tower, x, y }) => ({ tower, x, y })) });
+const strategies: Strategies = flag("--no-paths")
+  ? Object.fromEntries(Object.entries(loaded).map(([id, s]) => [id, { A: strip(s.A), B: strip(s.B) }]))
+  : loaded;
 // A sector module exports one sector; `content/missions.ts` exports all, picked by index.
 const sector = (Object.values(sectorModule).find((v: any) => v?.missions) ??
   sectorModule.SECTORS[Number(sectorIndex)]) as MissionSector;

@@ -396,7 +396,7 @@ export const SUPPORT_SPECIALIZATIONS: Readonly<Record<string, SupportPaths>> = {
       {
         slug: "piercing-field",
         name: "Piercing Field",
-        role: "ARMOR BREAK",
+        role: "Armor break",
         tiers: fixed([0.1, 0.15, 0.2] as const, (fraction) => ({
           specialization: { kind: "piercing-field", fraction },
           description: `Hits of supported towers ignore ${pct(fraction)} of armor; with an Armory in reach the higher pierce counts.`,
@@ -405,7 +405,7 @@ export const SUPPORT_SPECIALIZATIONS: Readonly<Record<string, SupportPaths>> = {
       {
         slug: "execution-field",
         name: "Execution Field",
-        role: "FINISHER",
+        role: "Finisher",
         tiers: fixed([0.1, 0.15, 0.2] as const, (bonus) => ({
           specialization: { kind: "execution-field", bonus, threshold: 0.3 },
           description: `Supported towers deal +${pct(bonus)} damage to enemies below 30% HP.`,
@@ -414,7 +414,7 @@ export const SUPPORT_SPECIALIZATIONS: Readonly<Record<string, SupportPaths>> = {
       {
         slug: "harmonics",
         name: "Harmonics",
-        role: "ALL-ROUND",
+        role: "All-round",
         tiers: fixed([0.05, 0.08, 0.1] as const, (bonus) => ({
           specialization: { kind: "harmonics", bonus },
           description: `Supported towers also get +${pct(bonus)} of the two stats of the tracks not taken (damage, attack speed or range), never more than the track's own bonus.`,

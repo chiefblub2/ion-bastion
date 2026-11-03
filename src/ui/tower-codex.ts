@@ -139,8 +139,10 @@ export function renderTowerCodex(content: ContentPack, page: number, collapsed =
             .map((p) => `<li style="--path:${p.color}"><strong>${escape(p.name)}</strong><small>${p.tiers.map((x) => `◇ ${x.cost}`).join(" → ")}</small></li>`)
             .join("")}</ul>`
         : "";
+      // The first path tier's level: 6 for attack towers and traps, 4 for support towers, 5 for Aura.
+      const from = Math.min(...d.upgrades.filter((u) => u.path && u.effects.level !== undefined).map((u) => u.effects.level!));
       const paths = t.paths.length
-        ? `<h3>${t.levels.length ? "Specializations · levels 6–8" : t.tracks.length ? "Paths · pick one after a track's tier III" : "Paths · pick one"}</h3><ul class="tower-codex-paths">${t.paths
+        ? `<h3>Specializations · levels ${from}–${from + 2}${t.tracks.length ? ", after a track's tier III" : ""}</h3><ul class="tower-codex-paths">${t.paths
             .map((p) => `<li style="--path:${p.color}"><strong>${escape(p.name)}</strong>${p.role ? `<span>${escape(p.role)}</span>` : ""}<small>${p.tiers.map((x) => `◇ ${x.cost}`).join(" → ")}</small></li>`)
             .join("")}</ul>`
         : "";
