@@ -8,6 +8,7 @@ import { recycleOverkill } from "./recycler";
 import { afterHit, hasTrait, layerOf, linkedGroup, modifyDamage, onDeath } from "./traits";
 import { afterDealt } from "./links";
 import { protocolAfterHit, protocolFactor, protocolKill } from "./protocols";
+import { combatPathsAfterHit, combatPathsFactor } from "./combat-paths-a";
 export type { DamageSource } from "../core/types";
 /**
  * Context of a hit for traits; absent for dots. `instant`: chain, pierce, focus, quake, pull, disrupt. `area`: splash (centre incl.),
@@ -97,13 +98,14 @@ function deal(sim: Sim, src: DamageSource, e: Enemy, amount: number, dot: boolea
   const s = sim.state,
     hpBefore = e.hp,
     // Weakening and marking first, so armor absorbs a share of the amplified hit.
-    raw = modifyDamage(sim, e, amount * damageTaken(e, s.time) * markFactor(sim, e) * conditionalFactor(sim, e, hit) * protocolFactor(sim, src, e, dot, hit), dot, hit),
+    raw = modifyDamage(sim, e, amount * damageTaken(e, s.time) * markFactor(sim, e) * conditionalFactor(sim, e, hit) * protocolFactor(sim, src, e, dot, hit) * combatPathsFactor(sim, e, dot, hit), dot, hit),
     dealt = Number.isFinite(raw) || raw <= 0 ? raw : e.hp;
   e.hp -= dealt;
   s.events.push({ type: "damage", at: { x: e.x, y: e.y }, amount: dealt, enemy: e.id });
   afterDealt(sim, e, Math.min(dealt, hpBefore));
   afterHit(sim, e, dot, hit);
   protocolAfterHit(sim, src, e, dot, hit);
+  combatPathsAfterHit(sim, e, dot, hit); // support combat: Shred
   const outcome = { hpBefore, dealt, killed: e.hp <= 0, overkill: Math.max(0, dealt - hpBefore) };
   if (e.hp > 0) return outcome;
   const d = sim.content.enemies[e.type],

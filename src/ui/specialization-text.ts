@@ -77,6 +77,18 @@ const OVERRIDES: Partial<Record<SpecializationSpec["kind"], Record<string, strin
   // ── support economy ──
   // ── end support economy ──
   // ── support combat ──
+  "weak-point": { fraction: "Armor ignored when marked" },
+  "hunters-mark": { bonus: "Damage taken (strongest)" },
+  "lingering-tag": { duration: "Mark lingers" },
+  "exposure-scan": { bonus: "Damage taken (revealed)" },
+  "static-pulse": { every: "Pulse every (s)", duration: "Disruption" },
+  afterimage: { duration: "Reveal lingers" },
+  cascade: { factor: "Second jump (share)" },
+  meltdown: { factor: "Burn (share of jump)", duration: "Burn duration" },
+  "scrap-yard": { every: "Overkill per credit" },
+  shred: { fraction: "Armor removed", duration: "Strip duration" },
+  "hollow-points": { bonus: "Bonus vs unarmored" },
+  shieldbreaker: { bonus: "Bonus vs shields" },
   // ── end support combat ──
   // ── aura paths ──
   // ── end aura paths ──

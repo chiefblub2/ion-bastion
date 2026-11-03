@@ -831,6 +831,12 @@ export interface Enemy extends Point {
   sentBy?: number;
   /** Warp Pad: set once the enemy has been warped back; it never warps again. */
   warped?: true;
+  // ── support combat ──
+  /** Tracker Lingering Tag: a mark of `amount` that holds until `until`; absent until a Lingering Tag first marks it. */
+  tag?: { amount: number; until: number };
+  /** Detector Afterimage: stays revealed until this time; absent until an Afterimage first reveals it. */
+  revealUntil?: number;
+  // ── end support combat ──
 }
 export interface Tower extends Point {
   id: number;
@@ -856,6 +862,10 @@ export interface Tower extends Point {
   critCount?: number;
   /** Shield Generator only: reactor damage absorbed in the current wave; absent while untouched, cleared after each wave. */
   barrier?: number;
+  // ── support combat ──
+  /** Recycler Scrap Yard: overkill counted towards the next credit and credits paid this wave; absent until used, cleared after each wave. */
+  scrapYard?: { overkill: number; paid: number };
+  // ── end support combat ──
 }
 /** Target selection of an attack tower; ties fall back to path progress, then id. */
 export type TargetPriority = "first" | "last" | "strong" | "weak" | "close";
