@@ -1,208 +1,214 @@
 /**
- * Quake concept, "Pile Driver": a cracked bronze-trimmed slab with a column at the back and an arm overhanging the
- * strike pit (still), a heavy ram on hydraulic rods that hangs raised and slams into the pit on every shockwave
- * (turret, its height follows `kick` only), and the charge slot, lamps, strike dust and pit glow (live). No aim: the
- * tower ignores `tower.angle`, and its pulse is centred on the ground.
+ * Quake concept, "Hydraulic Press": a low octagonal plinth with a round strike plate, three hydraulic legs leaning in
+ * from the sides and the back to a crown over the plate (still), a squat bronze hammer head on a short chrome piston
+ * that hangs raised and slams onto the plate on every shockwave (turret, its height follows `kick` only), and the
+ * pressure lights, lamps, strike dust and plate glow (live). No aim: the tower ignores `tower.angle`, and its pulse
+ * is centred on the ground.
  */
-import { halo } from "../render/material";
+import { facing, halo } from "../render/material";
 import { disc, oval, ring, shade } from "../render/shapes";
 import type { TurretContext } from "../render/tower-art/kit";
-import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, fillPoints, onGround, point, quad, tube, turn } from "../render/tower-art/tilt";
+import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, onGround, quad, tube, turn } from "../render/tower-art/tilt";
 import type { Concept } from "./types";
 
 const DROP = 6;
-/** Heights: slab, column, arm, the ram's raised and struck bottom and its thickness, the rod sleeves. */
+/** Heights: plinth, crown, the hammer's raised and struck bottom, its thickness and where the piston meets the crown. */
 const SLAB = 4,
-  POST = 27,
-  BEAM1 = 30.5,
-  ARM0 = 25.5,
-  ARM1 = 29,
-  RAISED = 10.5,
-  STRUCK = SLAB + 0.4,
-  RAM = 5.5,
-  SLEEVE = 21.5;
-/** Gunmetal, its top, the metallic highlight, the deep pit and the chrome of the rods. */
+  CROWN0 = 23,
+  CROWN1 = 26.5,
+  RAISED = 8,
+  STRUCK = SLAB + 0.3,
+  HEAD = 5,
+  PISTON_TOP = 17.8;
+/** Gunmetal, its top, the metallic highlight, the deep plate and the chrome of the pistons. */
 const WALL = 0x3a3631,
   TOP = 0x585049,
   METAL = 0x9c8f82,
   DEEP = 0x17130f,
   CHROME = 0xc9d2d6;
-
-/** The slab: a square with cut corners, clockwise on the screen. */
-const SLAB_FOOT = [19, -12, 19, 12, 12, 19, -12, 19, -19, 12, -19, -12, -12, -19, 12, -19];
-/** Two posts at the back corners, the crossbeam on them and the arm reaching forward over the pit. */
-const POSTS = [
-  [-15, -16, -10.5, -16, -10.5, -11.5, -15, -11.5],
-  [10.5, -16, 15, -16, 15, -11.5, 10.5, -11.5],
-];
-const BEAM = [-15.5, -16.5, 15.5, -16.5, 15.5, -11, -15.5, -11];
-const ARM_FOOT = [-3.8, -13, 3.8, -13, 3.8, 2.5, -3.8, 2.5];
-/** Level 5: armour plates on the outer sides of the posts. */
-const CHEEKS = [
-  [-16.4, -15.6, -15, -15.6, -15, -11.9, -16.4, -11.9],
-  [15, -15.6, 16.4, -15.6, 16.4, -11.9, 15, -11.9],
-];
-/** Front faces of the posts: the across centre of each, for rails and charge slots. */
-const POST_U = [-12.75, 12.75],
-  POST_V = -11.5;
-/** The ram, centred over the pit. */
-const RAM_FOOT = [-7, -3, 7, -3, 7.5, 2.5, 7, 9, -7, 9, -7.5, 2.5];
-const PIT = 7.5,
-  PIT_V = 3;
-/** Rods: across offsets (u) at the ram's centre line. */
-const RODS = [-3.6, 3.6],
-  ROD_V = 1;
+/** The plinth: a regular octagon with a flat face towards the viewer. */
+const OCT = Array.from({ length: 16 }, (_, i) => {
+  const k = Math.floor(i / 2),
+    a = Math.PI / 8 + (k * Math.PI) / 4;
+  return (i % 2 ? Math.sin : Math.cos)(a) * 20;
+});
+/** Strike plate radius and the hammer head radius. */
+const PLATE = 9,
+  HAMMER = 7.2,
+  CROWN_R = 5.5;
+/** Hydraulic legs: ground angle of each foot (left, right, back), the foot radius and the crown radius they reach. */
+const LEGS = [Math.PI, 0, -Math.PI / 2],
+  FOOT_R = 16.5,
+  TOP_R = 4.5,
+  RISE = CROWN0 + 0.5;
+const legPitch = Math.atan2(RISE, FOOT_R - TOP_R),
+  legLength = Math.sqrt(RISE * RISE + (FOOT_R - TOP_R) ** 2);
+/** Knuckle footprint at each foot. */
+const KNUCKLE = [-2.6, -2.6, 2.6, -2.6, 2.6, 2.6, -2.6, 2.6];
 
 function base({ g, x, y, level, color, definition }: TurretContext) {
   const y0 = y + DROP,
     c = definition.color;
   onGround(g, x, y0, 0, () => {
-    oval(g, 5, 6, 26, 22, 0x050b10, 0.22);
-    oval(g, 2, 2, 21, 20, 0x050b10, 0.35);
+    oval(g, 5, 6, 25, 21, 0x050b10, 0.22);
+    oval(g, 2, 2, 20, 19, 0x050b10, 0.35);
   });
-  let n = turn(SLAB_FOOT, 0, FOOT);
-  turn(SLAB_FOOT, 0, INSET, 0.92);
+  let n = turn(OCT, 0, FOOT);
+  turn(OCT, 0, INSET, 0.9);
   block(g, x, y0, FOOT, INSET, n, 0, SLAB - 1, 1, WALL, TOP, METAL);
-  // The slab's top: the strike pit, cracks running out of it, bolts and a trim inlay.
+  // The strike plate: a dark ring, a bronze-tinted plate, cracks running out of it, bolts and from level 4 an inlay.
   onGround(g, x, y0, SLAB, () => {
-    g.fillStyle(DEEP, 0.95);
-    g.fillRect(-PIT, PIT_V - PIT, PIT * 2, PIT * 2);
-    g.fillStyle(shade(c, -0.6), 1);
-    g.fillRect(-PIT + 1.5, PIT_V - PIT + 1.5, PIT * 2 - 3, PIT * 2 - 3);
+    disc(g, 0, 0, PLATE + 1.4, DEEP, 0.95);
+    disc(g, 0, 0, PLATE, shade(c, -0.55));
+    ring(g, 0, 0, PLATE - 2.5, 0.8, shade(c, -0.7), 0.9);
     for (const lip of [0.7, 0]) {
       g.lineStyle(lip ? 0.8 : 1.3, lip ? shade(TOP, 0.35) : DEEP, 0.9);
-      for (const [a, b, cc] of [
-        [-0.9, 0.12, 15],
-        [0.85, -0.18, 16],
-        [2.4, 0.2, 15.5],
-        [3.9, -0.12, 14],
+      for (const [a, b, r1] of [
+        [-0.5, 0.15, 16],
+        [0.9, -0.2, 15.5],
+        [2.5, 0.2, 16],
+        [3.8, -0.15, 15],
       ]) {
-        const r0 = PIT + 1;
+        const r0 = PLATE + 1.4;
         g.beginPath();
-        g.moveTo(Math.cos(a) * r0 + lip, PIT_V + Math.sin(a) * r0 + lip);
-        g.lineTo(Math.cos(a + b) * (r0 + 4) + lip, PIT_V + Math.sin(a + b) * (r0 + 4) + lip);
-        g.lineTo(Math.cos(a - b) * cc + lip, Math.sin(a - b) * cc + lip);
+        g.moveTo(Math.cos(a) * r0 + lip, Math.sin(a) * r0 + lip);
+        g.lineTo(Math.cos(a + b) * (r0 + 3) + lip, Math.sin(a + b) * (r0 + 3) + lip);
+        g.lineTo(Math.cos(a - b) * r1 + lip, Math.sin(a - b) * r1 + lip);
         g.strokePath();
       }
     }
-    if (level >= 4) {
-      g.lineStyle(0.9, shade(color, -0.2), 0.95);
-      g.strokeRect(-PIT - 1.4, PIT_V - PIT - 1.4, PIT * 2 + 2.8, PIT * 2 + 2.8);
-    }
-    const bolts = level >= 3 ? [[-15, -8], [15, -8], [-15, 14], [15, 14]] : [[-15, 14], [15, 14]];
-    for (const [bx, by] of bolts) {
+    if (level >= 4) ring(g, 0, 0, PLATE + 2.6, 0.8, shade(color, -0.2), 0.95);
+    const bolts = level >= 3 ? [1, 3, 5, 7] : [1, 3];
+    for (const k of bolts) {
+      const a = (k * Math.PI) / 4,
+        bx = Math.cos(a) * 16.5,
+        by = Math.sin(a) * 16.5;
       disc(g, bx, by, 1.4, shade(WALL, -0.45));
       disc(g, bx - 0.35, by - 0.35, 0.6, METAL, 0.9);
     }
   });
-  // The posts with a bronze rail and a charge slot on their faces (lit live), cheeks from level 5, beam and arm.
-  for (const post of POSTS) {
-    n = turn(post, 0, FOOT);
-    block(g, x, y0, FOOT, FOOT, n, SLAB - 0.5, POST, 0, WALL, TOP, METAL);
+  // Hydraulic legs, the back one first: a knuckle on the plinth, a dark cylinder (armoured from level 5) and a
+  // chrome rod up into the crown.
+  for (const t of [LEGS[2], LEGS[0], LEGS[1]]) {
+    const fu = Math.cos(t) * FOOT_R,
+      fv = Math.sin(t) * FOOT_R,
+      a = t + Math.PI,
+      px = X(x, fu),
+      py = y0 + fv * SQUASH;
+    n = turn(KNUCKLE, t, FOOT, 1, 0, fu, fv);
+    block(g, x, y0, FOOT, FOOT, n, SLAB - 0.5, SLAB + 2.5, 0, shade(WALL, -0.1), TOP, METAL);
+    tube(g, px, py, a, SLAB + 1.5, 0, legLength * 0.55, level >= 5 ? 2.9 : 2.4, level >= 5 ? shade(c, -0.45) : WALL, 1, true, legPitch);
+    tube(g, px, py, a, SLAB + 1.5, legLength * 0.5, legLength * 0.56, level >= 5 ? 3.1 : 2.6, shade(c, -0.1), 1, false, legPitch);
+    tube(g, px, py, a, SLAB + 1.5, legLength * 0.55, legLength - 1, 1.3, CHROME, 1, true, legPitch);
   }
-  for (const u of POST_U) {
-    const face = (du: number, h: number) => [X(x, u + du), Y(y0, POST_V, h)] as const;
-    quad(g, ...face(-1.6, SLAB + 1), ...face(-0.9, SLAB + 1), ...face(-0.9, POST - 1), ...face(-1.6, POST - 1), shade(c, -0.15));
-    quad(g, ...face(0.1, 7), ...face(1.7, 7), ...face(1.7, 24), ...face(0.1, 24), DEEP);
+  // The crown over the plate, with a trim band in the tower's (from level 6 the path's) colour.
+  drum(g, x, y0, CROWN_R + 1, CROWN0 - 1, CROWN0, shade(WALL, -0.2), shade(WALL, 0), 10);
+  drum(g, x, y0, CROWN_R, CROWN0, CROWN1, WALL, TOP, 10);
+  for (let i = 0; i < 10; i++) {
+    const t0 = (i / 10) * Math.PI,
+      t1 = ((i + 1) / 10) * Math.PI,
+      h = CROWN0 + 1.2;
+    quad(
+      g,
+      X(x, Math.cos(t0) * CROWN_R), Y(y0, Math.sin(t0) * CROWN_R, h),
+      X(x, Math.cos(t1) * CROWN_R), Y(y0, Math.sin(t1) * CROWN_R, h),
+      X(x, Math.cos(t1) * CROWN_R), Y(y0, Math.sin(t1) * CROWN_R, h + 0.9),
+      X(x, Math.cos(t0) * CROWN_R), Y(y0, Math.sin(t0) * CROWN_R, h + 0.9),
+      shade(level >= 6 ? color : c, -0.1 + 0.25 * facing((t0 + t1) / 2)),
+    );
   }
-  if (level >= 5)
-    for (const cheek of CHEEKS) {
-      n = turn(cheek, 0, FOOT);
-      block(g, x, y0, FOOT, FOOT, n, SLAB + 2, POST - 3, 0, shade(WALL, 0.1), shade(TOP, 0.08), METAL);
-    }
-  n = turn(BEAM, 0, FOOT);
-  turn(BEAM, 0, INSET, 0.9, 0, 0, -0.3);
-  block(g, x, y0, FOOT, INSET, n, POST, BEAM1, 0.8, shade(WALL, 0.05), TOP, METAL);
-  n = turn(ARM_FOOT, 0, FOOT);
-  turn(ARM_FOOT, 0, INSET, 0.85, 0, 0, -0.4);
-  block(g, x, y0, FOOT, INSET, n, ARM0, ARM1, 0.8, shade(WALL, 0.08), TOP, METAL);
-  // Rod sleeves hanging under the arm.
-  for (const u of RODS) tube(g, X(x, u), Y(y0, ROD_V, 0) + 0, 0, SLEEVE, 0, ARM0 - SLEEVE, 1.9, shade(WALL, -0.1), 1, true, Math.PI / 2);
+  disc(g, x, Y(y0, 0, CROWN1), 1.6, shade(WALL, -0.4));
 }
 
-/** Height of the ram's bottom: hanging raised at rest, down in the pit right after a strike. */
-const ramBottom = (kick: number) => STRUCK + (RAISED - STRUCK) * (1 - kick);
+/** Height of the hammer's bottom: hanging raised at rest, down on the plate right after a strike. */
+const headBottom = (kick: number) => STRUCK + (RAISED - STRUCK) * (1 - kick);
 
 function turret({ g, x, y, definition, level, kick, color }: TurretContext) {
   const y0 = y + DROP,
     c = definition.color,
-    h0 = ramBottom(kick),
-    h1 = h0 + RAM,
-    trim = level >= 6 ? color : shade(c, 0.1);
-  // The ram's shadow in the pit, sharper and closer the lower it hangs.
-  const k = (h0 - STRUCK) / (RAISED - STRUCK);
-  turn(RAM_FOOT, 0, FOOT, 0.95 - 0.1 * k);
-  onGround(g, x, y0, SLAB, () => {
-    for (let i = 0; i < 6; i++) point(i, FOOT[2 * i] + 1.5 + 4 * k, FOOT[2 * i + 1] + 2 + 5 * k);
-    fillPoints(g, 6, 0x050b10, 0.45 - 0.15 * k);
-  });
-  // The ram: a bronze block with a dark striking shoe and hazard stripes on its front.
-  const n = turn(RAM_FOOT, 0, FOOT);
-  turn(RAM_FOOT, 0, INSET, 0.82, 0, 0, 0.5);
-  block(g, x, y0, FOOT, FOOT, n, h0, h0 + 1.6, 0, DEEP, shade(DEEP, 0.2), METAL);
-  block(g, x, y0, FOOT, INSET, n, h0 + 1.6, h1, 1.2, shade(c, -0.25), shade(c, 0.05), shade(c, 0.5));
-  for (const u of [-4, 0, 4]) {
-    const fy = (h: number) => Y(y0, 9, h);
-    quad(g, X(x, u - 1.4), fy(h0 + 2.2), X(x, u), fy(h0 + 2.2), X(x, u + 1.4), fy(h1 - 0.6), X(x, u), fy(h1 - 0.6), DEEP);
+    h0 = headBottom(kick),
+    h1 = h0 + HEAD,
+    k = (h0 - STRUCK) / (RAISED - STRUCK),
+    trim = level >= 6 ? color : shade(c, 0.15);
+  // The hammer's shadow on the plate, sharper and closer the lower it hangs.
+  onGround(g, x, y0, SLAB, () => oval(g, 1.5 + 3 * k, 1.5 + 3.5 * k, HAMMER - 0.5 * k, HAMMER - 0.5 * k, 0x050b10, 0.5 - 0.2 * k));
+  // The piston, then the head: a dark striking shoe, the bronze body with hazard stripes on its front and a trim rim.
+  tube(g, x, y0, 0, h1, 0, PISTON_TOP - h1, 1.8, CHROME, 1, true, Math.PI / 2);
+  tube(g, x, y0, 0, h1, 0, 1.4, 2.6, shade(WALL, -0.1), 1, false, Math.PI / 2);
+  drum(g, x, y0, HAMMER + 0.4, h0, h0 + 1.4, DEEP, shade(DEEP, 0.25), 14);
+  drum(g, x, y0, HAMMER, h0 + 1.4, h1, shade(c, -0.2), shade(c, 0.08), 14);
+  for (const t of [0.75, 1.2, 1.65, 2.1, 2.55]) {
+    const t1 = t + 0.18;
+    quad(
+      g,
+      X(x, Math.cos(t) * (HAMMER + 0.05)), Y(y0, Math.sin(t) * HAMMER, h0 + 1.7),
+      X(x, Math.cos(t1) * (HAMMER + 0.05)), Y(y0, Math.sin(t1) * HAMMER, h0 + 1.7),
+      X(x, Math.cos(t1 + 0.22) * (HAMMER + 0.05)), Y(y0, Math.sin(t1 + 0.22) * HAMMER, h1 - 0.5),
+      X(x, Math.cos(t + 0.22) * (HAMMER + 0.05)), Y(y0, Math.sin(t + 0.22) * HAMMER, h1 - 0.5),
+      DEEP,
+    );
   }
-  // A trim band across the ram's top; bolts from level 3.
-  const ht = h1 + 1.2;
-  quad(g, X(x, -5.6), Y(y0, 6.2, ht), X(x, 5.6), Y(y0, 6.2, ht), X(x, 5.6), Y(y0, 7.2, ht), X(x, -5.6), Y(y0, 7.2, ht), trim);
+  oval(g, x, Y(y0, 0, h1), HAMMER - 0.6, (HAMMER - 0.6) * SQUASH, trim);
+  oval(g, x, Y(y0, 0, h1), HAMMER - 1.8, (HAMMER - 1.8) * SQUASH, shade(c, 0.08));
   if (level >= 3)
-    for (const u of [-5, 5]) {
-      disc(g, X(x, u), Y(y0, -1, ht), 0.9, shade(c, -0.6));
-      disc(g, X(x, u) - 0.3, Y(y0, -1, ht) - 0.3, 0.4, METAL);
+    for (const t of [Math.PI * 0.85, Math.PI * 0.15, -Math.PI / 2]) {
+      const bx = X(x, Math.cos(t) * (HAMMER - 1.2)),
+        by = Y(y0, Math.sin(t) * (HAMMER - 1.2), h1);
+      disc(g, bx, by, 0.9, shade(c, -0.6));
+      disc(g, bx - 0.3, by - 0.3, 0.4, METAL);
     }
-  // Chrome rods from the ram's top up into the sleeves.
-  for (const u of RODS) tube(g, X(x, u), Y(y0, ROD_V, 0), 0, ht, 0, SLEEVE + 0.5 - ht, 1.1, CHROME, 1, true, Math.PI / 2);
+  // The piston collar on the head's top.
+  tube(g, x, y0, 0, h1, 0, 1, 2.4, shade(WALL, 0.1), 1, false, Math.PI / 2);
 }
 
 function live({ g, glow, x, y, definition, level, kick, charge, energy, clock, color }: TurretContext) {
   const y0 = y + DROP,
     c = definition.color;
-  // The charge slots on the posts fill from the bottom as the next strike builds.
-  const top = 7 + 17 * charge;
-  if (charge > 0.02)
-    for (const u of POST_U) {
-      const face = (du: number, h: number) => [X(x, u + du), Y(y0, POST_V, h)] as const;
-      quad(g, ...face(0.5, 7.5), ...face(1.3, 7.5), ...face(1.3, top), ...face(0.5, top), shade(c, -0.05 + 0.45 * charge));
-      quad(glow, ...face(-0.8, 7), ...face(2.6, 7), ...face(2.6, top + 1), ...face(-0.8, top + 1), c, Math.min(0.45, 0.12 + 0.25 * charge + energy));
-    }
-  // Lamp on the arm's tip from level 2.
+  // Pressure lights on the crown's front: one more lights up per fifth of the charge.
+  const lit = Math.floor(charge * 5 + 0.001);
+  for (let i = 0; i < 5; i++) {
+    const t = Math.PI * (0.2 + 0.15 * i),
+      lx = X(x, Math.cos(t) * (CROWN_R + 0.1)),
+      ly = Y(y0, Math.sin(t) * CROWN_R, (CROWN0 + CROWN1) / 2 + 0.4),
+      on = i < lit;
+    disc(g, lx, ly, 0.75, on ? shade(c, 0.35) : shade(c, -0.65));
+    if (on) disc(glow, lx, ly, 2, c, Math.min(0.45, 0.2 + energy + 0.1 * charge));
+  }
+  // Lamp on top of the crown from level 2.
   if (level >= 2) {
-    const lx = X(x, 0),
-      ly = Y(y0, 2.5, ARM1 - 1.6);
+    const lx = x,
+      ly = Y(y0, 0, CROWN1) - 0.6;
     disc(g, lx, ly, 1.2, OUTLINE);
     disc(g, lx, ly, 0.75, shade(color, 0.2));
     disc(glow, lx, ly, 2.4, color, 0.35);
   }
-  // From level 4 three lights chase along the slab's front face.
+  // From level 4 three lights chase along the plinth's front faces.
   if (level >= 4)
-    [-7, 0, 7].forEach((u, i) => {
+    [-6, 0, 6].forEach((u, i) => {
       const on = 0.25 + 0.75 * Math.max(0, Math.sin(4 * clock - i * 1.3)),
         lx = X(x, u),
-        ly = Y(y0, 19, SLAB / 2);
+        ly = Y(y0, 18.5, SLAB / 2);
       quad(g, lx - 1.2, ly - 0.6, lx + 1.2, ly - 0.6, lx + 1.2, ly + 0.6, lx - 1.2, ly + 0.6, shade(color, -0.6 + 0.7 * on));
       if (on > 0.5) disc(glow, lx, ly, 2.2, color, 0.3 * on);
     });
-  // The strike: the pit flares, dust puffs and a ring runs out over the slab.
+  // The strike: the plate flares, dust puffs and a ring runs out over the plinth.
   if (kick > 0) {
     const spread = 1 - kick;
-    onGround(glow, x, y0, SLAB, () => halo(glow, 0, PIT_V, 10 + 6 * spread, c, 0.4 * kick));
-    onGround(g, x, y0, SLAB, () => ring(g, 0, PIT_V, 10 + 12 * spread, 1 + 1.5 * kick, shade(c, 0.4), 0.7 * kick));
+    onGround(glow, x, y0, SLAB, () => halo(glow, 0, 0, 11 + 6 * spread, c, 0.4 * kick));
+    onGround(g, x, y0, SLAB, () => ring(g, 0, 0, 11 + 10 * spread, 1 + 1.5 * kick, shade(c, 0.4), 0.7 * kick));
     for (let i = 0; i < 4; i++) {
       const a = Math.PI / 4 + (i * Math.PI) / 2,
-        r = 10 + 8 * spread;
-      disc(g, X(x, Math.cos(a) * r), Y(y0, PIT_V + Math.sin(a) * r, SLAB + 2 * spread), 1.6 + 2.6 * spread, 0x9c8f82, 0.5 * kick);
+        r = 11 + 7 * spread;
+      disc(g, X(x, Math.cos(a) * r), Y(y0, Math.sin(a) * r, SLAB + 2 * spread), 1.6 + 2.6 * spread, 0x9c8f82, 0.5 * kick);
     }
   }
 }
 
-/** Quake: a pile driver. */
+/** Quake: a hydraulic press. */
 export const concept = {
   tower: "quake",
-  name: "Pile Driver",
-  idea: "Cracked slab with a gantry (two posts, beam, arm) over the strike pit; a heavy bronze ram on chrome rods hangs raised and slams into the pit on every shockwave.",
+  name: "Hydraulic Press",
+  idea: "Low octagonal plinth with a round strike plate; three hydraulic legs lean in to a crown, and a squat bronze hammer on a short piston slams onto the plate on every shockwave.",
   tilt: { drop: DROP, squash: SQUASH, height: 0, deck: SLAB },
   base,
   turret,

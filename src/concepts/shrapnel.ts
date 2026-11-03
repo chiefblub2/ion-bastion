@@ -11,22 +11,28 @@ const TILT = { drop: 5, squash: SQUASH, height: 11, deck: 5 },
   DROP = TILT.drop,
   HB = TILT.height,
   RECOIL = 3,
-  reach = (l: number) => 15 + l,
+  reach = (l: number) => 18 + l,
   fan = (l: number) => ({ count: l >= 4 ? 5 : 3, step: 0.32 });
 const PED_R = 18,
   PED_TOP = 5,
   BEAR_TOP = 7;
 /** Vent slots on the pedestal's front wall (angles on the ground). */
 const VENTS = [0.2, 0.35, 0.5, 0.65, 0.8].map((f) => Math.PI * f);
-/** The housing: narrow at the back, spreading into the wide front the barrels leave from. */
-const HOUSING = [-7, -6.5, 4, -10.5, 8.5, -9, 8.5, 9, 4, 10.5, -7, 6.5];
+/** The housing: a tall breech block at the back, then a low fan-shaped deck the barrels lie on, so the fan shows. */
+const HOUSING = [-7, -6.5, -1, -8.5, 2.5, -8.5, 2.5, 8.5, -1, 8.5, -7, 6.5];
+const DECK = [2, -8.5, 7, -11.5, 10, -9.5, 10, 9.5, 7, 11.5, 2, 8.5];
 const H_BASE = BEAR_TOP,
-  H_TOP = 13.5;
+  H_TOP = 12.5,
+  DECK_TOP = 8.6;
+/** Barrel radius, the muzzle collar's and where the barrels leave the breech. */
+const BR = 2.3,
+  COLLAR = 2.9,
+  FROM = 1.5;
 const PLATES = [
-  [1, -11.6, 7.5, -10.2, 7.5, -9.2, 1, -10.4],
-  [1, 10.4, 7.5, 9.2, 7.5, 10.2, 1, 11.6],
+  [-5, -9.6, 1.5, -9.6, 1.5, -8.6, -5, -8],
+  [-5, 8, 1.5, 8.6, 1.5, 9.6, -5, 9.6],
 ];
-const DRUM_AT = -8.5,
+const DRUM_AT = -9,
   DRUM_R = 5.2,
   DRUM_TOP = 16;
 
@@ -81,27 +87,34 @@ function turret(ctx: TurretContext) {
       });
     },
   ]);
+  // The low fan deck in front, lighter than the breech: the barrels lie along it.
   parts.push([
-    depth(a, 1, 0),
+    depth(a, 5, 0) - 0.5,
+    () => {
+      part(g, x, y0, a, DECK, H_BASE, DECK_TOP, 0.8, shade(c, -0.4), shade(c, 0.12), shade(c, 0.5));
+      if (level >= 6) {
+        const t = [P(8.6, -9.8, DECK_TOP + 0.8), P(9.6, -9.6, DECK_TOP + 0.8), P(9.6, 9.6, DECK_TOP + 0.8), P(8.6, 9.8, DECK_TOP + 0.8)];
+        quad(g, ...t[0], ...t[1], ...t[2], ...t[3], color);
+      }
+    },
+  ]);
+  parts.push([
+    depth(a, -3, 0),
     () => {
       if (level >= 5) for (const plate of PLATES) part(g, x, y0, a, plate, H_BASE + 1, H_TOP - 1.5, 0, shade(c, -0.5), shade(c, -0.2), shade(c, 0.35));
       part(g, x, y0, a, HOUSING, H_BASE, H_TOP, 1.5, shade(c, -0.5), shade(c, -0.15), shade(c, 0.4));
       const ht = H_TOP + 1.5;
       // A seam across the roof, bolts from level 3 and a trim stripe in the path colour from level 6.
-      const s0 = P(-2, -6.8, ht),
-        s1 = P(-2, 6.8, ht);
+      const s0 = P(-3, -7, ht),
+        s1 = P(-3, 7, ht);
       g.lineStyle(0.7, shade(c, -0.75), 0.9);
       g.lineBetween(s0[0], s0[1], s1[0], s1[1]);
       if (level >= 3)
         for (const q of [-5.5, 5.5]) {
-          const [bx, by] = P(4.5, q, ht);
+          const [bx, by] = P(0.5, q, ht);
           disc(g, bx, by, 0.8, OUTLINE);
           disc(g, bx - 0.3, by - 0.3, 0.35, GUN.metal);
         }
-      if (level >= 6) {
-        const t = [P(5.6, -7.4, ht), P(6.6, -7.8, ht), P(6.6, 7.8, ht), P(5.6, 7.4, ht)];
-        quad(g, ...t[0], ...t[1], ...t[2], ...t[3], color);
-      }
     },
   ]);
   for (let i = 0; i < count; i++) {
@@ -109,13 +122,14 @@ function turret(ctx: TurretContext) {
     parts.push([
       depth(b, end * 0.6, 0) + 0.01 * i,
       () => {
-        tube(g, x, y0, b, HB, 5 + back, end - 2.6, 1.95, shade(c, -0.15), 1, true);
-        if (level >= 3) tube(g, x, y0, b, HB, (5 + end) / 2 - 0.5, (5 + end) / 2 + 0.5, 2.05, shade(c, -0.55), 1, false);
-        tube(g, x, y0, b, HB, end - 2.6, end, 2.45, shade(GUN.side, -0.05), 1, true);
-        if (tip !== undefined) tube(g, x, y0, b, HB, end - 1, end, 2.45, tip, 1, false);
+        tube(g, x, y0, b, HB, FROM + back, end - 3, BR, shade(GUN.side, 0.35), 1, true);
+        if (level >= 3) tube(g, x, y0, b, HB, (FROM + end) / 2 - 0.6, (FROM + end) / 2 + 0.6, BR + 0.2, shade(GUN.deep, 0.1), 1, false);
+        // A collar in the tower's colour at every muzzle, so the fan reads at a glance.
+        tube(g, x, y0, b, HB, end - 3, end, COLLAR, shade(c, 0.2), 1, true);
+        if (tip !== undefined) tube(g, x, y0, b, HB, end - 1, end, COLLAR, tip, 1, false);
         if (towardViewer(b) > 0.05) {
-          endFace(g, x, y0, b, HB, end, 2.45, shade(GUN.side, -0.4));
-          endFace(g, x, y0, b, HB, end, 1.2, OUTLINE);
+          endFace(g, x, y0, b, HB, end, COLLAR, shade(c, -0.25));
+          endFace(g, x, y0, b, HB, end, 1.3, OUTLINE);
         }
       },
     ]);

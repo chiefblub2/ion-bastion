@@ -10,8 +10,8 @@ import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, o
 import type { Concept } from "./types";
 
 const DROP = 5,
-  HB = 15,
-  reach = (l: number) => 9 + 0.4 * l;
+  HB = 17,
+  reach = (l: number) => 14 + 0.4 * l;
 /** Plinth: lower and upper diamond radius and their heights; the bearing post; the yoke. */
 const R0 = 21,
   R1 = 14,
@@ -19,8 +19,11 @@ const R0 = 21,
   H1 = 6.5,
   POST = 9,
   BAR0 = POST,
-  BAR1 = POST + 2.6,
-  ARM_TOP = HB + 2.8;
+  BAR1 = POST + 3.2,
+  ARM_TOP = HB + 4.2;
+/** Housing radius and its back end; the lens rim grows a little with the level. */
+const BODY = 5.4,
+  BACK = -10;
 /** Cool gunmetal, its top, the metallic highlight and the dark interior. */
 const WALL = 0x2f3640,
   TOP = 0x4b5563,
@@ -32,13 +35,13 @@ const diamond = (r: number) => [r, 0, 0, r, -r, 0, 0, -r];
 /** Corners of the diamonds clockwise on the screen (east, south, west, north). */
 const LOW = diamond(R0),
   HIGH = diamond(R1);
-const CROSSBAR = [-3, -8.6, 3, -8.6, 3, 8.6, -3, 8.6];
-const arm = (q: number) => [-2.4, q - 1.1, 2.4, q - 1.1, 2.4, q + 1.1, -2.4, q + 1.1];
-const ARMS = [arm(-7.5), arm(7.5)];
+const CROSSBAR = [-5, -12, 4, -12, 5.5, -10, 5.5, 10, 4, 12, -5, 12, -6.5, 10, -6.5, -10];
+const arm = (q: number) => [-4, q - 1.8, 3.4, q - 1.8, 4.4, q, 3.4, q + 1.8, -4, q + 1.8];
+const ARMS = [arm(-9.6), arm(9.6)];
 /** Level 5: shield plates on the outside of the arms. */
 const SHIELDS = [
-  [-3.4, 8.6, 3.4, 8.6, 3.4, 9.6, -3.4, 9.6],
-  [-3.4, -9.6, 3.4, -9.6, 3.4, -8.6, -3.4, -8.6],
+  [-4.6, 11.4, 4, 11.4, 4, 12.8, -4.6, 12.8],
+  [-4.6, -12.8, 4, -12.8, 4, -11.4, -4.6, -11.4],
 ];
 
 function base({ g, x, y, level, color, definition }: TurretContext) {
@@ -74,7 +77,7 @@ function base({ g, x, y, level, color, definition }: TurretContext) {
       disc(g, bx - 0.3, by - 0.3, 0.55, METAL, 0.9);
     }
   });
-  drum(g, x, y0, 4.6, H1 + 1, POST, CASING, shade(CASING, 0.3), 10);
+  drum(g, x, y0, 6, H1 + 1, POST, CASING, shade(CASING, 0.3), 10);
   // Corner studs of the lower step: dim pink glass (lit live).
   for (const [u, v] of [[R0 - 3, 0], [0, R0 - 3], [-(R0 - 3), 0]]) {
     const sx = X(x, u),
@@ -92,13 +95,13 @@ function turret({ g, x, y, tower, definition, level, tip, color }: TurretContext
     c = definition.color,
     lens = reach(level),
     trim = level >= 6 ? color : shade(c, -0.35),
-    rim = 5 + 0.15 * Math.min(level, 5),
+    rim = 7 + 0.2 * Math.min(level, 5),
     toward = towardViewer(a);
   // The yoke's shadow on the upper step.
   turn(CROSSBAR, a, FOOT);
   onGround(g, x, y0, H1 + 1, () => {
-    for (let i = 0; i < 4; i++) point(i, FOOT[2 * i] + 3.5, FOOT[2 * i + 1] + 4.5);
-    fillPoints(g, 4, 0x050b10, 0.3);
+    for (let i = 0; i < 8; i++) point(i, FOOT[2 * i] + 4.5, FOOT[2 * i + 1] + 6);
+    fillPoints(g, 8, 0x050b10, 0.3);
   });
   const part = (shape: readonly number[], h0: number, h1: number, wall: number, top: number, bevel = 0) => {
       const n = turn(shape, a, FOOT);
@@ -109,28 +112,34 @@ function turret({ g, x, y, tower, definition, level, tip, color }: TurretContext
     yokeArm = (shape: readonly number[]) => {
       part(shape, BAR1, ARM_TOP, shade(WALL, 0.05), TOP);
       // Trunnion cap on the outside of the arm at the pivot.
-      const q = shape[1] > 0 ? 8.8 : -8.8,
+      const q = shape[1] > 0 ? 11.6 : -11.6,
         cx = X(x, -sa * q),
         cy = Y(y0, ca * q, HB);
-      disc(g, cx, cy, 1.8, OUTLINE);
-      disc(g, cx, cy, 1.3, shade(METAL, -0.25));
-      if (level >= 3) disc(g, cx - 0.4, cy - 0.4, 0.5, METAL);
+      disc(g, cx, cy, 2.8, OUTLINE);
+      disc(g, cx, cy, 2.2, shade(METAL, -0.25));
+      disc(g, cx, cy, 1.1, shade(c, -0.5));
+      if (level >= 3) disc(g, cx - 0.6, cy - 0.6, 0.6, METAL);
     },
     shield = (shape: readonly number[]) => part(shape, BAR1 + 1, ARM_TOP - 1, shade(WALL, 0.12), shade(TOP, 0.1)),
     housing = () => {
-      const back = -7;
-      tube(g, x, y0, a, HB, back, lens - 2.2, 3.4, CASING);
-      // Trim stripe and focusing rings along the housing.
-      tube(g, x, y0, a, HB + 1.9, back + 1.5, lens - 3.5, 0.6, trim, 1, false);
-      for (const d of [back + 1, lens - 3.2]) tube(g, x, y0, a, HB, d - 0.5, d + 0.5, 3.7, DEEP, 1, false);
+      const back = BACK;
+      // A cooling shroud at the back (fins), the main optics barrel, then the trim stripe on top.
+      tube(g, x, y0, a, HB, back, lens - 3.5, BODY, CASING);
+      for (let d = back + 1; d < back + 7; d += 2) tube(g, x, y0, a, HB, d, d + 0.9, BODY + 1.1, shade(CASING, 0.12), 1, false);
+      tube(g, x, y0, a, HB, back + 7.6, back + 8.6, BODY + 0.5, DEEP, 1, false);
+      tube(g, x, y0, a, HB + BODY - 0.6, back + 9, lens - 4.5, 0.8, trim, 1, false);
+      if (level >= 3) tube(g, x, y0, a, HB, lens - 6, lens - 5, BODY + 0.4, shade(c, -0.55), 1, false);
       if (toward < -0.05) {
-        endFace(g, x, y0, a, HB, back, 3.4, shade(CASING, -0.25));
-        endFace(g, x, y0, a, HB, back, 1.6, DEEP);
+        endFace(g, x, y0, a, HB, back, BODY + 1.1, shade(CASING, -0.2));
+        endFace(g, x, y0, a, HB, back, BODY - 1.5, DEEP);
+        endFace(g, x, y0, a, HB, back, 1.6, shade(c, -0.4));
       }
     },
     lensCell = () => {
       // The lens hood: a short wide ring at the front, then the glass when it faces the viewer.
-      tube(g, x, y0, a, HB, lens - 2.2, lens, rim, shade(c, -0.6));
+      tube(g, x, y0, a, HB, lens - 3.5, lens - 2.2, rim - 0.4, shade(CASING, -0.2), 1, false);
+      tube(g, x, y0, a, HB, lens - 3, lens, rim, shade(c, -0.3));
+      tube(g, x, y0, a, HB, lens - 3, lens - 2.3, rim + 0.3, shade(c, -0.65), 1, false);
       tube(g, x, y0, a, HB, lens - 0.7, lens, rim, tip ?? shade(c, -0.45), 1, false);
       if (toward > 0.05) {
         endFace(g, x, y0, a, HB, lens, rim, shade(c, -0.7));
@@ -140,12 +149,12 @@ function turret({ g, x, y, tower, definition, level, tip, color }: TurretContext
     };
   const parts: [number, () => void][] = [
     [-50, crossbar],
-    [7.5 * ca, () => yokeArm(ARMS[1])],
-    [-7.5 * ca, () => yokeArm(ARMS[0])],
-    [-2 * sa + 0.01, housing],
+    [9.6 * ca, () => yokeArm(ARMS[1])],
+    [-9.6 * ca, () => yokeArm(ARMS[0])],
+    [-3 * sa + 0.01, housing],
     [lens * sa + 0.02, lensCell],
   ];
-  if (level >= 5) for (const s of SHIELDS) parts.push([(s[1] > 0 ? 9.2 : -9.2) * ca + 0.01, () => shield(s)]);
+  if (level >= 5) for (const s of SHIELDS) parts.push([(s[1] > 0 ? 12 : -12) * ca + 0.01, () => shield(s)]);
   parts.sort((p, q) => p[0] - q[0]);
   for (const [, draw] of parts) draw();
 }
@@ -187,18 +196,18 @@ function live({ g, glow, x, y, tower, definition, level, kick, energy, clock, co
     disc(glow, bx, by, 2.2, color, 0.35);
   }
   // The lens: a hot core on the glass when it faces the viewer, light round it either way.
-  if (toward > 0.05) disc(g, lx - 0.6, ly - 0.6, 0.9 + 1.2 * lit, shade(c, 0.5 + 0.3 * lit));
-  halo(glow, lx, ly, 5 + 3 * lit, c, Math.min(peak, 0.15 + 0.35 * lit + energy));
+  if (toward > 0.05) disc(g, lx - 0.9, ly - 0.9, 1.4 + 1.6 * lit, shade(c, 0.5 + 0.3 * lit));
+  halo(glow, lx, ly, 7 + 4 * lit, c, Math.min(peak, 0.15 + 0.35 * lit + energy));
   // Charge running along the housing's trim stripe.
   glow.lineStyle(2, c, Math.min(0.45, 0.08 + 0.3 * heat + energy));
-  glow.lineBetween(X(x, ca * -5.5), Y(y0, sa * -5.5, HB + 1.9), X(x, ca * (lens - 3.5)), Y(y0, sa * (lens - 3.5), HB + 1.9));
+  glow.lineBetween(X(x, ca * (BACK + 9)), Y(y0, sa * (BACK + 9), HB + BODY - 0.6), X(x, ca * (lens - 4.5)), Y(y0, sa * (lens - 4.5), HB + BODY - 0.6));
 }
 
 /** Focus: a lens on a fork mount. */
 export const concept = {
   tower: "focus",
   name: "Lens Fork",
-  idea: "Stepped diamond plinth with a bearing post; a fork yoke holds a short optics housing with a big pink lens. Heat ring and lens glow follow the focus charge.",
+  idea: "Stepped diamond plinth with a bearing post; a fork yoke holds a short optics barrel with a cooling shroud and a big hooded pink lens. Heat ring and lens glow follow the focus charge.",
   tilt: { drop: DROP, squash: SQUASH, height: HB, deck: H1 + 1 },
   reach,
   recoil: 0,
