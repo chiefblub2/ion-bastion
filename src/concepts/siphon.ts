@@ -64,8 +64,8 @@ function below({ g, glow, x, y, level, charge, kick, clock, color, definition }:
   const y0 = y + DROP,
     c = definition.color,
     // Full right after a drain, sinking as the next one charges.
-    fill = TANK0 + 1 + (TANK1 - TANK0 - 3) * Math.max(0.15, 1 - charge * 0.85 + kick * 0.3);
-  drum(g, x, y0, FLUID_R, TANK0 + 0.5, fill, shade(c, -0.25), shade(c, 0.15), 14);
+    fill = TANK0 + 1 + (TANK1 - TANK0 - 3) * Math.min(1, 0.45 + 0.55 * (1 - charge) + kick * 0.3);
+  drum(g, x, y0, FLUID_R, TANK0 + 0.5, fill, shade(c, -0.05), shade(c, 0.35), 14);
   onGround(g, x, y0, fill, () => {
     const t = clock * 2.2;
     g.lineStyle(0.7, shade(c, 0.45), 0.8);
@@ -109,7 +109,7 @@ function turret({ g, x, y, tower, level, kick, tip, color, definition }: TurretC
       drum(g, x, y0, TANK_R + 0.6, COLLAR, TANK0 + 1.5, GUN.deep, GUN.side, 14);
       const glass = shade(c, 0.55);
       onGround(g, x, y0, TANK0, () => oval(g, 0, 0, TANK_R + 0.7, TANK_R + 0.7, OUTLINE, 0.6));
-      g.fillStyle(glass, 0.22);
+      g.fillStyle(glass, 0.14);
       g.fillRect(X(x, -TANK_R), Y(y0, 0, TANK1), TANK_R * 2, TANK1 - TANK0);
       onGround(g, x, y0, TANK0 + 0.1, () => oval(g, 0, 0, TANK_R, TANK_R, glass, 0.22));
       g.lineStyle(0.9, OUTLINE, 0.8);

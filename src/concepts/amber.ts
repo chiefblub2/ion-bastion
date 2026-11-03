@@ -19,8 +19,8 @@ const R = 19,
   COLLAR = 7.5,
   CRADLE = 10,
   GEM_P = -1.5,
-  GEM_H = 18,
-  GEM_R = 4.8;
+  GEM_H = 17.5,
+  GEM_R = 6.2;
 const HEX = ngon(6, R, Math.PI / 6);
 const CRADLE_SHAPE = [-7, -5, 3, -5, 5, -3, 5, 3, 3, 5, -7, 5];
 const PLATES = [rect(-6, 2, 5, 6.3), rect(-6, 2, -6.3, -5)];
@@ -74,8 +74,8 @@ function gem(g: Ink, P: ReturnType<typeof framer>, a: number, c: number, level: 
       const t = (i * Math.PI) / 3 + Math.PI / 6;
       return { t, p: GEM_P + Math.cos(t) * GEM_R, q: Math.sin(t) * GEM_R };
     }),
-    top = P(GEM_P, 0, GEM_H + 6),
-    bottom = P(GEM_P, 0, GEM_H - 4.5),
+    top = P(GEM_P, 0, GEM_H + 7.5),
+    bottom = P(GEM_P, 0, GEM_H - 5.5),
     facets: { d: number; draw: () => void }[] = [];
   for (let i = 0; i < 6; i++) {
     const e0 = eq[i],
@@ -127,9 +127,9 @@ function turret({ g, x, y, tower, level, kick, tip, color, definition }: TurretC
     end = reach(level) - kick * RECOIL;
   castShadow(g, x, y0, a, CRADLE_SHAPE, DECK, 0.28);
   const claw = (t: number) => {
-      const base = P(GEM_P + Math.cos(t) * 5.6, Math.sin(t) * 5.6, CRADLE),
-        knee = P(GEM_P + Math.cos(t) * 6.4, Math.sin(t) * 6.4, GEM_H - 1),
-        hook = P(GEM_P + Math.cos(t) * 4, Math.sin(t) * 4, GEM_H + 3);
+      const base = P(GEM_P + Math.cos(t) * 6.6, Math.sin(t) * 6.6, CRADLE),
+        knee = P(GEM_P + Math.cos(t) * 7.8, Math.sin(t) * 7.8, GEM_H - 1),
+        hook = P(GEM_P + Math.cos(t) * 5, Math.sin(t) * 5, GEM_H + 3.5);
       g.lineStyle(2.6, OUTLINE, 0.95);
       g.lineBetween(...base, ...knee);
       g.lineBetween(...knee, ...hook);
@@ -150,11 +150,11 @@ function turret({ g, x, y, tower, level, kick, tip, color, definition }: TurretC
       for (const t of front) claw(t);
     },
     nozzle = () => {
-      tube(g, x, y0, a, HB, 3, end - 2.5, 1.9, GUN.side);
-      tube(g, x, y0, a, HB, end - 2.5, end, 2.5, shade(c, -0.35));
-      if (tip !== undefined) tube(g, x, y0, a, HB, end - 0.9, end, 2.5, tip, 1, false);
+      tube(g, x, y0, a, HB, 3, end - 2.5, 2.4, GUN.side);
+      tube(g, x, y0, a, HB, end - 2.5, end, 3, shade(c, -0.35));
+      if (tip !== undefined) tube(g, x, y0, a, HB, end - 0.9, end, 3, tip, 1, false);
       if (towardViewer(a) > 0.05) {
-        endFace(g, x, y0, a, HB, end, 2.5, shade(c, -0.55));
+        endFace(g, x, y0, a, HB, end, 3, shade(c, -0.55));
         endFace(g, x, y0, a, HB, end, 1.3, OUTLINE);
       }
     };

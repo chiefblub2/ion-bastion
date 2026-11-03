@@ -30,9 +30,9 @@ function base({ g, x, y, level, definition, color }: TurretContext) {
     c = definition.color;
   // Trampled earth under the wall (a lighter, churned patch) and the wall's contact shadow.
   onGround(g, x, y0, 0, () => {
-    disc(g, 0, 0, 18, shade(c, -0.72), 0.55);
-    disc(g, -2, -1.5, 13, shade(c, -0.62), 0.35);
-    disc(g, 3, 4, 11, 0x050b10, 0.28);
+    disc(g, 0, 0, 17, shade(c, -0.6), 0.32);
+    disc(g, -2, -1.5, 12, shade(c, -0.45), 0.22);
+    disc(g, 2.5, 3.5, 9, 0x050b10, 0.25);
   });
   for (const [u, v] of STAKES) {
     slab(g, x, y0, ngon(4, 1.6, Math.PI / 4), 0, 3.2, 0, shade(c, -0.55), shade(c, -0.3), shade(c, 0.1), 1, u, v);

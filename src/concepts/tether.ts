@@ -17,7 +17,7 @@ const DECK = 4,
   CARRIAGE = 8.5,
   DRUM_P = -6,
   DRUM_H = 12.5,
-  DRUM_R = 3.6;
+  DRUM_R = 4.2;
 const SQUARE = [-18, -15, -15, -18, 15, -18, 18, -15, 18, 15, 15, 18, -15, 18, -18, 15];
 const CARRIAGE_SHAPE = [-10, -6.5, 5, -6.5, 7, -4, 7, 4, 5, 6.5, -10, 6.5];
 const CHEEKS = [rect(-9.5, -2.5, 5.2, 6.6), rect(-9.5, -2.5, -6.6, -5.2)];
@@ -95,8 +95,8 @@ function turret({ g, x, y, tower, level, kick, tip, color, definition }: TurretC
       // Cheeks hold the drum; the chain is wound in green bands, the drum's ends are steel.
       const cheeks = Math.cos(a) > 0 ? [1, 0] : [0, 1];
       part(g, x, y0, a, CHEEKS[cheeks[0]], CARRIAGE, DRUM_H + 2.5, 0, GUN.side, GUN.top, GUN.metal);
-      crossTube(g, x, y0, a, DRUM_P, DRUM_H, -5, 5, DRUM_R, shade(c, -0.25), GUN.metal);
-      for (const q of [-3.5, -1.2, 1.2, 3.5]) crossTube(g, x, y0, a, DRUM_P, DRUM_H, q - 0.5, q + 0.5, DRUM_R + 0.35, shade(c, -0.55), shade(c, -0.55), false);
+      crossTube(g, x, y0, a, DRUM_P, DRUM_H, -5.5, 5.5, DRUM_R, shade(c, -0.5), GUN.metal);
+      for (const q of [-3.5, -1.2, 1.2, 3.5]) crossTube(g, x, y0, a, DRUM_P, DRUM_H, q - 0.55, q + 0.55, DRUM_R + 0.45, shade(c, 0.15), shade(c, 0.15), false);
       part(g, x, y0, a, CHEEKS[cheeks[1]], CARRIAGE, DRUM_H + 2.5, 0, GUN.side, GUN.top, GUN.metal);
     },
     barrel = () => {

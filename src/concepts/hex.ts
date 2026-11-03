@@ -112,10 +112,10 @@ function turret({ g, x, y, tower, level, kick, tip, color, definition }: TurretC
       const [bx, by] = P(2, 0, POST_TOP - 2.5),
         [kx, ky] = P(end - 6, 0, HB + 2.5),
         [ex, ey] = P(end - 2.5, 0, HB);
-      g.lineStyle(3.4, OUTLINE, 0.95);
+      g.lineStyle(4.6, OUTLINE, 0.95);
       g.lineBetween(bx, by, kx, ky);
       g.lineBetween(kx, ky, ex, ey);
-      g.lineStyle(2.1, GUN.side, 1);
+      g.lineStyle(3.1, GUN.side, 1);
       g.lineBetween(bx, by, kx, ky);
       g.lineBetween(kx, ky, ex, ey);
       g.lineStyle(0.7, GUN.metal, 0.8);
@@ -123,10 +123,10 @@ function turret({ g, x, y, tower, level, kick, tip, color, definition }: TurretC
       for (const q of [-2.4, 2.4]) {
         const [mx, my] = P(end - 1.5, q, HB + 0.8),
           [tx, ty] = P(end + 1.2, q * 0.45, HB + 0.4);
-        g.lineStyle(2, OUTLINE, 0.95);
+        g.lineStyle(2.6, OUTLINE, 0.95);
         g.lineBetween(ex, ey, mx, my);
         g.lineBetween(mx, my, tx, ty);
-        g.lineStyle(1, level >= 6 ? color : tip ?? shade(c, -0.2), 1);
+        g.lineStyle(1.4, level >= 6 ? color : tip ?? shade(c, -0.2), 1);
         g.lineBetween(ex, ey, mx, my);
         g.lineBetween(mx, my, tx, ty);
       }
