@@ -6,6 +6,7 @@ import { dist, len } from "./path";
 import { isDefused, taunters } from "./traits";
 import { critFactor, overclockRate, synergyFactor } from "./support";
 import { markedFirst, protocolRate } from "./protocols";
+import { chargedFactor, critRider, openSalvos } from "./combat-paths-b";
 /** Homing projectiles whose target died look for a new one within this radius. */
 export const RETARGET_RADIUS = 1.5;
 /** Every target priority in menu order; the first is the default. */
@@ -27,6 +28,7 @@ export function attackEnemies(sim: Sim, dt: number) {
     { towers } = sim.content,
     // Aura sources once per tick instead of once per tower.
     sources = s.towers.filter((t) => isAuraSource(t, sim.content));
+  openSalvos(sim);
   for (const t of s.towers) {
     const d = towers[t.type];
     if (isSupport(d.attack)) continue;
@@ -59,8 +61,11 @@ export function attackEnemies(sim: Sim, dt: number) {
       targets = extra > 0 ? [target, ...candidates.filter((c) => c !== target).slice(0, extra)] : [target];
     t.angle = Math.atan2(target.y - t.y, target.x - t.x);
     t.cooldown = 1;
-    stats.damage *= critFactor(sim, t, target) * synergyFactor(sim, t);
-    const src: DamageSource = special ? { tower: t.id, type: t.type, special } : { tower: t.id, type: t.type },
+    const critMultiplier = critFactor(sim, t, target),
+      // Fire Control paths ride on the crit to its hits (Penetrator, Stagger, Spotting).
+      crit = critMultiplier !== 1 ? critRider(sim, t) : undefined;
+    stats.damage *= critMultiplier * synergyFactor(sim, t) * chargedFactor(sim, t);
+    const src: DamageSource = { tower: t.id, type: t.type, ...(special ? { special } : {}), ...(crit ? { crit } : {}) },
       proc = fireProc(t, special, extra + 1 - targets.length),
       // Overload: a lone enemy in range at fire time strengthens the whole salvo.
       damage = special?.kind === "conditional-damage" && special.predicate === "isolated" && candidates.length === 1
@@ -112,6 +117,7 @@ export function attackEnemies(sim: Sim, dt: number) {
         attack,
         ...(special ? { special } : {}),
         ...(primary && proc ? { proc } : {}),
+        ...(crit ? { crit } : {}),
       });
     }
   }
@@ -158,7 +164,7 @@ export function moveProjectiles(sim: Sim, dt: number) {
     const at = { x: p.x, y: p.y };
     attackModule(p.attack)!.apply(
       sim,
-      p.special ? { tower: p.tower, type: p.type, special: p.special } : { tower: p.tower, type: p.type },
+      { tower: p.tower, type: p.type, ...(p.special ? { special: p.special } : {}), ...(p.crit ? { crit: p.crit } : {}) },
       p.proc ? { enemy: target, at, proc: p.proc } : { enemy: target, at },
       p.damage,
       p.attack,

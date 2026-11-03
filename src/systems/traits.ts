@@ -5,6 +5,7 @@ import { dist } from "./path";
 import { createEnemy } from "./spawn";
 import { armorDissolved, hasStatus } from "./status";
 import { armoryPierce } from "./support";
+import { critPierce } from "./combat-paths-b";
 /** Spacing in cells between enemies released by `splitOnDeath`. */
 const SPLIT_SPACING = 0.15;
 interface TraitModule<T extends Trait> {
@@ -38,7 +39,9 @@ const TRAITS: Registry = {
       const special = hit?.special?.kind === "armor-pierce" ? hit.special.fraction : 0,
         // An Armory near the firing tower combines like a second pierce; without one the value stays exactly as before.
         armory = armoryPierce(sim, hit?.tower),
-        pierce = armory ? 1 - (1 - special) * (1 - armory) : special;
+        // Fire Control Penetrator: a crit ignores another share, combined the same way.
+        penetrator = critPierce(hit),
+        pierce = armory || penetrator ? 1 - (1 - special) * (1 - armory) * (1 - penetrator) : special;
       return amount * (1 - t.reduction * (1 - pierce) * (1 - armorDissolved(e, sim.state.time)));
     },
   },

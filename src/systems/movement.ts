@@ -6,6 +6,7 @@ import { blinkJump, traitSpeedFactor } from "./traits";
 import { blockMove } from "./barricade";
 import { leakOf } from "./shrink";
 import { tetherStep } from "./tether";
+import { downlinkFactor } from "./combat-paths-b";
 export function moveEnemies(sim: Sim, dt: number) {
   const s = sim.state,
     { path, loop } = sim.mission.map;
@@ -13,7 +14,7 @@ export function moveEnemies(sim: Sim, dt: number) {
     if (e.hp <= 0) continue;
     const d = sim.content.enemies[e.type];
     const from = e.distance;
-    e.distance += d.speed * speedFactor(e, s.time) * traitSpeedFactor(sim, e) * dt;
+    e.distance += d.speed * speedFactor(e, s.time) * traitSpeedFactor(sim, e) * downlinkFactor(sim, e) * dt;
     // Tether: no faster than the slowest linked enemy.
     e.distance = tetherStep(sim, e, from, dt);
     // Blink: a forward move across a boundary adds one jump, never more than the reactor cell.

@@ -4,6 +4,7 @@ import type { Sim } from "../core/types";
 import { createEnemy } from "./spawn";
 import { repairReactor, settleEconomy } from "./support";
 import { restoreBarricades } from "./barricade";
+import { resetSalvos } from "./combat-paths-b";
 export { DEFAULT_HP_GROWTH } from "./spawn";
 /** Seconds of build time after a wave before the next one starts by itself. */
 export const WAVE_BREAK = 3;
@@ -35,6 +36,7 @@ export function settleWave(sim: Sim) {
     payIncome(sim);
     repairReactor(sim);
     restoreBarricades(sim);
+    resetSalvos(sim);
     s.status = s.wave === waves.length ? "won" : "ready";
     if (s.status === "ready" && !sim.mission.manualWaves) s.nextWave = WAVE_BREAK;
     s.events.push({ type: "waveEnd", wave: s.wave, bonus });

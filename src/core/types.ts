@@ -771,6 +771,15 @@ export interface DamageSource {
   type: TowerId;
   /** Specialization of the firing tower, snapshotted at fire time; absent for secondary hits, so they never chain. */
   special?: SpecializationSpec;
+  /** Fire Control paths: what a crit carries to its hits; absent on every other shot and for secondary hits. */
+  crit?: CritRider;
+}
+/** Fire Control paths on a crit: armor ignored (Penetrator), slow and its length (Stagger), the spotting bonus (Spotting). */
+export interface CritRider {
+  pierce?: number;
+  slow?: number;
+  duration?: number;
+  spot?: number;
 }
 /** Effects on an enemy; each kind has merge and tick rules in `systems/status.ts`. Expires at `until`. */
 export type StatusEffect =
@@ -831,6 +840,8 @@ export interface Enemy extends Point {
   sentBy?: number;
   /** Warp Pad: set once the enemy has been warped back; it never warps again. */
   warped?: true;
+  /** Spotting: marked by a crit of tower `by`; the next hit by another tower deals `bonus` more and clears it. */
+  spotted?: { by: number; bonus: number };
 }
 export interface Tower extends Point {
   id: number;
@@ -856,6 +867,8 @@ export interface Tower extends Point {
   critCount?: number;
   /** Shield Generator only: reactor damage absorbed in the current wave; absent while untouched, cleared after each wave. */
   barrier?: number;
+  /** Overclock Opening Salvo: when this wave's salvo window opened; absent until used, cleared after each wave. */
+  salvo?: number;
 }
 /** Target selection of an attack tower; ties fall back to path progress, then id. */
 export type TargetPriority = "first" | "last" | "strong" | "weak" | "close";
@@ -876,6 +889,8 @@ export interface Projectile extends Point {
   special?: SpecializationSpec;
   /** Fire-time proc: 1 for a Ricochet shot, the unused shards for Concentrated Volley. */
   proc?: number;
+  /** Fire Control paths: what the shot's crit carries; absent on every other shot. */
+  crit?: CritRider;
 }
 export interface Spawn {
   at: number;

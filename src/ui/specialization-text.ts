@@ -77,6 +77,16 @@ const OVERRIDES: Partial<Record<SpecializationSpec["kind"], Record<string, strin
   // ── support economy ──
   // ── end support economy ──
   // ── support combat ──
+
+  afterburn: { boost: "Fire rate after the burst", duration: "Fade-out" },
+  "opening-salvo": { duration: "Burst length" },
+  spotting: { bonus: "Bonus on the next hit" },
+  downlink: { slow: "Flyer slow" },
+  "flak-relay": { bonus: "Bonus vs. flyers" },
+  "wing-tag": { bonus: "Damage taken" },
+  "nexus-resonance": { bonus: "Range per type" },
+  harmony: { bonus: "Fire rate per type" },
+  diversity: { bonus: "Damage taken", min: "Min. tower types" },
   // ── end support combat ──
   // ── aura paths ──
   // ── end aura paths ──

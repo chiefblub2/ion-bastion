@@ -6,6 +6,7 @@ import type { Hit } from "./damage";
 import { dist } from "./path";
 import { isNetted } from "./status";
 import { isSuppressed, layerOf } from "./traits";
+import { windowBoost } from "./combat-paths-b";
 /**
  * Effects of the passive support towers. Like auras they are derived from the current
  * towers on every query, without a cache, and overlapping towers count only the strongest.
@@ -92,9 +93,8 @@ export const overclockActive = (a: OverclockAttack, time: number) => time % a.pe
 /** Overclock: cooldown speed factor of a tower, `1 + boost` of the strongest Overclock in reach with an open window. */
 export function overclockRate(sim: Sim, t: Point) {
   let boost = 0;
-  reaching(sim, "overclock", t, (a) => {
-    if (overclockActive(a, sim.state.time)) boost = Math.max(boost, a.boost);
-  });
+  // Support combat paths: Opening Salvo windows and the Afterburn tail count like the window itself.
+  reaching(sim, "overclock", t, (a, oc) => (boost = Math.max(boost, windowBoost(sim, a, oc))));
   return 1 + boost;
 }
 /** Fire Control in reach of `t` with the best average gain per shot, if any. */

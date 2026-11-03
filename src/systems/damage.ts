@@ -1,4 +1,4 @@
-import type { AttackKind, DamageSource, Enemy, SpecializationSpec, Sim } from "../core/types";
+import type { AttackKind, CritRider, DamageSource, Enemy, SpecializationSpec, Sim } from "../core/types";
 import { earn } from "../core/economy";
 import { absorbEncased } from "./encase";
 import { damageTaken, hasStatus, statusDeath } from "./status";
@@ -8,6 +8,7 @@ import { recycleOverkill } from "./recycler";
 import { afterHit, hasTrait, layerOf, linkedGroup, modifyDamage, onDeath } from "./traits";
 import { afterDealt } from "./links";
 import { protocolAfterHit, protocolFactor, protocolKill } from "./protocols";
+import { pathsAfterHit, pathsFactor } from "./combat-paths-b";
 export type { DamageSource } from "../core/types";
 /**
  * Context of a hit for traits; absent for dots. `instant`: chain, pierce, focus, quake, pull, disrupt. `area`: splash (centre incl.),
@@ -22,6 +23,8 @@ export interface Hit {
   execution?: boolean;
   /** Specialization of the firing tower (conditional damage, armor pierce); absent for secondary hits. */
   special?: SpecializationSpec;
+  /** Fire Control paths carried by a crit; absent for every other hit. */
+  crit?: CritRider;
 }
 /** What a hit did to its primary enemy; kill-based specializations read it. */
 export interface DamageOutcome {
@@ -56,6 +59,7 @@ export const hitOf = (kind: AttackKind, src: DamageSource, extra: Partial<Hit> =
   instant: INSTANT.has(kind),
   tower: src.tower,
   ...(src.special ? { special: src.special } : {}),
+  ...(src.crit ? { crit: src.crit } : {}),
   ...extra,
 });
 /** The source without its specialization: secondary hits never trigger another proc. */
@@ -97,13 +101,14 @@ function deal(sim: Sim, src: DamageSource, e: Enemy, amount: number, dot: boolea
   const s = sim.state,
     hpBefore = e.hp,
     // Weakening and marking first, so armor absorbs a share of the amplified hit.
-    raw = modifyDamage(sim, e, amount * damageTaken(e, s.time) * markFactor(sim, e) * conditionalFactor(sim, e, hit) * protocolFactor(sim, src, e, dot, hit), dot, hit),
+    raw = modifyDamage(sim, e, amount * damageTaken(e, s.time) * markFactor(sim, e) * conditionalFactor(sim, e, hit) * protocolFactor(sim, src, e, dot, hit) * pathsFactor(sim, src, e, dot), dot, hit),
     dealt = Number.isFinite(raw) || raw <= 0 ? raw : e.hp;
   e.hp -= dealt;
   s.events.push({ type: "damage", at: { x: e.x, y: e.y }, amount: dealt, enemy: e.id });
   afterDealt(sim, e, Math.min(dealt, hpBefore));
   afterHit(sim, e, dot, hit);
   protocolAfterHit(sim, src, e, dot, hit);
+  pathsAfterHit(sim, src, e, hit);
   const outcome = { hpBefore, dealt, killed: e.hp <= 0, overkill: Math.max(0, dealt - hpBefore) };
   if (e.hp > 0) return outcome;
   const d = sim.content.enemies[e.type],
