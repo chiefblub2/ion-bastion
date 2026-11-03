@@ -30,9 +30,9 @@ export const isTutorial = (m: MissionDefinition) => MISSIONS[0]?.id === m.id;
 export const thinBuilds = (m: MissionDefinition, strategy: Pick<Strategy, "builds">): Build[] =>
   strategy.builds.slice(0, m.circle ? 1 : 3);
 
-/** Same positions, ground-only Nova everywhere. */
+/** Same positions, ground-only Nova everywhere (without the builds' paths, which name another tower's). */
 export const novaOnly = (strategy: Pick<Strategy, "builds">): Build[] =>
-  strategy.builds.map((b) => ({ ...b, tower: "blast" as const }));
+  strategy.builds.map(({ x, y }) => ({ x, y, tower: "blast" as const }));
 
 /**
  * Mission ids and map ids of `sector` that other registered missions already use. Missions of the

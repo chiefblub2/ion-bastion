@@ -73,8 +73,8 @@ export const RIFT_STRATEGIES: Strategies = {
     // An Aura in the inner ring powers Lances and Zerfall across the spiral; a Detector at the last rings unmasks the Phantoms.
     A: {
       builds: [
-        b("decay", 13, 3), b("acid", 7, 4), b("aura", 12, 3), b("lance", 7, 5), b("frost", 9, 3),
-        b("pulse", 7, 3), b("detector", 9, 9), b("lance", 11, 3), b("stasis", 7, 7),
+        b("decay", 13, 3), b("acid", 7, 4), b("aura", 12, 3, "execution-field"), b("lance", 7, 5), b("frost", 9, 3),
+        b("pulse", 7, 3), b("detector", 9, 9, "exposure-scan"), b("lance", 11, 3), b("stasis", 7, 7),
         b("blast", 7, 8), b("tesla", 5, 5), b("pulse", 5, 7),
       ],
     },

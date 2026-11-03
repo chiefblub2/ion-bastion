@@ -39,7 +39,7 @@ export const RUIN_STRATEGIES: Strategies = {
       upgradeFirst: true,
       builds: [
         b("pulse", 10, 6), b("pulse", 9, 7), b("blast", 11, 6), b("acid", 7, 5), b("blast", 8, 4),
-        b("aura", 9, 8),
+        b("aura", 9, 8, "harmonics"),
       ],
     },
     // Novas along the nave, a lance looking down it, Flak for the gliders.
@@ -73,7 +73,7 @@ export const RUIN_STRATEGIES: Strategies = {
     A: {
       upgradeFirst: true,
       builds: [
-        b("blast", 18, 4), b("lance", 7, 2), b("pulse", 11, 10), b("lance", 14, 2), b("decay", 9, 10), b("detector", 18, 6),
+        b("blast", 18, 4), b("lance", 7, 2), b("pulse", 11, 10), b("lance", 14, 2), b("decay", 9, 10), b("detector", 18, 6, "exposure-scan"),
       ],
     },
     // Impuls cluster at the east wall, lances and acid along the north, aura support.
@@ -81,7 +81,7 @@ export const RUIN_STRATEGIES: Strategies = {
       upgradeFirst: true,
       builds: [
         b("pulse", 16, 9), b("lance", 10, 2), b("pulse", 16, 8), b("lance", 6, 2), b("decay", 5, 2),
-        b("acid", 8, 12), b("inferno", 13, 10), b("pulse", 15, 10), b("aura", 11, 2), b("acid", 14, 2),
+        b("acid", 8, 12), b("inferno", 13, 10), b("pulse", 15, 10), b("aura", 11, 2, "piercing-field"), b("acid", 14, 2),
       ],
     },
   },

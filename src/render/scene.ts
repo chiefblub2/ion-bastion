@@ -855,7 +855,7 @@ export class Battlefield extends Phaser.Scene {
       this.looks.byId.clear();
       for (const t of s.towers)
         this.looks.byId.set(t.id, {
-          markers: content.towers[t.type].attack.kind === "aura" ? t.upgrades.length : towerLevel(t, content),
+          markers: towerLevel(t, content),
           maxed: isFullyUpgraded(t, content),
           color: towerColor(t, content),
           path: towerPath(t, content),

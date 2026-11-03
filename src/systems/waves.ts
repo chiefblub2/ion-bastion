@@ -4,6 +4,8 @@ import type { Sim } from "../core/types";
 import { createEnemy } from "./spawn";
 import { repairReactor, settleEconomy } from "./support";
 import { restoreBarricades } from "./barricade";
+import { resetSalvos } from "./combat-paths-b";
+import { incomeOf, payCompounding } from "./economy-paths";
 export { DEFAULT_HP_GROWTH } from "./spawn";
 /** Seconds of build time after a wave before the next one starts by itself. */
 export const WAVE_BREAK = 3;
@@ -35,6 +37,7 @@ export function settleWave(sim: Sim) {
     payIncome(sim);
     repairReactor(sim);
     restoreBarricades(sim);
+    resetSalvos(sim);
     s.status = s.wave === waves.length ? "won" : "ready";
     if (s.status === "ready" && !sim.mission.manualWaves) s.nextWave = WAVE_BREAK;
     s.events.push({ type: "waveEnd", wave: s.wave, bonus });
@@ -47,7 +50,11 @@ export function payIncome(sim: Sim) {
   for (const t of s.towers) {
     const attack = resolveUpgrades(t, sim.content).attack;
     if (attack.kind !== "income") continue;
-    credit(s, t.owner, attack.amount);
-    s.events.push({ type: "income", at: { x: t.x, y: t.y }, amount: attack.amount, color: sim.content.towers[t.type].color });
+    // Advance (Refinery path) paid part of it at the wave's start.
+    const amount = incomeOf(t, attack.amount);
+    if (amount <= 0) continue;
+    credit(s, t.owner, amount);
+    s.events.push({ type: "income", at: { x: t.x, y: t.y }, amount, color: sim.content.towers[t.type].color });
   }
+  payCompounding(sim); // Refinery path: Compounding
 }

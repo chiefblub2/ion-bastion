@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isFullyUpgraded, resolveUpgrades, towerColor, towerLevel, towerPath, upgradeOption, validateUpgradeDefinitions } from "../core/upgrades";
+import { isFullyUpgraded, resolveUpgrades, towerColor, towerLevel, towerPath, towerTrack, upgradeOption, validateUpgradeDefinitions } from "../core/upgrades";
 import { Game } from "../core/game";
 import { TOWERS } from "../content/towers";
 import type { Enemy, Tower, TowerId } from "../core/types";
@@ -63,7 +63,7 @@ describe("aura rules", () => {
 });
 
 describe("aura commands and lifecycle", () => {
-  it("allows exactly one path per tower; the first purchase fixes it", () => {
+  it("allows exactly one track per tower; the first purchase fixes it", () => {
     const expected = {
       damage: { damage: .55, speed: 0, range: 0 },
       speed: { damage: 0, speed: .5, range: 0 },
@@ -72,9 +72,10 @@ describe("aura commands and lifecycle", () => {
     for (const path of ["damage", "speed", "range"] as const) {
       const g = fundedGame(), id = g.command({ type: "build", tower: "aura", x: 4, y: 4 }).id!;
       const t = g.state.towers[0];
-      expect(towerPath(t)).toBeUndefined();
+      expect(towerTrack(t)).toBeUndefined();
       expect(g.command({ type: "upgrade", id, upgrade: path }).ok).toBe(true);
-      expect(towerPath(t)).toBe(path);
+      expect(towerTrack(t)).toBe(path);
+      expect(towerPath(t)).toBeUndefined();
       const gold = g.state.wallets[0];
       for (const other of ["damage", "speed", "range"].filter(p => p !== path))
         for (const upgrade of [other, `${other}-2`, `${other}-3`]) {
@@ -85,18 +86,19 @@ describe("aura commands and lifecycle", () => {
       expect(isFullyUpgraded(t)).toBe(false);
       for (const upgrade of [`${path}-2`, `${path}-3`]) expect(g.command({ type: "upgrade", id, upgrade }).ok).toBe(true);
       expect(auraBonuses(t)).toEqual(expected[path]);
-      expect(towerLevel(t)).toBe(1);
-      expect(isFullyUpgraded(t)).toBe(true);
+      expect(towerLevel(t)).toBe(4);
+      // The paths open after tier III, so a tier-III Aura is not fully upgraded yet.
+      expect(isFullyUpgraded(t)).toBe(false);
     }
   });
-  it("offers three path starts, then only the next tier of the chosen path", () => {
+  it("offers three track starts, then only the next tier of the chosen track", () => {
     const g = fundedGame(), id = g.command({ type: "build", tower: "aura", x: 4, y: 4 }).id!;
     const t = g.state.towers[0];
     for (const upgrade of ["damage-2", "damage-3", "speed-3", "range-2"])
       expect(g.command({ type: "upgrade", id, upgrade }).ok).toBe(false);
     const start = upgradeControl(t, g.state.towers);
     expect(start.match(/data-upgrade=/g)).toHaveLength(3);
-    expect(start).toContain("Locks in the path");
+    expect(start).toContain("Locks in the track");
     expect(g.command({ type: "upgrade", id, upgrade: "damage" }).ok).toBe(true);
     const afterFirst = upgradeControl(t, g.state.towers);
     expect(afterFirst.match(/data-upgrade=/g)).toHaveLength(1);
@@ -104,24 +106,26 @@ describe("aura commands and lifecycle", () => {
     expect(afterFirst).toContain("+25% → +40%");
     expect(afterFirst).toContain("--path-color:#ff7a5c");
     for (const upgrade of ["damage-2", "damage-3"]) g.command({ type: "upgrade", id, upgrade });
+    // Tier III owned (✓), then the three paths on offer.
     const maxed = upgradeControl(t, g.state.towers);
-    expect(maxed.match(/data-upgrade=/g)).toHaveLength(1);
+    expect(maxed.match(/data-upgrade=/g)).toHaveLength(4);
     expect(maxed.match(/✓/g)).toHaveLength(1);
     expect(maxed).toContain("Damage III");
-    expect(towerDetails("aura", t, g.state.towers)).toContain("PATH DAMAGE · 3 / 3");
+    expect(maxed).toContain('data-upgrade="harmonics-1"');
+    expect(towerDetails("aura", t, g.state.towers)).toContain("LEVEL 4 / 7 · DAMAGE");
   });
-  it("takes on the colour of its path", () => {
+  it("takes on the colour of its track", () => {
     const t = tower(1, "aura", 0, 0);
     expect(towerColor(t)).toBe(TOWERS.aura.color);
     expect(towerColor({ ...t, upgrades: ["speed", "speed-2"] })).toBe(0xffd166);
     expect(towerColor(tower(2, "pulse", 0, 0, ["level-2"]))).toBe(TOWERS.pulse.color);
   });
-  it("rejects paths without visuals and prerequisites from another path", () => {
+  it("rejects tracks without visuals and prerequisites from another track", () => {
     const aura = structuredClone(TOWERS.aura);
-    const noVisual = { ...aura, upgrades: aura.upgrades.map(u => u.id === "range" ? { ...u, path: "reach" } : u) };
-    expect(() => validateUpgradeDefinitions(noVisual)).toThrow("visual.paths");
+    const noVisual = { ...aura, upgrades: aura.upgrades.map(u => u.id === "range" ? { ...u, track: "reach" } : u) };
+    expect(() => validateUpgradeDefinitions(noVisual)).toThrow("visual.tracks");
     const crossed = { ...aura, upgrades: aura.upgrades.map(u => u.id === "speed-2" ? { ...u, requires: ["damage"] } : u) };
-    expect(() => validateUpgradeDefinitions(crossed)).toThrow("another path");
+    expect(() => validateUpgradeDefinitions(crossed)).toThrow("another track");
   });
   it("rejects insufficient credits, wrong tower types and invalid upgrade keys atomically", () => {
     const g = new Game(), id = g.command({ type: "build", tower: "aura", x: 4, y: 4 }).id!;

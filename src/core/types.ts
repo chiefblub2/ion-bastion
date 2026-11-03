@@ -269,13 +269,20 @@ export interface UpgradeDefinition {
   requires: readonly string[];
   /** Upgrades with different paths exclude each other on one tower. */
   path?: string;
+  /**
+   * Aura only: upgrades with different tracks exclude each other, independently of the path. A track is never a
+   * specialization, so the Run never locks it.
+   */
+  track?: string;
+  /** Available only from this tower level on, whichever upgrades led there (Aura paths after any track's tier III). */
+  minLevel?: number;
   effects: {
     stats?: Partial<TowerStats>;
     aura?: Partial<AuraBonuses>;
     /** Overrides numeric parameters of the tower's attack, e.g. `{ factor: 0.45 }`. */
     attack?: Readonly<Record<string, number>>;
     level?: number;
-    /** Specialization ability (levels 6 to 8); a later tier replaces it completely. */
+    /** Specialization ability of a path tier; a later tier replaces it completely. */
     specialization?: SpecializationSpec;
   };
 }
@@ -367,7 +374,7 @@ export type PathMotif = "blades" | "vortex" | "rings";
 export interface PathVisual {
   color: number;
   motif: PathMotif;
-  /** Display name and tactical role of a specialization path; Aura paths take the name from their upgrades. */
+  /** Display name and tactical role of a specialization path; Aura tracks take the name from their upgrades. */
   name?: string;
   role?: string;
 }
@@ -381,6 +388,8 @@ export interface TowerVisual {
   impact?: "spark" | "burst";
   /** Look per upgrade path, once a tower has chosen one. */
   paths?: Readonly<Record<string, PathVisual>>;
+  /** Aura only: look per track, until a path is chosen. */
+  tracks?: Readonly<Record<string, PathVisual>>;
 }
 export interface TowerDefinition {
   id: string;
@@ -762,6 +771,15 @@ export interface DamageSource {
   type: TowerId;
   /** Specialization of the firing tower, snapshotted at fire time; absent for secondary hits, so they never chain. */
   special?: SpecializationSpec;
+  /** Fire Control paths: what a crit carries to its hits; absent on every other shot and for secondary hits. */
+  crit?: CritRider;
+}
+/** Fire Control paths on a crit: armor ignored (Penetrator), slow and its length (Stagger), the spotting bonus (Spotting). */
+export interface CritRider {
+  pierce?: number;
+  slow?: number;
+  duration?: number;
+  spot?: number;
 }
 /** Effects on an enemy; each kind has merge and tick rules in `systems/status.ts`. Expires at `until`. */
 export type StatusEffect =
@@ -822,6 +840,14 @@ export interface Enemy extends Point {
   sentBy?: number;
   /** Warp Pad: set once the enemy has been warped back; it never warps again. */
   warped?: true;
+  /** Spotting: marked by a crit of tower `by`; the next hit by another tower deals `bonus` more and clears it. */
+  spotted?: { by: number; bonus: number };
+  // ── support combat ──
+  /** Tracker Lingering Tag: a mark of `amount` that holds until `until`; absent until a Lingering Tag first marks it. */
+  tag?: { amount: number; until: number };
+  /** Detector Afterimage: stays revealed until this time; absent until an Afterimage first reveals it. */
+  revealUntil?: number;
+  // ── end support combat ──
 }
 export interface Tower extends Point {
   id: number;
@@ -847,6 +873,42 @@ export interface Tower extends Point {
   critCount?: number;
   /** Shield Generator only: reactor damage absorbed in the current wave; absent while untouched, cleared after each wave. */
   barrier?: number;
+  /** Overclock Opening Salvo: when this wave's salvo window opened; absent until used, cleared after each wave. */
+  salvo?: number;
+  // ── support combat ──
+  /** Recycler Scrap Yard: overkill counted towards the next credit and credits paid this wave; absent until used, cleared after each wave. */
+  scrapYard?: { overkill: number; paid: number };
+  // ── end support combat ──
+  // ── trap paths ──
+  /** Volley Signal: bonus of the tower's next shot after a Tripwire alerted it; absent until alerted, cleared after each wave. */
+  alerted?: number;
+  /** Tripwire with Flare only: time until which its alarm radius stays lit; absent until it fires, cleared after each wave. */
+  flare?: number;
+  // ── end trap paths ──
+  /** Support economy paths: counters of this tower (`systems/economy-paths.ts`); absent until a path first uses one. */
+  economy?: TowerEconomy;
+}
+/** Per-tower counters of the support economy paths; each field stays absent until used. */
+export interface TowerEconomy {
+  /** Big Game: credits paid this wave. */
+  bounty?: number;
+  /** Field Rations (kills) and Reserve Cells (interest credits) counted toward the next energy point. */
+  count?: number;
+  /** Advance: credits of this wave's income already paid at its start. */
+  advanced?: number;
+  /** Compounding: waves completed since the path was taken. */
+  waves?: number;
+}
+/** Per-wave state of the support economy paths; absent while unused, cleared after each wave. */
+export interface WaveEconomy {
+  /** Clean Sheet: the reactor took damage this wave. */
+  leaked?: true;
+  /** Triage: energy refunded this wave. */
+  triage?: number;
+  /** Field Rations: energy restored this wave. */
+  rations?: true;
+  /** Investment Account: credits each player spent on builds and upgrades during the wave (by wallet index). */
+  spent?: number[];
 }
 /** Target selection of an attack tower; ties fall back to path progress, then id. */
 export type TargetPriority = "first" | "last" | "strong" | "weak" | "close";
@@ -867,6 +929,8 @@ export interface Projectile extends Point {
   special?: SpecializationSpec;
   /** Fire-time proc: 1 for a Ricochet shot, the unused shards for Concentrated Volley. */
   proc?: number;
+  /** Fire Control paths: what the shot's crit carries; absent on every other shot. */
+  crit?: CritRider;
 }
 export interface Spawn {
   at: number;
@@ -947,6 +1011,8 @@ export interface GameState {
   zones?: Zone[];
   /** Orbital strikes still to land, in firing order; absent while none is coming. */
   strikes?: Strike[];
+  /** Support economy paths: per-wave counters; absent while unused. */
+  economy?: WaveEconomy;
 }
 /** A Plasma pool; its source is frozen on landing, so it keeps burning after a sale. */
 export interface Zone {

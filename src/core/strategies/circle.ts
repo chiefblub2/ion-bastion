@@ -48,7 +48,7 @@ export const CIRCLE_STRATEGIES: Strategies = {
       upgradeFirst: true,
       builds: [
         b("pulse", 9, 3), b("blast", 10, 5), b("tesla", 9, 7), b("frost", 7, 2), b("pulse", 11, 10),
-        b("blast", 10, 9), b("flak", 7, 5), b("pulse", 16, 4), b("aura", 10, 7), b("blast", 3, 4),
+        b("blast", 10, 9), b("flak", 7, 5), b("pulse", 16, 4), b("aura", 10, 7, "harmonics"), b("blast", 3, 4),
         b("pulse", 3, 9), b("blast", 13, 9),
       ],
     },

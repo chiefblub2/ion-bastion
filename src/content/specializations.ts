@@ -2,17 +2,17 @@ import type { DamagePredicate } from "../core/specialization-types";
 import type { PathVisual, SpecializationSpec, TowerStats, UpgradeDefinition } from "../core/types";
 
 /**
- * Specializations: after level 5 every attack tower built with `attackTower` picks one of three
- * paths (A, B, C) with three tiers each (levels 6 to 8). Tier values are final values of that
- * tier, never stacked on the previous tier.
+ * Specializations: after level 5 every attack tower built with `attackTower` and every trap built with `trapTower`
+ * picks one of three paths (A, B, C) with three tiers each (levels 6 to 8). Tier values are final values of that
+ * tier, never stacked on the previous tier. Support towers branch after level 3 (`support-specializations.ts`).
  */
-interface Tier {
+export interface Tier {
   description: string;
   stats?: Partial<TowerStats>;
   attack?: Readonly<Record<string, number>>;
   specialization?: SpecializationSpec;
 }
-interface PathData {
+export interface PathData {
   slug: string;
   name: string;
   /** Tactical role shown on the path card. */
@@ -31,13 +31,13 @@ const PATH_LOOKS: readonly Omit<PathVisual, "name" | "role">[] = [
 ];
 const NUMERALS = ["I", "II", "III"] as const;
 
-const pct = (value: number) => `${Math.round(value * 1000) / 10}%`;
-const num = (value: number) => `${Math.round(value * 100) / 100}`;
+export const pct = (value: number) => `${Math.round(value * 1000) / 10}%`;
+export const num = (value: number) => `${Math.round(value * 100) / 100}`;
 const ordinal = (n: number) => (n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`);
 /** Three tiers from three value sets. */
-const tiers = <T,>(values: readonly [T, T, T], tier: (value: T) => Tier) =>
+export const tiers = <T,>(values: readonly [T, T, T], tier: (value: T) => Tier) =>
   values.map(tier) as unknown as readonly [Tier, Tier, Tier];
-const fixed = <T,>(values: readonly [T, T, T], tier: (value: T) => Tier) => () => tiers(values, tier);
+export const fixed = <T,>(values: readonly [T, T, T], tier: (value: T) => Tier) => () => tiers(values, tier);
 
 /** Shorter time between attacks, computed from the level-5 interval. */
 const faster = (cuts: readonly [number, number, number]) => (l5: TowerStats) =>
@@ -525,20 +525,275 @@ export const SPECIALIZATIONS: Readonly<Record<string, readonly [PathData, PathDa
     },
   ],
   // ── end g2 ──
+  // ── trap paths ──
+  mine: [
+    { slug: "shaped-charge", name: "Shaped Charge", role: "Armor", tiers: conditional("armored", [0.25, 0.5, 0.75], "against armored enemies") },
+    {
+      slug: "chain-reaction", name: "Chain Reaction", role: "Kill chains",
+      tiers: fixed([[0.25, 0.75, 1], [0.4, 0.9, 2], [0.55, 1.1, 3]] as const, ([factor, radius, maxPerSalvo]) => ({
+        specialization: { kind: "chain-reaction", factor, radius, maxPerSalvo },
+        description: `Kills by the mine explode again: ${pct(factor)} damage within ${radius} cells, up to ${maxPerSalvo} per blast.`,
+      })),
+    },
+    { slug: "quick-rearm", name: "Quick Rearm", role: "Steady traffic", tiers: faster([0.15, 0.25, 0.35]) },
+  ],
+  spikes: [
+    { slug: "serrated", name: "Serrated", role: "Bleed", tiers: fixed([22, 26, 30] as const, (perCell) => ({ attack: { perCell }, description: `Bleeding enemies lose ${perCell} HP for every cell they walk.` })) },
+    {
+      slug: "hamstring", name: "Hamstring", role: "Slow",
+      tiers: fixed([0.15, 0.22, 0.3] as const, (slow) => ({
+        specialization: { kind: "hamstring", slow },
+        description: `Bleeding enemies are ${pct(slow)} slower while they bleed.`,
+      })),
+    },
+    {
+      slug: "open-wounds", name: "Open Wounds", role: "Team damage",
+      tiers: fixed([0.08, 0.12, 0.16] as const, (bonus) => ({
+        specialization: { kind: "open-wounds", bonus },
+        description: `Bleeding enemies take +${pct(bonus)} damage from every source while they bleed.`,
+      })),
+    },
+  ],
+  tar: [
+    { slug: "brittle-tar", name: "Brittle Tar", role: "Weaken", tiers: vulnerability("brittle-ice", [0.08, 0.12, 0.16], "Enemies slowed by this Tar Pit") },
+    {
+      slug: "spreading-bog", name: "Spreading Bog", role: "Groups",
+      tiers: fixed([[0.7, 0.6, 1.5], [1, 0.5, 1.8], [1.3, 0.45, 2]] as const, ([radius, factor, duration]) => ({
+        specialization: { kind: "frostburst", radius, factor, duration },
+        description: `The tar also slows enemies within ${radius} cells of its victim to ${pct(factor)} speed for ${duration} s.`,
+      })),
+    },
+    {
+      slug: "flammable-tar", name: "Flammable Tar", role: "Fire combo",
+      tiers: fixed([[1.4, 2.5], [1.7, 3], [2, 3.5]] as const, ([boost, duration]) => ({
+        specialization: { kind: "tar-oil", boost, duration },
+        description: `Tarred enemies count as oiled for ${duration} s: burns on them deal ${boost}× and leap to oiled enemies within 1 cell.`,
+      })),
+    },
+  ],
+  snare: [
+    {
+      slug: "exposure", name: "Exposure", role: "Damage window",
+      tiers: fixed([[0.1, 1.5], [0.15, 2], [0.2, 2.5]] as const, ([bonus, duration]) => ({
+        specialization: { kind: "temporal-exposure", bonus, duration },
+        description: `After the trap lets go, the enemy takes +${pct(bonus)} damage for ${duration} s.`,
+      })),
+    },
+    {
+      slug: "double-jaw", name: "Double Jaw", role: "Long hold",
+      tiers: fixed([[0.85, 2.4], [1, 2.6], [1.15, 2.8]] as const, ([radius, duration]) => ({
+        attack: { radius, duration },
+        description: `Grabs every ground enemy within ${radius} cells and holds it for ${duration} s.`,
+      })),
+    },
+    { slug: "hair-trigger", name: "Hair Trigger", role: "Quick reset", tiers: faster([0.15, 0.25, 0.35]) },
+  ],
+  grill: [
+    {
+      slug: "wildfire", name: "Wildfire", role: "Spread",
+      tiers: fixed([[0.4, 1, 1], [0.55, 1.2, 2], [0.7, 1.4, 3]] as const, ([remainingFactor, radius, count]) => ({
+        specialization: { kind: "wildfire", remainingFactor, radius, count },
+        description: `A burning enemy that dies passes ${pct(remainingFactor)} of its remaining burn to ${count} enem${count > 1 ? "ies" : "y"} within ${radius} cells.`,
+      })),
+    },
+    { slug: "scorch", name: "Scorch", role: "Synergy", tiers: conditional("burning", [0.15, 0.25, 0.4], "against enemies that already burn") },
+    {
+      slug: "blast-furnace", name: "Blast Furnace", role: "Burn",
+      tiers: fixed([[4.5, 4], [5, 4.5], [6, 5]] as const, ([ratio, duration]) => ({
+        attack: { ratio, duration },
+        description: `The burn deals ${ratio}× the hit over ${duration} s.`,
+      })),
+    },
+  ],
+  spring: [
+    {
+      slug: "compression", name: "Compression", role: "Damage window",
+      tiers: fixed([[0.1, 2], [0.15, 2.5], [0.2, 3]] as const, ([bonus, duration]) => ({
+        specialization: { kind: "compression", bonus, duration },
+        description: `Thrown enemies take +${pct(bonus)} damage for ${duration} s.`,
+      })),
+    },
+    { slug: "catapult", name: "Catapult", role: "Push back", tiers: fixed([4, 4.5, 5] as const, (strength) => ({ attack: { strength }, description: `Throws enemies back at ${strength}× their speed.` })) },
+    {
+      slug: "concussion", name: "Concussion", role: "Landing window",
+      tiers: fixed([[0.1, 1.5], [0.15, 2], [0.2, 2.5]] as const, ([bonus, duration]) => ({
+        specialization: { kind: "concussion", bonus, duration },
+        description: `Thrown enemies take +${pct(bonus)} damage from every source in the air and for ${duration} s after they land.`,
+      })),
+    },
+  ],
+  limpet: [
+    {
+      slug: "chain-reaction", name: "Chain Reaction", role: "Kill chains",
+      tiers: fixed([[0.25, 0.75, 1], [0.4, 0.9, 2], [0.55, 1.1, 3]] as const, ([factor, radius, maxPerSalvo]) => ({
+        specialization: { kind: "chain-reaction", factor, radius, maxPerSalvo },
+        description: `Kills by the bomb explode again: ${pct(factor)} damage within ${radius} cells, up to ${maxPerSalvo} per bomb.`,
+      })),
+    },
+    { slug: "breaching-charge", name: "Breaching Charge", role: "Armor", tiers: conditional("armored", [0.25, 0.5, 0.75], "against armored enemies") },
+    {
+      slug: "contact-fuse", name: "Contact Fuse", role: "Quick blast",
+      tiers: fixed([[1.2, 1.75], [0.9, 1.9], [0.6, 2.1]] as const, ([fuse, radius]) => ({
+        attack: { fuse, radius },
+        description: `The bomb goes off after ${fuse} s, blast radius ${radius} cells.`,
+      })),
+    },
+  ],
+  pit: [
+    {
+      slug: "sinkhole", name: "Sinkhole", role: "Swallow more",
+      tiers: fixed([[0.29, "Thornbacks, Crystal Wardens and Decoys"], [0.3, "Bulwarks, Commanders, Hydras and Piston Tanks"], [0.31, "Nautili and Pressure Bunkers"]] as const, ([size, more]) => ({
+        attack: { size },
+        description: `Also swallows ${more}. Berserkers and Titans never fall in.`,
+      })),
+    },
+    {
+      slug: "spike-bed", name: "Spike Bed", role: "Big enemies",
+      tiers: fixed([[0.75, 0.05], [0.9, 0.075], [1, 0.1]] as const, ([threshold, extraPercent]) => ({
+        specialization: { kind: "max-hp-execute", threshold, extraPercent },
+        description: `Enemies too big to fall in take another ${pct(extraPercent)} of their max HP while below ${pct(threshold)} HP.`,
+      })),
+    },
+    { slug: "quick-cover", name: "Quick Cover", role: "Swarms", tiers: faster([0.15, 0.25, 0.35]) },
+  ],
+  tripwire: [
+    { slug: "wide-alert", name: "Wide Alert", role: "Wide alarm", tiers: fixed([4, 4.5, 5] as const, (radius) => ({ attack: { radius }, description: `Alerts towers in radius ${radius}.` })) },
+    {
+      slug: "volley-signal", name: "Volley Signal", role: "Alpha strike",
+      tiers: fixed([0.5, 0.75, 1] as const, (bonus) => ({
+        specialization: { kind: "alarm-volley", bonus },
+        description: `The next shot of every alerted tower deals +${pct(bonus)} damage.`,
+      })),
+    },
+    {
+      slug: "flare", name: "Flare", role: "Stealth",
+      tiers: fixed([1.5, 2.5, 3.5] as const, (duration) => ({
+        specialization: { kind: "flare", duration },
+        description: `A tripped wire reveals stealthed enemies in its alarm radius for ${duration} s.`,
+      })),
+    },
+  ],
+  barricade: [
+    { slug: "bulwark", name: "Bulwark", role: "Long hold", tiers: fixed([1200, 1500, 1850] as const, (hp) => ({ attack: { hp }, description: `${hp} wall HP.` })) },
+    {
+      slug: "thorn-wall", name: "Thorn Wall", role: "Spikes",
+      tiers: (l5) => tiers([1.6, 2.2, 3] as const, (factor) => ({ stats: { damage: Math.round(l5.damage * factor) }, description: `Much stronger spikes: ${Math.round(l5.damage * factor)} damage per hit.` })),
+    },
+    {
+      slug: "choke-point", name: "Choke Point", role: "Team damage",
+      tiers: fixed([0.1, 0.15, 0.2] as const, (bonus) => ({
+        specialization: { kind: "held-exposure", bonus },
+        description: `Enemies held at the wall take +${pct(bonus)} damage from every source.`,
+      })),
+    },
+  ],
+  warp: [
+    { slug: "long-fold", name: "Long Fold", role: "Rewind", tiers: fixed([7, 8, 9] as const, (cells) => ({ attack: { cells }, description: `Sends enemies ${cells} tiles back.` })) },
+    {
+      slug: "disorient", name: "Disorient", role: "Confuse",
+      tiers: fixed([1, 1.5, 2] as const, (duration) => ({
+        specialization: { kind: "warp-daze", duration },
+        description: `Warped enemies are confused and walk backwards for ${duration} s. Berserkers keep their heading.`,
+      })),
+    },
+    {
+      slug: "mass-warp", name: "Mass Warp", role: "Big enemies",
+      tiers: (l5) =>
+        tiers([[0.33, 0.1], [0.34, 0.2], [0.36, 0.3]] as const, ([size, cut]) => ({
+          attack: { size },
+          stats: { interval: l5.interval * (1 - cut) },
+          description: `Fits enemies up to size ${Math.round(size * 100)}, and ${pct(cut)} less time to recharge: ${num(l5.interval * (1 - cut))} s.`,
+        })),
+    },
+  ],
+  arc: [
+    {
+      slug: "tempest-grid", name: "Tempest Grid", role: "Swarm chain",
+      tiers: fixed([[6, 0.87], [7, 0.9], [8, 0.92]] as const, ([jumps, falloff]) => ({
+        attack: { jumps, falloff },
+        description: `The lightning jumps to ${jumps} more enemies and keeps ${pct(falloff)} of its damage per jump.`,
+      })),
+    },
+    {
+      slug: "twin-arc", name: "Twin Arc", role: "Split groups",
+      tiers: fixed([[4, 0.45], [3, 0.55], [2, 0.65]] as const, ([every, factor]) => ({
+        specialization: { kind: "twin-arc", every, factor },
+        description: `Every ${ordinal(every)} strike starts a second chain at another enemy on the plate for ${pct(factor)} damage.`,
+      })),
+    },
+    { slug: "overcharge", name: "Overcharge", role: "Boss", tiers: conditional("heavy", [0.25, 0.45, 0.7], "against heavy targets (1,000+ max HP)") },
+  ],
+  oil: [
+    { slug: "accelerant", name: "Accelerant", role: "Fire combo", tiers: fixed([2.9, 3.2, 3.5] as const, (boost) => ({ attack: { boost }, description: `Burns on oiled enemies deal ${boost} times.` })) },
+    {
+      slug: "wide-spill", name: "Wide Spill", role: "Spread",
+      tiers: fixed([[1.8, 5.5], [2, 6], [2.2, 7]] as const, ([radius, duration]) => ({
+        attack: { radius, duration },
+        description: `Burns leap ${radius} tiles between oiled enemies; the coat lasts ${duration} s.`,
+      })),
+    },
+    {
+      slug: "slick", name: "Slick", role: "Slow",
+      tiers: fixed([[0.8, 0.7, 1], [1, 0.6, 1.2], [1.2, 0.5, 1.5]] as const, ([radius, factor, duration]) => ({
+        specialization: { kind: "frostburst", radius, factor, duration },
+        description: `Enemies within ${radius} cells of the slick, the coated ones included, move at ${pct(factor)} speed for ${duration} s.`,
+      })),
+    },
+  ],
+  grinder: [
+    { slug: "mulcher", name: "Mulcher", role: "Held enemies", tiers: fixed([4.5, 5, 6] as const, (bonus) => ({ attack: { bonus }, description: `Up to ${bonus + 1} times the damage on held enemies.` })) },
+    { slug: "shredder", name: "Shredder", role: "Armor", tiers: pierce },
+    {
+      slug: "bonesaw", name: "Bonesaw", role: "Boss",
+      tiers: fixed([[0.35, 0.002], [0.45, 0.003], [0.55, 0.004]] as const, ([threshold, extraPercent]) => ({
+        specialization: { kind: "max-hp-execute", threshold, extraPercent },
+        description: `Below ${pct(threshold)} HP, every turn of the blades adds ${pct(extraPercent)} of the target's max HP.`,
+      })),
+    },
+  ],
+  harpoon: [
+    {
+      slug: "deep-barb", name: "Deep Barb", role: "Long hold",
+      tiers: fixed([[1.8, 4.5], [2, 5], [2.3, 5.5]] as const, ([pin, duration]) => ({
+        attack: { pin, duration },
+        description: `Pins for ${pin} s and keeps the flyer netted for ${duration} s.`,
+      })),
+    },
+    { slug: "exposed-target", name: "Exposed Target", role: "Anti-air synergy", tiers: vulnerability("exposed-target", [0.1, 0.15, 0.2], "Harpooned flyers") },
+    {
+      slug: "net-cloud", name: "Net Cloud", role: "Several flyers",
+      tiers: fixed([[1, 0.9], [2, 1.1], [3, 1.3]] as const, ([count, radius]) => ({
+        specialization: { kind: "net-cloud", count, radius },
+        description: `The net also catches ${count} other flyer${count > 1 ? "s" : ""} within ${radius} cells.`,
+      })),
+    },
+  ],
+  // ── end trap paths ──
 };
 
-/** The nine specialization upgrades of a tower, or none if it has no paths. */
-export function specializationUpgrades(id: string, buildCost: number, l5: TowerStats): readonly UpgradeDefinition[] {
-  return (SPECIALIZATIONS[id] ?? []).flatMap(({ slug, name, tiers: make }) =>
-    make(l5).map(({ description, stats, attack, specialization }, index) => ({
+/** Where a tower's paths branch off, and what each tier costs. */
+export interface Branch {
+  /** Level the paths branch from; tier I is level `from + 1`. */
+  from: number;
+  /** Tier I needs this upgrade, or (Aura, whose tracks end in different ids) only the level `from`. */
+  after: string | { minLevel: number };
+  /** Price of tier 1, 2, 3. */
+  costs: readonly [number, number, number];
+}
+
+/** The nine path upgrades of three paths after `branch`. */
+export function pathUpgrades(paths: readonly PathData[], base: TowerStats, branch: Branch): readonly UpgradeDefinition[] {
+  return paths.flatMap(({ slug, name, tiers: make }) =>
+    make(base).map(({ description, stats, attack, specialization }, index) => ({
       id: `${slug}-${index + 1}`,
       label: `${name} ${NUMERALS[index]}`,
       description: index === 0 ? `${description} Locks the other two paths.` : description,
-      cost: Math.round(buildCost * SPECIALIZATION_COSTS[index]),
-      requires: [index === 0 ? "level-5" : `${slug}-${index}`],
+      cost: branch.costs[index],
+      requires: index > 0 ? [`${slug}-${index}`] : typeof branch.after === "string" ? [branch.after] : [],
+      ...(index === 0 && typeof branch.after !== "string" ? { minLevel: branch.after.minLevel } : {}),
       path: slug,
       effects: {
-        level: 6 + index,
+        level: branch.from + 1 + index,
         ...(stats ? { stats } : {}),
         ...(attack ? { attack } : {}),
         ...(specialization ? { specialization } : {}),
@@ -547,8 +802,18 @@ export function specializationUpgrades(id: string, buildCost: number, l5: TowerS
   );
 }
 
+/** The nine specialization upgrades of an attack tower or trap (levels 6 to 8), or none if it has no paths. */
+export function specializationUpgrades(id: string, buildCost: number, l5: TowerStats): readonly UpgradeDefinition[] {
+  const costs = SPECIALIZATION_COSTS.map((factor) => Math.round(buildCost * factor)) as unknown as Branch["costs"];
+  return pathUpgrades(SPECIALIZATIONS[id] ?? [], l5, { from: 5, after: "level-5", costs });
+}
+
+/** Path looks with name and role. */
+export const pathVisuals = (paths: readonly PathData[]): Readonly<Record<string, PathVisual>> =>
+  Object.fromEntries(paths.map(({ slug, name, role }, index) => [slug, { ...PATH_LOOKS[index], name, role }]));
+
 /** Path looks with name and role, or undefined if the tower has no paths. */
 export function specializationVisuals(id: string): Readonly<Record<string, PathVisual>> | undefined {
   const paths = SPECIALIZATIONS[id];
-  return paths && Object.fromEntries(paths.map(({ slug, name, role }, index) => [slug, { ...PATH_LOOKS[index], name, role }]));
+  return paths && pathVisuals(paths);
 }

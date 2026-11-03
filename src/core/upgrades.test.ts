@@ -38,7 +38,9 @@ describe("unified upgrade purchases", () => {
         // Specialization paths branch off level 5, so the fresh tower gets the shared levels first.
         if (upgradeOption(tower, upgrade.id, Infinity).status === "excluded") {
           ({ game, tower } = setup(type));
-          tower.upgrades.push(...TOWERS[type].upgrades.filter((u) => !u.path).map((u) => u.id));
+          // Aura: a new track starts on a bare tower; a path needs one whole track (the first) underneath.
+          const track = TOWERS[type].upgrades.find((u) => u.track)?.track;
+          tower.upgrades.push(...TOWERS[type].upgrades.filter((u) => !u.path && (upgrade.track ? !u.track : !u.track || u.track === track)).map((u) => u.id));
         }
         game.state.wallets[0] = upgrade.cost - 1;
         const before = JSON.stringify(game.state);
@@ -192,7 +194,8 @@ describe("late levels 4 and 5", () => {
     expect(attack("decay", 5)).toMatchObject({ percent: 0.06 });
   });
   it("the refinery has three levels that raise its income", () => {
-    expect(maxTowerLevel("refinery")).toBe(3);
+    // Three plain levels, then the three paths (levels 4 to 6).
+    expect(maxTowerLevel("refinery")).toBe(6);
     const income = (upgrades: string[]) => resolveUpgrades({ type: "refinery", upgrades }).attack;
     expect(income([])).toMatchObject({ amount: 25 });
     expect(income(["level-2"])).toMatchObject({ amount: 40 });

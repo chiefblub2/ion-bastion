@@ -1,10 +1,14 @@
 import { resolveUpgrades } from "../core/upgrades";
 import { credit } from "../core/economy";
 import type { AttackKind, AttackSpec, CritAttack, DamageSource, Enemy, OverclockAttack, Point, Sim, Tower, TowerId } from "../core/types";
+import type { SupportSpecialization } from "../core/specialization-types";
 import type { Hit } from "./damage";
 import { dist } from "./path";
 import { isNetted } from "./status";
 import { isSuppressed, layerOf } from "./traits";
+import { windowBoost } from "./combat-paths-b";
+import { resetScrapYards, trackerMark } from "./combat-paths-a";
+import { closeEconomyWave, interestBase, payCleanSheet, payOverflow, reserveCells, salvage, shockwave } from "./economy-paths";
 /**
  * Effects of the passive support towers. Like auras they are derived from the current
  * towers on every query, without a cache, and overlapping towers count only the strongest.
@@ -18,10 +22,44 @@ function strongest(sim: Sim, kind: AttackKind, key: string, e?: Enemy) {
   }
   return best;
 }
+/** The specialization of kind `kind` a tower holds, if any. */
+export function specialOf<K extends SupportSpecialization["kind"]>(sim: Sim, t: Tower, kind: K): Extract<SupportSpecialization, { kind: K }> | undefined {
+  const special = resolveUpgrades(t, sim.content).specialization;
+  return special?.kind === kind ? (special as Extract<SupportSpecialization, { kind: K }>) : undefined;
+}
+/**
+ * Support paths: calls `fn` for every unsuppressed tower holding the specialization `kind` whose radius reaches
+ * `at` (any distance without `at`). Path effects take the strongest such tower, like the base effects (plan rule 6).
+ */
+export function withSpecial<K extends SupportSpecialization["kind"]>(
+  sim: Sim,
+  kind: K,
+  at: Point | undefined,
+  fn: (special: Extract<SupportSpecialization, { kind: K }>, tower: Tower, range: number) => void,
+) {
+  for (const t of sim.state.towers) {
+    const resolved = resolveUpgrades(t, sim.content);
+    if (resolved.specialization?.kind !== kind) continue;
+    if ((at && dist(at, t) > resolved.stats.range) || isSuppressed(sim, t)) continue;
+    fn(resolved.specialization as Extract<SupportSpecialization, { kind: K }>, t, resolved.stats.range);
+  }
+}
+/** The largest value of `key` among the towers `withSpecial` finds; 0 without one. */
+export function strongestSpecial<K extends SupportSpecialization["kind"]>(
+  sim: Sim,
+  kind: K,
+  key: Exclude<keyof Extract<SupportSpecialization, { kind: K }>, "kind">,
+  at?: Point,
+) {
+  let best = 0;
+  withSpecial(sim, kind, at, (special) => (best = Math.max(best, special[key] as number)));
+  return best;
+}
 /** Bounty Beacon: extra credits for a kill in range, rounded so co-op splits stay whole. */
 export const bountyBonus = (sim: Sim, e: Enemy, reward: number) => Math.round(reward * strongest(sim, "bounty", "bonus", e));
 /** Peilsender: damage multiplier for an enemy in range; 1 without a tracker. */
-export const markFactor = (sim: Sim, e: Enemy) => 1 + strongest(sim, "mark", "amount", e);
+// Support combat paths (Lingering Tag, Hunter's Mark) through `trackerMark`; without them exactly the strongest mark.
+export const markFactor = (sim: Sim, e: Enemy) => 1 + trackerMark(sim, e, strongest(sim, "mark", "amount", e));
 /** Reparaturdock: after a completed wave each dock restores energy, never above the mission's start value. */
 export function repairReactor(sim: Sim) {
   const s = sim.state;
@@ -29,6 +67,7 @@ export function repairReactor(sim: Sim) {
     const attack = resolveUpgrades(t, sim.content).attack;
     if (attack.kind !== "repair") continue;
     const amount = Math.min(attack.amount, sim.mission.reactorEnergy - s.lives);
+    salvage(sim, t, attack.amount - Math.max(0, amount)); // Dock path: Salvage
     if (amount <= 0) continue;
     s.lives += amount;
     s.events.push({ type: "repair", at: { x: t.x, y: t.y }, amount, color: sim.content.towers[t.type].color });
@@ -58,9 +97,8 @@ export const overclockActive = (a: OverclockAttack, time: number) => time % a.pe
 /** Overclock: cooldown speed factor of a tower, `1 + boost` of the strongest Overclock in reach with an open window. */
 export function overclockRate(sim: Sim, t: Point) {
   let boost = 0;
-  reaching(sim, "overclock", t, (a) => {
-    if (overclockActive(a, sim.state.time)) boost = Math.max(boost, a.boost);
-  });
+  // Support combat paths: Opening Salvo windows and the Afterburn tail count like the window itself.
+  reaching(sim, "overclock", t, (a, oc) => (boost = Math.max(boost, windowBoost(sim, a, oc))));
   return 1 + boost;
 }
 /** Fire Control in reach of `t` with the best average gain per shot, if any. */
@@ -134,12 +172,14 @@ export function payInterest(sim: Sim) {
   for (const t of s.towers) {
     const attack = resolveUpgrades(t, sim.content).attack;
     if (attack.kind !== "interest") continue;
-    const amount = interestOn(s.wallets[t.owner] ?? 0, attack.rate, attack.cap);
+    const amount = interestOn(interestBase(sim, t), attack.rate, attack.cap); // Investment Account
     if (amount > (best.get(t.owner)?.amount ?? 0)) best.set(t.owner, { tower: t, amount });
   }
+  const restored = { done: false };
   for (const [owner, { tower: t, amount }] of best) {
     credit(s, owner, amount);
     s.events.push({ type: "income", at: { x: t.x, y: t.y }, amount, color: sim.content.towers[t.type].color });
+    reserveCells(sim, t, amount, restored); // Vault path: Reserve Cells
   }
 }
 /** Shield Generator: charge left this wave. */
@@ -154,19 +194,26 @@ export const barrierLeft = (sim: Sim, t: Pick<Tower, "type" | "upgrades" | "barr
 export function absorbLeak(sim: Sim, e: Enemy, leak: number) {
   const s = sim.state;
   let rest = leak;
+  const takers: Tower[] = [];
   for (const t of s.towers) {
     if (rest <= 0) break;
     const take = Math.min(rest, barrierLeft(sim, t));
     if (take <= 0) continue;
+    takers.push(t);
     t.barrier = (t.barrier ?? 0) + take;
     rest -= take;
     s.events.push({ type: "barrier", from: { x: t.x, y: t.y }, at: { x: e.x, y: e.y }, amount: take, color: sim.content.towers[t.type].color });
   }
+  if (takers.length) shockwave(sim, takers); // Shield Generator path: Shockwave
   return rest;
 }
 /** After a completed wave: Vault interest, then every Shield Generator recharges. */
 export function settleEconomy(sim: Sim) {
   payInterest(sim);
+  payCleanSheet(sim); // Vault path: Clean Sheet
+  payOverflow(sim, (t) => barrierLeft(sim, t)); // Shield Generator path: Overflow
   for (const t of sim.state.towers) delete t.barrier;
+  resetScrapYards(sim); // support combat: Scrap Yard
+  closeEconomyWave(sim);
 }
 // ── end g5 ──

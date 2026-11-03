@@ -8,6 +8,7 @@ import { igniteOiled, oilBoost } from "./oil";
 import { jumpCurse, releaseEcho } from "./hex";
 import { shrinkArmor } from "./shrink";
 import { spreadTether, whiplash } from "./tether";
+import { blast, chainReaction } from "./attacks/splash";
 /** Seconds between two burn damage steps; fewer, larger hits instead of one per tick. */
 export const BURN_TICK = 0.5;
 const active = (effect: StatusEffect, time: number) => time < effect.until;
@@ -27,9 +28,8 @@ interface StatusModule<S extends StatusEffect> {
 function detonate(sim: Sim, carrier: Enemy, s: Of<"charged">) {
   s.until = -Infinity;
   sim.state.events.push({ type: "pulse", at: { x: carrier.x, y: carrier.y }, radius: s.radius, color: sim.content.towers[s.source.type].color });
-  // A copy: fragments released by a death in the blast must not catch it.
-  for (const target of [...sim.state.enemies])
-    if (target.hp > 0 && canTarget(sim, s.source.type, target) && dist(target, carrier) <= s.radius) applyDamage(sim, s.source, target, s.damage, false, hitOf("charge", s.source));
+  // Chain Reaction (Sticky Mine): the blast's first kills explode once more, like a Nova's.
+  chainReaction(sim, s.source, blast(sim, s.source, carrier, s.radius, s.damage, "charge"), s.damage, "charge");
 }
 /** Overwrites an entry completely, so optional fields of the old effect (spread, exposure) do not survive. */
 function replace(existing: StatusEffect, incoming: StatusEffect) {

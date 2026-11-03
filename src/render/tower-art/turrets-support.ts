@@ -86,12 +86,14 @@ export const SUPPORT_TURRETS = {
     bolt(ctx, 2);
   },
   aura: (ctx) => {
+    // The track's motif (tracks are levels 2–4), replaced by the path's once one is chosen (levels 5–7).
     const { g, x, y, tower: t, definition: d, clock, color: c, path, level } = ctx,
-      motif = path ? d.visual.paths?.[path]?.motif : undefined;
+      track = d.upgrades.find((u) => u.track && t.upgrades.includes(u.id))?.track,
+      motif = path ? d.visual.paths?.[path]?.motif : track ? d.visual.tracks?.[track]?.motif : undefined;
     ring(g, x, y, 19, 2, c, motif ? 0.55 : 0.3);
     if (!motif) {
-      // Undecided: one dimmed dot per path colour hints at the choice.
-      Object.values(d.visual.paths ?? {}).forEach((option, i, all) => {
+      // Undecided: one dimmed dot per track colour hints at the choice.
+      Object.values(d.visual.tracks ?? {}).forEach((option, i, all) => {
         const p = at(x, y, clock * 0.4 + (i * TAU) / all.length - Math.PI / 2, 13);
         disc(g, p.x, p.y, 2.5, option.color, 0.55);
       });
@@ -99,7 +101,7 @@ export const SUPPORT_TURRETS = {
       bolt(ctx, 2);
       return;
     }
-    MOTIFS[motif](ctx, Math.max(1, level), clock + t.id);
+    MOTIFS[motif](ctx, Math.min(3, Math.max(1, path ? level - 4 : level - 1)), clock + t.id);
     disc(g, x, y, 5, c);
     bolt(ctx, 2);
     loop(g, x, y, 8 + Math.sin(clock * 2) * 2, 1.5, c, 0.75);

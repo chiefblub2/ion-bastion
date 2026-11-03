@@ -40,6 +40,9 @@ const FIELDS: Record<string, { label: string; unit: string; scale: number }> = {
   share: { label: "Damage shared", ...SHARE },
   cells: { label: "Knockback", ...CELLS },
   // ── end g2 ──
+  amount: { label: "Amount", ...PLAIN },
+  cap: { label: "Most per wave", ...PLAIN },
+  boost: { label: "Boost", ...SHARE },
 };
 /** Labels that read differently for one kind. */
 const OVERRIDES: Partial<Record<SpecializationSpec["kind"], Record<string, string>>> = {
@@ -69,6 +72,63 @@ const OVERRIDES: Partial<Record<SpecializationSpec["kind"], Record<string, strin
   "siphon-fork": { count: "Extra beams" },
   "power-tap": { bonus: "Damage per enemy" },
   // ── end g2 ──
+  // ── trap paths ──
+  hamstring: { slow: "Slow while bleeding" },
+  "open-wounds": { bonus: "Damage taken" },
+  "tar-oil": { boost: "Burn damage", duration: "Oil duration" },
+  concussion: { bonus: "Damage taken", duration: "After landing" },
+  "alarm-volley": { bonus: "Next shot bonus" },
+  flare: { duration: "Reveal" },
+  "held-exposure": { bonus: "Damage taken" },
+  "warp-daze": { duration: "Confusion" },
+  // ── end trap paths ──
+  // ── support economy ──
+  "big-game": { amount: "Credits per heavy kill" },
+  lure: { slow: "Slow in radius" },
+  "field-rations": { every: "Kills per energy" },
+  advance: { amount: "Paid at wave start" },
+  compounding: { amount: "Credits per wave", cap: "Most bonus per wave" },
+  "fuel-line": { bonus: "Fire rate", radius: "Reach" },
+  "clean-sheet": { amount: "Credits per clean wave" },
+  investment: { share: "Spending counted" },
+  "reserve-cells": { every: "Interest per energy" },
+  prefab: { share: "Build discount" },
+  refit: { share: "Sale share" },
+  calibration: { bonus: "Bonus damage at max level" },
+  triage: { amount: "Energy refunded per wave" },
+  salvage: { amount: "Credits per unused point" },
+  "damage-control": { bonus: "Fire rate below 50%", radius: "Reach" },
+  recharge: { amount: "Points refilled", every: "Seconds between refills" },
+  shockwave: { duration: "Stun", radius: "Reach around the reactor" },
+  overflow: { amount: "Credits per unused point" },
+  // ── end support economy ──
+  // ── support combat ──
+
+  afterburn: { boost: "Fire rate after the burst", duration: "Fade-out" },
+  "opening-salvo": { duration: "Burst length" },
+  spotting: { bonus: "Bonus on the next hit" },
+  downlink: { slow: "Flyer slow" },
+  "flak-relay": { bonus: "Bonus vs. flyers" },
+  "wing-tag": { bonus: "Damage taken" },
+  "nexus-resonance": { bonus: "Range per type" },
+  harmony: { bonus: "Fire rate per type" },
+  diversity: { bonus: "Damage taken", min: "Min. tower types" },
+  "weak-point": { fraction: "Armor ignored when marked" },
+  "hunters-mark": { bonus: "Damage taken (strongest)" },
+  "lingering-tag": { duration: "Mark lingers" },
+  "exposure-scan": { bonus: "Damage taken (revealed)" },
+  "static-pulse": { every: "Pulse every (s)", duration: "Disruption" },
+  afterimage: { duration: "Reveal lingers" },
+  cascade: { factor: "Second jump (share)" },
+  meltdown: { factor: "Burn (share of jump)", duration: "Burn duration" },
+  "scrap-yard": { every: "Overkill per credit" },
+  shred: { fraction: "Armor removed", duration: "Strip duration" },
+  "hollow-points": { bonus: "Bonus vs unarmored" },
+  shieldbreaker: { bonus: "Bonus vs shields" },
+  // ── end support combat ──
+  // ── aura paths ──
+  harmonics: { bonus: "Other two stats" },
+  // ── end aura paths ──
 };
 const PREDICATES = { heavy: "heavy targets", "heavy-air": "heavy flyers", armored: "armored enemies", isolated: "a lone target", burning: "burning enemies" };
 

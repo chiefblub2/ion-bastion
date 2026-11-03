@@ -4,6 +4,7 @@ import { applyDamage, hitOf } from "../damage";
 import { dist } from "../path";
 import { speedFactor } from "../status";
 import { canTarget } from "./targeting";
+import { executePercent } from "./specials";
 import type { AttackModule } from "./types";
 /** 0 for a walker at full speed, 1 for one that stands still (stunned, held, pulled back or stuck at a barricade). */
 export function stillness(sim: Sim, e: Enemy) {
@@ -23,6 +24,7 @@ export const grind: AttackModule<GrindAttack> = {
     // A copy: enemies released on death must not catch the same turn of the blades.
     for (const target of [...sim.state.enemies])
       if (target.hp > 0 && canTarget(sim, src.type, target) && dist(target, from) <= reach)
-        applyDamage(sim, src, target, damage * (1 + spec.bonus * stillness(sim, target)), false, hitOf("grind", src));
+        // Bonesaw (Decay's Final Decay): a wounded enemy also loses a share of its max HP, held or not.
+        applyDamage(sim, src, target, damage * (1 + spec.bonus * stillness(sim, target)) + executePercent(src.special, target) * target.maxHp, false, hitOf("grind", src));
   },
 };

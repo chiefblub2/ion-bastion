@@ -5,13 +5,19 @@ import { resists } from "../traits";
 import { canAcquire, nearest } from "./targeting";
 import type { AttackModule } from "./types";
 /**
- * Hypnotises one enemy: it walks backwards at its own speed until the trance ends, then is immune for the recovery.
+ * Confuses one enemy: it walks backwards at its own speed for `duration` seconds, then is immune for the recovery.
  * Units that shrug off a pull (unstoppable, dampened) keep their heading. True if the trance took hold.
+ * Shared by Mesmer and the Warp Pad's Disorient path.
  */
-function hypnotise(sim: Sim, e: Enemy, spec: ConfuseAttack, special: SpecializationSpec | undefined) {
+export function trance(sim: Sim, e: Enemy, duration: number, recovery: number) {
   if (resists(sim, e, "pull")) return false;
+  const release = sim.state.time + duration;
+  return applyStatus(sim, e, { kind: "confuse", release, until: release + recovery });
+}
+/** Mesmer's trance plus Mind Break. */
+function hypnotise(sim: Sim, e: Enemy, spec: ConfuseAttack, special: SpecializationSpec | undefined) {
+  if (!trance(sim, e, spec.duration, spec.recovery)) return false;
   const release = sim.state.time + spec.duration;
-  if (!applyStatus(sim, e, { kind: "confuse", release, until: release + spec.recovery })) return false;
   // Mind Break: only a trance that took hold opens the damage window, until it ends.
   if (special?.kind === "mind-break") applyStatus(sim, e, { kind: "vulnerable", amount: special.bonus, until: release });
   return true;

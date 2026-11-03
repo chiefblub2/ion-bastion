@@ -53,11 +53,13 @@ const width = SHOTS ? SHOTS_WIDTH : GAP + GROUPS * (groupWidth + 3 * GAP),
 const grid = (v: number) => v / CELL - 0.5;
 const font = (size: number, color = "#cfe3ef") => ({ fontFamily: "monospace", fontSize: `${size}px`, color, resolution: ZOOM });
 
-/** A tower as if bought up to `level` (path upgrades only from `path`), or as far as it goes with `"max"`. */
-function built(type: TowerId, level: number | "max", path?: string, cooldown = 0, angle = -Math.PI / 4): Tower {
+/** A tower as if bought up to `level` (path upgrades only from `path`, Aura's tracks only from `track`), or as far as it goes with `"max"`. */
+function built(type: TowerId, level: number | "max", path?: string, cooldown = 0, angle = -Math.PI / 4, track?: string): Tower {
   const t: Tower = { id: 0, type, x: 0, y: 0, upgrades: [], cooldown, spent: 0, angle, kills: 0, owner: 0 };
   while (level === "max" || towerLevel(t, content) < level) {
-    const next = upgradeOptions(t, Infinity, content).find((o) => o.status === "available" && (!o.definition!.path || o.definition!.path === path));
+    const next = upgradeOptions(t, Infinity, content).find(
+      (o) => o.status === "available" && (!o.definition!.path || o.definition!.path === path) && (!track || !o.definition!.track || o.definition!.track === track),
+    );
     if (!next) break;
     t.upgrades.push(next.definition!.id);
   }
@@ -67,15 +69,27 @@ function built(type: TowerId, level: number | "max", path?: string, cooldown = 0
 function variants(type: TowerId): { label: string; tower: Tower }[] {
   const d = content.towers[type],
     paths = Object.keys(d.visual.paths ?? {});
-  if (d.attack.kind === "aura")
-    return [{ label: "base", tower: built(type, 1) }, ...paths.map((p) => ({ label: p, tower: built(type, "max", p) }))];
-  if (paths.length)
+  // Aura: each track at its tier III (level 4), then each path at level 7 on the track in the same slot.
+  if (d.attack.kind === "aura") {
+    const tracks = Object.keys(d.visual.tracks ?? {});
+    return [
+      ...tracks.map((k) => ({ label: `L4 ${k}`, tower: built(type, 4, undefined, 0, undefined, k) })),
+      ...paths.map((p, i) => ({ label: `L7 ${d.visual.paths![p].name ?? p}`, tower: built(type, "max", p, 0, undefined, tracks[i]) })),
+    ];
+  }
+  if (paths.length) {
+    // The last plain level (5, support towers 3), then every path at its last tier.
+    const plain = Math.max(1, ...d.upgrades.filter((u) => !u.path).map((u) => u.effects.level ?? 1));
     return [
       { label: "L1", tower: built(type, 1) },
       { label: "L1 fire", tower: built(type, 1, undefined, 0.92) },
-      { label: "L5", tower: built(type, 5) },
-      ...paths.map((p) => ({ label: `L8 ${d.visual.paths![p].name ?? p}`, tower: built(type, "max", p) })),
+      { label: `L${plain}`, tower: built(type, plain) },
+      ...paths.map((p) => {
+        const t = built(type, "max", p);
+        return { label: `L${towerLevel(t, content)} ${d.visual.paths![p].name ?? p}`, tower: t };
+      }),
     ];
+  }
   return [
     { label: "L1", tower: built(type, 1) },
     { label: "L1 fire", tower: built(type, 1, undefined, 0.92) },
@@ -85,9 +99,8 @@ function variants(type: TowerId): { label: string; tower: Tower }[] {
 }
 /** Draws a tower the way the battlefield does. */
 function tower(pen: Pen, x: number, y: number, t: Tower) {
-  const aura = content.towers[t.type].attack.kind === "aura";
   drawTower(pen, x, y, t, content.towers[t.type], CLOCK, {
-    markers: aura ? t.upgrades.length : towerLevel(t, content),
+    markers: towerLevel(t, content),
     maxed: isFullyUpgraded(t, content),
     color: towerColor(t, content),
     path: towerPath(t, content),

@@ -5,6 +5,9 @@ import { isSupport } from "./attacks";
 import type { AuraBonuses, AuraStat, ContentPack, Point, Sim, TowerId } from "../core/types";
 import { isSuppressed, towerDebuffs } from "./traits";
 import { siphonBoost } from "./siphon";
+import { nexusBoost } from "./combat-paths-b";
+import { fieldBonuses } from "./aura-paths";
+import { economyBoost } from "./economy-paths";
 
 export const AURA_STATS: readonly AuraStat[] = ["damage", "speed", "range"];
 const emptyBonuses = (): AuraBonuses => ({ damage: 0, speed: 0, range: 0 });
@@ -37,7 +40,7 @@ export function receivedAuraBonuses(
   const combined = emptyBonuses();
   for (const source of towers) {
     if (!isInAura(source, target, content) || (sim && isSuppressed(sim, source))) continue;
-    const bonuses = auraBonuses(source, content);
+    const bonuses = fieldBonuses(source, target, content); // Harmonics: also the stats of the tracks not taken
     for (const key of AURA_STATS) combined[key] = Math.max(combined[key], bonuses[key]);
   }
   return combined;
@@ -57,11 +60,15 @@ export function effectiveTowerStats(
     debuffs = sim && d.placement !== "path" && !isSupport(d.attack) ? towerDebuffs(sim, target) : { range: 0, interval: 0 };
   // Siphon: hindered enemies near a Siphon speed up the attack towers around it (Power Tap: and strengthen them).
   const siphon = sim && d.placement !== "path" && !isSupport(d.attack) ? siphonBoost(sim, target) : { rate: 0, damage: 0 };
+  // Nexus Resonance and Harmony: more range and fire rate per tower type around the Nexus.
+  const nexus = sim && d.placement !== "path" && !isSupport(d.attack) ? nexusBoost(sim, target) : { range: 0, rate: 0 };
+  // Economy paths: Fuel Line and Damage Control (fire rate), Calibration (damage).
+  const economy = sim ? economyBoost(sim, target) : { rate: 0, damage: 0 };
   return {
     base,
     bonuses,
-    damage: base.damage * (1 + bonuses.damage) * (1 + siphon.damage),
-    range: base.range * (1 + bonuses.range) * (1 - debuffs.range),
-    interval: (base.interval / (1 + bonuses.speed)) * (1 + debuffs.interval) / (1 + siphon.rate),
+    damage: base.damage * (1 + bonuses.damage) * (1 + siphon.damage) * (1 + economy.damage),
+    range: base.range * (1 + bonuses.range) * (1 - debuffs.range) * (1 + nexus.range),
+    interval: (base.interval / (1 + bonuses.speed)) * (1 + debuffs.interval) / (1 + siphon.rate) / (1 + nexus.rate) / (1 + economy.rate),
   };
 }

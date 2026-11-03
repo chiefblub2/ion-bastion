@@ -2,6 +2,7 @@ import type { OilAttack } from "../../core/types";
 import { applyDamage, hitOf } from "../damage";
 import { dist } from "../path";
 import { applyStatus } from "../status";
+import { frostburst } from "./specials";
 import { canTarget } from "./targeting";
 import type { AttackModule } from "./types";
 /** Oil Slick: coats everything on the cell; fire does the rest (`systems/oil.ts`). */
@@ -23,5 +24,7 @@ export const oil: AttackModule<OilAttack> = {
         applyDamage(sim, src, target, damage, false, hitOf("oil", src));
         if (target.hp > 0) applyStatus(sim, target, { kind: "oiled", boost: spec.boost, radius: spec.radius, until });
       }
+    // Slick: enemies around the slick, the coated ones included, are slowed (Cryo's Frostburst).
+    if (src.special?.kind === "frostburst") frostburst(sim, src, from, src.special);
   },
 };

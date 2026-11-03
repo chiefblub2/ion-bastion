@@ -2,6 +2,7 @@ import type { TowerDefinition, TowerId } from "../core/types";
 import { attackTower, AURA_UPGRADES, BEACON_UPGRADES, DETECTOR_UPGRADES, DOCK_UPGRADES, REFINERY_UPGRADES, TRACKER_UPGRADES, trapTower } from "./upgrades";
 import { ARMORY_UPGRADES, FIRE_CONTROL_UPGRADES, NEXUS_UPGRADES, OVERCLOCK_UPGRADES, SKYLINK_UPGRADES } from "./upgrades";
 import { RECYCLER_UPGRADES, SHIELDGEN_UPGRADES, VAULT_UPGRADES, WORKSHOP_UPGRADES } from "./upgrades";
+import { supportTower } from "./support-specializations";
 export const TOWER_CONTENT = {
   pulse: attackTower({
     id: "pulse",
@@ -57,11 +58,11 @@ export const TOWER_CONTENT = {
       description: "Deep Freeze: enemies move at only 35% speed for almost three seconds.",
     },
   }),
-  aura: {
+  aura: supportTower({
     id: "aura",
     name: "Aura",
     role: "SUPPORT",
-    description: "Boosts attack towers in its radius. Pick one of three upgrade paths with three tiers each; no attack of its own.",
+    description: "Boosts attack towers in its radius. Pick one of three tracks with three tiers each, then one of three paths; no attack of its own.",
     cost: 160,
     damage: 0,
     range: 3,
@@ -72,14 +73,14 @@ export const TOWER_CONTENT = {
     visual: {
       icon: "◎",
       turret: "aura",
-      paths: {
+      tracks: {
         damage: { color: 0xff7a5c, motif: "blades" },
         speed: { color: 0xffd166, motif: "vortex" },
         range: { color: 0x8ef0a8, motif: "rings" },
       },
     },
     upgrades: AURA_UPGRADES,
-  },
+  }),
   flak: attackTower({
     id: "flak",
     name: "Flak",
@@ -968,7 +969,7 @@ export const TOWER_CONTENT = {
     5: { attack: { pin: 1.6, duration: 4 }, description: "Whaler: pins for 1.6 s, netted for 4 s." },
   }),
   // ── end g3 ──
-  refinery: {
+  refinery: supportTower({
     id: "refinery",
     name: "Refinery",
     role: "CREDITS",
@@ -982,8 +983,8 @@ export const TOWER_CONTENT = {
     targets: [],
     visual: { icon: "⚙\uFE0E", turret: "refinery" },
     upgrades: REFINERY_UPGRADES,
-  },
-  detector: {
+  }),
+  detector: supportTower({
     id: "detector",
     name: "Detector",
     role: "RECON",
@@ -997,8 +998,8 @@ export const TOWER_CONTENT = {
     targets: [],
     visual: { icon: "◎", turret: "radar" },
     upgrades: DETECTOR_UPGRADES,
-  },
-  beacon: {
+  }),
+  beacon: supportTower({
     id: "beacon",
     name: "Bounty Beacon",
     role: "BOUNTY",
@@ -1012,8 +1013,8 @@ export const TOWER_CONTENT = {
     targets: [],
     visual: { icon: "⛁\uFE0E", turret: "beacon" },
     upgrades: BEACON_UPGRADES,
-  },
-  dock: {
+  }),
+  dock: supportTower({
     id: "dock",
     name: "Repair Dock",
     role: "REPAIR",
@@ -1027,8 +1028,8 @@ export const TOWER_CONTENT = {
     targets: [],
     visual: { icon: "✚\uFE0E", turret: "dock" },
     upgrades: DOCK_UPGRADES,
-  },
-  tracker: {
+  }),
+  tracker: supportTower({
     id: "tracker",
     name: "Tracker",
     role: "TARGET MARKING",
@@ -1042,9 +1043,9 @@ export const TOWER_CONTENT = {
     targets: [],
     visual: { icon: "⌾", turret: "tracker" },
     upgrades: TRACKER_UPGRADES,
-  },
+  }),
   // ── new towers: g4 (Support A) ──
-  overclock: {
+  overclock: supportTower({
     id: "overclock",
     name: "Overclock",
     role: "BURST FIRE",
@@ -1058,8 +1059,8 @@ export const TOWER_CONTENT = {
     targets: [],
     visual: { icon: "⏱︎", turret: "clock" },
     upgrades: OVERCLOCK_UPGRADES,
-  },
-  firectl: {
+  }),
+  firectl: supportTower({
     id: "firectl",
     name: "Fire Control",
     role: "CRITICAL HITS",
@@ -1073,8 +1074,8 @@ export const TOWER_CONTENT = {
     targets: [],
     visual: { icon: "⊹", turret: "director" },
     upgrades: FIRE_CONTROL_UPGRADES,
-  },
-  armory: {
+  }),
+  armory: supportTower({
     id: "armory",
     name: "Armory",
     role: "ARMOR PIERCE",
@@ -1088,8 +1089,8 @@ export const TOWER_CONTENT = {
     targets: [],
     visual: { icon: "⛏︎", turret: "armory" },
     upgrades: ARMORY_UPGRADES,
-  },
-  skylink: {
+  }),
+  skylink: supportTower({
     id: "skylink",
     name: "Skylink",
     role: "AIR UPLINK",
@@ -1103,8 +1104,8 @@ export const TOWER_CONTENT = {
     targets: [],
     visual: { icon: "⇈", turret: "skylink" },
     upgrades: SKYLINK_UPGRADES,
-  },
-  nexus: {
+  }),
+  nexus: supportTower({
     id: "nexus",
     name: "Nexus",
     role: "SYNERGY",
@@ -1118,10 +1119,10 @@ export const TOWER_CONTENT = {
     targets: [],
     visual: { icon: "✣", turret: "nexus" },
     upgrades: NEXUS_UPGRADES,
-  },
+  }),
   // ── end g4 ──
   // ── new towers: g5 (Support B) ──
-  workshop: {
+  workshop: supportTower({
     id: "workshop",
     name: "Workshop",
     role: "UPGRADE DISCOUNT",
@@ -1135,8 +1136,8 @@ export const TOWER_CONTENT = {
     targets: [],
     visual: { icon: "⚒︎", turret: "workshop" },
     upgrades: WORKSHOP_UPGRADES,
-  },
-  vault: {
+  }),
+  vault: supportTower({
     id: "vault",
     name: "Vault",
     role: "INTEREST",
@@ -1150,8 +1151,8 @@ export const TOWER_CONTENT = {
     targets: [],
     visual: { icon: "▣", turret: "vault" },
     upgrades: VAULT_UPGRADES,
-  },
-  shieldgen: {
+  }),
+  shieldgen: supportTower({
     id: "shieldgen",
     name: "Shield Generator",
     role: "REACTOR SHIELD",
@@ -1165,8 +1166,8 @@ export const TOWER_CONTENT = {
     targets: [],
     visual: { icon: "⛨︎", turret: "shieldgen" },
     upgrades: SHIELDGEN_UPGRADES,
-  },
-  recycler: {
+  }),
+  recycler: supportTower({
     id: "recycler",
     name: "Recycler",
     role: "OVERKILL",
@@ -1180,7 +1181,7 @@ export const TOWER_CONTENT = {
     targets: [],
     visual: { icon: "♻︎", turret: "recycler" },
     upgrades: RECYCLER_UPGRADES,
-  },
+  }),
   // ── end g5 ──
 } satisfies Record<string, TowerDefinition>;
 export const TOWERS: Readonly<Record<TowerId, Readonly<TowerDefinition>>> =

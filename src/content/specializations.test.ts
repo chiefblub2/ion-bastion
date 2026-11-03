@@ -34,9 +34,9 @@ function built(type: TowerId, upgrades: string[] = LEVELS) {
 
 describe("tower specializations: content", () => {
   it("covers every attack and control tower with three paths of three tiers (T-001)", () => {
-    const attackers = Object.values(TOWERS).filter((t) => t.placement !== "path" && !isSupport(t.attack)).map((t) => t.id);
-    expect([...SPECIALIZED].sort()).toEqual(attackers.sort());
-    for (const type of SPECIALIZED) {
+    const attackers = (Object.keys(TOWERS) as TowerId[]).filter((id) => TOWERS[id].placement !== "path" && !isSupport(TOWERS[id].attack));
+    expect(attackers.every((id) => SPECIALIZED.includes(id))).toBe(true);
+    for (const type of attackers) {
       const upgrades = TOWERS[type].upgrades, paths = new Set(upgrades.map((u) => u.path).filter(Boolean));
       expect(upgrades).toHaveLength(13);
       expect(paths.size).toBe(3);
@@ -55,15 +55,23 @@ describe("tower specializations: content", () => {
         }
     }
   });
-  it("leaves traps and support towers as they were (T-009)", () => {
+  it("gives traps levels 6–8 and support towers levels 4–6 after their last plain level, never changing a trap's radius", () => {
     for (const type of Object.keys(TOWERS) as TowerId[]) {
-      if (SPECIALIZED.includes(type)) continue;
-      const definition: TowerDefinition = TOWERS[type];
-      if (definition.placement === "path") expect(definition.upgrades.map((u) => u.id)).toEqual(LEVELS);
-      expect(definition.upgrades.every((u) => !u.effects.specialization)).toBe(true);
-      expect(maxTowerLevel(type)).toBeLessThanOrEqual(5);
+      const definition: TowerDefinition = TOWERS[type], tiers = definition.upgrades.filter((u) => u.path && u.effects.level !== undefined);
+      if (definition.placement !== "path" && !isSupport(definition.attack)) continue;
+      const trap = definition.placement === "path";
+      expect(tiers, type).toHaveLength(9);
+      expect(new Set(tiers.map((u) => u.path)).size, type).toBe(3);
+      expect(maxTowerLevel(type), type).toBe(trap ? 8 : type === "aura" ? 7 : 6);
+      expect(Object.keys(definition.visual.paths ?? {}).sort()).toEqual([...new Set(tiers.map((u) => u.path!))].sort());
+      if (trap) {
+        expect(tiers.every((u) => u.effects.stats?.range === undefined), type).toBe(true);
+        expect(tiers.filter((u) => u.id.endsWith("-1")).every((u) => u.requires[0] === "level-5" && u.cost === Math.round(definition.cost * 2.5)), type).toBe(true);
+      } else {
+        // A support path never touches the tower's own values: no stats and no attack overrides.
+        expect(tiers.every((u) => !u.effects.stats && !u.effects.attack && !!u.effects.specialization), type).toBe(true);
+      }
     }
-    expect(TOWERS.aura.upgrades.map((u) => u.id)).toEqual(["damage", "damage-2", "damage-3", "speed", "speed-2", "speed-3", "range", "range-2", "range-3"]);
   });
   it("stores final values per tier instead of stacking them (M-001, M-002)", () => {
     const overclock = resolveUpgrades({ type: "pulse", upgrades: [...LEVELS, "overclock-1", "overclock-2"] });

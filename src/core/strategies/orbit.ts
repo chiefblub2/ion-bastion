@@ -5,9 +5,9 @@ export const ORBIT_STRATEGIES: Strategies = {
     // Two refineries right after the first tower, then the ring's inner corners.
     A: {
       builds: [
-        b("pulse", 12, 3), b("refinery", 17, 0), b("refinery", 17, 11), b("blast", 12, 6),
+        b("pulse", 12, 3), b("refinery", 17, 0, "compounding"), b("refinery", 17, 11, "compounding"), b("blast", 12, 6),
         b("frost", 13, 9), b("flak", 10, 3), b("blast", 10, 5), b("tesla", 13, 2),
-        b("pulse", 4, 5), b("blast", 4, 9), b("aura", 12, 5), b("pulse", 13, 8),
+        b("pulse", 4, 5), b("blast", 4, 9), b("aura", 12, 5, "harmonics"), b("pulse", 13, 8),
       ],
     },
     // No economy: tesla and novas inside the ring, upgrades first.
@@ -42,7 +42,7 @@ export const ORBIT_STRATEGIES: Strategies = {
       upgradeFirst: true,
       builds: [
         b("flak", 7, 4), b("pulse", 10, 6), b("blast", 5, 4), b("flak", 8, 6),
-        b("aura", 8, 4), b("flak", 9, 4), b("detector", 8, 7), b("decay", 7, 6), b("decay", 11, 6),
+        b("aura", 8, 4, "execution-field"), b("flak", 9, 4), b("detector", 8, 7, "exposure-scan"), b("decay", 7, 6), b("decay", 11, 6),
       ],
     },
     // No flak and no Detektor: all-round tesla, lance and pulse, the few Phantome slip through; upgrades first.
@@ -59,7 +59,7 @@ export const ORBIT_STRATEGIES: Strategies = {
     A: {
       builds: [
         b("lance", 21, 4), b("pulse", 19, 3), b("lance", 0, 7), b("frost", 2, 5),
-        b("lance", 0, 4), b("detector", 8, 3), b("blast", 19, 2), b("flak", 2, 6), b("lance", 21, 1),
+        b("lance", 0, 4), b("detector", 8, 3, "exposure-scan"), b("blast", 19, 2), b("flak", 2, 6), b("lance", 21, 1),
         b("tesla", 5, 5), b("blast", 13, 3),
       ],
     },
@@ -76,8 +76,8 @@ export const ORBIT_STRATEGIES: Strategies = {
     A: {
       upgradeFirst: true,
       builds: [
-        b("blast", 13, 5), b("pulse", 13, 6), b("flak", 14, 6), b("aura", 14, 5),
-        b("tesla", 16, 8), b("decay", 16, 3), b("frost", 12, 6), b("acid", 16, 9), b("detector", 12, 5),
+        b("blast", 13, 5), b("pulse", 13, 6), b("flak", 14, 6), b("aura", 14, 5, "execution-field"),
+        b("tesla", 16, 8), b("decay", 16, 3), b("frost", 12, 6), b("acid", 16, 9), b("detector", 12, 5, "exposure-scan"),
       ],
     },
     // Lances fire down the long straights, novas and tesla hold the corners, a Detektor reveals Phantome; upgrades first.
@@ -85,7 +85,7 @@ export const ORBIT_STRATEGIES: Strategies = {
       upgradeFirst: true,
       builds: [
         b("blast", 13, 5), b("lance", 19, 4), b("tesla", 16, 8), b("frost", 13, 6),
-        b("decay", 16, 3), b("lance", 10, 7), b("flak", 16, 9), b("blast", 12, 6), b("detector", 12, 5),
+        b("decay", 16, 3), b("lance", 10, 7), b("flak", 16, 9), b("blast", 12, 6), b("detector", 12, 5, "afterimage"),
       ],
     },
   },

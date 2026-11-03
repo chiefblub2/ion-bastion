@@ -98,6 +98,38 @@ describe("lockstep", () => {
     expect(clients[1].game.state.towers.map((t) => t.upgrades.at(-1))).toEqual(["ricochet-3", "aftershock-1"]);
     expect(clients[0].hashes).toEqual(clients[1].hashes);
   });
+  it("keeps co-op clients identical with specialized traps and support towers", () => {
+    const { room, clients, step } = session();
+    room.launch("outpost-07");
+    step();
+    for (const c of clients) c.game.state.wallets = [20000, 20000];
+    const g = clients[0].game,
+      free = [...Array(g.mission.map.columns * g.mission.map.rows).keys()]
+        .map((i) => ({ x: i % g.mission.map.columns, y: Math.floor(i / g.mission.map.columns) }))
+        .filter((p) => g.canBuild(p.x, p.y, "pulse")),
+      trap = g.mission.map.path.slice(3).find((p) => g.canBuild(p.x, p.y, "mine"))!;
+    const plan: [number, "pulse" | "beacon" | "vault" | "tracker" | "mine", { x: number; y: number }, string[]][] = [
+      [0, "pulse", free[0], ["level-2", "level-3"]],
+      [0, "beacon", free[1], ["level-2", "level-3", "big-game-1", "big-game-2"]],
+      [1, "vault", free[2], ["level-2", "level-3", "investment-1"]],
+      [1, "tracker", free[3], ["level-2", "level-3", "hunters-mark-1"]],
+      [1, "mine", trap, ["level-2", "level-3", "level-4", "level-5", "chain-reaction-1"]],
+    ];
+    for (const [seat, tower, at] of plan) room.queue(seat, { type: "build", tower, ...at });
+    step();
+    const ids = clients[0].game.state.towers.map((t) => t.id);
+    expect(ids).toHaveLength(plan.length);
+    plan.forEach(([seat, , , upgrades], i) => upgrades.forEach((upgrade) => room.queue(seat, { type: "upgrade", id: ids[i], upgrade })));
+    room.queue(0, { type: "start" });
+    let guard = 0;
+    do {
+      step();
+      expect(clients[0].sim.hash()).toBe(clients[1].sim.hash());
+      expect(guard++).toBeLessThan(20000);
+    } while (clients[0].game.state.status === "wave");
+    expect(clients[1].game.state.towers.map((t) => t.upgrades.at(-1))).toEqual(plan.map(([, , , u]) => u.at(-1)));
+    expect(clients[0].hashes).toEqual(clients[1].hashes);
+  });
   it("reports every applied command with its player", () => {
     const { room, clients, step } = session();
     room.launch("outpost-07");
