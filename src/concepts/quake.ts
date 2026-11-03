@@ -34,7 +34,7 @@ const OCT = Array.from({ length: 16 }, (_, i) => {
 });
 /** Strike plate radius and the hammer head radius. */
 const PLATE = 9,
-  HAMMER = 7.2,
+  HAMMER = 7.8,
   CROWN_R = 5.5;
 /** Hydraulic legs: ground angle of each foot (left, right, back), the foot radius and the crown radius they reach. */
 const LEGS = [Math.PI, 0, -Math.PI / 2],
@@ -97,9 +97,9 @@ function base({ g, x, y, level, color, definition }: TurretContext) {
       py = y0 + fv * SQUASH;
     n = turn(KNUCKLE, t, FOOT, 1, 0, fu, fv);
     block(g, x, y0, FOOT, FOOT, n, SLAB - 0.5, SLAB + 2.5, 0, shade(WALL, -0.1), TOP, METAL);
-    tube(g, px, py, a, SLAB + 1.5, 0, legLength * 0.55, level >= 5 ? 2.9 : 2.4, level >= 5 ? shade(c, -0.45) : WALL, 1, true, legPitch);
-    tube(g, px, py, a, SLAB + 1.5, legLength * 0.5, legLength * 0.56, level >= 5 ? 3.1 : 2.6, shade(c, -0.1), 1, false, legPitch);
-    tube(g, px, py, a, SLAB + 1.5, legLength * 0.55, legLength - 1, 1.3, CHROME, 1, true, legPitch);
+    tube(g, px, py, a, SLAB + 1.5, 0, legLength * 0.55, level >= 5 ? 2.5 : 2, level >= 5 ? shade(c, -0.45) : WALL, 1, true, legPitch);
+    tube(g, px, py, a, SLAB + 1.5, legLength * 0.5, legLength * 0.56, level >= 5 ? 2.7 : 2.2, shade(c, -0.1), 1, false, legPitch);
+    tube(g, px, py, a, SLAB + 1.5, legLength * 0.55, legLength - 1, 1.1, CHROME, 1, true, legPitch);
   }
   // The crown over the plate, with a trim band in the tower's (from level 6 the path's) colour.
   drum(g, x, y0, CROWN_R + 1, CROWN0 - 1, CROWN0, shade(WALL, -0.2), shade(WALL, 0), 10);
