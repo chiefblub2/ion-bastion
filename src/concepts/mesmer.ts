@@ -12,10 +12,10 @@ import type { Concept } from "./types";
 const DROP = 6,
   PLINTH = 3.5,
   POST = 8,
-  HB = 15,
+  HB = 14,
   /** How far the disc's face is turned up from looking straight at the target. */
-  LEAN = 1.05,
-  DISC_R = 10.5,
+  LEAN = 1.32,
+  DISC_R = 12,
   RECOIL = 1,
   reach = (l: number) => 15 + l;
 
@@ -40,10 +40,10 @@ function turret({ g, x, y, tower, definition, level }: TurretContext) {
     P = framer(x, y0, a);
   castShadow(g, x, y0, a, rect(-5, 4, -DISC_R, DISC_R), PLINTH, 0.22);
   // A crossbar on the post, two arms to the disc's sides, and a brace from the back.
-  part(g, x, y0, a, rect(-1.5, 1.5, -11.8, 11.8), POST, POST + 1.6, 0, GUN.side, GUN.top, GUN.metal);
+  part(g, x, y0, a, rect(-1.5, 1.5, -13.2, 13.2), POST, POST + 1.6, 0, GUN.side, GUN.top, GUN.metal);
   const [bu, bv] = [Math.cos(a) * -6, Math.sin(a) * -6];
   rod(g, x, y0, bu * 0.3, bv * 0.3, POST + 1.6, bu, bv, HB + 2, 1.6, GUN.side);
-  for (const q of [-11.8, 11.8]) {
+  for (const q of [-13.2, 13.2]) {
     const u = -Math.sin(a) * q,
       v = Math.cos(a) * q;
     rod(g, x, y0, u, v, POST + 1.6, u, v, HB, 2, GUN.top);
@@ -53,7 +53,7 @@ function turret({ g, x, y, tower, definition, level }: TurretContext) {
   plane(g, x, y0, f, -0.3, DISC_R + 0.4, level >= 5 ? shade(c, -0.45) : GUN.side);
   plane(g, x, y0, f, 0, DISC_R - 0.8, 0x10061c);
   // Hub caps where the arms hold the disc.
-  for (const q of [-11.8, 11.8]) {
+  for (const q of [-13.2, 13.2]) {
     const [hx, hy] = P(0, q, HB);
     disc(g, hx, hy, 1.7, OUTLINE);
     disc(g, hx - 0.3, hy - 0.3, 1.1, level >= 6 ? shade(c, 0.1) : GUN.metal);

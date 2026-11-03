@@ -1,7 +1,7 @@
 import { halo } from "../render/material";
 import { disc, oval, shade } from "../render/shapes";
 import type { TurretContext } from "../render/tower-art/kit";
-import { X, Y, drum, onGround, towardViewer } from "../render/tower-art/tilt";
+import { drum, onGround, towardViewer } from "../render/tower-art/tilt";
 import { box, frame } from "../render/tower-art/tilt-frame";
 import { GUN, castShadow, depth, endAt, framer, muzzleAt, paint, part, rect, tubeAt } from "../render/tower-art/tilt-parts";
 import { bolts, chase, contact, frontArc, plinth } from "./kit-control-a";
@@ -117,8 +117,6 @@ function above({ g, glow, x, y, tower, level, kick, charge, color, definition }:
     disc(glow, lx, ly, 2.4, color, 0.35);
     disc(g, lx, ly, 0.8, shade(color, 0.3));
   }
-  void X;
-  void Y;
 }
 
 export const concept: Concept = {
