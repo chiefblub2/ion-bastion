@@ -79,6 +79,7 @@ const OVERRIDES: Partial<Record<SpecializationSpec["kind"], Record<string, strin
   // ── support combat ──
   // ── end support combat ──
   // ── aura paths ──
+  harmonics: { bonus: "Other two stats" },
   // ── end aura paths ──
 };
 const PREDICATES = { heavy: "heavy targets", "heavy-air": "heavy flyers", armored: "armored enemies", isolated: "a lone target", burning: "burning enemies" };

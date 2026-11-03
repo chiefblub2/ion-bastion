@@ -7,6 +7,7 @@ import { skylinkFactor } from "./support";
 import { recycleOverkill } from "./recycler";
 import { afterHit, hasTrait, layerOf, linkedGroup, modifyDamage, onDeath } from "./traits";
 import { afterDealt } from "./links";
+import { executionFactor } from "./aura-paths";
 import { protocolAfterHit, protocolFactor, protocolKill } from "./protocols";
 export type { DamageSource } from "../core/types";
 /**
@@ -97,7 +98,7 @@ function deal(sim: Sim, src: DamageSource, e: Enemy, amount: number, dot: boolea
   const s = sim.state,
     hpBefore = e.hp,
     // Weakening and marking first, so armor absorbs a share of the amplified hit.
-    raw = modifyDamage(sim, e, amount * damageTaken(e, s.time) * markFactor(sim, e) * conditionalFactor(sim, e, hit) * protocolFactor(sim, src, e, dot, hit), dot, hit),
+    raw = modifyDamage(sim, e, amount * damageTaken(e, s.time) * markFactor(sim, e) * conditionalFactor(sim, e, hit) * executionFactor(sim, e, dot, hit) * protocolFactor(sim, src, e, dot, hit), dot, hit),
     dealt = Number.isFinite(raw) || raw <= 0 ? raw : e.hp;
   e.hp -= dealt;
   s.events.push({ type: "damage", at: { x: e.x, y: e.y }, amount: dealt, enemy: e.id });

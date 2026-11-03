@@ -38,7 +38,9 @@ describe("unified upgrade purchases", () => {
         // Specialization paths branch off level 5, so the fresh tower gets the shared levels first.
         if (upgradeOption(tower, upgrade.id, Infinity).status === "excluded") {
           ({ game, tower } = setup(type));
-          tower.upgrades.push(...TOWERS[type].upgrades.filter((u) => !u.path).map((u) => u.id));
+          // Aura: a new track starts on a bare tower; a path needs one whole track (the first) underneath.
+          const track = TOWERS[type].upgrades.find((u) => u.track)?.track;
+          tower.upgrades.push(...TOWERS[type].upgrades.filter((u) => !u.path && (upgrade.track ? !u.track : !u.track || u.track === track)).map((u) => u.id));
         }
         game.state.wallets[0] = upgrade.cost - 1;
         const before = JSON.stringify(game.state);

@@ -265,6 +265,9 @@ export function validateUpgradeDefinitions(tower: TowerDefinition, path = tower.
       const parentPath = definitions.get(prerequisite)!.path;
       if (parentPath && parentPath !== upgrade.path)
         throw new ContentError(`${path} › Upgrade ${id}`, "Requirement from another path.");
+      const parentTrack = definitions.get(prerequisite)!.track;
+      if (parentTrack && parentTrack !== upgrade.track)
+        throw new ContentError(`${path} › Upgrade ${id}`, "Requirement from another track.");
     }
     active.delete(id);
     done.add(id);

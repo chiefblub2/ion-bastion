@@ -1,10 +1,11 @@
 import { isTouch } from "./touch";
 import { DEFAULT_CONTENT } from "../content";
 import { sellValue } from "../core/game";
-import { auraBonuses, effectiveTowerStats, isInAura } from "../systems/auras";
+import { effectiveTowerStats, isInAura } from "../systems/auras";
+import { harmonicBonuses } from "../systems/aura-paths";
 import { describeAttack, isSupport } from "../systems/attacks";
 import type { ContentPack, Tower, TowerId, UnitLayer } from "../core/types";
-import { resolveUpgrades, towerLevel, maxTowerLevel, towerColor, towerPath } from "../core/upgrades";
+import { resolveUpgrades, towerLevel, maxTowerLevel, towerColor, towerPath, towerTrack } from "../core/upgrades";
 import { number, percent, statValue } from "./format";
 import { upgradeControl } from "./upgrade-tooltip";
 import { PRIORITY_LABELS } from "./messages";
@@ -42,13 +43,16 @@ export function towerDetails(
   const definition = content.towers[type];
   const support = definition.attack.kind === "aura";
   const path = tower && towerPath(tower, content);
-  const pathUpgrades = definition.upgrades.filter((upgrade) => upgrade.path === path);
+  // Aura: the track first (named by its tier I label), then the path.
+  const track = tower && towerTrack(tower, content),
+    trackName = track && definition.upgrades.find((upgrade) => upgrade.track === track)!.label;
+  const level = tower && `LEVEL ${towerLevel(tower, content)} / ${maxTowerLevel(type, content)}`;
   const heading = tower
     ? support
-      ? path
-        ? `PATH ${pathUpgrades[0].label.toUpperCase()} · ${tower.upgrades.length} / ${pathUpgrades.length}`
-        : "CHOOSE PATH"
-      : `LEVEL ${towerLevel(tower, content)} / ${maxTowerLevel(type, content)}${path ? ` · ${(definition.visual.paths?.[path]?.name ?? path).toUpperCase()}` : ""}`
+      ? track
+        ? `${level} · ${trackName!.toUpperCase()}${path ? ` · ${(definition.visual.paths?.[path]?.name ?? path).toUpperCase()}` : ""}`
+        : "CHOOSE TRACK"
+      : `${level}${path ? ` · ${(definition.visual.paths?.[path]?.name ?? path).toUpperCase()}` : ""}`
     : definition.name;
   let values: string;
   const resolved = resolveUpgrades(tower ?? { type, upgrades: [] }, content),
@@ -62,14 +66,14 @@ export function towerDetails(
       <div><strong>◇ ${income.amount}</strong><span>Credits per wave</span></div>
     </div><p class="aura-summary">Pays out after every completed wave · Investment ◇ ${tower?.spent ?? definition.cost} ≙ <b>${Math.ceil((tower?.spent ?? definition.cost) / income.amount)}</b> ${Math.ceil((tower?.spent ?? definition.cost) / income.amount) === 1 ? "wave" : "waves"} of income</p>`;
   } else if (support) {
-    const bonuses = auraBonuses(tower ?? { type, upgrades: [] }, content);
+    const bonuses = harmonicBonuses(tower ?? { type, upgrades: [] }, content); // Harmonics: all three stats
     const color = `#${towerColor(tower ?? { type, upgrades: [] }, content).toString(16).padStart(6, "0")}`;
     const stat = (key: keyof typeof bonuses, label: string) =>
       `<div class="${bonuses[key] ? "active" : "inactive"}"><strong>${percent(bonuses[key])}</strong><span>${label}</span></div>`;
     values = `<div class="tower-stats aura-stats" style="--path-color:${color}">
       ${stat("damage", "Damage")}${stat("speed", "Attack speed")}${stat("range", "Range")}
     </div><p class="aura-summary">Aura radius: <b>${number(definition.range)} cells</b>${tower ? ` · <b>${towers.filter((target) => isInAura(tower, target, content)).length}</b> ${towers.filter((target) => isInAura(tower, target, content)).length === 1 ? "tower" : "towers"} supported` : ""}</p>
-    <p class="aura-rule">Each Aura boosts exactly one stat. For each stat the strongest bonus counts; to get several bonuses, overlap Auras with different paths.</p>`;
+    <p class="aura-rule">Each track boosts one stat. For each stat the strongest bonus counts; to get several bonuses, overlap Auras with different tracks. After tier III a path adds one more effect for the towers it supports.</p>`;
   } else {
     const base = resolveUpgrades(tower ?? { type, upgrades: [] }, content).stats;
     const stats = tower

@@ -39,8 +39,10 @@ export interface CodexTower {
   levels: CodexLevel[];
   /** Attack parameters at level 1 (slow factor, chain jumps, …). */
   params: StatRow[];
-  /** Specialization paths (attack towers) or exclusive upgrade paths (Aura). */
+  /** Specialization paths. */
   paths: CodexPath[];
+  /** Aura: its three exclusive tracks, chosen before the paths. */
+  tracks: CodexPath[];
   /** Support towers: upgrades that belong to no path. */
   upgrades: { label: string; cost: number; description: string }[];
 }
@@ -56,7 +58,7 @@ export function codexTowers(content: ContentPack): CodexTower[] {
     .map(({ id, d }) => {
       const missions = offering(id),
         first = missions[0],
-        plain = d.upgrades.filter((u) => !u.path),
+        plain = d.upgrades.filter((u) => !u.path && !u.track),
         leveled = plain.filter((u) => u.effects.level !== undefined).sort((a, b) => a.effects.level! - b.effects.level!),
         attack = !isSupport(d.attack);
       const levels: CodexLevel[] = attack
@@ -67,10 +69,14 @@ export function codexTowers(content: ContentPack): CodexTower[] {
         : [];
       const byPath = new Map<string, UpgradeDefinition[]>();
       for (const u of d.upgrades) if (u.path) byPath.set(u.path, [...(byPath.get(u.path) ?? []), u]);
-      const paths: CodexPath[] = [...byPath].map(([path, tiers]) => {
-        const visual = d.visual.paths?.[path];
-        return { id: path, name: visual?.name ?? tiers[0].label, role: visual?.role, color: hex(visual?.color ?? d.color), tiers: tiers.map((t) => ({ label: t.label, cost: t.cost })) };
-      });
+      const byTrack = new Map<string, UpgradeDefinition[]>();
+      for (const u of d.upgrades) if (u.track) byTrack.set(u.track, [...(byTrack.get(u.track) ?? []), u]);
+      const group = (looks: TowerDefinition["visual"]["paths"]) => ([key, tiers]: [string, UpgradeDefinition[]]): CodexPath => {
+        const visual = looks?.[key];
+        return { id: key, name: visual?.name ?? tiers[0].label, role: visual?.role, color: hex(visual?.color ?? d.color), tiers: tiers.map((t) => ({ label: t.label, cost: t.cost })) };
+      };
+      const paths = [...byPath].map(group(d.visual.paths)),
+        tracks = [...byTrack].map(group(d.visual.tracks));
       return {
         definition: d,
         page: pageOf(d),
@@ -79,6 +85,7 @@ export function codexTowers(content: ContentPack): CodexTower[] {
         levels,
         params: attack ? describeAttack(d.attack) : [],
         paths,
+        tracks,
         upgrades: attack ? [] : plain.map((u) => ({ label: u.label, cost: u.cost, description: u.description })),
       };
     });
@@ -127,12 +134,17 @@ export function renderTowerCodex(content: ContentPack, page: number, collapsed =
       const upgrades = t.upgrades.length
         ? `<h3>Upgrades</h3><ul class="tower-codex-upgrades">${t.upgrades.map((u) => `<li title="${escape(u.description)}"><span>${escape(u.label)}</span><b>◇ ${u.cost}</b></li>`).join("")}</ul>`
         : "";
+      const tracks = t.tracks.length
+        ? `<h3>Tracks · pick one</h3><ul class="tower-codex-paths">${t.tracks
+            .map((p) => `<li style="--path:${p.color}"><strong>${escape(p.name)}</strong><small>${p.tiers.map((x) => `◇ ${x.cost}`).join(" → ")}</small></li>`)
+            .join("")}</ul>`
+        : "";
       const paths = t.paths.length
-        ? `<h3>${t.levels.length ? "Specializations · levels 6–8" : "Paths · pick one"}</h3><ul class="tower-codex-paths">${t.paths
+        ? `<h3>${t.levels.length ? "Specializations · levels 6–8" : t.tracks.length ? "Paths · pick one after a track's tier III" : "Paths · pick one"}</h3><ul class="tower-codex-paths">${t.paths
             .map((p) => `<li style="--path:${p.color}"><strong>${escape(p.name)}</strong>${p.role ? `<span>${escape(p.role)}</span>` : ""}<small>${p.tiers.map((x) => `◇ ${x.cost}`).join(" → ")}</small></li>`)
             .join("")}</ul>`
         : "";
-      return `<article class="codex-card tower-codex-card" style="--accent:${hex(d.color)}"><header>${towerIconHtml(d)}<span><strong>${escape(d.name)}</strong><small>${escape(d.role)} · ${where}</small></span></header><p>${escape(d.description)}</p><div class="codex-stats">${facts}</div>${params}${levels || upgrades || paths ? `<details class="tower-codex-more"${collapsed ? "" : " open"}><summary>${t.levels.length ? "Levels, upgrades and paths" : "Paths"}</summary>${levels}${upgrades}${paths}</details>` : ""}</article>`;
+      return `<article class="codex-card tower-codex-card" style="--accent:${hex(d.color)}"><header>${towerIconHtml(d)}<span><strong>${escape(d.name)}</strong><small>${escape(d.role)} · ${where}</small></span></header><p>${escape(d.description)}</p><div class="codex-stats">${facts}</div>${params}${levels || upgrades || tracks || paths ? `<details class="tower-codex-more"${collapsed ? "" : " open"}><summary>${t.levels.length ? "Levels, upgrades and paths" : "Paths"}</summary>${levels}${upgrades}${tracks}${paths}</details>` : ""}</article>`;
     })
     .join("");
   return { tabs, list };
