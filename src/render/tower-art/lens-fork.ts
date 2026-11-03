@@ -11,20 +11,11 @@ import type { TurretContext } from "./kit";
 import { FOOT, INSET, OUTLINE, X, Y, block, drum, endFace, fillPoints, onGround, point, towardViewer, tube, turn } from "./tilt";
 import { MUZZLES, TILTS } from "../muzzles";
 import type { TiltedArt } from "./tilted";
-import type { Ink } from "../shapes";
 
 const TILT = TILTS.lens!,
   DROP = TILT.drop,
   HB = TILT.height,
   reach = MUZZLES.lens!.reach;
-/**
- * A filled circle through the kit's exact-length corners (`fillPoints`), for the cached turret: the shared `disc`
- * hands Phaser its whole scratch buffer, so a recording of the turret (`stillTurret`) would pick up stale corners.
- */
-function dot(g: Ink, cx: number, cy: number, r: number, color: number, n = 10) {
-  for (let i = 0; i < n; i++) point(i, cx + Math.cos((i * 2 * Math.PI) / n) * r, cy + Math.sin((i * 2 * Math.PI) / n) * r);
-  fillPoints(g, n, color);
-}
 /** Plinth: lower and upper diamond radius and their heights; the bearing post; the yoke. */
 const R0 = 21,
   R1 = 14,
@@ -127,8 +118,8 @@ function turret({ g, x, y, tower, definition, level, tip, color }: TurretContext
       if (level >= 2) {
         const bx = X(x, -ca * 3.2),
           by = Y(y0, -sa * 3.2, BAR1 + 0.8);
-        dot(g, bx, by, 1.1, OUTLINE);
-        dot(g, bx, by, 0.7, shade(color, 0.2), 8);
+        disc(g, bx, by, 1.1, OUTLINE);
+        disc(g, bx, by, 0.7, shade(color, 0.2));
       }
     },
     yokeArm = (shape: readonly number[]) => {
@@ -137,10 +128,10 @@ function turret({ g, x, y, tower, definition, level, tip, color }: TurretContext
       const q = shape[1] > 0 ? 11.6 : -11.6,
         cx = X(x, -sa * q),
         cy = Y(y0, ca * q, HB);
-      dot(g, cx, cy, 2.8, OUTLINE, 12);
-      dot(g, cx, cy, 2.2, shade(METAL, -0.25), 12);
-      dot(g, cx, cy, 1.1, shade(c, -0.5), 8);
-      if (level >= 3) dot(g, cx - 0.6, cy - 0.6, 0.6, METAL, 6);
+      disc(g, cx, cy, 2.8, OUTLINE);
+      disc(g, cx, cy, 2.2, shade(METAL, -0.25));
+      disc(g, cx, cy, 1.1, shade(c, -0.5));
+      if (level >= 3) disc(g, cx - 0.6, cy - 0.6, 0.6, METAL);
     },
     shield = (shape: readonly number[]) => part(shape, BAR1 + 1, ARM_TOP - 1, shade(WALL, 0.12), shade(TOP, 0.1)),
     housing = () => {

@@ -10,37 +10,11 @@
 import { facing, halo } from "../material";
 import { disc, oval, ring, shade } from "../shapes";
 import type { TurretContext } from "./kit";
-import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, fillPoints, onGround, point, quad, tube, turn } from "./tilt";
+import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, onGround, quad, tube, turn } from "./tilt";
 import { TILTS } from "../muzzles";
 import type { TiltedArt } from "./tilted";
-import type { Ink } from "../shapes";
 
 const DROP = TILTS.hammer!.drop;
-/**
- * An ellipse through the kit's exact-length corners (`fillPoints`), for the cached turret: the shared `oval` (also
- * inside the kit's `drum`) hands Phaser its whole scratch buffer, so a recording (`stillTurret`) would pick up stale corners.
- */
-function ellipse(g: Ink, cx: number, cy: number, rx: number, ry: number, color: number, alpha = 1, n = 18) {
-  for (let i = 0; i < n; i++) point(i, cx + Math.cos((i * 2 * Math.PI) / n) * rx, cy + Math.sin((i * 2 * Math.PI) / n) * ry);
-  fillPoints(g, n, color, alpha);
-}
-/** The kit's `drum` drawn with `ellipse`: an upright cylinder from h0 to h1, its shaded front half, then its top. */
-function cylinder(g: Ink, x: number, y0: number, r: number, h0: number, h1: number, color: number, top: number, segments: number) {
-  ellipse(g, x, Y(y0, 0, h0), r + 0.7, r * SQUASH + 0.7, OUTLINE, 0.95);
-  for (let i = 0; i < segments; i++) {
-    const t0 = (i / segments) * Math.PI,
-      t1 = ((i + 1) / segments) * Math.PI;
-    quad(
-      g,
-      X(x, Math.cos(t0) * r), Y(y0, Math.sin(t0) * r, h0),
-      X(x, Math.cos(t1) * r), Y(y0, Math.sin(t1) * r, h0),
-      X(x, Math.cos(t1) * r), Y(y0, Math.sin(t1) * r, h1),
-      X(x, Math.cos(t0) * r), Y(y0, Math.sin(t0) * r, h1),
-      shade(color, -0.2 + 0.35 * facing((t0 + t1) / 2)),
-    );
-  }
-  ellipse(g, x, Y(y0, 0, h1), r, r * SQUASH, top);
-}
 /** Heights: plinth, crown, the hammer's raised and struck bottom, its thickness and where the piston meets the crown. */
 const SLAB = 4,
   CROWN0 = 23,
@@ -160,12 +134,12 @@ function turret({ g, x, y, definition, level, kick, color }: TurretContext) {
     k = (h0 - STRUCK) / (RAISED - STRUCK),
     trim = level >= 6 ? color : shade(c, 0.15);
   // The hammer's shadow on the plate, sharper and closer the lower it hangs.
-  onGround(g, x, y0, SLAB, () => ellipse(g, 1.5 + 3 * k, 1.5 + 3.5 * k, HAMMER - 0.5 * k, HAMMER - 0.5 * k, 0x050b10, 0.5 - 0.2 * k));
+  onGround(g, x, y0, SLAB, () => oval(g, 1.5 + 3 * k, 1.5 + 3.5 * k, HAMMER - 0.5 * k, HAMMER - 0.5 * k, 0x050b10, 0.5 - 0.2 * k));
   // The piston, then the head: a dark striking shoe, the bronze body with hazard stripes on its front and a trim rim.
   tube(g, x, y0, 0, h1, 0, PISTON_TOP - h1, 1.8, CHROME, 1, true, Math.PI / 2);
   tube(g, x, y0, 0, h1, 0, 1.4, 2.6, shade(WALL, -0.1), 1, false, Math.PI / 2);
-  cylinder(g, x, y0, HAMMER + 0.4, h0, h0 + 1.4, DEEP, shade(DEEP, 0.25), 14);
-  cylinder(g, x, y0, HAMMER, h0 + 1.4, h1, shade(c, -0.2), shade(c, 0.08), 14);
+  drum(g, x, y0, HAMMER + 0.4, h0, h0 + 1.4, DEEP, shade(DEEP, 0.25), 14);
+  drum(g, x, y0, HAMMER, h0 + 1.4, h1, shade(c, -0.2), shade(c, 0.08), 14);
   for (const t of [0.75, 1.2, 1.65, 2.1, 2.55]) {
     const t1 = t + 0.18;
     quad(
@@ -177,14 +151,14 @@ function turret({ g, x, y, definition, level, kick, color }: TurretContext) {
       DEEP,
     );
   }
-  ellipse(g, x, Y(y0, 0, h1), HAMMER - 0.6, (HAMMER - 0.6) * SQUASH, trim);
-  ellipse(g, x, Y(y0, 0, h1), HAMMER - 1.8, (HAMMER - 1.8) * SQUASH, shade(c, 0.08));
+  oval(g, x, Y(y0, 0, h1), HAMMER - 0.6, (HAMMER - 0.6) * SQUASH, trim);
+  oval(g, x, Y(y0, 0, h1), HAMMER - 1.8, (HAMMER - 1.8) * SQUASH, shade(c, 0.08));
   if (level >= 3)
     for (const t of [Math.PI * 0.85, Math.PI * 0.15, -Math.PI / 2]) {
       const bx = X(x, Math.cos(t) * (HAMMER - 1.2)),
         by = Y(y0, Math.sin(t) * (HAMMER - 1.2), h1);
-      ellipse(g, bx, by, 0.9, 0.9, shade(c, -0.6), 1, 8);
-      ellipse(g, bx - 0.3, by - 0.3, 0.4, 0.4, METAL, 1, 6);
+      oval(g, bx, by, 0.9, 0.9, shade(c, -0.6));
+      oval(g, bx - 0.3, by - 0.3, 0.4, 0.4, METAL);
     }
   // The piston collar on the head's top.
   tube(g, x, y0, 0, h1, 0, 1, 2.4, shade(WALL, 0.1), 1, false, Math.PI / 2);

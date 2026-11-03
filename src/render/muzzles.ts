@@ -102,14 +102,15 @@ export const MUZZLES: Partial<Record<TurretStyle, MuzzleSpec>> = {
 /**
  * Barrel tips in pixels for a turret at (`x`, `y`) aiming at `angle`: one per parallel or fanned barrel, projected on a
  * tilted turret (offsets across the aim lie on the ground plane); the emit point of a tilted turret without a barrel;
- * empty for other turrets without one.
+ * empty for other turrets without one. `flat`: the board point under each tip instead (no squash, no height), where a
+ * shot's ground path starts.
  */
-export function muzzleTips(turret: TurretStyle, level: number, x: number, y: number, angle: number, kick = 0): Point[] {
+export function muzzleTips(turret: TurretStyle, level: number, x: number, y: number, angle: number, kick = 0, flat = false): Point[] {
   const spec = MUZZLES[turret],
-    tilt = TILTS[turret];
+    tilt = flat ? undefined : TILTS[turret];
   if (!spec) return tilt?.emit !== undefined ? [{ x, y: y + tilt.drop - tilt.emit }] : [];
   const d = spec.reach(level) - kick * spec.recoil,
-    p = tilt?.pitch ?? 0,
+    p = TILTS[turret]?.pitch ?? 0,
     ground = d * Math.cos(p),
     tip = (a: number, side: number) => {
       const c = Math.cos(a),

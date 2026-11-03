@@ -210,9 +210,10 @@ function above(ctx: TurretContext) {
   glow.lineStyle(3, shade(c, 0.4), Math.min(0.5, 0.12 + 0.25 * charge + energy));
   glow.lineBetween(e0[0], e0[1], e1[0], e1[1]);
   if (level >= 2) lampLight(glow, ...lampAt(P, a), color);
-  // Charged: a glaive of three curved blades spins over the hub, ready to be thrown.
+  // Charged: a glaive of three curved blades spins over the hub, ready to be thrown. It hovers above the
+  // counterweight's roof: drawn over the cached turret, it must sit higher than any part that could be in front of it.
   if (charge >= 0.95) {
-    const [hx, hy] = P(0, 0, HUB_TOP + 4),
+    const [hx, hy] = P(0, 0, COUNTER_TOP + 2.5),
       spin = clock * 1.5 + tower.id;
     disc(glow, hx, hy, 6, c, 0.25);
     onGround(g, hx, hy, 0, () => {

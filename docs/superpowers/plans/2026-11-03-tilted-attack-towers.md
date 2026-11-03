@@ -59,8 +59,11 @@ The 13 towers, grouped by what they need from the kit:
   | cached | 7.8–8.3 / 14–17 | 6.5–6.7 / 12–14 |
   | live (`--live-turrets`) | 11.6 / 18 | 9.7–10.8 / 19–21 |
 
-- **Known flaws:** Executioner aimed north draws its spinning glaive (live, above) over the counterweight's front edge.
-  Batch C keeps small local exact-length shape helpers that the recorder fix made unnecessary.
+- **Fixed after review:** Executioner's charged glaive hovers above the counterweight's roof, so nothing of the cached
+  turret can stand in front of it; Ember, Focus and Quake use the kit's `disc`, `oval` and `drum` again. Shots of
+  tilted turrets no longer dive from the raised muzzle to the ground within one barrel length: `Trails` splits the tip
+  into its ground point (eased out within a barrel length) and its height above it (`rise`, faded over the whole
+  flight), using `muzzleTips(…, flat)`.
 - **Later:** Control, Traps and Support could follow with the same kit and cache.
 
 ## Phase 0: kit and measurement

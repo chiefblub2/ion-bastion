@@ -10,21 +10,12 @@ import type { TurretContext } from "./kit";
 import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, towardViewer, tube, turn } from "./tilt";
 import { MUZZLES, TILTS } from "../muzzles";
 import type { TiltedArt } from "./tilted";
-import type { Ink } from "../shapes";
 
 const TILT = TILTS.flame!,
   DROP = TILT.drop,
   HB = TILT.height,
   RECOIL = MUZZLES.flame!.recoil,
   reach = MUZZLES.flame!.reach;
-/**
- * A filled circle through the kit's exact-length corners (`fillPoints`), for the cached turret: the shared `disc`
- * hands Phaser its whole scratch buffer, so a recording of the turret (`stillTurret`) would pick up stale corners.
- */
-function dot(g: Ink, cx: number, cy: number, r: number, color: number, n = 10) {
-  for (let i = 0; i < n; i++) point(i, cx + Math.cos((i * 2 * Math.PI) / n) * r, cy + Math.sin((i * 2 * Math.PI) / n) * r);
-  fillPoints(g, n, color);
-}
 /** Plinth: octagon radius and height; turntable top; body heights. */
 const R = 20,
   H = 5,
@@ -129,14 +120,14 @@ function turret({ g, x, y, tower, definition, level, kick, tip, color }: TurretC
       quad(g, ...S(-6.2, -0.9), ...S(-1.5, -0.9), ...S(-1.5, 0.9), ...S(-6.2, 0.9), DEEP);
       for (const q of level >= 2 ? [-4.6, 4.6] : [4.6]) {
         const [lx, ly] = S(-6.8, q);
-        dot(g, lx, ly, 1.2, OUTLINE);
-        dot(g, lx, ly, 0.75, shade(color, 0.2), 8);
+        disc(g, lx, ly, 1.2, OUTLINE);
+        disc(g, lx, ly, 0.75, shade(color, 0.2));
       }
       if (level >= 3)
         for (const q of [-4.4, 4.4]) {
           const [bx, by] = S(-5.5, q);
-          dot(g, bx, by, 0.9, shade(WALL, -0.5), 8);
-          dot(g, bx - 0.3, by - 0.3, 0.4, METAL, 6);
+          disc(g, bx, by, 0.9, shade(WALL, -0.5));
+          disc(g, bx - 0.3, by - 0.3, 0.4, METAL);
         }
     },
     skirt = (plate: readonly number[]) => {
