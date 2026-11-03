@@ -7,6 +7,7 @@ import { isDefused, taunters } from "./traits";
 import { critFactor, overclockRate, synergyFactor } from "./support";
 import { markedFirst, protocolRate } from "./protocols";
 import { chargedFactor, critRider, openSalvos } from "./combat-paths-b";
+import { volleyFactor } from "./trap-paths";
 /** Homing projectiles whose target died look for a new one within this radius. */
 export const RETARGET_RADIUS = 1.5;
 /** Every target priority in menu order; the first is the default. */
@@ -64,7 +65,7 @@ export function attackEnemies(sim: Sim, dt: number) {
     const critMultiplier = critFactor(sim, t, target),
       // Fire Control paths ride on the crit to its hits (Penetrator, Stagger, Spotting).
       crit = critMultiplier !== 1 ? critRider(sim, t) : undefined;
-    stats.damage *= critMultiplier * synergyFactor(sim, t) * chargedFactor(sim, t);
+    stats.damage *= critMultiplier * synergyFactor(sim, t) * chargedFactor(sim, t) * volleyFactor(t);
     const src: DamageSource = { tower: t.id, type: t.type, ...(special ? { special } : {}), ...(crit ? { crit } : {}) },
       proc = fireProc(t, special, extra + 1 - targets.length),
       // Overload: a lone enemy in range at fire time strengthens the whole salvo.

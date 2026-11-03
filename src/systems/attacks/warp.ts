@@ -4,6 +4,7 @@ import { positionOnPath } from "../path";
 import { isEncased } from "../encase";
 import { sizeOf } from "../shrink";
 import { hasTrait } from "../traits";
+import { warpDaze } from "../trap-paths";
 import type { AttackModule } from "./types";
 /** Small enough (a shrunk size counts) to send back, not unstoppable, not encased, and never warped before. */
 export const canWarp = (sim: Sim, e: Enemy, spec: WarpAttack) =>
@@ -30,5 +31,7 @@ export const warp: AttackModule<WarpAttack> = {
     enemy.x = p.x;
     enemy.y = p.y;
     sim.state.events.push({ type: "warp", at, to: { x: p.x, y: p.y }, color: sim.content.towers[src.type].color });
+    // Disorient: the warped enemy also walks backwards for a while.
+    warpDaze(sim, enemy, src.special);
   },
 };

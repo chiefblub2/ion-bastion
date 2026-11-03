@@ -2,6 +2,7 @@ import type { PullAttack } from "../../core/types";
 import { applyDamage, hitOf } from "../damage";
 import { dist } from "../path";
 import { applyStatus } from "../status";
+import { concussion } from "../trap-paths";
 import { canTarget } from "./targeting";
 import type { AttackModule } from "./types";
 /** Gravitron pulse: drags every enemy around the target back along the path; recovery prevents a permanent lock. */
@@ -34,6 +35,8 @@ export const pull: AttackModule<PullAttack> = {
           if (src.special?.kind === "compression") applyStatus(sim, target, { kind: "vulnerable", amount: src.special.bonus, until: time + src.special.duration });
           // Downburst (Cyclone): a gusted flyer is forced down into reach of ground towers.
           else if (src.special?.kind === "downdraft") applyStatus(sim, target, { kind: "netted", factor: src.special.factor, until: time + src.special.duration });
+          // Concussion (Spring): the thrown enemy stays weakened until a while after it lands.
+          else if (src.special?.kind === "concussion") concussion(sim, target, src.special, time + spec.duration);
         }
       }
   },

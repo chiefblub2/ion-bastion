@@ -879,6 +879,12 @@ export interface Tower extends Point {
   /** Recycler Scrap Yard: overkill counted towards the next credit and credits paid this wave; absent until used, cleared after each wave. */
   scrapYard?: { overkill: number; paid: number };
   // ── end support combat ──
+  // ── trap paths ──
+  /** Volley Signal: bonus of the tower's next shot after a Tripwire alerted it; absent until alerted, cleared after each wave. */
+  alerted?: number;
+  /** Tripwire with Flare only: time until which its alarm radius stays lit; absent until it fires, cleared after each wave. */
+  flare?: number;
+  // ── end trap paths ──
 }
 /** Target selection of an attack tower; ties fall back to path progress, then id. */
 export type TargetPriority = "first" | "last" | "strong" | "weak" | "close";

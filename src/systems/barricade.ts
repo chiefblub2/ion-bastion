@@ -2,6 +2,7 @@ import { resolveUpgrades } from "../core/upgrades";
 import type { ContentPack, Enemy, MapDefinition, Sim, Tower, TowerDefinition } from "../core/types";
 import { canTarget } from "./attacks/targeting";
 import { hasTrait, isBurrowed, isDefused, layerOf } from "./traits";
+import { resetTrapPaths } from "./trap-paths";
 /** Enemies halt this far before a barricade's cell centre: on the edge of the cell, where a Grinder next to it reaches them. */
 export const WALL_GAP = 0.5;
 /** Wall damage per second of a pressing enemy, per unit of body size (a Drone about 23, a Titan about 46). */
@@ -95,4 +96,5 @@ export function wallShareOf(t: Tower, d: Readonly<TowerDefinition>) {
 /** After every wave: barricades stand whole again. */
 export function restoreBarricades(sim: Sim) {
   for (const t of sim.state.towers) delete t.wall;
+  resetTrapPaths(sim);
 }

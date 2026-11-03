@@ -7,7 +7,7 @@ import type { AttackModule } from "./types";
  * Damage to every targetable enemy within `radius` of a point; `kind` tells traits which attack it was (splash, mortar, airburst or a Plasma eruption).
  * Returns the enemies the blast killed, in id order.
  */
-export function blast(sim: Sim, src: DamageSource, at: Point, radius: number, damage: number, kind: "splash" | "mortar" | "airburst" | "pool"): Enemy[] {
+export function blast(sim: Sim, src: DamageSource, at: Point, radius: number, damage: number, kind: "splash" | "mortar" | "airburst" | "pool" | "charge"): Enemy[] {
   const killed: Enemy[] = [];
   // A copy: enemies released on death must not catch the same explosion.
   for (const target of [...sim.state.enemies])
@@ -24,8 +24,8 @@ export const splash: AttackModule<SplashAttack> = {
   },
   apply: (sim, src, { at }, damage, spec) => chainReaction(sim, src, blast(sim, src, at, spec.radius, damage, "splash"), damage, "splash"),
 };
-/** Chain Reaction: the first kills of a blast explode once more; kills of those explosions never chain. */
-export function chainReaction(sim: Sim, src: DamageSource, killed: readonly Enemy[], damage: number, kind: "splash" | "airburst") {
+/** Chain Reaction (Nova, Skyburst, Mine, Sticky Mine): the first kills of a blast explode once more; kills of those explosions never chain. */
+export function chainReaction(sim: Sim, src: DamageSource, killed: readonly Enemy[], damage: number, kind: "splash" | "airburst" | "charge") {
   const special = src.special;
   if (special?.kind !== "chain-reaction") return;
   for (const dead of killed.slice(0, special.maxPerSalvo)) {

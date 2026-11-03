@@ -73,6 +73,14 @@ const OVERRIDES: Partial<Record<SpecializationSpec["kind"], Record<string, strin
   "power-tap": { bonus: "Damage per enemy" },
   // ── end g2 ──
   // ── trap paths ──
+  hamstring: { slow: "Slow while bleeding" },
+  "open-wounds": { bonus: "Damage taken" },
+  "tar-oil": { boost: "Burn damage", duration: "Oil duration" },
+  concussion: { bonus: "Damage taken", duration: "After landing" },
+  "alarm-volley": { bonus: "Next shot bonus" },
+  flare: { duration: "Reveal" },
+  "held-exposure": { bonus: "Damage taken" },
+  "warp-daze": { duration: "Confusion" },
   // ── end trap paths ──
   // ── support economy ──
   // ── end support economy ──
