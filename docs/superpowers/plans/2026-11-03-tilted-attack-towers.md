@@ -47,6 +47,32 @@ The 13 towers, grouped by what they need from the kit:
    the strategy's). Note avg/p95 of `draw` and `render` for flat vs tilted fills on this machine. This is the
    baseline for Phase 1.
 
+## Measured (2026-11-03, SwiftShader, `lianenpfad` last wave, bloom off, 52 towers at L5)
+
+| Fill (43 extra towers) | draw avg / p95 ms | render avg / p95 ms |
+| --- | --- | --- |
+| Pulse + Nova (tilted) | 13.1–13.8 / 22–24 | 8.4–9.0 / 16–17 |
+| Flak + Lance (flat) | 6.8–8.1 / 12–15 | 5.7–6.3 / 11–14 |
+| no fill (9 towers) | 4.2 / 9 | 5.2 / 11 |
+
+The tilted turrets cost roughly twice what flat ones do: ~0.15 ms draw and ~0.06 ms render per tower here. A CPU
+profile splits the main-thread cost about evenly between our geometry code (`block`, `disc`, `drum`, `turn`) and
+Phaser's recording and earcut tessellation. Phaser re-tessellates every Graphics on every frame, so drawing less
+often only helps if the result is kept as pixels.
+
+Options weighed:
+
+- **Turret pixels per angle (chosen).** Removes nearly all of both halves for the turret: one textured quad per
+  tower. Costs memory, render-side angle snapping and a separate depth layer. A shared atlas keyed by look × angle
+  beats one texture per tower because fast trackers (Flak) revisit the same angles: after warm-up they never bake
+  again, while a per-tower texture would re-bake on every bucket change.
+- **Thinner geometry (do it as well, first).** Seams, lips and 0.6 px lines that vanish at board zoom, fewer drum
+  segments, no tuple allocations in hot helpers (`P(...)` in siege). Cheap and helps the bake, the live parts and
+  the flat towers too. Expect tens of percent, not the factor the cache gives.
+- **Only redraw on change, without pixels.** Saves only our half; Phaser still re-tessellates. Rejected.
+- **Real 3D (vertex buffer + shader rotating the turret).** Continuous angles and tiny memory, but a custom
+  Phaser render node and per-vertex lighting instead of our Graphics drawing kit. Too large a departure for now.
+
 ## Phase 1: turret cache (before any new tower)
 
 Building the cache before converting towers means every new drawing is split the right way from the start, rather

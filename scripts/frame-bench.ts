@@ -2,7 +2,7 @@
  * Frame-time benchmark of a busy wave in the real app (dev build only: reads the scene's `window.__frameStats`).
  *
  *   npm run dev   # in the background, on :4173
- *   npx vite-node scripts/frame-bench.ts [-- <missionId>] [--wave <n>] [--seconds 10] [--fill <n>] [--no-bloom] [--url http://localhost:4173]
+ *   npx vite-node scripts/frame-bench.ts [-- <missionId>] [--wave <n>] [--seconds 10] [--fill <n>] [--towers a,b] [--no-bloom] [--url http://localhost:4173]
  *
  * Without a mission it takes the campaign mission whose last wave is the largest, at its last wave. Opens it via
  * `&wave=<n>&credits=<n>`, builds every strategy A tower and levels each to L5 (no specializations), starts the wave
@@ -23,6 +23,8 @@ const seconds = Number(flag("--seconds") ?? 10);
 const waveFlag = flag("--wave");
 /** Extra towers (the strategy's own types in turn) on free cells, for a crowded late-game board. */
 const fill = Number(flag("--fill") ?? 0);
+/** Tower types the fill cycles through (default: strategy A's own), e.g. `--towers pulse,blast` for a tilted board. */
+const fillTypes = flag("--towers")?.split(",");
 /** Measures with the Bloom setting off (`render/graphics-settings.ts`); on by default on a desktop. */
 const noBloom = args.includes("--no-bloom");
 if (noBloom) args.splice(args.indexOf("--no-bloom"), 1);
@@ -40,7 +42,7 @@ try {
   if (noBloom) await page.addInitScript(() => localStorage.setItem("ion-bastion:graphics", JSON.stringify({ glow: false })));
   await open(page, base, { mission: mission.id, wave, credits: 1_000_000 });
   await buildAffordable(page, mission, { i: 0 });
-  const types = [...new Set((STRATEGIES[mission.id]?.A.builds ?? []).map((b) => b.tower))];
+  const types = fillTypes ?? [...new Set((STRATEGIES[mission.id]?.A.builds ?? []).map((b) => b.tower))];
   for (let y = 0, built = 0; y < mission.map.rows && built < fill; y++)
     for (let x = 0; x < mission.map.columns && built < fill; x++)
       try {

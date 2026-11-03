@@ -9,6 +9,7 @@ import { AnimReview, animReviewSize } from "./anim-review";
 import { ArtReview, artReviewSize } from "./art-review";
 import { ART_FILTERING } from "./render/enemy-art-scene";
 import { Showcase, showcaseSize } from "./showcase";
+import { TiltConcepts, conceptsSize } from "./tilt-concepts";
 import { createEnemy } from "./systems/spawn";
 import { statusFlags } from "./systems/status";
 import { traitFlags, type TraitFlags } from "./systems/traits";
@@ -106,7 +107,9 @@ const query = new URLSearchParams(location.search),
   sound = query.has("sound"),
   /** `?render`: offline music renders for scripts/render-music.ts (see `music-render.ts`); no canvas. */
   render = query.has("render"),
-  pageSize = anim ? animReviewSize : art ? artReviewSize : showcase ? showcaseSize : { width: width * ZOOM, height: height * ZOOM };
+  /** `?concepts`: the throwaway 3/4 tilt concept sheet of the Attack towers (see `tilt-concepts.ts`). */
+  concepts = query.has("concepts"),
+  pageSize = concepts ? conceptsSize : anim ? animReviewSize : art ? artReviewSize : showcase ? showcaseSize : { width: width * ZOOM, height: height * ZOOM };
 if (render)
   void import("./music-render").then((m) => {
     (window as unknown as { __renderMusic: typeof m.renderMusic }).__renderMusic = m.renderMusic;
@@ -120,6 +123,6 @@ else
     transparent: true,
     antialias: true,
     render: ART_FILTERING,
-    scene: anim ? AnimReview : art ? ArtReview : showcase ? Showcase : Gallery,
+    scene: concepts ? TiltConcepts : anim ? AnimReview : art ? ArtReview : showcase ? Showcase : Gallery,
     audio: { noAudio: true },
   });
