@@ -1,13 +1,12 @@
 import type { TurretStyle } from "../../core/types";
 import { DARK, OUTLINE, PLATE, SHADOW, facing, led, litBar, plate, rivets, sunken } from "../material";
 import { arcBand, chamferRect, disc, oval, polygon, ring, shade } from "../shapes";
+import { sentinelBase } from "./sentinel";
 import { type Drawing, TAU, PTS, put, at, quad, tick, pip, facets, inlay, base, trapFrame, hexLine, CORNERS } from "./kit";
 /** Base plates by `visual.turret`: the raised plate with its deck, studs and trim. */
 export const BASES: Record<TurretStyle, Drawing> = {
-  barrel: (ctx) => {
-    base(ctx, { n: 6, rot: Math.PI / 6 }, 23, 19);
-    rivets(ctx.g, ctx.x, ctx.y, 21, 3, Math.PI / 6, shade(ctx.definition.color, -0.45));
-  },
+  // Pulse: the Hex Sentinel's extruded foundation, drawn in the 3/4 tilt (see `sentinel.ts`).
+  barrel: sentinelBase,
   heavy: (ctx) => {
     const { g, x, y } = ctx;
     base(ctx, { n: 8, rot: Math.PI / 8 }, 24, 18);

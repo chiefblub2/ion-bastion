@@ -43,6 +43,8 @@ const MAX_CANVAS = 4096;
 const PULSE = 0.25;
 /** Seconds the reactor flares red after a leak. */
 const LEAK_ALARM = 1.2;
+/** Drawing order of towers: by row, then column, then id, so every frame draws them the same way. */
+const northFirst = (a: Tower, b: Tower) => a.y - b.y || a.x - b.x || a.id - b.id;
 export interface ViewState {
   build: TowerId | null;
   selected: number | null;
@@ -183,6 +185,8 @@ export class Battlefield extends Phaser.Scene {
    * resolution and the aura query, too costly to run for every tower in every frame.
    */
   private looks = { key: "", byId: new Map<number, TowerBadges>() };
+  /** Towers in drawing order, north to south: a tilted turret (Pulse) reaches into the cell above and must cover it. */
+  private order: Tower[] = [];
   /** Bloom, reactor-hit flash and strike shake (WebGL only), switched by the Bloom setting. */
   private screenFx = new ScreenFx(this, () => this.still.matches);
   /** The Bloom setting; `main.ts` changes it through `setGlow`. */
@@ -793,7 +797,11 @@ export class Battlefield extends Phaser.Scene {
     if (s.strikes) drawStrikes(this.hints, this.towerGlow, s.strikes, s.time, this.clock, content);
     const pulses = this.hooks.pulses?.() ?? {},
       looks = this.towerLooks();
-    for (const t of s.towers) {
+    const order = this.order;
+    order.length = 0;
+    for (const t of s.towers) order.push(t);
+    order.sort(northFirst);
+    for (const t of order) {
       const d = towers[t.type],
         badges = looks.get(t.id)!,
         x = px(t.x),
