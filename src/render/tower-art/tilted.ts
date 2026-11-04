@@ -1,4 +1,6 @@
-import type { TurretStyle } from "../../core/types";
+import type { TowerId, TurretStyle } from "../../core/types";
+import type { Tilt } from "../muzzles";
+import { MODELS } from "./models";
 import type { Drawing } from "./kit";
 import { sentinelAbove, sentinelBase, sentinelBelow, sentinelTurret } from "./sentinel";
 import { siegeAbove, siegeBase, siegeBelow, siegeTurret } from "./siege";
@@ -30,7 +32,24 @@ export interface TiltedArt {
   turret: Drawing;
   above: Drawing;
 }
+/**
+ * A tilted tower as drawn on the concept sheet (`models/`, the Control, Traps and Support towers): its four parts plus
+ * the projection and barrel it was drawn for, which `TILTS` and `MUZZLES` repeat (`tilted.test.ts` keeps them equal).
+ */
+export interface TiltedConcept extends TiltedArt {
+  tower: TowerId;
+  /** Name of the look, e.g. "Chrono Glass". */
+  name: string;
+  /** One line on the idea. */
+  idea: string;
+  tilt: Tilt;
+  reach?: (level: number) => number;
+  recoil?: number;
+  sides?: readonly number[];
+  fan?: (level: number) => { count: number; step: number };
+}
 export const TILTED: Partial<Record<TurretStyle, TiltedArt>> = {
+  ...MODELS,
   // Pulse: the Hex Sentinel.
   barrel: { base: sentinelBase, below: sentinelBelow, turret: sentinelTurret, above: sentinelAbove },
   // Nova: the Siege Cannon.

@@ -61,6 +61,52 @@ export const TILTS: Partial<Record<TurretStyle, Tilt>> = {
   prism: { drop: 6, squash: 0.65, height: 22, deck: 3.6, emit: 22 },
   // Quake: the Hydraulic Press; its wave starts on the ground.
   hammer: { drop: 6, squash: 0.65, height: 0, deck: 4 },
+  // Control, Traps and Support: the models in `tower-art/models/` (each module's own `tilt`; `tilted.test.ts` keeps them equal).
+  crystal: { drop: 6, squash: 0.65, height: 27, deck: 5, emit: 27 },
+  emitter: { drop: 6, squash: 0.65, height: 14.5, deck: 3.5, emit: 14.5 },
+  vat: { drop: 5, squash: 0.65, height: 10, deck: 5 },
+  gravity: { drop: 6, squash: 0.65, height: 17, deck: 4.4, emit: 17 },
+  antenna: { drop: 5, squash: 0.65, height: 13, deck: 4.6, emit: 13 },
+  launcher: { drop: 5, squash: 0.65, height: 10.5, pitch: 0.3, deck: 5 },
+  caster: { drop: 5, squash: 0.65, height: 12.5, pitch: 0.25, deck: 6 },
+  spiral: { drop: 6, squash: 0.65, height: 14, deck: 3.5 },
+  resin: { drop: 5, squash: 0.65, height: 12, deck: 5.7 },
+  magnet: { drop: 6, squash: 0.65, height: 0, deck: 4.4, emit: 26 },
+  fan: { drop: 6, squash: 0.65, height: 0, deck: 4.6, emit: 23 },
+  tether: { drop: 5, squash: 0.65, height: 11, deck: 4.6 },
+  shrinker: { drop: 5, squash: 0.65, height: 13, deck: 6.2 },
+  sigil: { drop: 5, squash: 0.65, height: 12, deck: 5.6 },
+  siphon: { drop: 5, squash: 0.65, height: 10.5, deck: 4.8 },
+  mine: { drop: 2, squash: 0.65, height: 0, deck: 3.4 },
+  spikes: { drop: 2, squash: 0.65, height: 0, deck: 0 },
+  tar: { drop: 2, squash: 0.65, height: 0, deck: 3.5 },
+  snare: { drop: 2, squash: 0.65, height: 0, deck: 3 },
+  grill: { drop: 2, squash: 0.65, height: 0, deck: 3.4 },
+  spring: { drop: 2, squash: 0.65, height: 0, deck: 3 },
+  limpet: { drop: 2, squash: 0.65, height: 0, deck: 2.2 },
+  pit: { drop: 2, squash: 0.65, height: 0, deck: 1.8 },
+  tripwire: { drop: 2, squash: 0.65, height: 0, deck: 1 },
+  barricade: { drop: 2, squash: 0.65, height: 0, deck: 0.5 },
+  warp: { drop: 2, squash: 0.65, height: 0, deck: 2.6 },
+  plate: { drop: 2, squash: 0.65, height: 0, deck: 1.8 },
+  slick: { drop: 2, squash: 0.65, height: 0, deck: 0.2 },
+  grinder: { drop: 2, squash: 0.65, height: 0, deck: 2.4 },
+  harpoon: { drop: 2, squash: 0.65, height: 3.4, deck: 1.6, pitch: 0.95 },
+  aura: { drop: 5, squash: 0.65, height: 25, deck: 6 },
+  refinery: { drop: 5, squash: 0.65, height: 6.5, deck: 12 },
+  radar: { drop: 5, squash: 0.65, height: 25, deck: 6 },
+  beacon: { drop: 5, squash: 0.65, height: 24, deck: 6, emit: 24 },
+  dock: { drop: 5, squash: 0.65, height: 12, deck: 3 },
+  tracker: { drop: 5, squash: 0.65, height: 17, deck: 4 },
+  clock: { drop: 5, squash: 0.65, height: 11, deck: 4 },
+  director: { drop: 5, squash: 0.65, height: 16, deck: 11.5 },
+  armory: { drop: 5, squash: 0.65, height: 15, deck: 6.2 },
+  skylink: { drop: 6, squash: 0.65, height: 17.5, deck: 5.5 },
+  nexus: { drop: 6, squash: 0.65, height: 16.5, deck: 5.5 },
+  workshop: { drop: 5, squash: 0.65, height: 17, deck: 6.6 },
+  vault: { drop: 4, squash: 0.65, height: 15, deck: 16.6 },
+  shieldgen: { drop: 5, squash: 0.65, height: 12.5, deck: 5 },
+  recycler: { drop: 5, squash: 0.65, height: 13, deck: 13 },
 };
 /**
  * Barrels of the turrets that have one. Turret drawings, muzzle flashes and the starting point of projectiles
@@ -79,7 +125,7 @@ export const MUZZLES: Partial<Record<TurretStyle, MuzzleSpec>> = {
   vat: { reach: (l) => 17 + l, recoil: 4, flash: "spray" },
   lens: { reach: (l) => 14 + 0.4 * l, recoil: 0, flash: "energy" },
   flask: { reach: (l) => 15 + l, recoil: 2, flash: "spray" },
-  caster: { reach: (l) => 14 + l, recoil: 6, flash: "heavy" },
+  caster: { reach: (l) => 16 + l, recoil: 6, flash: "heavy" },
   battery: { reach: (l) => 15 + l, recoil: 3, sides: [-5.4, -1.8, 1.8, 5.4], flash: "heavy" },
   // ── new towers: g1 (Attack+Control A) ──
   uplink: { reach: (l) => 13 + l, recoil: 1, flash: "energy" },
@@ -93,6 +139,8 @@ export const MUZZLES: Partial<Record<TurretStyle, MuzzleSpec>> = {
   siphon: { reach: (l) => 16 + l, recoil: 1, flash: "energy" },
   // ── end g2 ──
   // ── new towers: g3 (Traps) ──
+  // Harpoon: the Sky Lance's launcher tube (traps show no muzzle flash; harpoons leave its tip).
+  harpoon: { reach: (l) => 8.5 + 0.2 * l, recoil: 2, flash: "gun" },
   // ── end g3 ──
   // ── new towers: g4 (Support A) ──
   // ── end g4 ──

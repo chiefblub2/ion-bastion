@@ -818,6 +818,8 @@ export class Battlefield extends Phaser.Scene {
     for (const t of s.towers) order.push(t);
     order.sort(northFirst);
     this.turrets.begin();
+    // Under the baked bodies: a trap's path motif lies around it on the path.
+    const ground: Pen = { g: this.hints, glow: this.towerGlow };
     for (const t of order) {
       const d = towers[t.type],
         badges = looks.get(t.id)!,
@@ -830,8 +832,8 @@ export class Battlefield extends Phaser.Scene {
         // The live parts use the same recoil step as the picture, so a hot muzzle sits on its barrel.
         const kick = snapKick(Math.max(0, (t.cooldown - 0.7) / 0.3) ** 2),
           cached = this.turrets.place(shown, d, badges, x, y, kick);
-        drawTower(towerPen, x, y, shown, d, this.clock, badges, { baked, top: cached ? this.towerTop : undefined, kick });
-      } else drawTower(towerPen, x, y, shown, d, this.clock, badges, { baked });
+        drawTower(towerPen, x, y, shown, d, this.clock, badges, { baked, top: cached ? this.towerTop : undefined, kick, ground });
+      } else drawTower(towerPen, x, y, shown, d, this.clock, badges, { baked, ground });
       const family = familyOf(d),
         age = family ? pulses[family] : undefined;
       // The music visibly comes from the towers: a soft halo when their family's note sounds.

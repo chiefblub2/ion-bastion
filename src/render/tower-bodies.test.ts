@@ -21,11 +21,6 @@ describe("baked tower bodies", () => {
     expect(still.length / ids.length).toBeGreaterThan(0.8);
   });
 
-  it("keeps a base whose metal moves with time live", () => {
-    // Aura's base turns with time on its plate, not only in its light.
-    expect(stillBody(tower("aura"), DEFAULT_CONTENT.towers.aura, badges("aura", 1))).toBe(false);
-  });
-
   it("bakes the tilted foundations (Pulse, Nova) like any flat body, whatever was drawn before", () => {
     for (const id of ["pulse", "blast"] as const)
       for (const level of [1, 5]) {

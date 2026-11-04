@@ -45,14 +45,5 @@ describe("muzzle tips", () => {
   it("send shots of a tilted turret without a barrel from its emit point", () => {
     const tilt = TILTS.coil!;
     expect(muzzleTips("coil", 1, 10, 10, 1)).toEqual([{ x: 10, y: 10 + tilt.drop - tilt.emit! }]);
-    // A flat radial turret has neither.
-    expect(muzzleTips("emitter", 1, 10, 10, 1)).toEqual([]);
-  });
-
-  it("keep flat barrels on the aim", () => {
-    const [tip] = muzzleTips("tether", 1, 0, 0, Math.PI / 2);
-    expect(tip.x).toBeCloseTo(0);
-    expect(tip.y).toBeCloseTo(MUZZLES.tether!.reach(1));
-    expect(muzzleHeading("tether", 1)).toBe(1);
   });
 });

@@ -10,7 +10,6 @@ import { ArtReview, artReviewSize } from "./art-review";
 import { ART_FILTERING } from "./render/enemy-art-scene";
 import { Showcase, showcaseSize } from "./showcase";
 import { TiltReview, tiltReviewSize } from "./tilt-review";
-import { TiltConcepts, conceptsSize } from "./tilt-concepts";
 import { createEnemy } from "./systems/spawn";
 import { statusFlags } from "./systems/status";
 import { traitFlags, type TraitFlags } from "./systems/traits";
@@ -118,9 +117,7 @@ const query = new URLSearchParams(location.search),
   render = query.has("render"),
   /** `?tilt`: the towers drawn in the 3/4 tilt at levels, paths and headings (see `tilt-review.ts`). */
   tilt = query.has("tilt"),
-  /** `?concepts`: the throwaway 3/4 tilt concept sheet of the Control, Traps and Support towers (see `tilt-concepts.ts`). */
-  concepts = query.has("concepts"),
-  pageSize = concepts ? conceptsSize : tilt ? tiltReviewSize : anim ? animReviewSize : art ? artReviewSize : showcase ? showcaseSize : { width: width * ZOOM, height: height * ZOOM };
+  pageSize = tilt ? tiltReviewSize : anim ? animReviewSize : art ? artReviewSize : showcase ? showcaseSize : { width: width * ZOOM, height: height * ZOOM };
 if (render)
   void import("./music-render").then((m) => {
     (window as unknown as { __renderMusic: typeof m.renderMusic }).__renderMusic = m.renderMusic;
@@ -134,6 +131,6 @@ else
     transparent: true,
     antialias: true,
     render: ART_FILTERING,
-    scene: concepts ? TiltConcepts : tilt ? TiltReview : anim ? AnimReview : art ? ArtReview : showcase ? Showcase : Gallery,
+    scene: tilt ? TiltReview : anim ? AnimReview : art ? ArtReview : showcase ? Showcase : Gallery,
     audio: { noAudio: true },
   });

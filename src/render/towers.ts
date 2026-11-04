@@ -113,13 +113,8 @@ function drawTop(ctx: TurretContext, badges: TowerBadges, top?: Ink) {
   if (flat && level >= 8) arcBand(g, x, y, 17, 1.6, clock * 0.8 + tower.id, clock * 0.8 + tower.id + 0.5, shade(p, 0.8), 0.9);
   // Specialized towers: the path motif turns under the turret, one tier per level above the branch (5, support 3),
   // echoed in light. Aura draws its own.
-  const motif = badges.path && definition.attack.kind !== "aura" ? definition.visual.paths?.[badges.path]?.motif : undefined;
-  if (motif) {
-    const tier = Math.min(3, Math.max(1, level - branchLevel(definition)));
-    const tilt = TILTS[definition.visual.turret];
-    if (tilt) onDeck([g, glow], x, y + tilt.drop, tilt.deck, () => MOTIFS[motif]({ ...ctx, x: 0, y: 0 }, tier, clock + tower.id, 0.04 + 0.04 * tier));
-    else MOTIFS[motif](ctx, tier, clock + tower.id, 0.06 + 0.06 * tier);
-  }
+  // Traps carry it around them on the path instead (`drawTrapMotif`, under the base).
+  if (!trap) drawMotif(ctx, badges);
   // One lamp from level 2; from level 4 four of them chase round the collar.
   if (flat && level >= 4) {
     g.fillStyle(OUTLINE, 0.9);
@@ -162,6 +157,19 @@ function drawBadges({ g, x, y, level, color: p }: TurretContext, badges: TowerBa
     g.lineBetween(x + 19, y - 21, x + 19, y - 15);
   }
 }
+/** The path motif of a specialized tower (Aura draws its own), one tier per level above the branch, echoed in light. */
+function drawMotif(ctx: TurretContext, badges: TowerBadges, ground = false) {
+  const { g, glow, x, y, tower, definition, clock, level } = ctx,
+    motif = badges.path && definition.attack.kind !== "aura" ? definition.visual.paths?.[badges.path]?.motif : undefined;
+  if (!motif) return;
+  const tier = Math.min(3, Math.max(1, level - branchLevel(definition))),
+    tilt = TILTS[definition.visual.turret],
+    draw = () => MOTIFS[motif]({ ...ctx, x: 0, y: 0 }, tier, clock + tower.id, 0.04 + 0.04 * tier);
+  // On the path around a trap: larger and at ground height, so the trap covers its middle and keeps its face.
+  if (tilt && ground) onDeck([g, glow], x, y + tilt.drop, 0, draw, 1.3);
+  else if (tilt) onDeck([g, glow], x, y + tilt.drop, tilt.deck, draw);
+  else MOTIFS[motif](ctx, tier, clock + tower.id, 0.06 + 0.06 * tier);
+}
 /** How the battlefield shows a tower beside what `drawTower` draws. */
 export interface TowerView {
   /** The still body is already on screen as a texture (`stillBody`), so only its light is drawn. */
@@ -170,9 +178,13 @@ export interface TowerView {
   top?: Ink;
   /** Recoil to draw instead of the one the cooldown gives (the cached picture's step). */
   kick?: number;
+  /** A layer under the baked bodies (`hints`) for a trap's path motif; without it the motif goes first on `pen`. */
+  ground?: Pen;
 }
-export function drawTower(pen: Pen, x: number, y: number, tower: Tower, definition: Readonly<TowerDefinition>, clock: number, badges: TowerBadges, { baked, top, kick }: TowerView = {}) {
+export function drawTower(pen: Pen, x: number, y: number, tower: Tower, definition: Readonly<TowerDefinition>, clock: number, badges: TowerBadges, { baked, top, kick, ground }: TowerView = {}) {
   const ctx = turretContext(pen, x, y, tower, definition, clock, badges, kick);
+  // A trap's path motif lies on the path around it, under its base.
+  if (definition.placement === "path") drawMotif(ground ? { ...ctx, g: ground.g, glow: ground.glow } : ctx, badges, true);
   // A baked body without light of its own (every tilted base) has nothing left to draw.
   if (!baked) drawBody(ctx);
   else if (bodyLight(tower, badges)) drawBody({ ...ctx, g: NO_INK });
