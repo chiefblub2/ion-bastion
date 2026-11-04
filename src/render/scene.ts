@@ -317,7 +317,7 @@ export class Battlefield extends Phaser.Scene {
     // Dev builds only: the sprite manager for QA scripts (live and dying counts); stripped from `vite build`.
     if (import.meta.env.DEV) (window as unknown as { __enemySprites: EnemySprites }).__enemySprites = this.enemySprites;
     if (import.meta.env.DEV) (window as unknown as { __turretCache: TowerPictures }).__turretCache = this.turrets;
-    if (this.stats && !this.statsHooked) {
+    if (import.meta.env.DEV && this.stats && !this.statsHooked) {
       const stats = this.stats;
       let start = 0;
       this.game.events.on(Phaser.Core.Events.PRE_RENDER, () => (start = performance.now()));
@@ -587,7 +587,7 @@ export class Battlefield extends Phaser.Scene {
     if (!s.paused) for (const f of this.effects) f.age += dt;
     for (const f of this.effects) if (f.label && (f.event.type === "income" || f.event.type === "repair")) this.placeLabel(f.label, f.event.at, f.age);
     this.draw();
-    if (this.stats) {
+    if (import.meta.env.DEV && this.stats) {
       this.stats.add("sim", drawStart - simStart);
       this.stats.add("draw", performance.now() - drawStart);
     }
