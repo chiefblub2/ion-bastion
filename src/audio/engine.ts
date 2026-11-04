@@ -1,6 +1,5 @@
-import { Ambience } from "./ambience";
 import { addDuck, type Span } from "./duck";
-import { impulse, INSTRUMENTS, type Instrument, type Kit } from "./instruments";
+import { impulse, STINGER_INSTRUMENTS, type Instrument, type Kit, type Play } from "./instruments";
 import { admit, type Voice } from "./mixer";
 import { RECIPES, SHOT_CUES, TIMING, type CueId } from "./recipes";
 import type { Note } from "./score";
@@ -33,7 +32,8 @@ const SHOTS = new Set<CueId>(SHOT_CUES);
 type Playing = Voice & { source: AudioBufferSourceNode };
 
 export class AudioEngine {
-  readonly ambience: Ambience;
+  /** The voices `instrument` can play: the stingers' until the soundtrack loads its own (`music.ts`). */
+  instruments: Partial<Record<Instrument, Play>> = STINGER_INSTRUMENTS;
   private master: GainNode;
   private bus: Record<"sfx" | "ui" | "music", GainNode>;
   private duckGain: GainNode;
@@ -112,7 +112,10 @@ export class AudioEngine {
     send(this.layers.drums, 0.1);
     send(this.bus.sfx, 0.1);
     this.kit = { noise: noiseBuffer(ctx) };
-    this.ambience = new Ambience(ctx, this.layers.pad);
+  }
+  /** The pad's layer, for the soundtrack's ambience (`music.ts`). */
+  get pad(): AudioNode {
+    return this.layers.pad;
   }
   volumes(s: SoundSettings) {
     const now = this.ctx.currentTime;
@@ -149,9 +152,11 @@ export class AudioEngine {
   }
   /**
    * Plays a note on one of the soundtrack's layers or, for stingers, the effects bus; false when it came too late or
-   * the instrument (or the whole music) already sounds too many notes at that time.
+   * the instrument (or the whole music) already sounds too many notes at that time, or is not loaded.
    */
   instrument(name: Instrument, hz: number, at: number, velocity: number, pan: number, layer: Layer = "keys", length?: number) {
+    const play = this.instruments[name];
+    if (!play) return false;
     // Judged at the note's own time, so an offline render (currentTime stays 0 while scheduling) works the same.
     const now = this.ctx.currentTime;
     if (layer !== "sfx" && at < now - LATE) return false;
@@ -159,7 +164,7 @@ export class AudioEngine {
       sounding = (this.notes.get(name) ?? []).filter((end) => end > start);
     this.sounding = this.sounding.filter((end) => end > start);
     if (sounding.length >= POLYPHONY || this.sounding.length >= MUSIC_VOICES) return false;
-    const end = INSTRUMENTS[name](this.ctx, this.panner(layer === "sfx" ? this.bus.sfx : this.layers[layer], pan), start, hz, velocity, this.kit, length);
+    const end = play(this.ctx, this.panner(layer === "sfx" ? this.bus.sfx : this.layers[layer], pan), start, hz, velocity, this.kit, length);
     sounding.push(end);
     this.sounding.push(end);
     this.notes.set(name, sounding);

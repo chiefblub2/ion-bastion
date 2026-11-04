@@ -4,8 +4,9 @@ import { DRONES } from "./drones";
 import type { Layer } from "./engine";
 import type { Family } from "./families";
 import { bassFor, CALM_DOWN, ESCALATE, layersFor, type Drum } from "./grooves";
-import { climb, extentFor, rooted, type Color } from "./harmony";
-import { REGISTER, type Instrument } from "./instruments";
+import type { Director } from "./effects";
+import { extentFor, rooted, type Color } from "./harmony";
+import { pitchOf as pitch, REGISTER, type Instrument } from "./instruments";
 import { colorOf, toneFor } from "./intensity";
 import type { DroneId } from "./mood";
 import { TIMING, type CueId } from "./recipes";
@@ -66,7 +67,7 @@ const BASS: Player = { instrument: "synthBass", pan: 0, gain: 0.8, layer: "bass"
 const ARP_LEVEL: Record<Phase, number> = { menu: 0.55, build: 0.5, wave: 0.7, paused: 0, over: 0.5 };
 const QUIET: Parts = { drums: [], bass: null, arp: 0, lead: null, extent: 3, color: "drive", escalate: false, threat: 0 };
 
-export class Conductor {
+export class Conductor implements Director {
   readonly score = new Score();
   private drone: DroneId = "menu";
   private mood: Color = "drive";
@@ -172,10 +173,3 @@ export class Conductor {
     this.voices.instrument(player.instrument, hz, at, velocity * player.gain, player.pan, player.layer, length);
   }
 }
-/** A pitched instrument's chord tone around its register; unpitched instruments ignore it. */
-const pitch = (name: Instrument, chord: readonly number[], tone: number) => {
-  const register = REGISTER[name];
-  if (!register) return 0;
-  // The bass centres on the root, so a widening chord never drops it an octave.
-  return (name === "synthBass" ? rooted : climb)(register, chord, tone);
-};

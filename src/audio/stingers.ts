@@ -1,10 +1,11 @@
-import type { Instrument } from "./instruments";
+import type { StingerInstrument } from "./instruments";
 import type { CueId } from "./recipes";
 // The game's turning points as short instrument phrases on the beat grid: [instrument, chord tone, 1/16 offset, velocity].
-// Tower actions (build, sell, upgrade) are plain effects instead, so the towers never play into the music.
+// Tower actions (build, sell, upgrade) are plain effects instead, so the towers never play into the music. Their voices
+// (`STINGER_INSTRUMENTS`) sound with or without the soundtrack.
 
 export interface Stinger {
-  notes: readonly (readonly [Instrument, number, number, number])[];
+  notes: readonly (readonly [StingerInstrument, number, number, number])[];
   /** Dips the music while it plays. */
   duck?: boolean;
 }

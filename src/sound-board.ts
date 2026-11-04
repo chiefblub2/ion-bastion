@@ -3,7 +3,9 @@ import { cuesFor } from "./audio/cues";
 import { AudioEngine } from "./audio/engine";
 import { FAMILIES, familyOf, type Family } from "./audio/families";
 import { MUSIC } from "./audio/harmony";
-import { INSTRUMENTS, REGISTER, type Instrument } from "./audio/instruments";
+import { REGISTER, type Instrument } from "./audio/instruments";
+import { withMusic, type MusicEngine } from "./audio/music";
+import { INSTRUMENTS } from "./audio/music-instruments";
 import type { DroneId } from "./audio/mood";
 import { COMBAT_CUES, FLOW_CUES, RECIPES, SHOT_CUES, TIMING, UI_CUES, type CueId } from "./audio/recipes";
 import { Sequencer } from "./audio/sequencer";
@@ -35,7 +37,7 @@ const timing = (id: CueId) => {
 const slider = (id: string, label: string, max: number, value: number) => `<label>${label} <input id="${id}" type="range" min="0" max="${max}" value="${value}"><output id="${id}-out">${value}</output></label>`;
 
 export function mountSoundBoard(root: HTMLElement) {
-  let live: { ctx: AudioContext; engine: AudioEngine; conductor: Conductor; shots: ShotMixer } | null = null,
+  let live: { ctx: AudioContext; engine: MusicEngine; conductor: Conductor; shots: ShotMixer } | null = null,
     timer: ReturnType<typeof setInterval> | null = null;
   const head = `<div class="sb-row sb-head"><span>Sound</span><span>Timing</span>${CRITERIA.map(([c, hint]) => `<span title="${hint}">${c}</span>`).join("")}<span>Notes</span></div>`,
     effects = [...SHOT_CUES, ...COMBAT_CUES, ...FLOW_CUES, ...UI_CUES].map((id) => row(`cue:${id}`, id, timing(id), `cap ${RECIPES[id].cap} · gap ${RECIPES[id].gap}s`)).join(""),
@@ -59,7 +61,7 @@ export function mountSoundBoard(root: HTMLElement) {
   function ready() {
     if (!live) {
       const ctx = new AudioContext(),
-        engine = new AudioEngine(ctx),
+        engine = withMusic(new AudioEngine(ctx)),
         conductor = new Conductor(engine);
       engine.volumes({ ...DEFAULT_SETTINGS, muted: false });
       live = { ctx, engine, conductor, shots: new ShotMixer() };
