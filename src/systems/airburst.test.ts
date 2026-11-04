@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { Game } from "../core/game";
 import { attackEnemies } from "./combat";
-import { landProjectiles, makeEnemy } from "../core/test-helpers";
+import { landProjectiles, makeEnemy, LEVELS, lost } from "../core/test-helpers";
 import { validateContent } from "../core/validation";
 import { specializationError } from "../core/specialization-types";
 import { DEFAULT_CONTENT } from "../content";
@@ -12,7 +12,6 @@ import { isNetted } from "./status";
 import { canAcquire } from "./attacks";
 
 const { radius } = TOWERS.skyburst.attack as AirburstAttack;
-const LEVELS = ["level-2", "level-3", "level-4", "level-5"];
 /** Skyburst at (7,5) on the outpost map, optionally upgraded; one salvo is fired and landed. */
 function fire(enemies: [EnemyId, number, number][], upgrades: string[] = []) {
   const g = new Game();
@@ -24,7 +23,7 @@ function fire(enemies: [EnemyId, number, number][], upgrades: string[] = []) {
   landProjectiles(g);
   return g;
 }
-const damage = (g: Game) => g.state.enemies.map((e) => 1000 - e.hp);
+const damage = (g: Game) => g.state.enemies.map(lost);
 
 describe("Skyburst airburst", () => {
   it("bursts on its target and hits every flyer in the radius, but no ground unit under it", () => {

@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
-import { ENEMIES } from "../content/enemies";
 import { missionById } from "../content/missions";
 import { Game } from "../core/game";
-import { finishWave } from "../core/test-helpers";
+import { finishWave, withTraits } from "../core/test-helpers";
 import { waveHpScale } from "../systems/spawn";
 import { renderWaveForecast, waveForecast } from "./wave-forecast";
 import type { EnemyId } from "../core/types";
@@ -34,21 +33,14 @@ describe("wave forecast", () => {
     expect(html).toContain("24 enemies");
   });
   it("shows armor, regeneration, splitting and immunity next to the unit", () => {
-    const content = {
-      ...DEFAULT_CONTENT,
-      enemies: {
-        ...ENEMIES,
-        drone: {
-          ...ENEMIES.drone,
-          traits: [
-            { kind: "armor", reduction: 0.3 },
-            { kind: "regen", perSecond: 4 },
-            { kind: "splitOnDeath", type: "runner", count: 2 },
-            { kind: "slowImmune" },
-          ] as const,
-        },
-      },
-    };
+    const content = withTraits({
+      drone: [
+        { kind: "armor", reduction: 0.3 },
+        { kind: "regen", perSecond: 4 },
+        { kind: "splitOnDeath", type: "runner", count: 2 },
+        { kind: "slowImmune" },
+      ],
+    });
     const next = waveForecast(new Game(missionById("schleusenring")!, content))!;
     expect(next.enemies[0].tags.map((t) => t.label)).toEqual(["ARMOR 30%", "REGEN 4/s", "SPLITS ×2", "IMMUNE: SLOW"]);
     const html = renderWaveForecast(next);
@@ -56,26 +48,19 @@ describe("wave forecast", () => {
     expect(html).toContain("Splits into 2× Sprinter");
   });
   it("shows the new traits next to the unit", () => {
-    const content = {
-      ...DEFAULT_CONTENT,
-      enemies: {
-        ...ENEMIES,
-        drone: {
-          ...ENEMIES.drone,
-          traits: [
-            { kind: "shield", capacity: 0.3, delay: 3 },
-            { kind: "sprint", threshold: 0.5, factor: 1.6, duration: 2 },
-            { kind: "evade", every: 4 },
-            { kind: "healer", radius: 2, percent: 0.03 },
-            { kind: "leader", radius: 2, speed: 0.2, resist: 0.15 },
-            { kind: "stealth" },
-            { kind: "unstoppable" },
-            { kind: "swift", speed: 0.5, hp: 0.2 },
-            { kind: "regen", percent: 0.02 },
-          ] as const,
-        },
-      },
-    };
+    const content = withTraits({
+      drone: [
+        { kind: "shield", capacity: 0.3, delay: 3 },
+        { kind: "sprint", threshold: 0.5, factor: 1.6, duration: 2 },
+        { kind: "evade", every: 4 },
+        { kind: "healer", radius: 2, percent: 0.03 },
+        { kind: "leader", radius: 2, speed: 0.2, resist: 0.15 },
+        { kind: "stealth" },
+        { kind: "unstoppable" },
+        { kind: "swift", speed: 0.5, hp: 0.2 },
+        { kind: "regen", percent: 0.02 },
+      ],
+    });
     const next = waveForecast(new Game(missionById("schleusenring")!, content))!;
     expect(next.enemies[0].tags.map((t) => t.label)).toEqual([
       "SHIELD 30%",
@@ -116,10 +101,7 @@ describe("wave forecast", () => {
   });
   it("shows the swift HP penalty in the forecast HP", () => {
     const base = waveForecast(new Game(missionById("schleusenring")!))!;
-    const content = {
-      ...DEFAULT_CONTENT,
-      enemies: { ...ENEMIES, drone: { ...ENEMIES.drone, traits: [{ kind: "swift", speed: 0.5, hp: 0.2 }] as const } },
-    };
+    const content = withTraits({ drone: [{ kind: "swift", speed: 0.5, hp: 0.2 }] });
     const next = waveForecast(new Game(missionById("schleusenring")!, content))!;
     expect(next.enemies[0].hp).toBe(Math.round(base.enemies[0].hp * 0.8));
   });

@@ -3,16 +3,13 @@ import { describe, expect, it } from "vitest";
 import { isFullyUpgraded, resolveUpgrades, towerColor, towerLevel, towerPath, towerTrack, upgradeOption, validateUpgradeDefinitions } from "../core/upgrades";
 import { Game } from "../core/game";
 import { TOWERS } from "../content/towers";
-import type { Enemy, Tower, TowerId } from "../core/types";
+import type { Enemy } from "../core/types";
 import { auraBonuses, effectiveTowerStats, isInAura, receivedAuraBonuses } from "./auras";
 import { attackEnemies } from "./combat";
-import { landProjectiles, makeEnemy } from "../core/test-helpers";
+import { landProjectiles, makeEnemy, towerAt } from "../core/test-helpers";
 import { upgradeControl } from "../ui/upgrade-tooltip";
 import { towerDetails } from "../ui/tower-details";
 
-function tower(id: number, type: TowerId, x: number, y: number, upgrades: string[] = []): Tower {
-  return { id, type, x, y, upgrades, cooldown: 0, spent: TOWERS[type].cost, angle: 0, kills: 0, owner: 0 };
-}
 function enemy(x: number, y: number): Enemy {
   return makeEnemy(100, "tank", x, y, 1);
 }
@@ -20,26 +17,26 @@ function fundedGame() { const g = new Game(); g.state.wallets[0] = 2000; return 
 
 describe("aura rules", () => {
   it("includes the exact radius boundary and excludes diagonal and just-outside targets", () => {
-    const source = tower(1, "aura", 0, 0, ["damage"]), target = tower(2, "pulse", 3, 0);
+    const source = towerAt(1, "aura", 0, 0, ["damage"]), target = towerAt(2, "pulse", 3, 0);
     expect(isInAura(source, target, DEFAULT_CONTENT)).toBe(true);
     expect(effectiveTowerStats(target, [source, target], DEFAULT_CONTENT).damage).toBeCloseTo(22.5);
     expect(isInAura(source, { ...target, x: 3.0001 }, DEFAULT_CONTENT)).toBe(false);
     expect(isInAura(source, { ...target, x: 2, y: 3 }, DEFAULT_CONTENT)).toBe(false);
   });
   it("takes the strongest bonus independently per property without stacking", () => {
-    const target = tower(4, "pulse", 1, 1);
-    const a = tower(1, "aura", 0, 0, ["damage", "damage-2"]);
-    const b = tower(2, "aura", 2, 0, ["speed"]);
-    const c = tower(3, "aura", 1, 0, ["range"]);
-    const d = tower(5, "aura", 2, 1, ["damage"]);
+    const target = towerAt(4, "pulse", 1, 1);
+    const a = towerAt(1, "aura", 0, 0, ["damage", "damage-2"]);
+    const b = towerAt(2, "aura", 2, 0, ["speed"]);
+    const c = towerAt(3, "aura", 1, 0, ["range"]);
+    const d = towerAt(5, "aura", 2, 1, ["damage"]);
     expect(receivedAuraBonuses(target, [a, b, c, d], DEFAULT_CONTENT)).toEqual({ damage: .4, speed: .2, range: .15 });
     expect(receivedAuraBonuses(target, [d, c, b, a], DEFAULT_CONTENT)).toEqual(receivedAuraBonuses(target, [a, b, c, d], DEFAULT_CONTENT));
   });
   it("applies bonuses after normal upgrades without altering source content or special effects", () => {
     const before = JSON.stringify(TOWERS);
-    const sources = [tower(1, "aura", 0, 0, ["damage"]), tower(3, "aura", 0, 1, ["speed"]), tower(4, "aura", 1, 1, ["range"])];
+    const sources = [towerAt(1, "aura", 0, 0, ["damage"]), towerAt(3, "aura", 0, 1, ["speed"]), towerAt(4, "aura", 1, 1, ["range"])];
     for (const type of ["pulse", "blast", "frost"] as const) {
-      const target = { ...tower(2, type, 1, 0), upgrades: ["level-2", "level-3"] };
+      const target = { ...towerAt(2, type, 1, 0), upgrades: ["level-2", "level-3"] };
       const stats = effectiveTowerStats(target, [...sources, target], DEFAULT_CONTENT), base = resolveUpgrades({ type, upgrades: ["level-2", "level-3"] }, DEFAULT_CONTENT).stats;
       expect(stats.damage).toBeCloseTo(base.damage * 1.25);
       expect(stats.range).toBeCloseTo(base.range * 1.15);
@@ -48,15 +45,15 @@ describe("aura rules", () => {
     expect(JSON.stringify(TOWERS)).toBe(before);
   });
   it("never buffs an aura tower or propagates through another aura", () => {
-    const a = tower(1, "aura", 0, 0, ["range", "range-2"]);
-    const b = tower(2, "aura", 2, 0, ["damage"]);
-    const target = tower(3, "pulse", 5, 0);
+    const a = towerAt(1, "aura", 0, 0, ["range", "range-2"]);
+    const b = towerAt(2, "aura", 2, 0, ["damage"]);
+    const target = towerAt(3, "pulse", 5, 0);
     expect(receivedAuraBonuses(b, [a, b], DEFAULT_CONTENT)).toEqual({ damage: 0, speed: 0, range: 0 });
     expect(effectiveTowerStats(b, [a, b], DEFAULT_CONTENT).range).toBe(3);
     expect(receivedAuraBonuses(target, [a, b], DEFAULT_CONTENT)).toEqual({ damage: .25, speed: 0, range: 0 });
   });
   it("has no base bonus: an aura without a path boosts nothing", () => {
-    const source = tower(1, "aura", 0, 0), target = tower(2, "pulse", 1, 0);
+    const source = towerAt(1, "aura", 0, 0), target = towerAt(2, "pulse", 1, 0);
     expect(auraBonuses(source, DEFAULT_CONTENT)).toEqual({ damage: 0, speed: 0, range: 0 });
     expect(effectiveTowerStats(target, [source, target], DEFAULT_CONTENT).damage).toBe(18);
     expect(Object.values(effectiveTowerStats(target, [source, target], DEFAULT_CONTENT).bonuses).some(Boolean)).toBe(false);
@@ -116,10 +113,10 @@ describe("aura commands and lifecycle", () => {
     expect(towerDetails("aura", t, g.state.towers)).toContain("LEVEL 4 / 7 · DAMAGE");
   });
   it("takes on the colour of its track", () => {
-    const t = tower(1, "aura", 0, 0);
+    const t = towerAt(1, "aura", 0, 0);
     expect(towerColor(t, DEFAULT_CONTENT)).toBe(TOWERS.aura.color);
     expect(towerColor({ ...t, upgrades: ["speed", "speed-2"] }, DEFAULT_CONTENT)).toBe(0xffd166);
-    expect(towerColor(tower(2, "pulse", 0, 0, ["level-2"]), DEFAULT_CONTENT)).toBe(TOWERS.pulse.color);
+    expect(towerColor(towerAt(2, "pulse", 0, 0, ["level-2"]), DEFAULT_CONTENT)).toBe(TOWERS.pulse.color);
   });
   it("rejects tracks without visuals and prerequisites from another track", () => {
     const aura = structuredClone(TOWERS.aura);
@@ -159,18 +156,18 @@ describe("aura commands and lifecycle", () => {
 
 describe("combat and interface integration", () => {
   it("support towers do not attack, even with an enemy inside their radius", () => {
-    const g = new Game(); g.state.towers = [tower(1, "aura", 0, 0, ["damage", "damage-2", "damage-3"])];
+    const g = new Game(); g.state.towers = [towerAt(1, "aura", 0, 0, ["damage", "damage-2", "damage-3"])];
     g.state.enemies = [enemy(1, 0)];
     attackEnemies(g, 1);
     expect(g.state.enemies[0].hp).toBe(1000);
     expect(g.state.events).toEqual([]);
   });
   it("uses aura range and damage in real attacks", () => {
-    const g = new Game(), target = tower(1, "pulse", 0, 0);
+    const g = new Game(), target = towerAt(1, "pulse", 0, 0);
     g.state.towers = [target]; g.state.enemies = [enemy(3, 0)];
     attackEnemies(g, 1 / 30);
     expect(g.state.enemies[0].hp).toBe(1000);
-    g.state.towers.push(tower(2, "aura", 0, 1, ["range"]), tower(3, "aura", 1, 1, ["damage"]));
+    g.state.towers.push(towerAt(2, "aura", 0, 1, ["range"]), towerAt(3, "aura", 1, 1, ["damage"]));
     attackEnemies(g, 1 / 30);
     expect(g.state.enemies[0].hp).toBe(1000);
     landProjectiles(g);
@@ -178,7 +175,7 @@ describe("combat and interface integration", () => {
     expect(g.state.events.filter(e => e.type === "shot")).toHaveLength(1);
   });
   it("speed changes preserve attack progress and do not grant a free shot", () => {
-    const g = new Game(), target = tower(1, "pulse", 0, 0), source = tower(2, "aura", 1, 0);
+    const g = new Game(), target = towerAt(1, "pulse", 0, 0), source = towerAt(2, "aura", 1, 0);
     g.state.towers = [target, source]; g.state.enemies = [enemy(1, 0)];
     attackEnemies(g, 0);
     attackEnemies(g, .275);
@@ -193,7 +190,7 @@ describe("combat and interface integration", () => {
     expect(g.state.events.filter(e => e.type === "shot")).toHaveLength(1);
   });
   it("upgrade previews and selected stats include the same active aura as combat", () => {
-    const target = tower(1, "pulse", 1, 0), source = tower(2, "aura", 0, 0, ["damage"]);
+    const target = towerAt(1, "pulse", 1, 0), source = towerAt(2, "aura", 0, 0, ["damage"]);
     const towers = [target, source], preview = upgradeControl(target, towers);
     expect(preview).toContain("22.5"); // 18 * 1.25
     expect(preview).toContain("37.5"); // next upgrades: ["level-2", "level-3"]0 * 1.25

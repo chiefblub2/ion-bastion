@@ -1,18 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { Game } from "../core/game";
 import { stateHash } from "../core/hash";
-import { makeEnemy } from "../core/test-helpers";
+import { makeEnemy, place } from "../core/test-helpers";
 import type { AttackSpec, Tower, TowerId } from "../core/types";
 import { attackError, canTarget } from "./attacks";
 import { attackEnemies } from "./combat";
 import { applyDamage, hitOf } from "./damage";
 import { critFactor, overclockRate, skylinkFactor, synergyFactor } from "./support";
-/** Places a tower straight into the state; support effects are pure queries over the towers. */
-function place(g: Game, type: TowerId, x: number, y: number, upgrades: string[] = []) {
-  const t: Tower = { id: g.state.nextId++, type, x, y, upgrades, cooldown: 0, spent: 0, angle: 0, kills: 0, owner: 0 };
-  g.state.towers.push(t);
-  return t;
-}
 describe("Overclock", () => {
   it("doubles the cooling rate of towers in reach during the first 3 s of every 10 s", () => {
     const g = new Game(),

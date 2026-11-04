@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { Game } from "../core/game";
-import { makeEnemy } from "../core/test-helpers";
+import { makeEnemy, place, lost } from "../core/test-helpers";
 import { TOWERS } from "../content/towers";
-import type { DamageSource, Enemy, EnemyId, ShrinkAttack, SiphonAttack, Tower, TowerId } from "../core/types";
+import type { DamageSource, Enemy, EnemyId, ShrinkAttack, SiphonAttack, TowerId } from "../core/types";
 import { validateTower } from "../core/validation";
 import { effectiveTowerStats } from "./auras";
 import { attackEnemies } from "./combat";
@@ -12,12 +12,6 @@ import { leakOf, sizeOf } from "./shrink";
 import { siphonBoost } from "./siphon";
 import { applyStatus, hasStatus, speedFactor, tickStatus } from "./status";
 import { partners } from "./tether";
-/** Places a tower straight into the state. */
-function place(g: Game, type: TowerId, x: number, y: number, upgrades: string[] = []) {
-  const t: Tower = { id: g.state.nextId++, type, x, y, upgrades, cooldown: 0, spent: 0, angle: 0, kills: 0, owner: 0 };
-  g.state.towers.push(t);
-  return t;
-}
 /** An enemy on the default map's path, `distance` cells in. */
 function walker(g: Game, id: number, type: EnemyId, distance: number): Enemy {
   const p = g.mission.map.path[Math.floor(distance)];
@@ -121,11 +115,11 @@ describe("Hex", () => {
     g.drainEvents();
     g.state.time = 3;
     tickStatus(g, 1 / 30);
-    expect(1000 - e.hp).toBeCloseTo(150 + 60);
+    expect(lost(e)).toBeCloseTo(150 + 60);
     expect(g.drainEvents().some((ev) => ev.type === "echo")).toBe(true);
     g.state.time = 6;
     tickStatus(g, 1 / 30);
-    expect(1000 - e.hp).toBeCloseTo(210);
+    expect(lost(e)).toBeCloseTo(210);
   });
 });
 describe("Siphon", () => {
@@ -170,7 +164,7 @@ describe("Control B specializations", () => {
       [a, b, c] = [1, 2, 3].map((id) => makeEnemy(id, "drone", 3, 2 + id));
     linked(g, [a, b, c], 500, { ...source("tether"), special: { kind: "tether-share", share: 0.4 } });
     applyDamage(g, source("pulse"), a, 100);
-    expect([a, b, c].map((e) => 1000 - e.hp)).toEqual([100, 40, 40]);
+    expect([a, b, c].map(lost)).toEqual([100, 40, 40]);
   });
   it("Doom finishes an enemy that its echo leaves below the threshold", () => {
     const g = new Game(),

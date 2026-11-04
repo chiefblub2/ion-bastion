@@ -3,7 +3,7 @@ import { Game } from "../core/game";
 import { attackEnemies, moveProjectiles } from "./combat";
 import { moveEnemies } from "./movement";
 import { stateHash } from "../core/hash";
-import { landProjectiles, makeEnemy } from "../core/test-helpers";
+import { landProjectiles, makeEnemy, withTraits, lost } from "../core/test-helpers";
 import { validateContent } from "../core/validation";
 import { DEFAULT_CONTENT } from "../content";
 import { TOWERS } from "../content/towers";
@@ -22,7 +22,7 @@ function setup(tower: TowerId, enemies: [EnemyId, number, number][]) {
   g.state.enemies = enemies.map(([type, x, y], i) => makeEnemy(100 + i, type, x, y, 10 - i));
   attackEnemies(g, 0);
   landProjectiles(g);
-  return g.state.enemies.map((e) => 1000 - e.hp);
+  return g.state.enemies.map(lost);
 }
 describe("ground and air targeting", () => {
   it("Nova ignores gliders and its splash spares them", () => {
@@ -58,7 +58,7 @@ describe("ground and air targeting", () => {
       validateContent({ ...DEFAULT_CONTENT, towers: { ...TOWERS, pulse: { ...TOWERS.pulse, targets: [] } } }),
     ).toThrow("tower targets");
     expect(() =>
-      validateContent({ ...DEFAULT_CONTENT, enemies: { ...ENEMIES, drone: { ...ENEMIES.drone, layer: "space" as never } } }),
+      validateContent(withTraits({}, { drone: { layer: "space" as never } })),
     ).toThrow("enemy layer");
   });
 });
@@ -230,10 +230,7 @@ describe("newer attack mechanics", () => {
     applyDamage(g, { tower: 0, type: "pulse" }, e, 100);
     expect(e.hp).toBeCloseTo(1000 - TOWERS.acid.damage * 1.25 - 125);
     expect(damageTaken(e, 3)).toBe(1);
-    const armored = new Game(undefined, {
-      ...DEFAULT_CONTENT,
-      enemies: { ...ENEMIES, drone: { ...ENEMIES.drone, traits: [{ kind: "armor", reduction: 0.5 }] } },
-    });
+    const armored = new Game(undefined, withTraits({ drone: [{ kind: "armor", reduction: 0.5 }] }));
     const tough = enemyAt(100, "drone", 7, 7);
     tough.status.push({ kind: "vulnerable", amount: 0.25, until: 3 });
     armored.state.enemies = [tough];
@@ -361,7 +358,7 @@ describe("Beben", () => {
   it("hits every ground enemy in range, weaker towards the edge, and spares gliders", () => {
     const g = fire("quake", [enemyAt(100, "drone", 7, 5.5), enemyAt(101, "drone", 7 + range * 0.99, 5), enemyAt(102, "glider", 7, 6), enemyAt(103, "drone", 7, 5 + range + 0.2)]);
     expect(g.state.projectiles).toHaveLength(0);
-    const [near, rim, glider, far] = g.state.enemies.map((e) => 1000 - e.hp);
+    const [near, rim, glider, far] = g.state.enemies.map(lost);
     expect(near).toBeCloseTo(d * (1 - (1 - edge) * (0.5 / range)));
     expect(rim).toBeCloseTo(d * (1 - (1 - edge) * 0.99));
     expect([glider, far]).toEqual([0, 0]);
@@ -393,7 +390,7 @@ describe("Schrapnell", () => {
     ]);
     expect(g.state.projectiles.map((p) => p.target)).toEqual([101, 102, 100].slice(0, targets));
     landProjectiles(g);
-    expect(g.state.enemies.map((e) => 1000 - e.hp)).toEqual([TOWERS.shrapnel.damage, TOWERS.shrapnel.damage, TOWERS.shrapnel.damage, 0]);
+    expect(g.state.enemies.map(lost)).toEqual([TOWERS.shrapnel.damage, TOWERS.shrapnel.damage, TOWERS.shrapnel.damage, 0]);
   });
   it("shoots once with a single enemy, and more targets after level 5", () => {
     expect(fire("shrapnel", [enemyAt(100, "drone", 7, 7)]).state.projectiles).toHaveLength(1);

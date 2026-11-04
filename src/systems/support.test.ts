@@ -1,18 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { Game } from "../core/game";
-import { finishWave, makeEnemy } from "../core/test-helpers";
+import { finishWave, makeEnemy, place } from "../core/test-helpers";
 import { MISSIONS } from "../content/missions";
 import { ENEMIES } from "../content/enemies";
-import type { Tower, TowerId } from "../core/types";
 import { applyDamage } from "./damage";
 import { applyStatus } from "./status";
 import { bountyBonus, markFactor } from "./support";
-/** Places a tower straight into the state; support effects are pure queries over the towers. */
-function place(g: Game, type: TowerId, x: number, y: number, upgrades: string[] = []) {
-  const t: Tower = { id: g.state.nextId++, type, x, y, upgrades, cooldown: 0, spent: 0, angle: 0, kills: 0, owner: 0 };
-  g.state.towers.push(t);
-  return t;
-}
 const src = { tower: 0, type: "pulse" as const };
 describe("Bounty Beacon", () => {
   it("adds half the reward for kills in range, nothing outside, and never stacks", () => {

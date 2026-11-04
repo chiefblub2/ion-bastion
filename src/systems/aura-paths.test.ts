@@ -1,19 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import { Game } from "../core/game";
-import { makeEnemy } from "../core/test-helpers";
+import { makeEnemy, place } from "../core/test-helpers";
 import type { Tower, TowerId } from "../core/types";
 import { towerLevel, towerPath, towerTrack, upgradeOption } from "../core/upgrades";
 import { lockSpecializations } from "../run/transform";
 import { receivedAuraBonuses } from "./auras";
 import { applyDamage, hitOf } from "./damage";
 
-/** Places a tower straight into the state; aura effects are pure queries over the towers. */
-function place(g: Game, type: TowerId, x: number, y: number, upgrades: string[] = []) {
-  const t: Tower = { id: g.state.nextId++, type, x, y, upgrades, cooldown: 0, spent: 0, angle: 0, kills: 0, owner: 0 };
-  g.state.towers.push(t);
-  return t;
-}
 const DAMAGE = ["damage", "damage-2", "damage-3"];
 const aura = (upgrades: string[]) => ({ type: "aura" as TowerId, upgrades });
 /** Damage a 1000-HP enemy of `type` takes from one 100-damage hit of `tower`. */

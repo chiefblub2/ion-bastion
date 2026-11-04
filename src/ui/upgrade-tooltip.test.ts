@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { towerAt } from "../core/test-helpers";
 import type { Tower } from "../core/types";
 import { upgradeControl } from "./upgrade-tooltip";
 import { towerDetails } from "./tower-details";
 
 const LEVELS = ["level-2", "level-3", "level-4", "level-5"];
-const pulse = (upgrades: string[]): Tower => ({ id: 1, type: "pulse", x: 0, y: 0, upgrades, cooldown: 0, spent: 80, angle: 0, kills: 0, owner: 0 });
+const pulse = (upgrades: string[]): Tower => ({ ...towerAt(1, "pulse", 0, 0, upgrades), spent: 80 });
 const offered = (html: string) => [...html.matchAll(/data-upgrade="([^"]+)"/g)].map((m) => m[1]);
 
 describe("specialization panel", () => {

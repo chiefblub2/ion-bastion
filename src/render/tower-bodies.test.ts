@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import type { Tower, TowerId } from "../core/types";
+import { towerAt } from "../core/test-helpers";
 import { drawTower, stillBody, stillTurret, type TowerBadges } from "./towers";
 import { towerColor, towerLevel, towerPath, upgradeOptions } from "../core/upgrades";
 import type { Ink } from "./shapes";
 
-const tower = (type: string): Tower => ({ id: 3, type: type as TowerId, x: 0, y: 0, upgrades: [], cooldown: 0, spent: 0, angle: 0, kills: 0, owner: 0 });
+const tower = (type: string): Tower => towerAt(3, type as TowerId, 0, 0);
 const badges = (type: string, markers: number): TowerBadges => ({ markers, maxed: false, color: DEFAULT_CONTENT.towers[type as TowerId].color, boosted: false });
 /** Counts the calls a drawing makes on one ink. */
 function counter() {

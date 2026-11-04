@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { Game } from "../core/game";
 import { stateHash } from "../core/hash";
-import { makeEnemy } from "../core/test-helpers";
+import { foe, place } from "../core/test-helpers";
 import { MISSIONS } from "../content/missions";
-import type { Enemy, EnemyId, MissionDefinition, Protocols, Tower, TowerId } from "../core/types";
+import type { Enemy, EnemyId, MissionDefinition, Protocols, TowerId } from "../core/types";
 import { applyDamage, hitOf } from "./damage";
 import { applyStatus, hasStatus } from "./status";
 import { attackEnemies } from "./combat";
@@ -17,21 +17,12 @@ function game(protocols?: Protocols) {
   g.state.status = "wave";
   return g;
 }
-function place(g: Game, type: TowerId, x: number, y: number): Tower {
-  const t: Tower = { id: g.state.nextId++, type, x, y, upgrades: [], cooldown: 0, spent: 0, angle: 0, kills: 0, owner: 0 };
-  g.state.towers.push(t);
-  return t;
-}
-const enemy = (g: Game, type: EnemyId, hp = 500, x = 5, y = 5): Enemy => {
-  const e = { ...makeEnemy(g.state.nextId++, type, x, y), hp, maxHp: hp };
-  g.state.enemies.push(e);
-  return e;
-};
+const enemy = (g: Game, type: EnemyId, hp = 500, x = 5, y = 5) => foe(g.state.nextId++, type, x, y, { hp, maxHp: hp, into: g });
 const src = (type: TowerId) => ({ tower: 0, type });
 /** Damage a hit of `type` deals to a fresh enemy prepared by `prepare`. */
-function dealt(protocols: Protocols | undefined, type: TowerId, kind: Parameters<typeof hitOf>[0], prepare: (g: Game, e: Enemy) => void = () => {}, foe: EnemyId = "drone") {
+function dealt(protocols: Protocols | undefined, type: TowerId, kind: Parameters<typeof hitOf>[0], prepare: (g: Game, e: Enemy) => void = () => {}, victim: EnemyId = "drone") {
   const g = game(protocols),
-    e = enemy(g, foe);
+    e = enemy(g, victim);
   prepare(g, e);
   applyDamage(g, src(type), e, 100, false, hitOf(kind, src(type)));
   return { amount: 500 - e.hp, g, e };
@@ -126,11 +117,10 @@ describe("boss signature protocols", () => {
     const p = { titan: { bonus: 0.2, reload: 3 } };
     expect(dealt(p, "pulse", "direct", () => {}, "boss").amount).toBeCloseTo(100);
     const g = game(p),
-      heavy = { ...makeEnemy(g.state.nextId++, "boss", 5, 5), hp: 100, maxHp: 1600 },
+      heavy = foe(g.state.nextId++, "boss", 5, 5, { hp: 100, maxHp: 1600, into: g }),
       near = place(g, "pulse", 6, 5),
       far = place(g, "pulse", 12, 12);
     near.cooldown = far.cooldown = 0.9;
-    g.state.enemies.push(heavy);
     applyDamage(g, src("pulse"), heavy, 200, false, hitOf("direct", src("pulse")));
     expect([near.cooldown, far.cooldown]).toEqual([0, 0.9]);
   });
