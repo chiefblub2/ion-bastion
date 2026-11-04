@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import type { EnemyId } from "../core/types";
 import { artSignature, decodePng, identify, lfsReady, measureArt, VISIBLE_ALPHA, type Png } from "../../scripts/png";
@@ -153,6 +153,11 @@ const PIXELS = lfsReady(
 );
 
 describe.skipIf(!PIXELS)("animation sheets", () => {
+  // Decoding the 2048×1024 sheets takes a few seconds; keep it out of the first test's time limit.
+  beforeAll(() => {
+    for (const id of ANIMATED) sheet(animationsFor(id)!.idle!);
+  }, 30_000);
+
   it("are grids of their declared cells, a power of two, never blank or cut, unused cells empty", () => {
     for (const id of ANIMATED) {
       const set = animationsFor(id)!,
@@ -224,8 +229,10 @@ describe.skipIf(!PIXELS)("animation sheets", () => {
     for (const [id, entry] of Object.entries(manifest.enemies)) {
       expect(DEFAULT_CONTENT.enemies[id as EnemyId], `${id} is an enemy type`).toBeDefined();
       expect(entry.sheet, id).toBe(`assets-src/enemy-animations/${id}.png`);
-      const png = decodePng(readFileSync(new URL(entry.sheet, ROOT)));
-      expect([png.width, png.height], id).toEqual([manifest.frameWidth * manifest.columns, manifest.frameHeight * manifest.rows]);
+      // The size from the header alone: the source sheets need no decoding here.
+      const head = readFileSync(new URL(entry.sheet, ROOT)),
+        size = [head.readUInt32BE(16), head.readUInt32BE(20)];
+      expect(size, id).toEqual([manifest.frameWidth * manifest.columns, manifest.frameHeight * manifest.rows]);
       if (entry.disabled) {
         expect(animationsFor(id as EnemyId), `${id} is disabled`).toBeUndefined();
         continue;
