@@ -64,7 +64,10 @@ The 13 towers, grouped by what they need from the kit:
   tilted turrets no longer dive from the raised muzzle to the ground within one barrel length: `Trails` splits the tip
   into its ground point (eased out within a barrel length) and its height above it (`rise`, faded over the whole
   flight), using `muzzleTips(…, flat)`.
-- **Later:** Control, Traps and Support could follow with the same kit and cache.
+- **Control, Traps and Support (2026-11-04):** 45 concepts drawn on a concept sheet, revised once for look-alikes (Tar
+  Pit, Cyclone, Jammer, Stasis, Nexus, the rectangular traps, Gravitron, Tracker, Plasma, Snare Net; Overclock as the
+  Overdrive Core), then moved into the game as `tower-art/models/` with the same four-part split and cache. Traps keep
+  their path motif around them on the path. Every tower is now tilted.
 
 ## Phase 0: kit and measurement
 
