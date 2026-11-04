@@ -84,12 +84,14 @@ function plainLevel(type: TowerId) {
 function drawConcept(pen: Pen, c: Concept, x: number, y: number, t: Tower) {
   const ctx = context(pen, x, y, t),
     d = ctx.definition;
+  const motif = ctx.path ? d.visual.paths?.[ctx.path]?.motif : undefined,
+    tier = Math.min(3, Math.max(1, ctx.level - plainLevel(t.type))),
+    drawMotif = () => MOTIFS[motif!]({ ...ctx, x: 0, y: 0 }, tier, CLOCK + t.id, 0.04 + 0.04 * tier);
+  // Traps: the path motif lies on the path bed around the trap, larger and drawn first, so the trap covers its middle
+  // and the motif reads as a rim instead of hiding the trap's face. Towers: on their deck, over the base.
+  if (motif && d.placement === "path") onDeck([pen.g, pen.glow], x, y + c.tilt.drop, 0, drawMotif, 1.3);
   c.base(ctx);
-  const motif = ctx.path ? d.visual.paths?.[ctx.path]?.motif : undefined;
-  if (motif) {
-    const tier = Math.min(3, Math.max(1, ctx.level - plainLevel(t.type)));
-    onDeck([pen.g, pen.glow], x, y + c.tilt.drop, c.tilt.deck, () => MOTIFS[motif]({ ...ctx, x: 0, y: 0 }, tier, CLOCK + t.id, 0.04 + 0.04 * tier));
-  }
+  if (motif && d.placement !== "path") onDeck([pen.g, pen.glow], x, y + c.tilt.drop, c.tilt.deck, drawMotif);
   c.below(ctx);
   c.turret(ctx);
   c.above(ctx);
