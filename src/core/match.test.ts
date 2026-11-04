@@ -98,8 +98,8 @@ describe("versus match", () => {
     readyAll(m);
     finishWaves(m);
     expect(m.isAlive(1)).toBe(false);
-    expect(m.result.winner).toBe(0);
-    expect(m.result.ranking).toEqual([0, 2, 1]);
+    expect(m.result?.winner).toBe(0);
+    expect(m.result?.ranking).toEqual([0, 2, 1]);
     // A finished match ignores further input.
     expect(m.command({ type: "ready", player: 0 }).code).toBe("mission-over");
   });
@@ -110,7 +110,7 @@ describe("versus match", () => {
     readyAll(m);
     finishWaves(m);
     expect(statuses(m)).toEqual(["won", "won"]);
-    expect(m.result.winner).toBeNull();
+    expect(m.result?.winner).toBeNull();
     m.command({ type: "restart", player: 0 });
     expect(m.result).toBeNull();
     m.fields[0].state.lives = 10000;
@@ -118,7 +118,7 @@ describe("versus match", () => {
     lastWave(m);
     readyAll(m);
     finishWaves(m);
-    expect(m.result.ranking).toEqual([1, 0]);
+    expect(m.result?.ranking).toEqual([1, 0]);
   });
 });
 describe("siege sends", () => {
