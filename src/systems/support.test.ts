@@ -58,10 +58,12 @@ describe("Reparaturdock", () => {
     finishWave(g);
     expect(g.state.lives).toBe(g.mission.reactorEnergy);
   });
-  it("is not offered on a ring without a reactor", () => {
-    expect(new Game().availableTowers()).toContain("dock");
-    const ring = MISSIONS.find((m) => m.circle)!;
-    expect(new Game(ring).availableTowers()).not.toContain("dock");
+});
+describe("reactor towers on a ring", () => {
+  // Repair Dock and Shield Generator protect a reactor, which a ring mission does not have.
+  it.each(["dock", "shieldgen"] as const)("%s is not offered on a ring without a reactor", (type) => {
+    expect(new Game().availableTowers()).toContain(type);
+    expect(new Game(MISSIONS.find((m) => m.circle)!).availableTowers()).not.toContain(type);
   });
 });
 describe("Peilsender", () => {

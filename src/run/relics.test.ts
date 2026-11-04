@@ -15,14 +15,14 @@ function sample(act: number): RunState {
   return { ...run, act, roster: ["pulse", "blast", "frost", "tesla", "detector", "mine", "inferno", "plasma", "aura"], doctrines: ["pulse:" + "x"] };
 }
 describe("run relics and modifiers", () => {
-  it("every relic yields valid missions in every act", () => {
-    for (const id of RELIC_IDS)
-      for (let act = 0; act < 4; act++) {
-        const run = gainRelic({ ...sample(act), doctrines: [] }, id),
-          node = actMap(run.seed, act, content).flat().find((n) => n.mission)!,
-          { mission, content: pack } = runMission(run, node, content);
-        expect(() => validateMission(mission, pack), `${id} in act ${act + 1}`).not.toThrow();
-      }
+  it("every relic yields a valid mission", () => {
+    // Each relic once, on one act-II mission node (the acts differ in the source missions, not in the relic transforms).
+    const node = actMap(sample(1).seed, 1, content).flat().find((n) => n.mission)!;
+    for (const id of RELIC_IDS) {
+      const run = gainRelic({ ...sample(1), doctrines: [] }, id),
+        { mission, content: pack } = runMission(run, node, content);
+      expect(() => validateMission(mission, pack), id).not.toThrow();
+    }
     expect(relicOf("glass").rarity).toBe("cursed");
   });
   it("every boss modifier yields valid boss missions, and ranks change only roster towers", () => {

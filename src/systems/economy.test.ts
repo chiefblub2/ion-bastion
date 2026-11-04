@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { Game } from "../core/game";
 import { stateHash } from "../core/hash";
 import { finishWave, makeEnemy } from "../core/test-helpers";
-import { MISSIONS } from "../content/missions";
 import { TOWERS } from "../content/towers";
 import type { Tower, TowerDefinition, TowerId } from "../core/types";
 import { validateTower } from "../core/validation";
@@ -90,10 +89,6 @@ describe("Shield Generator", () => {
     g.state.enemies = [];
     finishWave(g);
     expect(shield.barrier).toBeUndefined();
-  });
-  it("is not offered on a ring without a reactor", () => {
-    expect(new Game().availableTowers()).toContain("shieldgen");
-    expect(new Game(MISSIONS.find((m) => m.circle)!).availableTowers()).not.toContain("shieldgen");
   });
 });
 describe("Recycler", () => {
