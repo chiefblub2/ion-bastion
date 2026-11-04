@@ -1,21 +1,45 @@
 @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+/*
+ * Deep Ion: the one palette of the menu and the HUD. Graphite with a faint blue bias for the chrome, teal for actions
+ * and selection only, violet as the second colour (Circuit, highlights), semantic colours apart from both. The
+ * battlefield's interface colours repeat these values in `render/palette.ts`.
+ */
+:root {
+  --ion-bg: #07090d;
+  --ion-surface: #0e131a;
+  --ion-surface-2: #141a23;
+  --ion-hover: #1a2230;
+  --ion-line: #243041;
+  --ion-text: #e6ecf2;
+  --ion-text-2: #9aa7b6;
+  /* Eyebrows, breadcrumbs and section labels: a quiet teal, so the accent itself stays on what can be pressed or is selected. */
+  --ion-label: #86b3ad;
+  --ion-muted: #717e8f;
+  --ion-accent: #5fe3d3;
+  --ion-accent-hover: #97efe5;
+  --ion-on-accent: #03110f;
+  --ion-second: #9a86ff;
+  --ion-warn: #f2b84b;
+  --ion-star: #f4cf7a;
+  --ion-danger: #ff5f6d;
+}
 :root {
   font-family: "DM Sans", sans-serif;
-  color: #e8f6ff;
-  background: #05070f;
+  color: var(--ion-text);
+  background: var(--ion-bg);
   font-synthesis: none;
-  --mint: #3ef2ff;
-  --star: #ffd166;
-  --muted: #7f93b3;
-  --line: #1b2c4a;
-  --panel: #0a1122;
+  --mint: var(--ion-accent);
+  --star: var(--ion-star);
+  --muted: var(--ion-muted);
+  --line: var(--ion-line);
+  --panel: var(--ion-surface);
   --mono: "IBM Plex Mono", monospace;
   --display: "Orbitron", "Rajdhani", sans-serif;
-  --neon: #3ef2ff;
-  --neon-2: #ff3dcb;
-  --on-neon: #021018;
-  --glow: 0 0 14px #3ef2ff55;
-  --glow-strong: 0 0 10px #3ef2ff88, 0 0 32px #3ef2ff33;
+  --neon: var(--ion-accent);
+  --neon-2: var(--ion-second);
+  --on-neon: var(--ion-on-accent);
+  --glow: 0 0 14px color-mix(in srgb, var(--ion-accent) 20%, transparent);
+  --glow-strong: 0 0 10px color-mix(in srgb, var(--ion-accent) 32%, transparent), 0 0 32px color-mix(in srgb, var(--ion-accent) 12%, transparent);
 }
 * {
   box-sizing: border-box;
@@ -65,29 +89,29 @@ button:active:not(:disabled) {
   display: flex;
   align-items: center;
   gap: 28px;
-  background: linear-gradient(180deg, #0a1430, transparent);
+  background: linear-gradient(180deg, #141c27, transparent);
 }
-/* A neon seam under the top bar: cyan fading into magenta. */
+/* A neon seam under the top bar: teal fading into violet. */
 .topbar::after {
   content: "";
   position: absolute;
   inset: auto 0 -1px;
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--neon) 20%, var(--neon-2) 80%, transparent);
-  box-shadow: 0 0 10px #3ef2ff88;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ion-accent) 32%, transparent);
   pointer-events: none;
 }
 .brand {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #f0f9ff;
+  color: #f4f7fb;
   text-decoration: none;
   font-family: var(--display);
   font-size: 23px;
   font-weight: 800;
   letter-spacing: 0.12em;
-  text-shadow: 0 0 18px #3ef2ff44;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--ion-accent) 16%, transparent);
 }
 /* The hexagon mark (ui/brand.ts): a square holder, the SVG fills it. */
 .brand-mark {
@@ -113,13 +137,13 @@ button:active:not(:disabled) {
 }
 .edition {
   font: 12px var(--mono);
-  color: #6c80a3;
+  color: #7a8695;
   letter-spacing: 1px;
   border-left: 1px solid var(--line);
   padding-left: 24px;
 }
 .edition b {
-  color: var(--mint);
+  color: var(--ion-label);
   margin-left: 8px;
 }
 .header-actions {
@@ -128,16 +152,16 @@ button:active:not(:disabled) {
   margin-left: auto;
 }
 .quiet {
-  background: #0d1730;
-  border: 1px solid #24406a;
+  background: #161d27;
+  border: 1px solid #364559;
   border-radius: 2px;
   clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
   padding: 10px 14px;
   font-size: 14px;
 }
 .quiet:hover {
-  background: #13234a;
-  border-color: color-mix(in srgb, var(--neon) 60%, #24406a);
+  background: #212d3c;
+  border-color: color-mix(in srgb, var(--neon) 60%, #364559);
   color: #fff;
 }
 /* Cut-corner buttons clip an outer outline, so their focus ring sits inside. */
@@ -167,11 +191,11 @@ main {
   margin: 0 0 8px;
   font: 500 12px var(--mono);
   letter-spacing: 1.4px;
-  color: var(--mint);
+  color: var(--ion-label);
 }
 .eyebrow span {
   margin: 0 8px;
-  color: #56688c;
+  color: #646f7f;
 }
 h1 {
   font:
@@ -240,7 +264,7 @@ p {
 }
 .resources small {
   font: 13px var(--mono);
-  color: #6c80a3;
+  color: #7a8695;
   margin-top: 6px;
 }
 .credits {
@@ -264,7 +288,7 @@ p {
 }
 .player-chip b {
   font-weight: 600;
-  color: #e8f6ff;
+  color: var(--ion-text);
 }
 .player-chip em {
   font-style: normal;
@@ -272,7 +296,7 @@ p {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 2px 6px;
-  border: 1px solid #2a4670;
+  border: 1px solid #3b4b5f;
   border-radius: 4px;
 }
 .player-chip.out {
@@ -323,9 +347,9 @@ p {
 .playback button {
   height: 38px;
   min-width: 40px;
-  border: 1px solid #24406a;
+  border: 1px solid #364559;
   border-radius: 5px;
-  background: #0d1730;
+  background: #161d27;
   font: 500 16px var(--mono);
 }
 .playback button:hover {
@@ -342,13 +366,13 @@ p {
   box-shadow: var(--glow);
 }
 .playback .toolbar-start:hover {
-  background: #8ff8ff;
+  background: var(--ion-accent-hover);
   box-shadow: var(--glow-strong);
 }
 .playback .toolbar-start:disabled {
-  background: #12303f;
-  border-color: #1f4c5e;
-  color: #8fb9c8;
+  background: #1b3634;
+  border-color: #2c514f;
+  color: #9abdba;
   opacity: 0.8;
 }
 .toolbar-start b {
@@ -388,7 +412,7 @@ p {
   height: 40px;
   border: 1px solid var(--mint);
   border-radius: 6px;
-  background: rgba(6, 11, 24, 0.88);
+  background: rgba(11, 14, 20, 0.88);
   color: var(--mint);
   font: 20px/1 sans-serif;
 }
@@ -409,7 +433,7 @@ p {
   justify-content: center;
   flex-direction: column;
   text-align: center;
-  background: #050a18d9;
+  background: #0a0e13d9;
   backdrop-filter: blur(5px);
   padding: 32px;
   pointer-events: none;
@@ -467,7 +491,7 @@ p {
 }
 #overlay-copy {
   max-width: 380px;
-  color: #b4c6de;
+  color: #bfc8d4;
   font-size: 16px;
   line-height: 1.6;
 }
@@ -476,7 +500,7 @@ p {
   flex-direction: row;
   gap: 12px;
   padding: 8px 16px;
-  background: #050a18b3;
+  background: #0a0e13b3;
   backdrop-filter: none;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -515,21 +539,21 @@ p {
 .legend-path {
   width: 12px;
   height: 6px;
-  background: #2a8fb0;
+  background: #3e9c91;
   border-radius: 2px;
 }
 /* A buildable pad: lit top-left edge, shaded bottom-right, as drawn on the board. */
 .legend-build {
   width: 10px;
   height: 10px;
-  background: #1a2a33;
+  background: #1f2e2d;
   border: 1px solid;
-  border-color: #52707e #0a1216 #0a1216 #52707e;
+  border-color: #5b7573 #0c1413 #0c1413 #5b7573;
 }
 .wave-timeline {
   padding: 20px 24px 16px;
   border-top: 1px solid var(--line);
-  background: #08101f;
+  background: #0e1319;
 }
 .timeline-label {
   display: flex;
@@ -556,12 +580,12 @@ p {
 #wave-segments i {
   display: block;
   height: 5px;
-  background: #16264a;
+  background: #232e3d;
   border-radius: 2px;
 }
 #wave-segments small {
   font: 10px var(--mono);
-  color: #6c80a3;
+  color: #7a8695;
   display: block;
   margin-top: 7px;
 }
@@ -594,7 +618,7 @@ p {
 }
 .section-title > span {
   font: 12px var(--mono);
-  color: #7286a8;
+  color: #808b9b;
 }
 /* The "Towers" heading folds the build menu while a tower or enemy is selected (ui/tower-pages.ts menuCollapsed). */
 .tower-menu-toggle {
@@ -610,7 +634,7 @@ p {
 .tower-menu-toggle i {
   font-style: normal;
   font-size: 14px;
-  color: #7286a8;
+  color: #808b9b;
 }
 .tower-menu-toggle:hover:not(:disabled),
 .tower-menu-toggle:hover:not(:disabled) i {
@@ -634,23 +658,23 @@ p {
   font: 600 11px var(--mono);
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #9fb4cc;
-  background: #0b1224;
-  border: 1px solid #1e3a5c;
+  color: var(--ion-text-2);
+  background: var(--ion-surface);
+  border: 1px solid var(--ion-line);
   border-radius: 6px;
 }
 .tower-tab small {
   font-size: 10px;
-  color: #66799c;
+  color: #737f8f;
 }
 .tower-tab:hover {
-  background: #13214a;
+  background: var(--ion-hover);
   border-color: var(--mint);
 }
 .tower-tab[aria-selected="true"] {
-  color: #e8f6ff;
+  color: var(--ion-text);
   border-color: var(--mint);
-  background: color-mix(in srgb, var(--mint) 8%, #070d1c);
+  background: color-mix(in srgb, var(--mint) 8%, #0c1117);
   box-shadow: inset 0 -2px var(--mint);
 }
 /* The tower being built sits on another page. */
@@ -667,7 +691,7 @@ p {
   gap: 6px;
 }
 .tower-card {
-  --accent: #3ef2ff;
+  --accent: var(--ion-accent);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   justify-items: center;
@@ -677,23 +701,23 @@ p {
   min-width: 0;
   text-align: center;
   padding: 9px 7px 7px;
-  background: #0b1224;
-  border: 1px solid #1e3a5c;
+  background: var(--ion-surface);
+  border: 1px solid var(--ion-line);
   border-radius: 8px;
 }
 .tower-card.blast {
   --accent: #ffbd76;
 }
 .tower-card.frost {
-  --accent: #ff3dcb;
+  --accent: var(--ion-second);
 }
 .tower-card:hover {
-  background: #13214a;
+  background: var(--ion-hover);
   border-color: var(--accent);
 }
 .tower-card.active {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, #070d1c);
+  background: color-mix(in srgb, var(--accent) 8%, #0c1117);
   box-shadow: inset 3px 0 var(--accent);
 }
 .tower-symbol {
@@ -727,12 +751,12 @@ p {
 }
 kbd {
   font: 11px var(--mono);
-  background: #0d1730;
-  border: 1px solid #2a4670;
+  background: #161d27;
+  border: 1px solid #3b4b5f;
   border-bottom-width: 2px;
   border-radius: 4px;
   padding: 2px 5px;
-  color: #9fb4cc;
+  color: var(--ion-text-2);
 }
 .selection {
   margin-top: 18px;
@@ -747,7 +771,7 @@ kbd {
   justify-content: space-between;
   font: 10px var(--mono);
   letter-spacing: 0.7px;
-  color: #8fa5c4;
+  color: #9ca8b7;
   margin-bottom: 13px;
 }
 .selection-heading b {
@@ -768,7 +792,7 @@ kbd {
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 5px;
-  background: #0d1730;
+  background: #161d27;
   color: var(--muted);
   font: 13px/1 sans-serif;
 }
@@ -786,7 +810,7 @@ kbd {
 .selection > p {
   font-size: 14px;
   line-height: 1.55;
-  color: #9fb4cc;
+  color: var(--ion-text-2);
   margin: 0 0 16px;
 }
 .tower-stats {
@@ -809,28 +833,28 @@ kbd {
 .placement-note {
   font-size: 12px;
   line-height: 1.6;
-  color: #b4c6de;
+  color: #bfc8d4;
 }
 .placement-note span {
-  color: #7286a8;
+  color: #808b9b;
 }
 .upgrade {
   width: 100%;
-  border: 1px solid #1f6f85;
+  border: 1px solid #2e766d;
   color: var(--mint);
-  background: #0a2a3a;
+  background: #14302e;
   border-radius: 5px;
   padding: 10px;
   font-size: 14px;
 }
 .upgrade:hover {
-  background: #0e3d52;
+  background: #1c4442;
 }
 .sell {
   width: 100%;
   background: none;
   border: 0;
-  color: #9aabc6;
+  color: #a5afbb;
   font-size: 12px;
   margin-top: 9px;
   padding: 5px;
@@ -859,14 +883,14 @@ kbd {
   border: 1px solid var(--line);
   border-radius: 4px;
   background: none;
-  color: #9aabc6;
+  color: #a5afbb;
   font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .target-priority button:hover:not(:disabled) {
-  color: #e8f6ff;
+  color: var(--ion-text);
 }
 .target-priority button.active {
   border-color: var(--mint);
@@ -888,13 +912,13 @@ kbd {
   align-items: center;
 }
 .primary:hover {
-  background: #8ff8ff;
+  background: var(--ion-accent-hover);
   box-shadow: var(--glow-strong);
 }
 .primary:disabled {
-  background: #12303f;
-  border-color: #1f4c5e;
-  color: #8fb9c8;
+  background: #1b3634;
+  border-color: #2c514f;
+  color: #9abdba;
   opacity: 0.8;
 }
 .primary span {
@@ -909,7 +933,7 @@ kbd {
   margin-top: 16px;
   padding: 0 3px;
   font-size: 13px;
-  color: #8fa5c4;
+  color: #9ca8b7;
 }
 #notice.error {
   color: #ff9ba9;
@@ -917,26 +941,26 @@ kbd {
 .text-button {
   background: none;
   border: 0;
-  color: #7a8fb0;
+  color: #8893a3;
   font-size: 12px;
   white-space: nowrap;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 .text-button:hover {
-  color: #d4e6f7;
+  color: #dde4ee;
 }
 dialog {
-  color: #e8f6ff;
-  background: #0b1428;
-  border: 1px solid #2a4670;
+  color: var(--ion-text);
+  background: #121921;
+  border: 1px solid #3b4b5f;
   border-radius: 12px;
   width: min(540px, calc(100% - 32px));
   padding: 32px;
-  box-shadow: 0 24px 100px #0008;
+  box-shadow: 0 24px 100px #00000088;
 }
 dialog::backdrop {
-  background: #02050ebb;
+  background: #05080bbb;
   backdrop-filter: blur(4px);
 }
 :where(dialog, .menu-page) h2 {
@@ -949,7 +973,7 @@ dialog::backdrop {
 :where(dialog, .menu-page) li {
   font-size: 15px;
   line-height: 1.65;
-  color: #9fb4cc;
+  color: var(--ion-text-2);
 }
 :where(dialog, .menu-page) ol {
   padding-left: 20px;
@@ -959,7 +983,7 @@ dialog::backdrop {
   margin-bottom: 15px;
 }
 :where(dialog, .menu-page) strong {
-  color: #e8f6ff;
+  color: var(--ion-text);
 }
 .dialog-close {
   float: right;
@@ -970,11 +994,11 @@ dialog::backdrop {
 }
 .tip {
   border-left: 2px solid var(--mint);
-  background: #0c1f33;
+  background: #161e29;
   padding: 14px 16px;
   font-size: 14px;
   line-height: 1.6;
-  color: #c4dcec;
+  color: #cce4e2;
 }
 .keyboard-help {
   font-size: 12px;
@@ -1313,15 +1337,15 @@ dialog::backdrop {
 .upgrade-info {
   flex: 0 0 42px;
   min-height: 42px;
-  border: 1px solid #1f6f85;
+  border: 1px solid #2e766d;
   border-radius: 5px;
   color: var(--mint);
-  background: #0a2a3a;
+  background: #14302e;
   font-size: 20px;
 }
 .upgrade-info:hover,
 .upgrade-info[aria-expanded="true"] {
-  background: #0e3d52;
+  background: #1c4442;
 }
 .upgrade-tooltip {
   position: absolute;
@@ -1330,11 +1354,11 @@ dialog::backdrop {
   z-index: 10;
   width: 100%;
   padding: 15px;
-  border: 1px solid #2a7a92;
+  border: 1px solid #3a827a;
   border-radius: 8px;
-  background: #0a1a2c;
-  box-shadow: 0 12px 32px #0007;
-  color: #e8f6ff;
+  background: #121a24;
+  box-shadow: 0 12px 32px #00000077;
+  color: var(--ion-text);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -1359,7 +1383,7 @@ dialog::backdrop {
   margin: 7px 0;
 }
 .upgrade-before {
-  color: #a3b8cc;
+  color: #adb6c2;
 }
 .upgrade-change strong {
   color: var(--mint);
@@ -1368,21 +1392,21 @@ dialog::backdrop {
 .upgrade-tooltip p {
   margin: 12px 0 0;
   font-size: 12px;
-  color: #bcd3e3;
+  color: #c4dbda;
 }
 .upgrade-tooltip .upgrade-unchanged {
   padding-top: 10px;
-  border-top: 1px solid #1f4c5e;
+  border-top: 1px solid #2c514f;
 }
 
 .aura-upgrades { display: flex; flex-direction: column; gap: 9px; }
 .aura-upgrade { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; border-left: 3px solid var(--path-color, transparent); }
-.aura-upgrade small { display: block; margin-top: 4px; font-size: 12px; color: #bad3e6; }
+.aura-upgrade small { display: block; margin-top: 4px; font-size: 12px; color: #c5cfdb; }
 .aura-upgrade b { white-space: nowrap; font: 500 12px var(--mono); }
-.aura-summary { font-size: 13px; color: #b7eafa; line-height: 1.6; margin: 0 0 10px; }
+.aura-summary { font-size: 13px; color: #c1f0ea; line-height: 1.6; margin: 0 0 10px; }
 .aura-rule { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 0 0 15px; }
-.aura-stat-detail { color: #8ee0f6; font-size: 12px; line-height: 1.5; padding-right: 5px; }
-.aura-stats strong { color: var(--path-color, #8ee0f6); }
+.aura-stat-detail { color: #9ee6de; font-size: 12px; line-height: 1.5; padding-right: 5px; }
+.aura-stats strong { color: var(--path-color, #9ee6de); }
 .aura-stats .inactive { opacity: .45; }
 @media(max-width: 520px) {
   .tower-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1418,24 +1442,24 @@ dialog::backdrop {
 }
 .codex-tab {
   padding: 8px 14px;
-  background: #0b1224;
-  border: 1px solid #1e3a5c;
+  background: var(--ion-surface);
+  border: 1px solid var(--ion-line);
   border-radius: 8px;
-  color: #9fb4cc;
+  color: var(--ion-text-2);
   font-size: 13px;
 }
 .codex-tab small {
   font: 500 10px var(--mono);
-  color: #7286a8;
+  color: #808b9b;
 }
 .codex-tab:hover {
-  background: #13214a;
+  background: var(--ion-hover);
   border-color: var(--mint);
 }
 .codex-tab[aria-selected="true"] {
-  color: #e8f6ff;
+  color: var(--ion-text);
   border-color: var(--mint);
-  background: color-mix(in srgb, var(--mint) 8%, #070d1c);
+  background: color-mix(in srgb, var(--mint) 8%, #0c1117);
   box-shadow: inset 0 -2px var(--mint);
 }
 .codex-list {
@@ -1448,12 +1472,12 @@ dialog::backdrop {
   flex-direction: column;
   gap: 10px;
   padding: 14px;
-  background: #0b1224;
-  border: 1px solid #1e3a5c;
+  background: var(--ion-surface);
+  border: 1px solid var(--ion-line);
   border-radius: 8px;
 }
 .codex-card.air {
-  border-color: #2a6a8a;
+  border-color: #3d7773;
 }
 .codex-card header {
   display: flex;
@@ -1475,16 +1499,16 @@ dialog::backdrop {
 }
 .codex-card header small {
   font-size: 12px;
-  color: #9fb4cc;
+  color: var(--ion-text-2);
 }
 .codex-anim-toggle {
   margin-left: auto;
   flex: none;
   width: 32px;
   height: 32px;
-  border: 1px solid #2a4670;
+  border: 1px solid #3b4b5f;
   border-radius: 6px;
-  background: #08101f;
+  background: #0e1319;
   color: var(--mint);
   font-size: 12px;
 }
@@ -1505,9 +1529,9 @@ dialog::backdrop {
   position: relative;
   width: 132px;
   height: 132px;
-  border: 1px solid #1e3a5c;
+  border: 1px solid var(--ion-line);
   border-radius: 6px;
-  background: radial-gradient(circle, #101d3c, #05070f 75%);
+  background: radial-gradient(circle, #1b2531, var(--ion-bg) 75%);
 }
 .codex-sprite,
 .codex-anim-still {
@@ -1531,9 +1555,9 @@ dialog::backdrop {
 }
 .codex-anim-controls button {
   padding: 4px 9px;
-  border: 1px solid #2a4670;
+  border: 1px solid #3b4b5f;
   border-radius: 5px;
-  background: #08101f;
+  background: #0e1319;
   font-size: 12px;
 }
 .codex-anim-controls button[aria-pressed="true"] {
@@ -1574,7 +1598,7 @@ dialog::backdrop {
   flex-direction: column;
   gap: 2px;
   padding: 6px 8px;
-  background: #08101f;
+  background: #0e1319;
   border-radius: 5px;
 }
 .codex-stats b {
@@ -1611,7 +1635,7 @@ dialog::backdrop {
   align-items: center;
 }
 .codex-carriers li span {
-  color: #d4e6f7;
+  color: #dde4ee;
 }
 :where(dialog, .menu-page) p.codex-plain {
   font-size: 12px;
@@ -1623,7 +1647,7 @@ dialog::backdrop {
   margin: -4px 0 12px;
 }
 .tower-targets b {
-  color: #d4e6f7;
+  color: #dde4ee;
   font-weight: 600;
 }
 
@@ -1649,7 +1673,7 @@ dialog::backdrop {
 }
 .next-wave-head .stat-label {
   margin: 0;
-  color: var(--mint);
+  color: var(--ion-label);
   white-space: nowrap;
 }
 .next-wave-head small {
@@ -1685,16 +1709,16 @@ dialog::backdrop {
   align-items: center;
   gap: 5px;
   padding: 3px 7px 3px 5px;
-  border: 1px solid #1e3a5c;
+  border: 1px solid var(--ion-line);
   border-radius: 5px;
-  background: #070d1c;
+  background: #0c1117;
   font: 500 13px var(--mono);
   white-space: nowrap;
   cursor: help;
 }
 .unit-badge.air {
-  border-color: #2a8fb0;
-  background: #082036;
+  border-color: #3e9c91;
+  background: #141d2b;
 }
 .enemy-icon {
   width: 16px;
@@ -1730,7 +1754,7 @@ dialog::backdrop {
 }
 .unit-name {
   font: 12px "DM Sans", sans-serif;
-  color: #b4c6de;
+  color: #bfc8d4;
 }
 .unit-hp {
   font: 11px var(--mono);
@@ -1744,19 +1768,19 @@ dialog::backdrop {
   border-radius: 3px;
 }
 .unit-tag.air {
-  color: #0c202a;
-  background: #78dfff;
+  color: #122423;
+  background: #8cebe0;
 }
 .unit-tag.trait {
   color: #2b1d08;
   background: #f0b45a;
 }
 .unit-tag.status {
-  color: #0c202a;
-  background: #c7b8ff;
+  color: #122423;
+  background: #cad9ed;
 }
 .unit-tag.new {
-  color: #021018;
+  color: var(--ion-on-accent);
   background: var(--mint);
 }
 .next-wave-empty {
@@ -1862,7 +1886,7 @@ dialog::backdrop {
     gap: 14px;
     padding: 24px;
     text-align: center;
-    background: #05070f;
+    background: var(--ion-bg);
     color: var(--muted);
     font: 15px var(--mono);
   }
@@ -2228,9 +2252,9 @@ dialog::backdrop {
     max-height: calc(100% - 16px);
     overflow-y: auto;
     padding: 10px 12px;
-    border: 1px solid #2a4670;
+    border: 1px solid #3b4b5f;
     border-radius: 8px;
-    background: rgba(6, 11, 24, 0.95);
+    background: rgba(11, 14, 20, 0.95);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
   }
   :root:is(.is-fullscreen, .is-compact) .next-wave-slot.open .next-wave-head {
@@ -2265,10 +2289,10 @@ dialog::backdrop {
   :root:is(.is-fullscreen, .is-compact) #notice {
     max-width: 100%;
     padding: 4px 10px;
-    border: 1px solid #24406a;
+    border: 1px solid #364559;
     border-radius: 6px;
-    background: rgba(5, 9, 20, 0.86);
-    color: #c7d6ea;
+    background: rgba(9, 12, 16, 0.86);
+    color: #d0d7e1;
     font-size: 12px;
     white-space: normal;
     text-align: center;
@@ -2307,9 +2331,9 @@ dialog::backdrop {
   gap: 6px;
   width: 190px;
   padding: 10px;
-  border: 1px solid #2a4670;
+  border: 1px solid #3b4b5f;
   border-radius: 8px;
-  background: rgba(6, 11, 24, 0.97);
+  background: rgba(11, 14, 20, 0.97);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
 }
 .game-menu[hidden] {
@@ -2317,10 +2341,10 @@ dialog::backdrop {
 }
 .game-menu button {
   min-height: 42px;
-  border: 1px solid #24406a;
+  border: 1px solid #364559;
   border-radius: 5px;
-  background: #0d1730;
-  color: #e8f6ff;
+  background: #161d27;
+  color: var(--ion-text);
   font: 500 14px "DM Sans", sans-serif;
 }
 .game-menu button.primary {
@@ -2358,13 +2382,13 @@ dialog::backdrop {
   gap: 6px;
   min-width: 0;
   padding: 8px 10px;
-  background: #0b1224;
-  border: 1px solid #1e3a5c;
+  background: var(--ion-surface);
+  border: 1px solid var(--ion-line);
   border-left: 3px solid var(--accent);
   border-radius: 8px;
 }
 .send-card:not(:disabled):hover {
-  background: #13214a;
+  background: var(--ion-hover);
   border-color: var(--accent);
 }
 .send-card strong {
@@ -2396,13 +2420,13 @@ dialog::backdrop {
   align-items: center;
   gap: 7px;
   padding: 5px 7px;
-  border: 1px solid #1e3a5c;
+  border: 1px solid var(--ion-line);
   border-radius: 5px;
-  background: #070d1c;
+  background: #0c1117;
 }
 .live-unit.air {
-  border-color: #2a8fb0;
-  background: #082036;
+  border-color: #3e9c91;
+  background: #141d2b;
 }
 .live-unit.pending {
   opacity: 0.5;
@@ -2441,7 +2465,7 @@ dialog::backdrop {
 .enemy-hp {
   height: 6px;
   border-radius: 3px;
-  background: #13214a;
+  background: var(--ion-hover);
   overflow: hidden;
 }
 .enemy-hp > span {
@@ -2516,7 +2540,7 @@ dialog::backdrop {
   z-index: 40;
   width: min(320px, calc(100vw - 32px));
   padding: 14px 16px 12px;
-  color: #e8f6ff;
+  color: var(--ion-text);
   background: color-mix(in srgb, var(--panel) 94%, transparent);
   border: 1px solid var(--neon);
   box-shadow: var(--glow-strong);
@@ -2638,11 +2662,11 @@ dialog::backdrop {
   background: none;
   border: 1px solid var(--line);
   border-radius: 4px;
-  color: #9aabc6;
+  color: #a5afbb;
 }
 .tower-card-pop button:hover:not(:disabled) {
-  color: #e8f6ff;
-  border-color: #1f6f85;
+  color: var(--ion-text);
+  border-color: #2e766d;
 }
 .card-head {
   display: flex;
@@ -2681,11 +2705,11 @@ dialog::backdrop {
   padding: 4px 8px;
   text-align: left;
   color: var(--mint);
-  background: #0a2a3a;
-  border-color: #1f6f85;
+  background: #14302e;
+  border-color: #2e766d;
 }
 .tower-card-pop .card-upgrade:hover:not(:disabled) {
-  background: #0e3d52;
+  background: #1c4442;
   color: var(--mint);
 }
 .card-upgrade span {
@@ -2705,7 +2729,7 @@ dialog::backdrop {
   align-items: stretch;
   gap: 3px;
   padding: 6px 8px;
-  border-left: 3px solid var(--path-color, #1f6f85);
+  border-left: 3px solid var(--path-color, #2e766d);
 }
 .card-spec .card-spec-head {
   display: flex;

@@ -530,7 +530,7 @@
   background: var(--m-surface);
   border: 1px solid var(--run);
   border-top-width: 3px;
-  box-shadow: 0 10px 30px #0008;
+  box-shadow: 0 10px 30px #00000088;
   container-type: inline-size;
 }
 .run-inspector[data-side="after"] {

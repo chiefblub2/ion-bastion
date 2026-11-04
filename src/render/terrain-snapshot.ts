@@ -22,7 +22,7 @@ function boot() {
       parent: host,
       width: CELL,
       height: CELL,
-      backgroundColor: "#05070f",
+      backgroundColor: "#07090d",
       banner: false,
       audio: { noAudio: true },
       input: { keyboard: false, mouse: false, touch: false, gamepad: false },
