@@ -96,12 +96,4 @@ export function prism(g: Ink, x: number, y0: number, u: number, v: number, r: nu
   g.lineStyle(0.6, shade(color, 0.6), 0.9);
   g.lineBetween(X(cx, la), Y(y0, cv + lb, h1), apex[0], apex[1]);
 }
-/** A filled ellipse on the plane at height h (radius r), as exact corners. */
-export function flatDisc(g: Ink, x: number, y0: number, u: number, v: number, h: number, r: number, color: number, alpha = 1, n = 14) {
-  for (let i = 0; i < n; i++) {
-    const t = (i / n) * Math.PI * 2;
-    point(i, X(x, u + Math.cos(t) * r), Y(y0, v + Math.sin(t) * r, h));
-  }
-  fillPoints(g, n, color, alpha);
-}
 export { SQUASH };

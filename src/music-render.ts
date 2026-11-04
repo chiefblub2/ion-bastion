@@ -1,6 +1,7 @@
 import { Conductor, type Phase } from "./audio/conductor";
 import { cuesFor } from "./audio/cues";
 import { AudioEngine } from "./audio/engine";
+import { withMusic } from "./audio/music";
 import { familyOf, type Family } from "./audio/families";
 import { MUSIC } from "./audio/harmony";
 import { moodOf, type DroneId } from "./audio/mood";
@@ -35,7 +36,7 @@ const RATE = 44100,
 export async function renderMusic(s: Scenario) {
   const seconds = (s.bars * 4 * 60) / MUSIC[s.theme].bpm,
     ctx = new OfflineAudioContext(2, Math.ceil((seconds + TAIL) * RATE), RATE),
-    engine = new AudioEngine(ctx),
+    engine = withMusic(new AudioEngine(ctx)),
     conductor = new Conductor(engine),
     shots = new ShotMixer(),
     shooters = Object.values(DEFAULT_CONTENT.towers).filter((d) => {

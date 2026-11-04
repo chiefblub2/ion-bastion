@@ -1,6 +1,7 @@
-// Synthesized instruments for the synthwave soundtrack: plain Web Audio voices with filter and amplitude envelopes
-// (parameters after Tone.js's MonoSynth and FMSynth defaults and the classic 80s drum machines). Each voice schedules
-// one note and returns when it has died away.
+// Synthesized instruments: plain Web Audio voices with filter and amplitude envelopes (parameters after Tone.js's
+// MonoSynth and FMSynth defaults and the classic 80s drum machines). Each voice schedules one note and returns when it
+// has died away. The stingers' voices live here; the soundtrack's own (`music-instruments.ts`) load with the music.
+import { climb, rooted } from "./pitch";
 
 export type Instrument = "synthBass" | "arp" | "lead" | "bell" | "swell" | "kick" | "snare" | "hat" | "tom" | "crash" | "riser";
 /** Pitched instruments play their chord tone in the octave around this frequency (Hz); the others are unpitched (the tom takes an optional pitch). */
@@ -12,10 +13,10 @@ export interface Kit {
   noise: AudioBuffer;
 }
 /** `length` overrides a voice's own length where it must fit the tempo (riser, lead, held bass). */
-type Play = (ctx: BaseAudioContext, out: AudioNode, at: number, hz: number, velocity: number, kit: Kit, length?: number) => number;
+export type Play = (ctx: BaseAudioContext, out: AudioNode, at: number, hz: number, velocity: number, kit: Kit, length?: number) => number;
 
 /** Gain that rises to `peak` in `attack` s and fades out over about `decay` s. */
-function envelope(ctx: BaseAudioContext, at: number, peak: number, attack: number, decay: number) {
+export function envelope(ctx: BaseAudioContext, at: number, peak: number, attack: number, decay: number) {
   const g = ctx.createGain();
   g.gain.setValueAtTime(0, at);
   g.gain.linearRampToValueAtTime(peak, at + attack);
@@ -23,12 +24,12 @@ function envelope(ctx: BaseAudioContext, at: number, peak: number, attack: numbe
   return g;
 }
 /** A noise source with the buffer position it starts from. */
-interface Burst {
+export interface Burst {
   source: AudioBufferSourceNode;
   offset: number;
 }
 /** Starts the sources at `at`, stops them at `end` and frees the voice's nodes once they ended. */
-function run(sources: (AudioScheduledSourceNode | Burst)[], at: number, end: number) {
+export function run(sources: (AudioScheduledSourceNode | Burst)[], at: number, end: number) {
   const nodes = sources.map((s) => {
     if (!("offset" in s)) {
       s.start(at);
@@ -64,52 +65,6 @@ const synthBass: Play = (ctx, out, at, hz, v, _kit, length = LENGTH.synthBass) =
   square.connect(squareGain).connect(f);
   f.connect(g).connect(out);
   return run([saw, square], at, at + length);
-};
-/** The arpeggio: a square wave with a short filter blip. */
-const arp: Play = (ctx, out, at, hz, v) => {
-  const o = ctx.createOscillator(),
-    f = ctx.createBiquadFilter(),
-    g = envelope(ctx, at, 0.11 * v, 0.003, 0.22),
-    end = at + LENGTH.arp;
-  o.type = "square";
-  o.frequency.value = hz;
-  f.type = "lowpass";
-  f.Q.value = 2;
-  f.frequency.setValueAtTime(hz * 6, at);
-  f.frequency.setTargetAtTime(hz * 2, at, 0.06);
-  o.connect(f).connect(g).connect(out);
-  return run([o], at, end);
-};
-/** The lead: two detuned saws with a delayed vibrato; it holds for `length` and releases. */
-const lead: Play = (ctx, out, at, hz, v, _kit, length = LENGTH.lead) => {
-  const g = ctx.createGain(),
-    f = ctx.createBiquadFilter(),
-    vibrato = ctx.createOscillator(),
-    depth = ctx.createGain(),
-    hold = Math.max(0.08, length - 0.06),
-    end = at + length + 0.3,
-    oscillators = [-7, 7].map((cents) => {
-      const o = ctx.createOscillator();
-      o.type = "sawtooth";
-      o.frequency.value = hz;
-      o.detune.value = cents;
-      o.connect(f);
-      vibrato.connect(depth).connect(o.detune);
-      return o;
-    });
-  g.gain.setValueAtTime(0, at);
-  g.gain.linearRampToValueAtTime(0.09 * v, at + 0.025);
-  g.gain.setTargetAtTime(0.07 * v, at + 0.025, 0.15);
-  g.gain.setTargetAtTime(0, at + hold, 0.08);
-  vibrato.frequency.value = 5.2;
-  depth.gain.setValueAtTime(0, at);
-  depth.gain.linearRampToValueAtTime(12, at + Math.min(0.4, hold));
-  f.type = "lowpass";
-  f.Q.value = 1;
-  f.frequency.setValueAtTime(hz * 3, at);
-  f.frequency.linearRampToValueAtTime(hz * 5, at + 0.12);
-  f.connect(g).connect(out);
-  return run([...oscillators, vibrato], at, end);
 };
 /** FM bell: a sine carrier modulated at 3.5× with a decaying index; `decay` sets how long it rings. */
 const fm =
@@ -150,55 +105,6 @@ const swell: Play = (ctx, out, at, hz, v) => {
   });
   return run(oscillators, at, at + LENGTH.swell);
 };
-/** A short noise burst through a filter, read from a position that follows the time (hits differ but repeat across runs). */
-function noise(ctx: BaseAudioContext, kit: Kit, at: number, type: BiquadFilterType, freq: number, q: number) {
-  const s = ctx.createBufferSource(),
-    f = ctx.createBiquadFilter();
-  s.buffer = kit.noise;
-  f.type = type;
-  f.frequency.value = freq;
-  f.Q.value = q;
-  s.connect(f);
-  return { source: s, out: f, offset: (at * 7.31) % 1.5 } as Burst & { out: BiquadFilterNode };
-}
-/** Linn-style kick: a sine sweeping down with a short click on top. */
-const kick: Play = (ctx, out, at, _hz, v, kit) => {
-  const o = ctx.createOscillator(),
-    g = envelope(ctx, at, 0.8 * v, 0.002, 0.34),
-    click = noise(ctx, kit, at, "bandpass", 3000, 0.8),
-    clickGain = envelope(ctx, at, 0.25 * v, 0.0005, 0.012),
-    end = at + LENGTH.kick;
-  o.frequency.setValueAtTime(110, at);
-  o.frequency.exponentialRampToValueAtTime(45, at + 0.1);
-  o.connect(g).connect(out);
-  click.out.connect(clickGain).connect(out);
-  return run([o, click], at, end);
-};
-/** The big 80s snare: a tuned body plus noise under a gate (flat hold, then a hard cut), so its room stops short. */
-const snare: Play = (ctx, out, at, _hz, v, kit) => {
-  const body = ctx.createOscillator(),
-    bodyGain = envelope(ctx, at, 0.22 * v, 0.001, 0.09),
-    n = noise(ctx, kit, at, "highpass", 1400, 0.6),
-    gate = ctx.createGain(),
-    end = at + LENGTH.snare;
-  body.type = "triangle";
-  body.frequency.setValueAtTime(220, at);
-  body.frequency.exponentialRampToValueAtTime(170, at + 0.05);
-  body.connect(bodyGain).connect(out);
-  gate.gain.setValueAtTime(0, at);
-  gate.gain.linearRampToValueAtTime(0.24 * v, at + 0.002);
-  gate.gain.linearRampToValueAtTime(0.13 * v, at + 0.12);
-  gate.gain.linearRampToValueAtTime(0, at + 0.14);
-  n.out.connect(gate).connect(out);
-  return run([body, n], at, end);
-};
-/** A closed hat: high-passed noise, short and quiet. */
-const hat: Play = (ctx, out, at, _hz, v, kit) => {
-  const n = noise(ctx, kit, at, "highpass", 8000, 0.7),
-    g = envelope(ctx, at, 0.09 * v, 0.001, 0.045);
-  n.out.connect(g).connect(out);
-  return run([n], at, at + LENGTH.hat);
-};
 /** A synth tom: a sine sweeping down from `hz` (default 150 Hz); fills pass falling pitches. */
 const tom: Play = (ctx, out, at, hz, v) => {
   const o = ctx.createOscillator(),
@@ -209,41 +115,16 @@ const tom: Play = (ctx, out, at, hz, v) => {
   o.connect(g).connect(out);
   return run([o], at, at + LENGTH.tom);
 };
-/** A soft crash: high-passed noise with a long fade. */
-const crash: Play = (ctx, out, at, _hz, v, kit) => {
-  const n = noise(ctx, kit, at, "highpass", 6000, 0.5),
-    g = envelope(ctx, at, 0.11 * v, 0.002, 1);
-  n.source.loop = true;
-  n.out.connect(g).connect(out);
-  return run([n], at, at + LENGTH.crash);
-};
-/** Filtered noise sweeping up while it swells, into the next phrase. */
-const riser: Play = (ctx, out, at, _hz, v, kit, length = LENGTH.riser) => {
-  const n = noise(ctx, kit, at, "bandpass", 300, 3),
-    g = ctx.createGain(),
-    end = at + length;
-  n.source.loop = true;
-  n.out.frequency.setValueAtTime(300, at);
-  n.out.frequency.exponentialRampToValueAtTime(5000, end);
-  g.gain.setValueAtTime(0.0001, at);
-  g.gain.exponentialRampToValueAtTime(0.28 * v, end - 0.02);
-  g.gain.linearRampToValueAtTime(0, end);
-  n.out.connect(g).connect(out);
-  return run([n.source], at, end);
-};
-export const INSTRUMENTS: Record<Instrument, Play> = {
-  synthBass,
-  arp,
-  lead,
-  bell: fm(1.6, LENGTH.bell, 0.22),
-  swell,
-  kick,
-  snare,
-  hat,
-  tom,
-  crash,
-  riser,
-};
+/** The voices the stingers play, which sound with or without the soundtrack. */
+export const STINGER_INSTRUMENTS = { synthBass, bell: fm(1.6, LENGTH.bell, 0.22), swell, tom } satisfies Partial<Record<Instrument, Play>>;
+export type StingerInstrument = keyof typeof STINGER_INSTRUMENTS;
+/** A pitched instrument's chord tone around its register; unpitched instruments ignore it. */
+export function pitchOf(name: Instrument, chord: readonly number[], tone: number) {
+  const register = REGISTER[name];
+  if (!register) return 0;
+  // The bass centres on the root, so a widening chord never drops it an octave.
+  return (name === "synthBass" ? rooted : climb)(register, chord, tone);
+}
 /**
  * A stereo reverb impulse: decaying noise from xorshift32 that also darkens along its tail (a one-pole low-pass whose
  * cutoff falls), after a short pre-delay, so the room sounds smooth instead of grainy.

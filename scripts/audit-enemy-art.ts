@@ -1,6 +1,6 @@
 /**
  * Enemy art audit: reads the alpha of every PNG in public/assets/enemies/ and checks it against the content and the
- * art registry (`src/render/enemy-art.ts`). No browser and no dependency (`scripts/png.ts`).
+ * art registry (`src/render/enemy-art.ts`). No browser (`scripts/png.ts`, decoding through `pngjs`).
  *
  *   npx vite-node scripts/audit-enemy-art.ts            # table and warnings; exit code 1 on errors
  *   npx vite-node scripts/audit-enemy-art.ts -- --fix   # erase the reviewed residue islands in `RESIDUE` (lossless)

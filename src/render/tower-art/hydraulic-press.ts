@@ -14,7 +14,7 @@ import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, onGround, quad, tube, 
 import { TILTS } from "../muzzles";
 import type { TiltedArt } from "./tilted";
 
-const DROP = TILTS.hammer!.drop;
+const DROP = TILTS.hammer.drop;
 /** Heights: plinth, crown, the hammer's raised and struck bottom, its thickness and where the piston meets the crown. */
 const SLAB = 4,
   CROWN0 = 23,

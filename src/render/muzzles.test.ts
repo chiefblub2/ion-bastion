@@ -3,7 +3,7 @@ import { MUZZLES, TILTS, muzzleHeading, muzzleTips } from "./muzzles";
 
 describe("muzzle tips", () => {
   it("project a tilted barrel (Pulse) onto its raised, foreshortened tip", () => {
-    const { reach } = MUZZLES.barrel!,
+    const { reach } = MUZZLES.barrel,
       tilt = TILTS.barrel,
       d = reach(3);
     expect(muzzleTips("barrel", 3, 100, 100, 0)[0]).toEqual({ x: 100 + d, y: 100 + tilt!.drop - tilt!.height });
@@ -15,7 +15,7 @@ describe("muzzle tips", () => {
   });
 
   it("raise a pitched barrel (Nova) by its elevation and shorten it on the ground", () => {
-    const { reach } = MUZZLES.heavy!,
+    const { reach } = MUZZLES.heavy,
       tilt = TILTS.heavy,
       d = reach(1),
       p = tilt!.pitch!;
@@ -26,9 +26,9 @@ describe("muzzle tips", () => {
   });
 
   it("lay parallel barrels of a tilted turret across the aim on the ground plane", () => {
-    const tilt = TILTS.barrel!,
-      saved = MUZZLES.barrel!.sides;
-    MUZZLES.barrel!.sides = [-4, 4];
+    const tilt = TILTS.barrel,
+      saved = MUZZLES.barrel.sides;
+    MUZZLES.barrel.sides = [-4, 4];
     try {
       // Aimed east, the offsets run north-south: squashed on the screen, both at barrel height.
       const [a, b] = muzzleTips("barrel", 1, 0, 0, 0);
@@ -38,12 +38,12 @@ describe("muzzle tips", () => {
       const [c, e] = muzzleTips("barrel", 1, 0, 0, Math.PI / 2);
       expect(c.x - e.x).toBeCloseTo(8);
     } finally {
-      MUZZLES.barrel!.sides = saved;
+      MUZZLES.barrel.sides = saved;
     }
   });
 
   it("send shots of a tilted turret without a barrel from its emit point", () => {
-    const tilt = TILTS.coil!;
+    const tilt = TILTS.coil;
     expect(muzzleTips("coil", 1, 10, 10, 1)).toEqual([{ x: 10, y: 10 + tilt.drop - tilt.emit! }]);
   });
 });

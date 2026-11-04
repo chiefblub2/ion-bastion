@@ -91,5 +91,3 @@ export function well(g: Ink, x: number, y0: number, h: number, rx: number, ry: n
     oval(g, 0, -ry * 0.12, rx * 0.97, ry * 0.86, shade(floor, -0.35));
   });
 }
-/** Squash helper for flat drawings placed with plain screen math. */
-export const sq = (v: number) => v * SQUASH;

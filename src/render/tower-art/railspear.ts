@@ -13,8 +13,8 @@ import { GUN, SHADOW_INK, castShadow, depth, framer, lampInk, lampLight, paint, 
  * level and trim colour; the turret's ink is cached per aim step (`turret`); the capacitor cells (`below`) and the
  * block's lamps, the coils' lights, the charge running between the rails and the muzzle flare (`above`) are live.
  */
-const TILT = TILTS.rail!,
-  SPEC = MUZZLES.rail!,
+const TILT = TILTS.rail,
+  SPEC = MUZZLES.rail,
   DROP = TILT.drop,
   HB = TILT.height,
   RECOIL = SPEC.recoil,

@@ -1,13 +1,8 @@
-import type { Tower, TowerDefinition, TurretStyle } from "../core/types";
-import { DARK, LIGHT, OUTLINE, SHADOW, halo, led } from "./material";
-import { arcBand, disc, oval, ring, shade, type Ink, type Pen } from "./shapes";
-import { type TurretContext, type Drawing, at, pip, loop } from "./tower-art/kit";
-import { BASES } from "./tower-art/bases";
+import type { Tower, TowerDefinition } from "../core/types";
+import { halo } from "./material";
+import { disc, shade, type Ink, type Pen } from "./shapes";
+import { type TurretContext, loop } from "./tower-art/kit";
 import { MOTIFS } from "./tower-art/motifs";
-import { ATTACK_TURRETS } from "./tower-art/turrets-attack";
-import { CONTROL_TURRETS } from "./tower-art/turrets-control";
-import { TRAPS_TURRETS } from "./tower-art/turrets-traps";
-import { SUPPORT_TURRETS } from "./tower-art/turrets-support";
 import { onDeck } from "./tower-art/tilt";
 import { TILTED } from "./tower-art/tilted";
 import { TILTS } from "./muzzles";
@@ -29,11 +24,6 @@ function branchLevel(definition: Readonly<TowerDefinition>) {
   }
   return from;
 }
-/**
- * Turret drawings by `visual.turret`, one module per build-menu tab (`tower-art/turrets-*.ts`). A new look is one entry
- * in its tab's module; this type fails to compile while a style has no drawing.
- */
-const TURRETS: Record<TurretStyle, Drawing> = { ...ATTACK_TURRETS, ...CONTROL_TURRETS, ...TRAPS_TURRETS, ...SUPPORT_TURRETS };
 export interface TowerBadges {
   /** Level for attack towers, number of purchases for support towers. */
   markers: number;
@@ -70,77 +60,26 @@ function turretContext(pen: Pen, x: number, y: number, tower: Tower, definition:
     peak: badges.maxed ? 0.42 : 0.6,
   };
 }
+// Every tower is drawn in the 3/4 tilt (`TILTED`, projection in `TILTS`): its base casts its own shadow and carries its
+// own level language, and the path motif lies on the tilted deck.
+/** The part of a tower that holds still on `g`: the model's base (its light is live). */
+const drawBody = (ctx: TurretContext) => TILTED[ctx.definition.visual.turret].base(ctx);
 /**
- * Turrets drawn in the 3/4 tilt (Pulse's Hex Sentinel): their base casts its own shadow and carries its own level
- * language, so the flat collar, rings, lamps and glint are skipped and the path motif lies on the tilted deck.
- */
-export const isTilted = (definition: Readonly<TowerDefinition>) => TILTS[definition.visual.turret] !== undefined;
-/** The part of a tower that holds still on `g`: shadow, base plate, collar and the r14 ring (the base's light is live). */
-function drawBody(ctx: TurretContext) {
-  const { g, glow, x, y, definition, level, color: p } = ctx,
-    // Traps lie flat on the path: no shadow, no collar and no turret rings.
-    trap = definition.placement === "path",
-    attack = !trap && definition.targets.length > 0;
-  if (isTilted(definition)) return BASES[definition.visual.turret](ctx);
-  if (!trap) {
-    oval(g, x + 3, y + 6, 22, 15.5, SHADOW, 0.22);
-    oval(g, x + 3, y + 6, 18, 12, SHADOW, 0.3);
-  }
-  BASES[definition.visual.turret](ctx);
-  // Level language: a collar from level 2, the r14 ring echoed in light from level 5.
-  if (!trap) {
-    if (level >= 2) {
-      ring(g, x, y, 17, 2.2, DARK);
-      arcBand(g, x, y, 17.3, 0.9, LIGHT - 0.9, LIGHT + 0.9, shade(p, 0.25), 0.85);
-    }
-    ring(g, x, y, 14, 1.5, p, 0.6);
-    if (attack && level >= 5) ring(glow, x, y, 14, 2, p, 0.35);
-  }
-}
-/**
- * Everything that moves or changes on its own: the glint, motif, lamps, turret, level bars and the aura badge. With
- * `top`, a tilted tower's turret is on screen as a cached picture (`TurretCache`) between `ctx.g` and `top`: only the
- * live parts under it go to `ctx.g`, the ones over it and the level bars and badge to `top`.
+ * Everything that moves or changes on its own: the halo, motif, turret, level bars and the aura badge. With `top`, the
+ * turret is on screen as a cached picture (`TowerPictures`) between `ctx.g` and `top`: only the live parts under it go to
+ * `ctx.g`, the ones over it and the level bars and badge to `top`.
  */
 function drawTop(ctx: TurretContext, badges: TowerBadges, top?: Ink) {
-  const { g, glow, x, y, tower, definition, clock, level, color: p } = ctx,
-    tilted = isTilted(definition),
-    // Traps lie flat and tilted turrets carry their own lamps: neither gets the collar's glint and lamps.
-    trap = definition.placement === "path",
-    flat = !trap && !tilted;
+  const { glow, x, y, tower, definition, clock, color: p } = ctx,
+    art = TILTED[definition.visual.turret];
   if (badges.maxed) halo(glow, x, y, 26, p, 0.12 + 0.04 * Math.sin(clock * 2 + tower.id));
-  // A glint sweeps the collar at level 8.
-  if (flat && level >= 8) arcBand(g, x, y, 17, 1.6, clock * 0.8 + tower.id, clock * 0.8 + tower.id + 0.5, shade(p, 0.8), 0.9);
-  // Specialized towers: the path motif turns under the turret, one tier per level above the branch (5, support 3),
-  // echoed in light. Aura draws its own.
-  // Traps carry it around them on the path instead (`drawTrapMotif`, under the base).
-  if (!trap) drawMotif(ctx, badges);
-  // One lamp from level 2; from level 4 four of them chase round the collar.
-  if (flat && level >= 4) {
-    g.fillStyle(OUTLINE, 0.9);
-    for (let i = 0; i < 4; i++) {
-      const q = at(x, y, 0.75 * Math.PI + (i * Math.PI) / 2, 19);
-      pip(g, q.x, q.y, 2.2);
-    }
-    for (let i = 0; i < 4; i++) {
-      const q = at(x, y, 0.75 * Math.PI + (i * Math.PI) / 2, 19),
-        on = 0.35 + 0.65 * Math.max(0, Math.sin(4 * clock - (i * Math.PI) / 2));
-      g.fillStyle(shade(p, -0.7 * (1 - on)));
-      pip(g, q.x, q.y, 1.4);
-      if (on <= 0.5) continue;
-      glow.fillStyle(p, 0.3 * on);
-      pip(glow, q.x, q.y, 3.6);
-    }
-  } else if (flat && level >= 2) {
-    const q = at(x, y, 0.75 * Math.PI, 19);
-    led(ctx, q.x, q.y, p, 1);
-  }
-  const art = top ? TILTED[definition.visual.turret] : undefined;
-  if (art) {
-    art.below(ctx);
-    ctx = { ...ctx, g: top! };
-    art.above(ctx);
-  } else TURRETS[definition.visual.turret](ctx);
+  // Specialized towers: the path motif lies on the deck, one tier per level above the branch (5, support 3), echoed in
+  // light. Aura draws its own. Traps carry it around them on the path instead (`drawTower`, under the base).
+  if (definition.placement !== "path") drawMotif(ctx, badges);
+  art.below(ctx);
+  if (top) ctx = { ...ctx, g: top };
+  else art.turret(ctx);
+  art.above(ctx);
   drawBadges(ctx, badges);
 }
 /** Level bars and the aura badge. */
@@ -166,15 +105,14 @@ function drawMotif(ctx: TurretContext, badges: TowerBadges, ground = false) {
     tilt = TILTS[definition.visual.turret],
     draw = () => MOTIFS[motif]({ ...ctx, x: 0, y: 0 }, tier, clock + tower.id, 0.04 + 0.04 * tier);
   // On the path around a trap: larger and at ground height, so the trap covers its middle and keeps its face.
-  if (tilt && ground) onDeck([g, glow], x, y + tilt.drop, 0, draw, 1.3);
-  else if (tilt) onDeck([g, glow], x, y + tilt.drop, tilt.deck, draw);
-  else MOTIFS[motif](ctx, tier, clock + tower.id, 0.06 + 0.06 * tier);
+  if (ground) onDeck([g, glow], x, y + tilt.drop, 0, draw, 1.3);
+  else onDeck([g, glow], x, y + tilt.drop, tilt.deck, draw);
 }
 /** How the battlefield shows a tower beside what `drawTower` draws. */
 export interface TowerView {
   /** The still body is already on screen as a texture (`stillBody`), so only its light is drawn. */
   baked?: boolean;
-  /** A tilted turret is on screen as a cached picture (`TurretCache`) above `pen.g`; the parts over it go to `top`. */
+  /** A tilted turret is on screen as a cached picture (`TowerPictures`) above `pen.g`; the parts over it go to `top`. */
   top?: Ink;
   /** Recoil to draw instead of the one the cooldown gives (the cached picture's step). */
   kick?: number;
@@ -190,60 +128,56 @@ export function drawTower(pen: Pen, x: number, y: number, tower: Tower, definiti
   else if (bodyLight(tower, badges)) drawBody({ ...ctx, g: NO_INK });
   drawTop(ctx, badges, top);
 }
-/** Draws only a tilted tower's turret ink (on `g`, centred on `x`, `y`) at the tower's angle and the given recoil, for `TurretCache`. */
+/** Draws only a turret's ink (on `g`, centred on `x`, `y`) at the tower's angle and the given recoil, for the turret pictures. */
 export function drawTurretInk(g: Ink, x: number, y: number, tower: Tower, definition: Readonly<TowerDefinition>, badges: TowerBadges, kick: number) {
-  const art = TILTED[definition.visual.turret];
-  if (art) art.turret({ ...turretContext({ g, glow: NO_INK }, x, y, tower, definition, 0, badges), kick });
+  TILTED[definition.visual.turret].turret({ ...turretContext({ g, glow: NO_INK }, x, y, tower, definition, 0, badges), kick });
 }
-/** Every call a tilted turret's ink makes, with its arguments; `glow` false once it touched the glow layer. */
-function recordTurret(tower: Tower, definition: Readonly<TowerDefinition>, clock: number, badges: TowerBadges, kick: number) {
-  const log: string[] = [],
-    trace = (onCall: (name: string, args: unknown[]) => void): Ink => {
-      const ink: Ink = new Proxy({} as Ink, { get: (_, name) => (name === "then" ? undefined : (...args: unknown[]) => (onCall(String(name), args), ink)) });
-      return ink;
-    },
-    g = trace((name, args) => log.push(name, used(name, args)));
-  let glow = true;
-  const art = TILTED[definition.visual.turret]!;
-  art.turret({ ...turretContext({ g, glow: trace(() => (glow = false)) }, 0, 0, tower, definition, clock, badges), kick });
-  return { log: log.join("\n"), glow };
-}
-const stillTurrets = new Map<string, boolean>();
-/**
- * Whether a tilted tower's turret ink depends only on its look, angle and recoil, so `TurretCache` may keep it as a
- * picture: drawn twice at the same angle and recoil with different time, id and cooldown, it must come out the same
- * and never touch the glow layer. A turret that fails is drawn live (and `tower-bodies.test.ts` fails).
- */
-export function stillTurret(tower: Tower, definition: Readonly<TowerDefinition>, badges: TowerBadges) {
-  if (!TILTED[definition.visual.turret]) return false;
-  const key = bodyKey(tower, badges);
-  let known = stillTurrets.get(key);
-  if (known === undefined) {
-    const a = recordTurret({ ...tower, id: 1, cooldown: 0, angle: 0.7 }, definition, 0, badges, 0.5),
-      b = recordTurret({ ...tower, id: 7, cooldown: 0.9, angle: 0.7 }, definition, 2.345, badges, 0.5);
-    known = a.glow && b.glow && a.log === b.log;
-    stillTurrets.set(key, known);
-  }
-  return known;
-}
-/** Draws only the still body (on `g`, centred on `x`, `y`), for baking it into a texture. */
+/** Draws only the still body (on `g`, centred on `x`, `y`), for baking it into a picture. */
 export function drawTowerBody(g: Ink, x: number, y: number, tower: Tower, definition: Readonly<TowerDefinition>, badges: TowerBadges) {
   drawBody(turretContext({ g, glow: NO_INK }, x, y, tower, definition, 0, badges));
 }
-/** Cache key of a still body: everything `drawBody` reads apart from time and the tower's own state. */
+/** Cache key of a still body or turret look: everything they read apart from time, angle, recoil and the tower's own state. */
 export const bodyKey = (tower: Tower, badges: TowerBadges) => `${tower.type}|${badges.markers}|${badges.color}|${badges.maxed ? 1 : 0}|${badges.path ?? ""}`;
-const still = new Map<string, boolean>();
+/** An ink that reports every call to `onCall`. */
+function trace(onCall: (name: string, args: unknown[]) => void): Ink {
+  const ink: Ink = new Proxy({} as Ink, { get: (_, name) => (name === "then" ? undefined : (...args: unknown[]) => (onCall(String(name), args), ink)) });
+  return ink;
+}
+/**
+ * Draws `draw` twice, for two towers that differ in id, cooldown and angle (`angles`) at two different times, and
+ * records every call on `g` with its arguments as they were at the call: `same` when both came out alike, `light`
+ * once either touched `glow`.
+ */
+function drawnTwice(tower: Tower, angles: readonly [number, number], draw: (pen: Pen, tower: Tower, clock: number) => void) {
+  let light = false;
+  const glow = trace(() => (light = true)),
+    record = (t: Tower, clock: number) => {
+      const log: string[] = [];
+      draw({ g: trace((name, args) => log.push(name, used(name, args))), glow }, t, clock);
+      return log.join("\n");
+    },
+    a = record({ ...tower, id: 1, cooldown: 0, angle: angles[0] }, 0),
+    b = record({ ...tower, id: 7, cooldown: 0.9, angle: angles[1] }, 2.345);
+  return { same: a === b, light };
+}
+const stillTurrets = new Map<string, boolean>();
+/**
+ * Whether a turret's ink depends only on its look, angle and recoil, so `TowerPictures` may keep it as a picture:
+ * drawn twice at the same angle and recoil with different time, id and cooldown, it must come out the same and never
+ * touch the glow layer. A turret that fails is drawn live (and `tower-bodies.test.ts` fails).
+ */
+export function stillTurret(tower: Tower, definition: Readonly<TowerDefinition>, badges: TowerBadges) {
+  const key = bodyKey(tower, badges);
+  let known = stillTurrets.get(key);
+  if (known === undefined) {
+    const { same, light } = drawnTwice(tower, [0.7, 0.7], (pen, t, clock) => TILTED[definition.visual.turret].turret({ ...turretContext(pen, 0, 0, t, definition, clock, badges), kick: 0.5 }));
+    stillTurrets.set(key, (known = same && !light));
+  }
+  return known;
+}
+const stillBodies = new Map<string, boolean>();
 /** Body keys whose still body also draws light (on `glow`), which a baked body must still draw every frame. */
 const lit = new Set<string>();
-/** Every call `drawBody` makes on `g`, with its arguments as they were at the call; `light` once it drew on `glow`. */
-function record(tower: Tower, definition: Readonly<TowerDefinition>, clock: number, badges: TowerBadges) {
-  const log: string[] = [],
-    ink: Ink = new Proxy({} as Ink, { get: (_, name) => (name === "then" ? undefined : (...args: unknown[]) => (log.push(String(name), used(String(name), args)), ink)) });
-  let light = false;
-  const glow: Ink = new Proxy({} as Ink, { get: (_, name) => (name === "then" ? undefined : () => ((light = true), glow)) });
-  drawBody(turretContext({ g: ink, glow }, 0, 0, tower, definition, clock, badges));
-  return { log: log.join("\n"), light };
-}
 /** Whether a baked body (`stillBody` true) still draws light of its own; dark ones are skipped entirely once baked. */
 export const bodyLight = (tower: Tower, badges: TowerBadges) => lit.has(bodyKey(tower, badges));
 /**
@@ -252,13 +186,11 @@ export const bodyLight = (tower: Tower, badges: TowerBadges) => lit.has(bodyKey(
  */
 export function stillBody(tower: Tower, definition: Readonly<TowerDefinition>, badges: TowerBadges) {
   const key = bodyKey(tower, badges);
-  let known = still.get(key);
+  let known = stillBodies.get(key);
   if (known === undefined) {
-    const a = record({ ...tower, id: 1, cooldown: 0, angle: 0 }, definition, 0, badges),
-      b = record({ ...tower, id: 7, cooldown: 0.9, angle: 1.9 }, definition, 2.345, badges);
-    known = a.log === b.log;
-    still.set(key, known);
-    if (a.light || b.light) lit.add(key);
+    const { same, light } = drawnTwice(tower, [0, 1.9], (pen, t, clock) => drawBody(turretContext(pen, 0, 0, t, definition, clock, badges)));
+    stillBodies.set(key, (known = same));
+    if (light) lit.add(key);
   }
   return known;
 }
