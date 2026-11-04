@@ -37,7 +37,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 const plural = (n: number, word: string) => (n === 1 ? word : `${word}s`);
 /** Hotkeys for the towers of the open tab, from 1 again on every tab; more than ten continue with letters. */
 export const TOWER_KEYS = "1234567890qwery";
-export const towerKey = (index: number) => TOWER_KEYS[index]?.toUpperCase() ?? "";
+const towerKey = (index: number) => TOWER_KEYS[index]?.toUpperCase() ?? "";
 /** "1–9, 0, Q, W" for a tab of twelve towers; `wrap` formats each key, e.g. as `<kbd>`. */
 function towerKeyRange(count: number, wrap = (key: string) => key) {
   const keys = [...TOWER_KEYS.slice(0, count).toUpperCase()].map(wrap);

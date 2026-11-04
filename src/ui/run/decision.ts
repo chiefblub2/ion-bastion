@@ -44,7 +44,7 @@ export const takeButton = (label: string | undefined, enabled = !!label) =>
   `<button class="primary run-take" data-run="take"${enabled ? "" : " disabled"}>${label ? escape(label) : "Select an option"} <span>→</span></button>`;
 export const emptyPreview = (text: string) => `<p class="run-preview-empty">${text}</p>`;
 /** The eyebrow of a reward decision: "REWARD 2 OF 3", or the step's own name when it is the only one. */
-export function eyebrow(r: RunState, own: string) {
+function eyebrow(r: RunState, own: string) {
   const { index, total } = rewardProgress(r);
   return total > 1 ? `REWARD ${index} OF ${total} · ${own}` : own;
 }

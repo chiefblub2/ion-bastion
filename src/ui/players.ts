@@ -10,7 +10,7 @@ export interface MultiplayerSession {
   match: Match | null;
 }
 const hex = (color: number) => `#${color.toString(16).padStart(6, "0")}`;
-export const playerColor = (player: number) => hex(PLAYER_COLORS[player] ?? 0xffffff);
+const playerColor = (player: number) => hex(PLAYER_COLORS[player] ?? 0xffffff);
 export const playerName = (player: number, me?: number) => (player === me ? "You" : `Player ${player + 1}`);
 const dot = (player: number) => `<i class="player-dot" style="--player:${playerColor(player)}"></i>`;
 const pad = (n: number) => String(n).padStart(2, "0");

@@ -53,7 +53,7 @@ export function renderSystem(game: Game, options: AtlasOptions) {
   placeSystem();
 }
 /** The system layout the SVG shows ("wide" or "narrow"), redrawn when the view crosses the phone width. */
-export let drawn: keyof typeof SYSTEM | null = null;
+let drawn: keyof typeof SYSTEM | null = null;
 /** The sun and the orbits of one layout: planets around the sun, the moon around the last planet. */
 function drawOrbits(layout: keyof typeof SYSTEM) {
   const { w, h, sun } = SYSTEM[layout],

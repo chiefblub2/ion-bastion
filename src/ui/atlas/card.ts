@@ -30,7 +30,7 @@ export function showBriefTab(tab: BriefTab) {
   for (const b of card.querySelectorAll<HTMLElement>("[data-brief-tab]")) b.setAttribute("aria-pressed", String(b.dataset.briefTab === tab));
 }
 /** The mission the briefing shows, so the app can return to it after leaving the page. */
-export let featured: MissionDefinition | undefined;
+let featured: MissionDefinition | undefined;
 /** The featured mission and its sector's content index, or undefined before the first render. */
 export function atlasSelection(game: Game) {
   const sectors = game.content.sectors ?? [],

@@ -16,7 +16,7 @@ export type CardPlacement =
   | { mode: "float"; side: "left" | "right" | "above" | "below"; x: number; y: number }
   | { mode: "dock"; edge: "top" | "bottom" };
 /** Px between the cell and the card. */
-export const CARD_GAP = 8;
+const CARD_GAP = 8;
 type Side = "left" | "right" | "above" | "below";
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 export function placeTowerCard({ board, columns, rows, cell, card, path }: CardPlaceInput): CardPlacement {

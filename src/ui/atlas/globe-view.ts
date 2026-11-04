@@ -92,12 +92,12 @@ const FLIGHT_MS = 950;
 let flight = 0,
   shown: Camera | null = null;
 /** The painted globe (WebGL), created with the first world; absent or not `ok`, the territories stay flat. */
-export let globe: GlobeGL | null = null;
+let globe: GlobeGL | null = null;
 /**
  * Applies one camera: the painted globe, every territory outline, link and dot projected onto it, the decks in orbit
  * and every label's screen position; what the globe hides is hidden.
  */
-export function place(cam: Camera) {
+function place(cam: Camera) {
   const view = $("world-view"),
     width = view.clientWidth,
     height = view.clientHeight,

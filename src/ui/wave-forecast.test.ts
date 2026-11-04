@@ -5,7 +5,7 @@ import { missionById } from "../content/missions";
 import { Game } from "../core/game";
 import { finishWave } from "../core/test-helpers";
 import { waveHpScale } from "../systems/spawn";
-import { enemyIcon, renderWaveForecast, waveForecast } from "./wave-forecast";
+import { renderWaveForecast, waveForecast } from "./wave-forecast";
 import type { EnemyId } from "../core/types";
 
 const game = (id: string) => new Game(missionById(id)!);

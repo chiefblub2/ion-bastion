@@ -19,7 +19,7 @@ export const ALTITUDE = 1.32;
 /** A deck's own units on its tangent plane, relative to the surface's plane units. */
 export const DECK_SCALE = 0.42;
 /** Longitude and latitude (radians) of a plane point; the plane's middle is 0, 0, north (small y) is positive. */
-export const lonLatOf = (p: Point) => ({ lon: (p.x - WORLD_W / 2) * UNIT, lat: (WORLD_H / 2 - p.y) * UNIT });
+const lonLatOf = (p: Point) => ({ lon: (p.x - WORLD_W / 2) * UNIT, lat: (WORLD_H / 2 - p.y) * UNIT });
 /** The unit vector of a plane point: x east, y north, z towards the viewer at rest. */
 export function toSphere(p: Point): Vec3 {
   const { lon, lat } = lonLatOf(p),
@@ -38,7 +38,7 @@ export interface Camera {
   oy: number;
 }
 /** A direction turned so the camera's `lon`, `lat` faces the viewer (+z), north up (+y). */
-export function rotate(v: Vec3, { lon, lat }: Pick<Camera, "lon" | "lat">): Vec3 {
+function rotate(v: Vec3, { lon, lat }: Pick<Camera, "lon" | "lat">): Vec3 {
   const cl = Math.cos(lon),
     sl = Math.sin(lon),
     x1 = v.x * cl - v.z * sl,

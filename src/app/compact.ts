@@ -7,7 +7,7 @@
  * only: `data-notch` on <html> names that side from the screen's rotation, so the layout keeps only a slim margin
  * on the other (style.css, `--inset-l`/`--inset-r`).
  */
-export const COMPACT_QUERY = "(pointer: coarse) and (orientation: landscape) and (max-height: 540px)";
+const COMPACT_QUERY = "(pointer: coarse) and (orientation: landscape) and (max-height: 540px)";
 /**
  * The fitted menu layout (menu.css): a short landscape viewport, measured by height so every landscape phone from
  * 667×375 to 956×440 gets it, whatever its width, and a short desktop window too. The home page and the Sector Atlas

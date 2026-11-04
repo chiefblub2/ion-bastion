@@ -37,7 +37,7 @@ export interface Region extends Territory {
   station?: boolean;
 }
 /** A stable pseudo-random number in [0, 1) for a pair of integers (render-side jitter, no `Math.random`). */
-export function jitter(a: number, b: number) {
+function jitter(a: number, b: number) {
   let h = Math.imul(a + 1, 0x9e3779b1) ^ Math.imul(b + 7, 0x85ebca6b);
   h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
   h ^= h >>> 12;
@@ -83,7 +83,7 @@ export function voronoiCell(seeds: readonly Point[], i: number, bounds: Box): Po
   return poly;
 }
 /** Smooth value noise in [0, 1) over the plane, one lattice value per integer point (from `jitter`). */
-export function valueNoise(x: number, y: number, seed = 0) {
+function valueNoise(x: number, y: number, seed = 0) {
   const ix = Math.floor(x),
     iy = Math.floor(y),
     fx = x - ix,
@@ -96,7 +96,7 @@ export function valueNoise(x: number, y: number, seed = 0) {
   return top + (bottom - top) * v;
 }
 /** How far a border point moves at most from the straight cell edge, in world units. */
-export const BORDER_WOBBLE = 3.2;
+const BORDER_WOBBLE = 3.2;
 /**
  * The border warp's displacement at (x, y), in units of `BORDER_WOBBLE`: smooth, and a function of the position
  * only, so both neighbours of an edge move it alike and their borders stay one line. A broad meander, a mid bend and
@@ -156,7 +156,7 @@ export interface Planet {
   wilds: Territory[];
 }
 /** The deck of a station in orbit around `c`: a long hull with chamfered ends and a notched spine. */
-export function deckOutline(c: Point): Point[] {
+function deckOutline(c: Point): Point[] {
   const w = 26,
     h = 9;
   return [
@@ -321,7 +321,7 @@ export const ROUTE_SHAPES = {
 } satisfies Record<string, readonly (readonly [number, number])[]>;
 export type RouteShape = keyof typeof ROUTE_SHAPES;
 /** The route shape of a sector, from the terrain theme of its first map; ring missions circle. */
-export const THEME_ROUTES: Record<MapTheme, RouteShape> = {
+const THEME_ROUTES: Record<MapTheme, RouteShape> = {
   outpost: "fork",
   lock: "chain",
   shard: "chain",
@@ -346,7 +346,7 @@ export const routeShape = (theme: MapTheme, circle: boolean): RouteShape => (cir
  * The room a route has in a territory: half the clear distance from its centre to the border along each axis
  * (the smaller side), so every station keeps a margin to the border for its label.
  */
-export function frameOf(region: Region): { rx: number; ry: number } {
+function frameOf(region: Region): { rx: number; ry: number } {
   const reach = (dx: number, dy: number) => {
     let d = 0;
     while (d < 200 && inside({ x: region.x + dx * (d + 1), y: region.y + dy * (d + 1) }, region.border)) d++;
