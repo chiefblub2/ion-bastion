@@ -114,8 +114,8 @@ function above(ctx: TurretContext) {
       if (phase < 0.8) {
         const r = 1 + 3.2 * (phase / 0.8);
         oval(g, bx + 0.4, by + 0.6, r + 0.4, r + 0.2, tar(c, -0.08));
-        disc(g, bx, by, r, tar(c, 0.05 + 0.04 * (phase / 0.8)));
-        arcBand(g, bx, by, r - 0.4, 0.7, Math.PI * 1.1, Math.PI * 1.55, tar(c, 0.22), 0.8);
+        disc(g, bx, by, r, tar(c, 0.08 + 0.06 * (phase / 0.8)));
+        arcBand(g, bx, by, r - 0.4, 0.9, Math.PI * 1.05, Math.PI * 1.6, tar(c, 0.34), 0.85);
       } else {
         // Burst: a dark crater ring closing again.
         const k = (phase - 0.8) / 0.2;
