@@ -2,6 +2,7 @@ import type { Ink } from "./render/shapes";
 import { mulberry32 } from "./render/terrain-themes/kit";
 import * as O from "./render/terrain-themes/outpost-props";
 import * as L from "./render/terrain-themes/lock-props";
+import * as S from "./render/terrain-themes/shard-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -71,5 +72,21 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
     { label: "barge", span: 2, shadow: (g, x, y) => L.bargeShadow(g, x, y), draw: (g, x, y) => L.drawBarge(g, x, y) },
     { label: "crane", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => L.craneShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => L.drawCrane(g)) },
     { label: "control tower", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => L.controlTowerShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => L.drawControlTower(g)) },
+  ],
+  shard: [
+    ...[1, 2, 3, 4].map((n) => {
+      const c = S.clusterOf(r(900 + n));
+      return { label: "cluster", shadow: (g: Ink, x: number, y: number) => S.clusterShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => S.drawCluster(g, x, y, c) };
+    }),
+    (() => {
+      const q = S.geodeOf(r(950));
+      return { label: "geode", shadow: (g: Ink, x: number, y: number) => S.geodeShadow(g, x, y, q), draw: (g: Ink, x: number, y: number) => S.drawGeode(g, x, y, q) };
+    })(),
+    { label: "floater", shadow: (g, x, y) => S.floaterShadow(g, x, y), draw: (g, x, y) => S.drawFloater(g, x, y, 0x7fd8ff, 0.5) },
+    { label: "sensor", shadow: (g, x, y) => S.sensorShadow(g, x, y), draw: (g, x, y) => S.drawSensor(g, x, y, 0.6) },
+    { label: "pylon", shadow: (g, x, y) => S.pylonShadow(g, x, y), draw: (g, x, y) => S.drawPylon(g, x, y, 0.2, 0xf0a6d8) },
+    { label: "crystal", shadow: (g, x, y) => S.crystalShadow(g, x, y, { u: 0, v: 0, a: 0.8, lean: 0.3, len: 30, r: 7, color: 0x9d8cff }), draw: (g, x, y) => S.crystal(g, x, y, { u: 0, v: 0, a: 0.8, lean: 0.3, len: 30, r: 7, color: 0x9d8cff }) },
+    { label: "monolith", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => S.monolithShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => S.drawMonolith(g, 0xb8a6ff)) },
+    { label: "split geode", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => S.splitGeodeShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => S.drawSplitGeode(g, 0x9d8cff)) },
   ],
 };
