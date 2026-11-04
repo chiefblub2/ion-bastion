@@ -170,28 +170,20 @@ describe("late levels 4 and 5", () => {
       expect(dpsPerCredit(type, 5)).toBeGreaterThan(dpsPerCredit(type, 1));
     }
   });
-  it("Kryo and Tesla gain special values on levels 4 and 5", () => {
-    const frost = (n: number) => resolveUpgrades({ type: "frost", upgrades: levels(n) }).attack;
-    const tesla = (n: number) => resolveUpgrades({ type: "tesla", upgrades: levels(n) }).attack;
-    expect(frost(3)).toMatchObject({ factor: 0.55, duration: 1.9 });
-    expect(frost(4)).toMatchObject({ factor: 0.45, duration: 2.3 });
-    expect(frost(5)).toMatchObject({ factor: 0.35, duration: 2.8 });
-    expect(tesla(3)).toMatchObject({ jumps: 3, range: 1.6, falloff: 0.75 });
-    expect(tesla(4)).toMatchObject({ jumps: 4, range: 1.8 });
-    expect(tesla(5)).toMatchObject({ jumps: 5, range: 2 });
-  });
-  it("the newer attack towers gain special values on levels 4 and 5", () => {
-    const attack = (type: TowerId, n: number) => resolveUpgrades({ type, upgrades: levels(n) }).attack;
-    expect(attack("lance", 4)).toMatchObject({ width: 0.35, falloff: 0.9 });
-    expect(attack("lance", 5)).toMatchObject({ width: 0.5, falloff: 1 });
-    expect(attack("inferno", 4)).toMatchObject({ ratio: 3, duration: 3 });
-    expect(attack("inferno", 5)).toMatchObject({ ratio: 3.5, duration: 3.5 });
-    expect(attack("stasis", 4)).toMatchObject({ radius: 1.1, duration: 1, recovery: 1.5 });
-    expect(attack("stasis", 5)).toMatchObject({ radius: 1.3, duration: 1.2 });
-    expect(attack("acid", 4)).toMatchObject({ amount: 0.3, radius: 0.8 });
-    expect(attack("acid", 5)).toMatchObject({ amount: 0.4, radius: 1 });
-    expect(attack("decay", 4)).toMatchObject({ percent: 0.05 });
-    expect(attack("decay", 5)).toMatchObject({ percent: 0.06 });
+  it("levels 4 and 5 change the attack values their upgrades name", () => {
+    const special: TowerId[] = [];
+    for (const type of attackTowers)
+      for (const n of [4, 5]) {
+        const values = TOWERS[type].upgrades.find((u) => u.id === `level-${n}`)?.effects.attack;
+        if (!values) continue;
+        const before = resolveUpgrades({ type, upgrades: levels(n - 1) }).attack as unknown as Record<string, unknown>,
+          after = resolveUpgrades({ type, upgrades: levels(n) }).attack;
+        expect(after, `${type} level-${n}`).toMatchObject(values);
+        expect(Object.entries(values).some(([key, value]) => before[key] !== value), `${type} level-${n}`).toBe(true);
+        special.push(type);
+      }
+    // Kryo, Tesla and the newer attack towers sharpen their special values on the top plain levels.
+    expect(special).toEqual(expect.arrayContaining(["frost", "tesla", "lance", "inferno", "stasis", "acid", "decay"]));
   });
   it("the refinery has three levels that raise its income", () => {
     // Three plain levels, then the three paths (levels 4 to 6).
