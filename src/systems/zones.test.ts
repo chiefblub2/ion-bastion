@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { Game } from "../core/game";
 import { stateHash } from "../core/hash";
 import { attackEnemies } from "./combat";
-import { landProjectiles, makeEnemy } from "../core/test-helpers";
+import { landProjectiles, LEVELS, lost, makeEnemy } from "../core/test-helpers";
 import { TOWERS } from "../content/towers";
 import type { EnemyId, PoolAttack } from "../core/types";
 import { settleWave } from "./waves";
@@ -10,7 +10,6 @@ import { tickZones } from "./zones";
 
 const { duration } = TOWERS.plasma.attack as PoolAttack,
   DPS = TOWERS.plasma.damage;
-const LEVELS = ["level-2", "level-3", "level-4", "level-5"];
 /** Plasma at (7,5) on the outpost map lands one pool on the first enemy; enemies stand still. */
 function land(enemies: [EnemyId, number, number][], upgrades: string[] = []) {
   const g = new Game();
@@ -29,7 +28,7 @@ function burn(g: Game, seconds: number) {
     tickZones(g);
   }
 }
-const lost = (g: Game) => g.state.enemies.map((e) => Math.round(1000 - e.hp));
+const lostAll = (g: Game) => g.state.enemies.map((e) => Math.round(lost(e)));
 
 describe("Plasma pools", () => {
   it("burn every ground unit inside for dps × duration, hidden and burrowed ones included, but no flyer", () => {
@@ -38,7 +37,7 @@ describe("Plasma pools", () => {
     g.state.enemies[2].distance = 2;
     expect(g.state.zones).toHaveLength(1);
     burn(g, duration + 1);
-    expect(lost(g)).toEqual([DPS * duration, DPS * duration, DPS * duration, 0, 0]);
+    expect(lostAll(g)).toEqual([DPS * duration, DPS * duration, DPS * duration, 0, 0]);
     expect(g.state.zones).toBeUndefined();
   });
   it("never stacks two pools of one tower on the same enemy, and keeps burning after a sale", () => {
@@ -46,7 +45,7 @@ describe("Plasma pools", () => {
     g.state.zones!.push({ ...g.state.zones![0] });
     g.command({ type: "sell", id: g.state.towers[0].id });
     burn(g, duration + 1);
-    expect(lost(g)).toEqual([DPS * duration]);
+    expect(lostAll(g)).toEqual([DPS * duration]);
   });
   it("Eruption bursts once when the pool runs out", () => {
     const g = land([["drone", 7, 6]], [...LEVELS, "eruption-1"]),

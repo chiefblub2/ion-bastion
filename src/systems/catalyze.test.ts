@@ -1,15 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { Game } from "../core/game";
 import { attackEnemies } from "./combat";
-import { landProjectiles, makeEnemy } from "../core/test-helpers";
+import { landProjectiles, makeEnemy, LEVELS, lost } from "../core/test-helpers";
 import { validateContent } from "../core/validation";
 import { DEFAULT_CONTENT } from "../content";
 import { TOWERS } from "../content/towers";
-import type { CatalyzeAttack, Enemy, EnemyId, StatusEffect } from "../core/types";
+import type { CatalyzeAttack, EnemyId, StatusEffect } from "../core/types";
 
 const { bonus, cap } = TOWERS.catalyst.attack as CatalyzeAttack,
   BASE = TOWERS.catalyst.damage;
-const LEVELS = ["level-2", "level-3", "level-4", "level-5"];
 const src = { tower: 99, type: "frost" as const };
 /** Running effects that change neither speed-independent damage nor targeting. */
 const EFFECTS: Record<string, StatusEffect> = {
@@ -30,7 +29,6 @@ function fire(enemies: [EnemyId, number, number, StatusEffect[]][], upgrades: st
   landProjectiles(g);
   return g;
 }
-const lost = (e: Enemy) => 1000 - e.hp;
 
 describe("Catalyst", () => {
   it("deals its bonus once per distinct running effect", () => {

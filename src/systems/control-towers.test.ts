@@ -1,25 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { Game } from "../core/game";
-import { landProjectiles, makeEnemy } from "../core/test-helpers";
+import { landProjectiles, makeEnemy, place, wait } from "../core/test-helpers";
 import { stateHash } from "../core/hash";
 import { TOWERS } from "../content/towers";
-import type { ConfuseAttack, EncaseAttack, GatherAttack, PullAttack, StrikeAttack, Tower, TowerId } from "../core/types";
+import type { ConfuseAttack, EncaseAttack, GatherAttack, PullAttack, StrikeAttack } from "../core/types";
 import { attackEnemies } from "./combat";
 import { applyDamage } from "./damage";
 import { positionOnPath } from "./path";
-import { applyStatus, speedFactor, tickStatus } from "./status";
+import { applyStatus, speedFactor } from "./status";
 import { landStrikes } from "./strikes";
-// Orbital, Mesmer, Amber, Magnetar and Cyclone.
-function place(g: Game, type: TowerId, x: number, y: number) {
-  const t: Tower = { id: g.state.nextId++, type, x, y, upgrades: [], cooldown: 0, spent: 0, angle: 0, kills: 0, owner: 0 };
-  g.state.towers.push(t);
-  return t;
-}
-/** Advances the clock and status effects only. */
-function wait(g: Game, until: number) {
-  g.state.time = until;
-  tickStatus(g, 0);
-}
 describe("Orbital", () => {
   const { delay, radius } = TOWERS.orbital.attack as StrikeAttack,
     d = TOWERS.orbital.damage;

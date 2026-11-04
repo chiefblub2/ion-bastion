@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import { Game } from "../core/game";
-import { makeEnemy } from "../core/test-helpers";
+import { makeEnemy, towerAt } from "../core/test-helpers";
 import type { MissionDefinition, Tower, TowerId } from "../core/types";
 import { applyDamage, hitOf } from "../systems/damage";
 import { hasStatus } from "../systems/status";
@@ -14,7 +14,7 @@ const content = DEFAULT_CONTENT;
 const mission = content.missions[0],
   path = mission.map.path;
 let id = 1;
-const tower = (type: TowerId, x: number, y: number, kills = 0): Tower => ({ id: id++, type, x, y, upgrades: [], cooldown: 0, spent: 0, angle: 0, kills, owner: 0 });
+const tower = (type: TowerId, x: number, y: number, kills = 0): Tower => ({ ...towerAt(id++, type, x, y), kills });
 /** A buildable cell beside the path cell `i`, and one far from every path cell. */
 const beside = (i: number) => ({ x: path[i].x, y: path[i].y - 1 });
 describe("assist XP", () => {

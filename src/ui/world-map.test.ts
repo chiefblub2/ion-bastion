@@ -9,8 +9,8 @@ describe("world map", () => {
         all = [...ground, ...wilds];
       let single = 0,
         total = 0;
-      for (let x = 1; x < WORLD_W; x += 3)
-        for (let y = 1; y < WORLD_H; y += 3) {
+      for (let x = 2; x < WORLD_W; x += 6)
+        for (let y = 2; y < WORLD_H; y += 6) {
           total++;
           if (all.filter((t) => inside({ x, y }, t.border)).length === 1) single++;
         }

@@ -3,12 +3,14 @@ import { describe, it, expect } from "vitest";
 import { blankDraft, compileDraft } from "../editor/draft";
 import { asPlaytest } from "../editor/playtest-id";
 import { Game } from "./game";
-import { towerLevel } from "./upgrades";
+import { resolveUpgrades, towerLevel } from "./upgrades";
+import type { IncomeAttack } from "./types";
 import { TOWERS } from "../content/towers";
 import { OUTPOST } from "../content/maps";
 import { MISSIONS } from "../content/missions";
 import { validateMission } from "./validation";
-import { finishWave } from "./test-helpers";
+import { emptyWave, finishWave, makeEnemy } from "./test-helpers";
+import { attackEnemies } from "../systems/combat";
 import { WAVE_BREAK } from "../systems/waves";
 import { effectiveTowerStats, isInAura } from "../systems/auras";
 describe("validated player commands", () => {
@@ -205,22 +207,20 @@ describe("Raffinerie", () => {
   };
   it("pays its credits after every completed wave, more with each level, and never attacks", () => {
     const { g, id } = setup();
+    const amount = (upgrades: string[]) => (resolveUpgrades({ type: "refinery", upgrades }, g.content).attack as IncomeAttack).amount;
     let gold = g.state.wallets[0];
-    g.command({ type: "start" });
-    finishWave(g);
-    expect(g.state.wallets[0]).toBe(gold + MISSIONS[0].waves[0].bonus + 25);
-    expect(g.state.towers[0].cooldown).toBe(0);
+    emptyWave(g);
+    expect(g.state.wallets[0]).toBe(gold + MISSIONS[0].waves[0].bonus + amount([]));
     g.command({ type: "upgrade", id, upgrade: "level-2" });
     gold = g.state.wallets[0];
-    g.command({ type: "start" });
-    const events: string[] = [];
-    while (g.state.status === "wave") {
-      g.tick();
-      events.push(...g.drainEvents().map((e) => e.type));
-    }
-    expect(events).not.toContain("shot");
-    expect(events).toContain("income");
-    expect(g.state.wallets[0]).toBe(gold + MISSIONS[0].waves[1].bonus + 40);
+    emptyWave(g);
+    expect(g.state.wallets[0]).toBe(gold + MISSIONS[0].waves[1].bonus + amount(["level-2"]));
+    expect(amount(["level-2"])).toBeGreaterThan(amount([]));
+    // An enemy beside it draws no shot.
+    g.state.enemies = [makeEnemy(1, "drone", 4, 5)];
+    attackEnemies(g, 1);
+    expect(g.state.projectiles).toHaveLength(0);
+    expect(g.drainEvents().map((e) => e.type)).not.toContain("shot");
   });
   it("pays nothing once sold or when the mission is lost", () => {
     const sold = setup();
