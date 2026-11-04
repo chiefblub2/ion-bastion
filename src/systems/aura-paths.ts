@@ -1,4 +1,3 @@
-import { DEFAULT_CONTENT } from "../content";
 import { resolveUpgrades, type UpgradeProgress } from "../core/upgrades";
 import type { SupportSpecialization } from "../core/specialization-types";
 import type { AuraBonuses, ContentPack, Enemy, Point, Sim, TowerId } from "../core/types";
@@ -35,7 +34,7 @@ const harmonized = new WeakMap<object, AuraBonuses>();
  * Harmonics: the bonuses an Aura gives an attack tower. With the path, the two stats of the tracks it did not take
  * get `bonus` each, never more than its own track bonus; without it exactly its track bonuses.
  */
-export function harmonicBonuses(source: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT): AuraBonuses {
+export function harmonicBonuses(source: UpgradeProgress, content: ContentPack): AuraBonuses {
   const resolved = resolveUpgrades(source, content);
   if (resolved.specialization?.kind !== "harmonics") return resolved.aura;
   let bonuses = harmonized.get(resolved);
@@ -49,7 +48,7 @@ export function harmonicBonuses(source: UpgradeProgress, content: ContentPack = 
   return bonuses;
 }
 /** The bonuses an Aura gives `target`: Harmonics for attack towers, the plain track bonuses for a trap. */
-export const fieldBonuses = (source: UpgradeProgress, target: { type: TowerId }, content: ContentPack = DEFAULT_CONTENT) =>
+export const fieldBonuses = (source: UpgradeProgress, target: { type: TowerId }, content: ContentPack) =>
   content.towers[target.type].placement === "path" ? resolveUpgrades(source, content).aura : harmonicBonuses(source, content);
 
 /** Piercing Field: share of armor that hits of the tower `tower` ignore; 0 without a supporting Aura on the path. */

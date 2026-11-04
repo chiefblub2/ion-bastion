@@ -1,3 +1,4 @@
+import { DEFAULT_CONTENT } from "../content";
 import { describe, it, expect } from "vitest";
 import { blankDraft, compileDraft } from "../editor/draft";
 import { asPlaytest } from "../editor/playtest-id";
@@ -36,7 +37,7 @@ describe("validated player commands", () => {
       d = TOWERS.pulse.damage;
     const r = g.command({ type: "build", tower: "pulse", x: 4, y: 4 });
     expect(g.command({ type: "upgrade", id: r.id!, upgrade: "level-2" }).ok).toBe(true);
-    expect(towerLevel(g.state.towers[0])).toBe(2);
+    expect(towerLevel(g.state.towers[0], DEFAULT_CONTENT)).toBe(2);
     expect(TOWERS.pulse.damage).toBe(d);
     expect(g.command({ type: "upgrade", id: r.id!, upgrade: "level-3" }).ok).toBe(false);
     expect(g.state.wallets[0]).toBe(88);
@@ -146,7 +147,7 @@ describe("mission outcomes", () => {
     for (let w = 0; w < 10; w++) {
       if (w > 0) {
         for (const t of [...g.state.towers])
-          if (towerLevel(t) < 3) g.command({ type: "upgrade", id: t.id, upgrade: `level-${towerLevel(t) + 1}` });
+          if (towerLevel(t, DEFAULT_CONTENT) < 3) g.command({ type: "upgrade", id: t.id, upgrade: `level-${towerLevel(t, DEFAULT_CONTENT) + 1}` });
         for (const a of additions)
           if (!g.state.towers.some((t) => t.x === a.x && t.y === a.y))
             g.command({ type: "build", ...a });
@@ -282,8 +283,8 @@ describe("Raffinerie", () => {
     g.command({ type: "build", tower: "aura", x: 4, y: 5 });
     const [refinery, aura] = g.state.towers;
     g.command({ type: "upgrade", id: aura.id, upgrade: "damage" });
-    expect(isInAura(aura, refinery)).toBe(false);
-    expect(Object.values(effectiveTowerStats(refinery, g.state.towers).bonuses).every((v) => v === 0)).toBe(true);
+    expect(isInAura(aura, refinery, DEFAULT_CONTENT)).toBe(false);
+    expect(Object.values(effectiveTowerStats(refinery, g.state.towers, DEFAULT_CONTENT).bonuses).every((v) => v === 0)).toBe(true);
   });
 });
 describe("wave break timer", () => {

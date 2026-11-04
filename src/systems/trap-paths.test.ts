@@ -177,7 +177,7 @@ describe("new trap abilities", () => {
     const thrown = enemy(1, "drone", 7, 5);
     const { g, tower } = arena("spring", path("concussion", 2), [thrown]);
     fire(g, tower);
-    const release = g.state.time + (resolveUpgrades(tower).attack as { duration: number }).duration;
+    const release = g.state.time + (resolveUpgrades(tower, DEFAULT_CONTENT).attack as { duration: number }).duration;
     expect(statusOf(thrown, "vulnerable")).toMatchObject({ amount: 0.15, until: release + 2 });
   });
   it("Tripwire Volley Signal strengthens only the alerted towers' next shot", () => {
@@ -185,7 +185,7 @@ describe("new trap abilities", () => {
     const { g, tower, damage } = arena("tripwire", path("volley-signal", 1), [target]);
     const pulse: Tower = { id: 2, type: "pulse", x: 8, y: 5, upgrades: [], cooldown: 1, spent: 0, angle: 0, kills: 0, owner: 0 };
     g.state.towers.push(pulse);
-    const shot = resolveUpgrades(pulse).stats.damage;
+    const shot = resolveUpgrades(pulse, DEFAULT_CONTENT).stats.damage;
     fire(g, tower);
     expect(100000 - target.hp).toBeCloseTo(damage + shot * 1.5);
     expect(pulse.alerted).toBeUndefined();
@@ -219,7 +219,7 @@ describe("new trap abilities", () => {
     attackEnemies(g, 0);
     const held = g.state.enemies[0];
     expect(damageTaken(held, g.state.time)).toBeCloseTo(1.2);
-    expect(lost(held)).toBeCloseTo(resolveUpgrades(wall).stats.damage * 1.2);
+    expect(lost(held)).toBeCloseTo(resolveUpgrades(wall, DEFAULT_CONTENT).stats.damage * 1.2);
   });
   it("Warp Pad Disorient confuses the warped enemy", () => {
     const warped = enemy(1, "drone", 7, 5);

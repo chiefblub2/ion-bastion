@@ -27,18 +27,18 @@ function hit(g: Game, tower: Tower, type: "scarab" | "tank" = "tank", hp = 1000)
 
 describe("Aura tracks and paths", () => {
   it("excludes tracks and paths independently, and opens the paths only from a track's tier III (level 4)", () => {
-    expect(upgradeOption(aura([]), "harmonics-1", Infinity).status).toBe("locked");
-    expect(upgradeOption(aura(["speed", "speed-2"]), "harmonics-1", Infinity).status).toBe("locked");
+    expect(upgradeOption(aura([]), "harmonics-1", Infinity, DEFAULT_CONTENT).status).toBe("locked");
+    expect(upgradeOption(aura(["speed", "speed-2"]), "harmonics-1", Infinity, DEFAULT_CONTENT).status).toBe("locked");
     for (const track of ["damage", "speed", "range"]) {
       const t = aura([track, `${track}-2`, `${track}-3`]);
-      expect(towerLevel(t)).toBe(4);
-      expect(upgradeOption(t, "piercing-field-1", Infinity).status).toBe("available");
+      expect(towerLevel(t, DEFAULT_CONTENT)).toBe(4);
+      expect(upgradeOption(t, "piercing-field-1", Infinity, DEFAULT_CONTENT).status).toBe("available");
     }
     const t = aura([...DAMAGE, "harmonics-1"]);
-    expect([towerTrack(t), towerPath(t), towerLevel(t)]).toEqual(["damage", "harmonics", 5]);
-    expect(upgradeOption(t, "speed", Infinity).status).toBe("excluded");
-    expect(upgradeOption(t, "execution-field-1", Infinity).status).toBe("excluded");
-    expect(upgradeOption(t, "harmonics-2", Infinity).status).toBe("available");
+    expect([towerTrack(t, DEFAULT_CONTENT), towerPath(t, DEFAULT_CONTENT), towerLevel(t, DEFAULT_CONTENT)]).toEqual(["damage", "harmonics", 5]);
+    expect(upgradeOption(t, "speed", Infinity, DEFAULT_CONTENT).status).toBe("excluded");
+    expect(upgradeOption(t, "execution-field-1", Infinity, DEFAULT_CONTENT).status).toBe("excluded");
+    expect(upgradeOption(t, "harmonics-2", Infinity, DEFAULT_CONTENT).status).toBe("available");
   });
   it("keeps the tracks in a Run and drops the paths without a Doctrine", () => {
     const locked = lockSpecializations([])(DEFAULT_CONTENT).towers.aura;
@@ -57,12 +57,12 @@ describe("Harmonics", () => {
       pulse = place(g, "pulse", 6, 5),
       vault = place(g, "vault", 5, 6),
       mine = place(g, "mine", 4, 5);
-    expect(receivedAuraBonuses(pulse, g.state.towers)).toEqual({ damage: 0.55, speed: 0.1, range: 0.1 });
-    expect(receivedAuraBonuses(vault, g.state.towers)).toEqual({ damage: 0, speed: 0, range: 0 });
-    expect(receivedAuraBonuses(mine, g.state.towers).speed).toBe(0);
+    expect(receivedAuraBonuses(pulse, g.state.towers, DEFAULT_CONTENT)).toEqual({ damage: 0.55, speed: 0.1, range: 0.1 });
+    expect(receivedAuraBonuses(vault, g.state.towers, DEFAULT_CONTENT)).toEqual({ damage: 0, speed: 0, range: 0 });
+    expect(receivedAuraBonuses(mine, g.state.towers, DEFAULT_CONTENT).speed).toBe(0);
     // Overlap: the strongest Aura per stat, so a speed-track Aura wins the speed stat.
     place(g, "aura", 7, 5, ["speed"]);
-    expect(receivedAuraBonuses(pulse, g.state.towers)).toEqual({ damage: 0.55, speed: 0.2, range: 0.1 });
+    expect(receivedAuraBonuses(pulse, g.state.towers, DEFAULT_CONTENT)).toEqual({ damage: 0.55, speed: 0.2, range: 0.1 });
     // A bonus above the track's own value is capped by it.
     const content = structuredClone(DEFAULT_CONTENT),
       tier = content.towers.aura.upgrades.find((u) => u.id === "harmonics-3")!;

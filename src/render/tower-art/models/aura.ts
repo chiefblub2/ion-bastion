@@ -1,6 +1,6 @@
 import { halo } from "../../material";
 import { disc, ring, shade } from "../../shapes";
-import { towerTrack } from "../../../core/upgrades";
+import { trackOf } from "../../../core/upgrades";
 import { MOTIFS } from "../motifs";
 import { rod } from "../tilt-frame";
 import { SQUASH, onDeck, onGround } from "../tilt";
@@ -22,7 +22,7 @@ const CYAN = 0x78dfff;
 
 /** The track's (levels 2–4) or the path's (5–7) motif and colour, undefined while undecided. */
 function choice({ tower, definition: d, path }: TurretContext) {
-  const track = towerTrack(tower);
+  const track = trackOf(tower, d);
   if (path) return { motif: d.visual.paths?.[path]?.motif, tier: 0 };
   if (track) return { motif: d.visual.tracks?.[track]?.motif, tier: 0 };
   return undefined;

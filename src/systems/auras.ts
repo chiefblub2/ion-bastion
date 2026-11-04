@@ -1,5 +1,4 @@
 import { dist } from "./path";
-import { DEFAULT_CONTENT } from "../content";
 import { resolveUpgrades, type UpgradeProgress } from "../core/upgrades";
 import { isArmed, isSupport } from "./attacks";
 import type { AuraBonuses, AuraStat, ContentPack, Point, Sim, TowerId } from "../core/types";
@@ -14,17 +13,17 @@ const emptyBonuses = (): AuraBonuses => ({ damage: 0, speed: 0, range: 0 });
 export type TowerPosition = Point & UpgradeProgress;
 
 /** Pure queries shared by simulation, drawing, UI and upgrade previews. */
-export function auraBonuses(source: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT): AuraBonuses {
+export function auraBonuses(source: UpgradeProgress, content: ContentPack): AuraBonuses {
   return resolveUpgrades(source, content).aura;
 }
 
-export const isAuraSource = (tower: { type: TowerId }, content: ContentPack = DEFAULT_CONTENT) =>
+export const isAuraSource = (tower: { type: TowerId }, content: ContentPack) =>
   content.towers[tower.type].attack.kind === "aura";
 
 export function isInAura(
   source: Point & { type: TowerId },
   target: Point & { type: TowerId },
-  content: ContentPack = DEFAULT_CONTENT,
+  content: ContentPack,
 ): boolean {
   return isAuraSource(source, content) &&
     !isSupport(content.towers[target.type].attack) &&
@@ -34,7 +33,7 @@ export function isInAura(
 export function receivedAuraBonuses(
   target: TowerPosition,
   towers: readonly TowerPosition[],
-  content: ContentPack = DEFAULT_CONTENT,
+  content: ContentPack,
   sim?: Sim,
 ): AuraBonuses {
   const combined = emptyBonuses();
@@ -49,7 +48,7 @@ export function receivedAuraBonuses(
 export function effectiveTowerStats(
   target: TowerPosition,
   towers: readonly TowerPosition[],
-  content: ContentPack = DEFAULT_CONTENT,
+  content: ContentPack,
   /** With the running simulation, enemy effects apply: suppressed aura sources, blind (range) and jam (interval). UI previews omit it. */
   sim?: Sim,
 ) {

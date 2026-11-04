@@ -84,7 +84,7 @@ class Gallery extends Phaser.Scene {
       for (const ink of [pen.g, pen.glow]) (ink as Phaser.GameObjects.Graphics).setPosition(x, y + TILTED_SHIFT).setScale(TILTED_SCALE);
       x = y = 0;
     }
-    drawTower(pen, x, y, tower, definition, CLOCK, { markers: 1, maxed: false, boosted: false, color: towerColor(tower) });
+    drawTower(pen, x, y, tower, definition, CLOCK, { markers: 1, maxed: false, boosted: false, color: towerColor(tower, DEFAULT_CONTENT) });
   }
   private enemy({ g }: Pen, x: number, y: number, type: EnemyId) {
     // A real spawn in a throwaway game, so shields, plates and the like start as they do on the field.

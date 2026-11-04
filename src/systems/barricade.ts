@@ -19,12 +19,12 @@ function pathIndex(map: MapDefinition, x: number, y: number) {
   return index.get(`${x},${y}`);
 }
 /** The wall's full HP at the tower's current level. */
-export function wallHp(t: Tower, content?: ContentPack) {
+export function wallHp(t: Tower, content: ContentPack) {
   const attack = resolveUpgrades(t, content).attack;
   return attack.kind === "block" ? attack.hp : 0;
 }
 /** Share of the wall left, 1 when whole and 0 when breached; render and UI read it. */
-export const wallShare = (t: Tower, content?: ContentPack) => {
+export const wallShare = (t: Tower, content: ContentPack) => {
   const hp = wallHp(t, content);
   return hp > 0 ? Math.max(0, 1 - (t.wall ?? 0) / hp) : 0;
 };

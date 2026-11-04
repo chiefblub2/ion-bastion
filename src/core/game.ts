@@ -34,7 +34,7 @@ export const FIXED_STEP = 1 / 30;
 /** Share of the total investment (build plus upgrades) returned on sale. */
 export const SELL_REFUND = 0.7;
 /** Refund of a sale; with the board, a Workshop on the Refit path may raise the share. */
-export const sellValue = (tower: Tower, towers?: readonly Tower[], content: ContentPack = DEFAULT_CONTENT) =>
+export const sellValue = (tower: Tower, towers: readonly Tower[] | undefined, content: ContentPack) =>
   Math.floor(tower.spent * (towers ? Math.max(SELL_REFUND, refitShare(tower, towers, content)) : SELL_REFUND));
 export function initialState(mission: MissionDefinition, players = 1): GameState {
   return {
@@ -56,7 +56,7 @@ export function initialState(mission: MissionDefinition, players = 1): GameState
   };
 }
 /** Buildable towers of a mission, in content order. A ring has no reactor, so nothing that repairs or shields it (`reactorOnly`). */
-export function availableTowers(mission: MissionDefinition, content: ContentPack = DEFAULT_CONTENT): TowerId[] {
+export function availableTowers(mission: MissionDefinition, content: ContentPack): TowerId[] {
   const all = (Object.keys(content.towers) as TowerId[]).filter((id) => !(mission.circle && attackModule(content.towers[id].attack)?.reactorOnly));
   return mission.availableTowers ? all.filter((id) => mission.availableTowers!.includes(id)) : all;
 }
