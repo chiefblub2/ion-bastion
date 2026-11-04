@@ -1,3 +1,4 @@
+import { REACTOR_MAX, THREAT_REACTOR_MAX } from "./tuning";
 /**
  * Threat levels (ascension): each completed full run unlocks the next level, and every level keeps the rules of the
  * ones below it. Level 0 is the plain run.
@@ -7,7 +8,7 @@ export const THREAT_TEXT: readonly string[] = [
   "The plain run.",
   "Elites have 10% more HP.",
   "10% fewer starting credits.",
-  "The reactor holds 25 at most.",
+  `The reactor holds ${THREAT_REACTOR_MAX} at most.`,
   "Shop prices rise 20%.",
   "The Final Stand carries two modifiers.",
   "Every mission is 5% tougher.",
@@ -33,7 +34,7 @@ export function threatRules(threat: number): ThreatRules {
   return {
     eliteHp: at(1) ? 1.1 : 1,
     credits: at(2) ? 0.9 : 1,
-    reactorMax: at(3) ? 25 : 30,
+    reactorMax: at(3) ? THREAT_REACTOR_MAX : REACTOR_MAX,
     prices: at(4) ? 1.2 : 1,
     finalMods: at(5) ? 2 : 1,
     depth: at(6) ? 0.05 : 0,

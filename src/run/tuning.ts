@@ -26,6 +26,8 @@ export const ELITE_WAVES = 1;
 export const ECONOMY_SHARE = 0.7;
 /** The run's reactor: its maximum at the start, the field repair after every won mission and the Repair node. */
 export const REACTOR_MAX = 30;
+/** The reactor's maximum from threat level 3 on. */
+export const THREAT_REACTOR_MAX = 25;
 export const FIELD_REPAIR = 3;
 export const REPAIR_NODE = 10;
 export const REINFORCE_NODE = 3;
