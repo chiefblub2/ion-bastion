@@ -106,21 +106,23 @@ const RING_POINTS = [[0, 0], ...Array.from({ length: 8 }, (_, i) => [Math.cos((i
 export const OPEN_SEA = 200;
 /**
  * Depth of the sea at a pixel, in px of distance from dry land: `landDistance` averaged over a small ring (so the
- * coast curves instead of following the cell steps) plus a slow wobble, so it never runs straight either.
+ * coast curves instead of following the cell steps) plus a slow wobble of up to `wobbly` px (0: straight quays with
+ * rounded corners).
  */
-export function seaDepth(map: MapDefinition, sea: ReadonlySet<string>, x: number, y: number) {
+export function seaDepth(map: MapDefinition, sea: ReadonlySet<string>, x: number, y: number, wobbly = 7) {
   const near = landDistance(map, sea, x, y);
   if (near > 60) return Math.min(OPEN_SEA, near);
   let sum = 0;
   for (const [dx, dy] of RING_POINTS) sum += Math.min(OPEN_SEA, landDistance(map, sea, x + dx, y + dy));
-  return sum / RING_POINTS.length + wobble(fnv(`${map.id}:sea`), x, y, 34) * 7;
+  return sum / RING_POINTS.length + (wobbly ? wobble(fnv(`${map.id}:sea`), x, y, 34) * wobbly : 0);
 }
 /** Tile size of the sea field in px: fine enough for a smooth foam line. */
 export const SEA_TILE = 2;
 const FIELD = new Map<string, Map<string, Float32Array>>();
 /** `seaDepth` at every tile centre of every sea cell (`CELL / SEA_TILE` squared per cell, row by row), computed once. */
-export function seaField(map: MapDefinition): ReadonlyMap<string, Float32Array> {
-  const cached = FIELD.get(map.id);
+export function seaField(map: MapDefinition, wobbly = 7): ReadonlyMap<string, Float32Array> {
+  const id = `${map.id}:${wobbly}`,
+    cached = FIELD.get(id);
   if (cached) return cached;
   const sea = seaCells(map),
     n = CELL / SEA_TILE,
@@ -129,10 +131,10 @@ export function seaField(map: MapDefinition): ReadonlyMap<string, Float32Array> 
     const [cx, cy] = k.split(",").map(Number),
       depths = new Float32Array(n * n);
     for (let ty = 0; ty < n; ty++)
-      for (let tx = 0; tx < n; tx++) depths[ty * n + tx] = seaDepth(map, sea, cx * CELL + (tx + 0.5) * SEA_TILE, cy * CELL + (ty + 0.5) * SEA_TILE);
+      for (let tx = 0; tx < n; tx++) depths[ty * n + tx] = seaDepth(map, sea, cx * CELL + (tx + 0.5) * SEA_TILE, cy * CELL + (ty + 0.5) * SEA_TILE, wobbly);
     field.set(k, depths);
   }
-  FIELD.set(map.id, field);
+  FIELD.set(id, field);
   return field;
 }
 /** A point on a line of equal sea depth, with the unit normal pointing to deeper water. */
