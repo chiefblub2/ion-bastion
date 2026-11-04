@@ -8,10 +8,13 @@ import type { MapTheme, TowerId } from "./core/types";
 // Dev-only page `/gallery.html?terrain`: one sample map through the battlefield's own terrain functions (baked
 // terrain, live ambient and gates) with a few towers standing on it, to judge a theme's obstacles, landmarks and path
 // against the tilted towers. `&theme=<id>` (default `island`), `&clock=<s>` freezes the animation at that time,
-// `&towers=0` leaves the towers out, `&seed=<text>` re-rolls the decoration. Never sets `__gallery.cells`, so `scripts/readme-images.ts` ignores it.
+// `&towers=0` leaves the towers out, `&seed=<text>` re-rolls the decoration, `&focus=<x>,<y>` zooms in on a cell. Never sets `__gallery.cells`, so `scripts/readme-images.ts` ignores it.
 
-const ZOOM = 2;
 const params = new URLSearchParams(location.search),
+  /** `&focus=<x>,<y>`: a close-up of 6 × 4 cells around that cell instead of the whole board, at `&zoom=` (default 4). */
+  focus = params.get("focus")?.split(",").map(Number),
+  ZOOM = Number(params.get("zoom") ?? (focus ? 4 : 2)),
+  VIEW = focus ? { w: 6, h: 4 } : undefined,
   theme = (params.get("theme") ?? "island") as MapTheme,
   frozen = params.has("clock") ? Number(params.get("clock")) : undefined,
   withTowers = params.get("towers") !== "0",
@@ -48,13 +51,14 @@ const TOWERS: readonly [TowerId, number, number, number][] = [
   ["tesla", 13, 9, 4],
   ["frost", 15, 4, 1],
 ];
-export const terrainReviewSize = { width: map.columns * CELL * ZOOM, height: map.rows * CELL * ZOOM };
+export const terrainReviewSize = { width: (VIEW?.w ?? map.columns) * CELL * ZOOM, height: (VIEW?.h ?? map.rows) * CELL * ZOOM };
 
 export class TerrainReview extends Phaser.Scene {
   private ink!: Phaser.GameObjects.Graphics;
   private glow!: Phaser.GameObjects.Graphics;
   create() {
     this.cameras.main.setOrigin(0, 0).setZoom(ZOOM);
+    if (focus && VIEW) this.cameras.main.setScroll((focus[0] + 0.5 - VIEW.w / 2) * CELL, (focus[1] + 0.5 - VIEW.h / 2) * CELL);
     const blocked = new Set(map.blocked.map((p) => `${p.x},${p.y}`));
     drawTerrain(this, map, (x, y) => blocked.has(`${x},${y}`));
     this.ink = this.add.graphics();

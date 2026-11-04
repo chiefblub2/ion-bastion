@@ -18,7 +18,6 @@ import type { MapDefinition } from "../../core/types";
 const SAND = 0xf2eada;
 /** Shadow colour on white sand: warm and see-through, never black. */
 const SHADE = 0x6a5634;
-const LEAF = 0x3aa23e;
 const WATER = { deep: 0x0d9bc4, mid: 0x1fc3d0, shallow: 0x62e4d6, foam: 0xf6fffd } as const;
 /** Kind thresholds of the first `cellRandom` draw (`hash` in the ambient names the piece the same way). */
 const PALM = 0.6,
@@ -86,88 +85,174 @@ const bend = (p: Palm, t: number) => {
   const d = p.lean * p.height * 0.36 * t * t;
   return { u: Math.cos(p.dir) * d, v: Math.sin(p.dir) * d };
 };
-const FRONDS = 9,
-  FROND_LEN = 23;
-/** Screen point `t` along frond `a` (ground angle) from the crown at (tx, ty): arcs up, then droops. */
-function frondPoint(tx: number, ty: number, a: number, t: number, len: number) {
-  return { x: tx + Math.cos(a) * len * t, y: ty + Math.sin(a) * len * t * SQUASH - 5 * Math.sin(Math.PI * t) + 15 * t * t * (len / FROND_LEN) };
-}
-const frondAngle = (p: Palm, i: number) => p.spin + (i * Math.PI * 2) / FRONDS + 0.18 * Math.sin(i * 2.3 + p.spin * 5);
-function frond(g: Ink, tx: number, ty: number, a: number, len: number) {
-  const n = 7,
-    k = len / FROND_LEN,
-    mid: { x: number; y: number }[] = [],
-    left: { x: number; y: number }[] = [],
-    right: { x: number; y: number }[] = [];
-  for (let i = 0; i <= n; i++) mid.push(frondPoint(tx, ty, a, i / n, len));
+type Pt = { x: number; y: number };
+/** Screen point of the trunk's centre line at height fraction t, for a palm standing on (gx, gy). */
+const trunkAt = (gx: number, gy: number, p: Palm, t: number): Pt => {
+  const o = bend(p, t);
+  return { x: gx + o.u, y: gy + o.v * SQUASH - t * p.height };
+};
+const BARK = { body: 0x9a8264, lit: 0xc2ab88, dark: 0x6a5640, ring: 0x5e4c38 } as const;
+/**
+ * A smooth, tapering trunk along its curve: a flared foot, the lit left side and shaded right side, fine ring scars
+ * that bow with the round trunk, and the fibrous collar under the crown.
+ */
+function trunk(g: Ink, gx: number, gy: number, p: Palm) {
+  const n = 14,
+    scale = Math.min(1.25, p.height / 40),
+    spine: Pt[] = [],
+    half: number[] = [];
   for (let i = 0; i <= n; i++) {
-    const t = i / n,
-      a0 = mid[Math.max(0, i - 1)],
-      a1 = mid[Math.min(n, i + 1)],
-      l = Math.sqrt((a1.x - a0.x) ** 2 + (a1.y - a0.y) ** 2) || 1,
-      nx = -(a1.y - a0.y) / l,
-      ny = (a1.x - a0.x) / l,
-      w = (5.2 * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 0.4) * k;
-    left.push({ x: mid[i].x + nx * w, y: mid[i].y + ny * w });
-    right.push({ x: mid[i].x - nx * w * 0.8, y: mid[i].y - ny * w * 0.8 });
+    const t = i / n;
+    spine.push(trunkAt(gx, gy, p, t));
+    half.push((3.4 - 1.2 * t + 2.2 * Math.max(0, 1 - t / 0.14) ** 2) * scale);
   }
-  const tone = shade(LEAF, 0.28 * facing(a)),
-    blade = [...left, ...[...right].reverse()];
-  g.fillStyle(OUTLINE, 0.5);
-  g.fillPoints(blade.map((p) => ({ x: p.x, y: p.y + 0.7 })), true);
-  g.fillStyle(tone);
-  g.fillPoints(blade, true);
-  // The underside half a step darker, leaflet cuts across the blade and a lit midrib.
-  g.fillStyle(shade(tone, -0.22));
-  g.fillPoints([...mid, ...[...right].reverse()], true);
-  g.lineStyle(0.9, shade(tone, -0.45), 0.8);
-  for (let i = 2; i < n; i++) g.lineBetween(mid[i].x, mid[i].y, left[i].x * 0.75 + mid[i].x * 0.25, left[i].y * 0.75 + mid[i].y * 0.25);
-  g.lineStyle(1, shade(tone, 0.4), 0.9);
-  g.strokePoints(mid, false);
+  const side = (k: number, f: number) =>
+    spine.map((c, i) => {
+      const a = spine[Math.max(0, i - 1)],
+        b = spine[Math.min(n, i + 1)],
+        l = Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2) || 1;
+      // Normal of the centre line, pointing right of the upward direction.
+      return { x: c.x - ((b.y - a.y) / l) * half[i] * k * f, y: c.y + ((b.x - a.x) / l) * half[i] * k * f };
+    }),
+    band = (k0: number, k1: number, color: number, alpha = 1, grow = 0) => {
+      g.fillStyle(color, alpha);
+      g.fillPoints([...side(-1, k0 + grow), ...side(-1, k1 + grow).reverse()], true);
+    };
+  // Outline, body, the shaded right third and the lit left band.
+  g.fillStyle(OUTLINE, 0.55);
+  g.fillPoints([...side(1, 1.25), ...side(-1, 1.25).reverse()], true);
+  band(-1, 1, BARK.body);
+  band(-1, -0.35, BARK.dark);
+  band(0.35, 0.8, BARK.lit, 0.9);
+  // Ring scars: short bowed strokes across the trunk every few pixels, fainter towards the top.
+  for (let i = 1; i < n * 3; i++) {
+    const t = i / (n * 3),
+      j = Math.min(n - 1, Math.floor(t * n)),
+      f = t * n - j,
+      c = { x: spine[j].x + (spine[j + 1].x - spine[j].x) * f, y: spine[j].y + (spine[j + 1].y - spine[j].y) * f },
+      w = half[j] + (half[j + 1] - half[j]) * f;
+    g.lineStyle(0.8, BARK.ring, 0.55 - 0.25 * t);
+    g.beginPath();
+    g.moveTo(c.x - w, c.y - 0.4);
+    g.lineTo(c.x, c.y + 0.9);
+    g.lineTo(c.x + w, c.y - 0.4);
+    g.strokePath();
+  }
+  // Fibrous collar where the fronds grow out.
+  const top = spine[n];
+  oval(g, top.x, top.y + 1.5, 4.8 * scale, 3 * scale, 0x5a4428);
+  oval(g, top.x - 0.8, top.y + 0.8, 3.4 * scale, 2 * scale, 0x7a6038);
 }
-/** A palm standing on the ground point (gx, gy): ringed trunk curving out along its lean, coconuts, a full crown. */
+/** One frond of the crown: its ground direction, length, how high it arches and how far it droops, and its colour. */
+interface Frond { a: number; len: number; rise: number; droop: number; color: number; leaflet: number }
+const LEAF = { young: 0x74c44c, mature: 0x3e9e3c, old: 0x2c7a34, dead: 0xb08a4a, rib: 0x9ab850 } as const;
+const OUTER = 9,
+  INNER = 5,
+  FROND_LEN = 24;
+/**
+ * The crown of a palm: an outer ring of mature fronds that arch out and droop, an inner ring of young ones that stand
+ * higher, and on some palms an old frond hanging limp or a dead brown one. Derived from the palm's spin alone, so the
+ * body and its shadow always agree.
+ */
+function crown(p: Palm): Frond[] {
+  const len = FROND_LEN * p.size,
+    seed = p.spin * 1000,
+    fronds: Frond[] = [];
+  for (let i = 0; i < OUTER; i++)
+    fronds.push({
+      a: p.spin + (i * Math.PI * 2) / OUTER + 0.22 * (hash01(seed, i, 1) - 0.5),
+      len: len * (1 + 0.22 * hash01(seed, i, 2)),
+      rise: 7 + 3 * hash01(seed, i, 3),
+      droop: 9 + 5 * hash01(seed, i, 4),
+      color: hash01(seed, i, 5) < 0.3 ? LEAF.old : LEAF.mature,
+      leaflet: 6.5,
+    });
+  for (let i = 0; i < INNER; i++)
+    fronds.push({
+      a: p.spin + ((i + 0.5) * Math.PI * 2) / INNER,
+      len: len * 0.6,
+      rise: 11,
+      droop: 3,
+      color: LEAF.young,
+      leaflet: 4.5,
+    });
+  if (hash01(seed, 9, 9) < 0.45) fronds.push({ a: p.spin + Math.PI * 0.5 + hash01(seed, 9, 8), len: len * 0.7, rise: 1, droop: 24, color: LEAF.dead, leaflet: 4 });
+  return fronds;
+}
+/** Screen point `t` along a frond's rachis from the crown top (tx, ty): out along its direction, up, then down. */
+const rachis = (tx: number, ty: number, f: Frond, t: number): Pt => ({
+  x: tx + Math.cos(f.a) * f.len * t,
+  y: ty + Math.sin(f.a) * f.len * t * SQUASH - f.rise * Math.sin(Math.PI * Math.min(1, t * 1.1)) + f.droop * t * t,
+});
+/**
+ * A pinnate frond: thin leaflets in pairs along the rachis, hanging down and outwards, longest at mid frond; the
+ * leaflets on the side facing the light are lighter, tips a touch yellower. Then the rachis as a thin lit rib.
+ */
+function frond(g: Ink, tx: number, ty: number, f: Frond) {
+  const n = 14,
+    pts = Array.from({ length: n + 1 }, (_, i) => rachis(tx, ty, f, i / n)),
+    lit = facing(f.a);
+  for (let i = 1; i <= n; i++) {
+    const c = pts[i],
+      b = pts[i - 1],
+      l = Math.sqrt((c.x - b.x) ** 2 + (c.y - b.y) ** 2) || 1,
+      dx = (c.x - b.x) / l,
+      dy = (c.y - b.y) / l,
+      t = i / n,
+      size = f.leaflet * (0.35 + Math.sin(Math.PI * Math.min(1, t * 1.05)) * 0.85);
+    for (const side of [-1, 1]) {
+      // Out to the side, swept forward along the frond and pulled down by its weight.
+      const ex = c.x - dy * side * size + dx * size * 0.4,
+        ey = c.y + dx * side * size * SQUASH + dy * size * 0.4 + size * 0.28,
+        tone = shade(f.color, 0.22 * lit + (side > 0 ? -0.1 : 0.08) + (t > 0.8 ? 0.06 : 0));
+      g.fillStyle(OUTLINE, 0.35);
+      g.fillTriangle(c.x - dx * 1.6, c.y - dy * 1.6 + 0.6, c.x + dx * 0.6, c.y + dy * 0.6 + 0.6, ex, ey + 0.8);
+      g.fillStyle(tone);
+      g.fillTriangle(c.x - dx * 1.5, c.y - dy * 1.5, c.x + dx * 0.6, c.y + dy * 0.6, ex, ey);
+    }
+  }
+  g.lineStyle(1, f.color === LEAF.dead ? 0x8a6a3a : LEAF.rib, 0.75);
+  g.strokePoints(pts, false);
+}
+/** A palm standing on the ground point (gx, gy): trunk, the back of the crown, coconuts, then the front of the crown. */
 function palm(g: Ink, gx: number, gy: number, p: Palm) {
-  const segments = 9;
-  for (let i = 0; i < segments; i++) {
-    const t0 = i / segments,
-      t1 = (i + 1) / segments,
-      o = bend(p, (t0 + t1) / 2),
-      r = (3.6 - 1.3 * t0) * Math.min(1.3, p.height / 40);
-    drum(g, gx + o.u, gy + o.v * SQUASH, r, t0 * p.height, t1 * p.height + 0.6, i % 2 ? 0x8f6d48 : 0x7a5a3a, i % 2 ? 0xa8845a : 0x93714a, 8);
-  }
-  const top = bend(p, 1),
-    tx = gx + top.u,
-    ty = gy + top.v * SQUASH - p.height,
-    len = FROND_LEN * p.size,
-    order = Array.from({ length: FRONDS }, (_, i) => frondAngle(p, i)).sort((a, b) => Math.sin(a) - Math.sin(b));
-  // Back fronds, the coconut cluster, then the fronds facing the viewer.
-  for (const a of order) if (Math.sin(a) < 0) frond(g, tx, ty, a, len);
+  trunk(g, gx, gy, p);
+  const top = trunkAt(gx, gy, p, 1),
+    fronds = crown(p).sort((a, b) => Math.sin(a.a) - Math.sin(b.a)),
+    young = (f: Frond) => f.color === LEAF.young;
+  for (const f of fronds) if (Math.sin(f.a) < 0 && !young(f)) frond(g, top.x, top.y, f);
+  for (const f of fronds) if (young(f)) frond(g, top.x, top.y, f);
   for (let i = 0; i < p.nuts; i++) {
-    const a = (i / p.nuts) * Math.PI + 0.4;
-    disc(g, tx + Math.cos(a) * 3.4, ty + 2.6 + Math.sin(a) * 1.4, 2.6, OUTLINE, 0.7);
-    disc(g, tx + Math.cos(a) * 3.4, ty + 2.4 + Math.sin(a) * 1.4, 2.2, 0x6b4a2a);
-    disc(g, tx + Math.cos(a) * 3.4 - 0.7, ty + 1.7 + Math.sin(a) * 1.4, 0.8, 0xa07a50);
+    const a = (i / Math.max(1, p.nuts - 1)) * Math.PI * 0.8 + 0.3,
+      x = top.x + Math.cos(a) * 4.2,
+      y = top.y + 4 + Math.sin(a) * 1.8,
+      color = i % 2 ? 0x7a8a32 : 0x6b4a2a;
+    disc(g, x, y + 0.5, 3.1, OUTLINE, 0.6);
+    disc(g, x, y, 2.7, color);
+    disc(g, x - 0.9, y - 0.9, 0.9, shade(color, 0.4));
   }
-  disc(g, tx, ty, 3, 0x4c6a2a);
-  for (const a of order) if (Math.sin(a) >= 0) frond(g, tx, ty, a, len);
+  for (const f of fronds) if (Math.sin(f.a) >= 0 && !young(f)) frond(g, top.x, top.y, f);
 }
-/** The palm's shadow on the sand: the trunk as a soft line, the crown as a star through the frond tips. */
+/** The palm's shadow on the sand: the trunk as a soft band, each frond as a feathered wedge from the crown's shadow. */
 function palmShadow(g: Ink, gx: number, gy: number, p: Palm) {
   const top = bend(p, 1),
     sx = gx + top.u + p.height * SUN.x,
-    sy = gy + top.v * SQUASH + p.height * SUN.y,
-    len = FROND_LEN * p.size;
-  g.lineStyle(4.5, SHADE, 0.16);
+    sy = gy + top.v * SQUASH + p.height * SUN.y;
+  g.lineStyle(5, SHADE, 0.15);
   g.lineBetween(gx + 1, gy, sx, sy);
-  const pts: { x: number; y: number }[] = [];
-  for (let i = 0; i < FRONDS; i++) {
-    const a = frondAngle(p, i),
-      b = a + Math.PI / FRONDS;
-    pts.push({ x: sx + Math.cos(a) * len * 1.05, y: sy + Math.sin(a) * len * SQUASH * 1.05 + 4 });
-    pts.push({ x: sx + Math.cos(b) * 6, y: sy + Math.sin(b) * 6 * SQUASH });
+  g.fillStyle(SHADE, 0.13);
+  for (const f of crown(p)) {
+    if (f.color === LEAF.young) continue;
+    const reach = f.len * 1.05,
+      ex = sx + Math.cos(f.a) * reach,
+      ey = sy + Math.sin(f.a) * reach * SQUASH + 3,
+      nx = -Math.sin(f.a) * 6,
+      ny = Math.cos(f.a) * 6 * SQUASH,
+      mx = (sx + ex) / 2,
+      my = (sy + ey) / 2;
+    g.fillTriangle(sx, sy, mx + nx, my + ny, ex, ey);
+    g.fillTriangle(sx, sy, mx - nx, my - ny, ex, ey);
   }
-  g.fillStyle(SHADE, 0.16);
-  g.fillPoints(pts, true);
 }
 /** Sand mound, beach grass and fallen coconuts under a cell's palms, then the palms back to front. */
 function palms(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "palms" }>) {

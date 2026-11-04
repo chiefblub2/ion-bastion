@@ -64,10 +64,10 @@ npx vite-node scripts/readme-images.ts [-- --only towers|enemies|screens]
                                           # Review sheets on the same page (dev-only, shared tiles in `src/review-kit.ts`): towers per level, path and
                                           # track are on `?tilt` (see Tilted towers); `?showcase` (`src/showcase.ts`) draws every projectile in flight, muzzle flash, impact,
                                           # beam, chain and pulse (`&clock=<s>` picks another animation frame)
-npx vite-node scripts/terrain-review.ts [-- theme=island] [seed=b] [clock=1.5] [towers=0]
+npx vite-node scripts/terrain-review.ts [-- theme=island] [seed=b] [clock=1.5] [towers=0] [focus=7,7] [zoom=4]
                                           # with `npm run dev` running: screenshot of the dev-only page `/gallery.html?terrain` (`src/terrain-review.ts`:
                                           # one sample map in a theme, baked terrain plus live ambient and gates, a few towers to compare the tilt;
-                                          # `seed` re-rolls decor, pieces and landmark designs) into visual-check/terrain/
+                                          # `seed` re-rolls decor, pieces and landmark designs; `focus` a 6 × 4 cell close-up at `zoom`) into visual-check/terrain/
 npx vite-node scripts/normalize-enemy-animations.ts
                                           # re-cuts the supplied animation pack (assets-src/enemy-animations/<id>.png, manifest.json v2: one 8×4 grid
                                           # per enemy, a clip per row) losslessly into public/assets/enemy-animations/<id>.png (256 px cells, 2048×1024):
