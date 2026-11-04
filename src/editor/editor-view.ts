@@ -18,7 +18,7 @@ import { asPlaytest } from "./playtest-id";
 import { currentDraft, deleteDraft, keepTarget, rememberDraft, saveDraft, savedDrafts } from "./storage";
 import { waveClickEdit, waveInputEdit, wavesHtml } from "./wave-panel";
 
-/** What the mission editor may do in the app; implemented by `app/input.ts`. */
+/** What the mission editor may do in the app; implemented by `app/menu-nav.ts`. */
 export interface EditorHost {
   content: ContentPack;
   /** Loads the mission as a playtest and switches to the game on success. */

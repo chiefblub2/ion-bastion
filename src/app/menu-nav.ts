@@ -13,7 +13,7 @@ import { closeCodexPreview } from "../ui/codex-preview";
 import type { Coach } from "../ui/coach-view";
 import type { CodexTab } from "../ui/enemy-codex";
 import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, renderPlay, renderTowerCodexPage } from "../ui/interface";
-import type { RunHost } from "../ui/run-view";
+import type { RunHost } from "../ui/run/state";
 import { type AtlasOptions, atlasSelection, bindGlobe, type BriefTab, fitWorld, renderAtlas, selectMission as featureMission, selectSector, selectWorld, showBriefTab, toggleWorld } from "../ui/sector-atlas";
 import type { Coop } from "./coop";
 import { bindMenuKeys, showCodexTab, showTowerCodex } from "./menu-keys";
