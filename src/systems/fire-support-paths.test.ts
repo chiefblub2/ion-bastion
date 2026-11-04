@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { Game } from "../core/game";
-import { L3, landProjectiles, makeEnemy, place, tiers, lost } from "../core/test-helpers";
-import type { DamageSource, Tower, TowerId } from "../core/types";
+import { L3, landProjectiles, makeEnemy, place, tiers, lost, spec } from "../core/test-helpers";
+import type { CritAttack, DamageSource, Tower, TowerId } from "../core/types";
+import { resolveUpgrades } from "../core/upgrades";
 import { effectiveTowerStats } from "./auras";
 import { chargedFactor, critRider, downlinkFactor, nexusBoost, openSalvos, fireSupportFactor, resetSalvos } from "./fire-support-paths";
 import { attackEnemies } from "./combat";
@@ -50,27 +51,31 @@ describe("Overclock paths", () => {
       t = place(g, "pulse", 5, 6);
     place(g, "overclock", 5, 5, tiers("charged-rounds", 3, L3));
     g.state.time = 1;
-    expect(chargedFactor(g, t)).toBeCloseTo(1.16);
+    const charged = 1 + spec("overclock", "charged-rounds", 3).bonus;
+    expect(chargedFactor(g, t)).toBeCloseTo(charged);
     g.state.enemies = [makeEnemy(1, "tank", 5.5, 6.5)];
     attackEnemies(g, 1 / 30);
-    expect(g.state.projectiles[0].damage).toBeCloseTo(g.content.towers.pulse.damage * 1.16);
+    expect(g.state.projectiles[0].damage).toBeCloseTo(g.content.towers.pulse.damage * charged);
     g.state.time = 5;
     expect(chargedFactor(g, t)).toBe(1);
   });
 });
 
 describe("Fire Control paths", () => {
-  it("Penetrator rides on the crit's projectile and ignores 70% of the armor", () => {
+  it("Penetrator rides on the crit's projectile and ignores its share of the armor", () => {
     const g = new Game(),
       t = place(g, "pulse", 5, 6);
-    place(g, "firectl", 5, 5, tiers("penetrator", 3, L3));
+    const fc = place(g, "firectl", 5, 5, tiers("penetrator", 3, L3)),
+      { fraction } = spec("firectl", "penetrator", 3),
+      { multiplier } = resolveUpgrades(fc, g.content).attack as CritAttack,
+      { reduction } = g.content.enemies.scarab.traits!.find((t) => t.kind === "armor") as { reduction: number };
     t.critCount = 2;
     const e = makeEnemy(1, "scarab", 5.5, 6.5);
     g.state.enemies = [e];
     attackEnemies(g, 1 / 30);
-    expect(g.state.projectiles[0].crit).toEqual({ pierce: 0.7 });
+    expect(g.state.projectiles[0].crit).toEqual({ pierce: fraction });
     landProjectiles(g);
-    expect(lost(e)).toBeCloseTo(g.content.towers.pulse.damage * 3 * (1 - 0.3 * 0.3));
+    expect(lost(e)).toBeCloseTo(g.content.towers.pulse.damage * multiplier * (1 - reduction * (1 - fraction)));
     // The next shot is no crit and carries nothing.
     t.cooldown = 0;
     attackEnemies(g, 1 / 30);
@@ -82,10 +87,11 @@ describe("Fire Control paths", () => {
       e = makeEnemy(1, "tank", 6, 6);
     place(g, "firectl", 5, 5, tiers("stagger", 3, L3));
     const crit = critRider(g, t)!;
-    expect(crit).toEqual({ slow: 0.3, duration: 1 });
+    const { slow, duration } = spec("firectl", "stagger", 3);
+    expect(crit).toEqual({ slow, duration });
     applyDamage(g, source(t, crit), e, 10, false, hitOf("direct", source(t, crit)));
-    expect(speedFactor(e, g.state.time + 0.5)).toBeCloseTo(0.7);
-    expect(speedFactor(e, g.state.time + 1.5)).toBe(1);
+    expect(speedFactor(e, g.state.time + duration / 2)).toBeCloseTo(1 - slow);
+    expect(speedFactor(e, g.state.time + duration + 0.5)).toBe(1);
   });
   it("Spotting: the next hit by another tower deals 20% more and consumes the mark", () => {
     const g = new Game(),
@@ -114,7 +120,7 @@ describe("Skylink paths", () => {
       free = makeEnemy(2, "glider", 12, 12),
       walker = makeEnemy(3, "tank", 5, 6);
     place(g, "skylink", 5, 5, tiers("downlink", 3, L3));
-    expect(downlinkFactor(g, held)).toBeCloseTo(0.8);
+    expect(downlinkFactor(g, held)).toBeCloseTo(1 - spec("skylink", "downlink", 3).slow);
     expect(downlinkFactor(g, free)).toBe(1);
     expect(downlinkFactor(g, walker)).toBe(1);
   });

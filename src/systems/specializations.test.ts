@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { Game } from "../core/game";
 import { stateHash } from "../core/hash";
-import { landProjectiles, arena, fire, foe, LEVELS, lost, tiers, withTraits } from "../core/test-helpers";
-import type { SpecializationSpec, TowerId } from "../core/types";
+import { arena, fire, foe, landProjectiles, LEVELS, lost, spec, tiers, withTraits } from "../core/test-helpers";
+import { resolveUpgrades } from "../core/upgrades";
+import type { ExecuteAttack, SpecializationSpec, TowerId } from "../core/types";
 import { attackEnemies } from "./combat";
 import { applyDamage, hitOf } from "./damage";
 import { applyStatus, BURN_TICK, damageTaken, hasStatus, speedFactor, tickStatus } from "./status";
@@ -31,7 +32,7 @@ describe("damage and armor", () => {
     const heavy = foe(1, "drone", 7, 6), light = foe(2, "drone", 7, 6, { hp: 999, maxHp: 999 });
     const a = arena("pulse", tiers("sharpshooter", 3), [heavy]);
     fire(a.g, a.tower);
-    expect(lost(heavy)).toBeCloseTo(a.damage * 1.7);
+    expect(lost(heavy)).toBeCloseTo(a.damage * (1 + spec("pulse", "sharpshooter", 3).bonus));
     const b = arena("pulse", tiers("sharpshooter", 3), [light]);
     fire(b.g, b.tower);
     expect(lost(light)).toBeCloseTo(b.damage);
@@ -41,13 +42,13 @@ describe("damage and armor", () => {
     const armored = foe(1, "drone", 7, 6), plainOne = foe(2, "runner", 7, 6);
     const { g, tower, damage } = arena("blast", tiers("siegebreaker", 2), [armored, plainOne], content);
     fire(g, tower);
-    expect(lost(armored)).toBeCloseTo(damage * 1.4 * 0.75);
+    expect(lost(armored)).toBeCloseTo(damage * (1 + spec("blast", "siegebreaker", 2).bonus) * (1 - 0.25));
     expect(lost(plainOne)).toBeCloseTo(damage);
   });
   it("Overload strengthens the chain only for a lone enemy in range", () => {
     const lone = arena("tesla", tiers("overload", 1), [foe(1, "drone", 7, 6)]);
     fire(lone.g, lone.tower);
-    expect(lost(lone.g.state.enemies[0])).toBeCloseTo(lone.damage * 1.3);
+    expect(lost(lone.g.state.enemies[0])).toBeCloseTo(lone.damage * (1 + spec("tesla", "overload", 1).bonus));
     const pair = arena("tesla", tiers("overload", 1), [foe(1, "drone", 7, 6, { distance: 11 }), foe(2, "drone", 8, 6.5)]);
     fire(pair.g, pair.tower);
     expect(lost(pair.g.state.enemies[0])).toBeCloseTo(pair.damage);
@@ -58,7 +59,7 @@ describe("damage and armor", () => {
     fire(g, tower);
     expect(lost(target)).toBeCloseTo(damage);
     fire(g, tower);
-    expect(lost(target)).toBeCloseTo(damage + damage * 1.4);
+    expect(lost(target)).toBeCloseTo(damage + damage * (1 + spec("inferno", "searing-heat", 3).bonus));
   });
   it("Final Decay adds its points strictly below the threshold (M-005)", () => {
     const hit = (hp: number) => {
@@ -86,12 +87,12 @@ describe("extra hits and procs", () => {
   it("Ricochet II bounces exactly on the third shot (M-007)", () => {
     const main = foe(1, "drone", 7, 6, { hp: 1e6, maxHp: 1e6, distance: 12 }), side = foe(2, "drone", 7.5, 6.5, { hp: 1e6, maxHp: 1e6, distance: 5 });
     const { g, tower, damage } = arena("pulse", tiers("ricochet", 2), [main, side]);
-    fire(g, tower);
-    fire(g, tower);
+    const { every, factor } = spec("pulse", "ricochet", 2);
+    for (let i = 1; i < every; i++) fire(g, tower);
     expect(lost(side)).toBe(0);
-    expect(tower.specialShots).toBe(2);
+    expect(tower.specialShots).toBe(every - 1);
     fire(g, tower);
-    expect(lost(side)).toBeCloseTo(damage * 0.5);
+    expect(lost(side)).toBeCloseTo(damage * factor);
     expect(tower.specialShots).toBe(0);
   });
   it("a Ricochet shot still bounces after its tower was sold (T-011)", () => {
@@ -102,28 +103,31 @@ describe("extra hits and procs", () => {
     expect(g.state.projectiles[0]).toMatchObject({ proc: 1, special: { kind: "ricochet" } });
     g.state.towers = [];
     landProjectiles(g);
-    expect(lost(side)).toBeCloseTo(damage * 0.65);
+    expect(lost(side)).toBeCloseTo(damage * spec("pulse", "ricochet", 3).factor);
   });
   it("Flak Curtain III adds at most three weaker shots (M-008)", () => {
     const flyers = [0, 1, 2, 3, 4].map((i) => foe(i + 1, "glider", 7 + i * 0.3, 6, { hp: 1e6, maxHp: 1e6, distance: 20 - i }));
     const { g, tower, damage } = arena("flak", tiers("flak-curtain", 3), flyers);
     fire(g, tower);
-    expect(flyers.map(lost).map((v) => Math.round(v / damage * 100) / 100)).toEqual([1, 0.45, 0.45, 0.45, 0]);
+    const { count, factor } = spec("flak", "flak-curtain", 3);
+    expect(count).toBeLessThan(flyers.length - 1);
+    flyers.forEach((f, i) => expect(lost(f) / damage).toBeCloseTo(i === 0 ? 1 : i <= count ? factor : 0));
   });
   it("Wingclip slows hit flyers", () => {
     const flyer = foe(1, "glider", 7, 6, { hp: 1e6, maxHp: 1e6 });
     const { g, tower } = arena("flak", tiers("wingclip", 3), [flyer]);
     fire(g, tower);
-    expect(speedFactor(flyer, g.state.time)).toBeCloseTo(0.7);
+    expect(speedFactor(flyer, g.state.time)).toBeCloseTo(1 - spec("flak", "wingclip", 3).slow);
   });
   it("Twin Arc starts a second chain on its fourth salvo, never on an enemy hit twice", () => {
     const near = foe(1, "drone", 7, 6, { hp: 1e6, maxHp: 1e6, distance: 12 }), far = foe(2, "drone", 7, 2.5, { hp: 1e6, maxHp: 1e6, distance: 5 });
     const { g, tower, damage } = arena("tesla", tiers("twin-arc", 1), [near, far]);
-    for (let i = 0; i < 3; i++) fire(g, tower);
+    const { every, factor } = spec("tesla", "twin-arc", 1);
+    for (let i = 1; i < every; i++) fire(g, tower);
     expect(lost(far)).toBe(0);
     fire(g, tower);
-    expect(lost(far)).toBeCloseTo(damage * 0.45);
-    expect(lost(near)).toBeCloseTo(damage * 4);
+    expect(lost(far)).toBeCloseTo(damage * factor);
+    expect(lost(near)).toBeCloseTo(damage * every);
   });
   it("Contagion strikes nearby enemies for a capped share of their max HP", () => {
     const main = foe(1, "drone", 7, 6, { hp: 1e6, maxHp: 1e6, distance: 12 }), side = foe(2, "drone", 7.5, 6.5, { distance: 5 });
@@ -135,7 +139,7 @@ describe("extra hits and procs", () => {
     const front = foe(1, "drone", 7, 6, { hp: 1e6, maxHp: 1e6, distance: 12 }), back = foe(2, "drone", 7, 7.2, { hp: 1e6, maxHp: 1e6, distance: 5 });
     const { g, tower, damage } = arena("focus", tiers("prism-beam", 1), [front, back]);
     fire(g, tower);
-    expect(lost(back)).toBeCloseTo(damage * 0.3);
+    expect(lost(back)).toBeCloseTo(damage * spec("focus", "prism-beam", 1).factor);
     expect(tower.focus).toEqual({ target: 1, stacks: 0 });
   });
   it("Adaptive Lens keeps a share of the stacks on a target switch", () => {
@@ -164,8 +168,10 @@ describe("extra hits and procs", () => {
     const victim = foe(1, "drone", 7, 6, { hp: 10, distance: 12 }), next = foe(2, "drone", 7.5, 6.5, { hp: 1e6, maxHp: 1e6, distance: 5 });
     const { g, tower, damage } = arena("executioner", tiers("blood-transfer", 3), [victim, next]);
     fire(g, tower);
-    // Below 35% HP: executed for 5×; 60% of the overkill, capped by the hit.
-    expect(lost(next)).toBeCloseTo(Math.min((damage * 5 - 10) * 0.6, damage * 5));
+    // Below the threshold: executed for its multiplier; a share of the overkill, capped by the hit.
+    const { multiplier } = resolveUpgrades(tower, g.content).attack as ExecuteAttack,
+      { factor } = spec("executioner", "blood-transfer", 3);
+    expect(lost(next)).toBeCloseTo(Math.min((damage * multiplier - 10) * factor, damage * multiplier));
     const shielded = withTraits({ drone: [{ kind: "shield", capacity: 0.9, delay: 3 }] });
     const tough = { ...foe(1, "drone", 7, 6, { distance: 12 }), shield: 1e6 }, bystander = foe(2, "runner", 7.5, 6.5, { hp: 1e6, maxHp: 1e6, distance: 5 });
     const b = arena("executioner", tiers("blood-transfer", 3), [tough, bystander], shielded);
@@ -189,7 +195,7 @@ describe("status specializations", () => {
     const { g, tower } = arena("frost", tiers("frostburst", 2), [main, side]);
     fire(g, tower);
     expect(lost(side)).toBe(0);
-    expect(speedFactor(side, g.state.time)).toBeCloseTo(0.45);
+    expect(speedFactor(side, g.state.time)).toBeCloseTo(spec("frost", "frostburst", 2).factor);
   });
   it("Temporal Exposure starts only when the stun ends (M-013)", () => {
     const target = foe(1, "drone", 7, 6, { hp: 1e6, maxHp: 1e6 });

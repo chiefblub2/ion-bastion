@@ -1,15 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { Game } from "../core/game";
 import { DEFAULT_CONTENT } from "../content";
 import { TOWERS } from "../content/towers";
-import { makeEnemy, arena, fire, foe, LEVELS, lost, tiers, withTraits, towerAt } from "../core/test-helpers";
+import { arena, fire, foe, LEVELS, lost, tiers, withTraits, towerAt, spec, buildTrap, walker } from "../core/test-helpers";
 import { resolveUpgrades } from "../core/upgrades";
 import type { Enemy, Tower } from "../core/types";
 import { attackEnemies } from "./combat";
 import { applyDamage } from "./damage";
 import { updateDetection } from "./detection";
 import { moveEnemies } from "./movement";
-import { positionOnPath } from "./path";
 import { damageTaken, hasStatus, speedFactor, tickStatus } from "./status";
 import { settleWave } from "./waves";
 
@@ -24,7 +22,7 @@ describe("ported abilities fire through their traps", () => {
     const { g, tower, damage } = arena("mine", tiers("chain-reaction", 3), [trigger, victim, outside]);
     fire(g, tower);
     expect(victim.hp).toBeLessThanOrEqual(0);
-    expect(lost(outside)).toBeCloseTo(damage * 0.55);
+    expect(lost(outside)).toBeCloseTo(damage * spec("mine", "chain-reaction", 3).factor);
   });
   it("Sticky Mine Chain Reaction: kills of the bomb explode again", () => {
     const carrier = foe(1, "drone", 7, 5, { hp: 100000, maxHp: 100000, distance: 11 }),
@@ -35,7 +33,7 @@ describe("ported abilities fire through their traps", () => {
     g.state.time += 5;
     tickStatus(g, 0);
     expect(victim.hp).toBeLessThanOrEqual(0);
-    expect(lost(outside)).toBeCloseTo(damage * 0.55);
+    expect(lost(outside)).toBeCloseTo(damage * spec("limpet", "chain-reaction", 3).factor);
   });
   it("Pitfall Spike Bed: an enemy too big to fall in takes a share of its max HP while wounded", () => {
     const content = withTraits({ boss: [] });
@@ -61,8 +59,9 @@ describe("ported abilities fire through their traps", () => {
     const { g, tower } = arena("oil", tiers("slick", 1), [coated, near, far]);
     fire(g, tower);
     expect(hasStatus(coated, "oiled", g.state.time)).toBe(true);
-    expect(speedFactor(coated, g.state.time)).toBeCloseTo(0.7);
-    expect(speedFactor(near, g.state.time)).toBeCloseTo(0.7);
+    const { factor } = spec("oil", "slick", 1);
+    expect(speedFactor(coated, g.state.time)).toBeCloseTo(factor);
+    expect(speedFactor(near, g.state.time)).toBeCloseTo(factor);
     expect(speedFactor(far, g.state.time)).toBe(1);
   });
   it("Harpoon Exposed Target and Net Cloud", () => {
@@ -87,7 +86,7 @@ describe("reused abilities fire through their traps", () => {
     const near = foe(2, "drone", 7.6, 5);
     const b = arena("tar", tiers("spreading-bog", 1), [foe(1, "drone", 7, 5), near]);
     fire(b.g, b.tower);
-    expect(speedFactor(near, b.g.state.time)).toBeCloseTo(0.6);
+    expect(speedFactor(near, b.g.state.time)).toBeCloseTo(spec("tar", "spreading-bog", 1).factor);
   });
   it("Bear Trap Exposure weakens the enemy once the trap lets go", () => {
     const held = foe(1, "drone", 7, 5);
@@ -116,21 +115,23 @@ describe("reused abilities fire through their traps", () => {
     fire(a.g, a.tower);
     a.g.state.time += 5;
     tickStatus(a.g, 0);
-    expect(lost(carrier)).toBeCloseTo(a.damage * 1.25 * 0.5);
+    expect(lost(carrier)).toBeCloseTo(a.damage * (1 + spec("limpet", "breaching-charge", 1).bonus) * (1 - 0.5));
     const minced = foe(1, "drone", 7, 5);
     const b = arena("grinder", tiers("shredder", 3), [minced], content);
     fire(b.g, b.tower);
-    expect(lost(minced)).toBeCloseTo(b.damage * 0.8);
+    // The pierce removes its share of the 50% armor reduction.
+    expect(lost(minced)).toBeCloseTo(b.damage * (1 - 0.5 * (1 - spec("grinder", "shredder", 3).fraction)));
   });
   it("Arc Plate Twin Arc starts a second chain at an enemy the first one missed", () => {
     const content = withTraits({ runner: [{ kind: "insulated" }] });
     const insulated = foe(1, "runner", 7, 5, { hp: 100000, maxHp: 100000, distance: 11 }),
       second = foe(2, "drone", 7.2, 5);
     const { g, tower, damage } = arena("arc", tiers("twin-arc", 3), [insulated, second], content);
-    fire(g, tower);
+    const { every, factor } = spec("arc", "twin-arc", 3);
+    for (let i = 1; i < every; i++) fire(g, tower);
     expect(lost(second)).toBe(0);
     fire(g, tower);
-    expect(lost(second)).toBeCloseTo(damage * 0.65);
+    expect(lost(second)).toBeCloseTo(damage * factor);
   });
 });
 
@@ -139,7 +140,7 @@ describe("new trap abilities", () => {
     const a = arena("spikes", tiers("hamstring", 3), [foe(1, "drone", 7, 5)]);
     fire(a.g, a.tower);
     const slowed = a.g.state.enemies[0];
-    expect(speedFactor(slowed, a.g.state.time)).toBeCloseTo(0.7);
+    expect(speedFactor(slowed, a.g.state.time)).toBeCloseTo(1 - spec("spikes", "hamstring", 3).slow);
     expect(statusOf(slowed, "slow")!.until).toBe(statusOf(slowed, "bleeding")!.until);
     const b = arena("spikes", tiers("open-wounds", 2), [foe(1, "drone", 7, 5)]);
     fire(b.g, b.tower);
@@ -165,10 +166,10 @@ describe("new trap abilities", () => {
     g.state.towers.push(pulse);
     const shot = resolveUpgrades(pulse, DEFAULT_CONTENT).stats.damage;
     fire(g, tower);
-    expect(100000 - target.hp).toBeCloseTo(damage + shot * 1.5);
+    expect(lost(target)).toBeCloseTo(damage + shot * 1.5);
     expect(pulse.alerted).toBeUndefined();
     fire(g, pulse);
-    expect(100000 - target.hp).toBeCloseTo(damage + shot * 2.5);
+    expect(lost(target)).toBeCloseTo(damage + shot * 2.5);
   });
   it("Tripwire Flare reveals stealthed enemies in the alarm radius for a while", () => {
     const content = withTraits({ drone: [{ kind: "stealth" }] });
@@ -184,20 +185,15 @@ describe("new trap abilities", () => {
     expect(near.revealed).toBe(false);
   });
   it("Barricade Choke Point weakens enemies held at the wall", () => {
-    const g = new Game(),
-      cell = 4,
-      at = g.mission.map.path[cell];
-    g.state.wallets[0] = 10000;
-    expect(g.command({ type: "build", tower: "barricade", ...at }).ok).toBe(true);
-    const wall = g.state.towers[0];
+    const { g, cell, tower: wall } = buildTrap("barricade", 4);
     wall.upgrades = tiers("choke-point", 3);
-    const p = positionOnPath(g.mission.map.path, cell - 1);
-    g.state.enemies = [makeEnemy(1, "drone", p.x, p.y, cell - 1)];
+    g.state.enemies = [walker(g, 1, "drone", cell - 1)];
     moveEnemies(g, 1);
     attackEnemies(g, 0);
-    const held = g.state.enemies[0];
-    expect(damageTaken(held, g.state.time)).toBeCloseTo(1.2);
-    expect(lost(held)).toBeCloseTo(resolveUpgrades(wall, DEFAULT_CONTENT).stats.damage * 1.2);
+    const held = g.state.enemies[0],
+      exposure = 1 + spec("barricade", "choke-point", 3).bonus;
+    expect(damageTaken(held, g.state.time)).toBeCloseTo(exposure);
+    expect(lost(held)).toBeCloseTo(resolveUpgrades(wall, DEFAULT_CONTENT).stats.damage * exposure);
   });
   it("Warp Pad Disorient confuses the warped enemy", () => {
     const warped = foe(1, "drone", 7, 5);

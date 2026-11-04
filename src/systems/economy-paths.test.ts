@@ -1,7 +1,7 @@
 import { DEFAULT_CONTENT } from "../content";
 import { describe, expect, it } from "vitest";
 import { Game, sellValue } from "../core/game";
-import { emptyWave, finishWave, L3, makeEnemy, openWave, place, tiers } from "../core/test-helpers";
+import { emptyWave, finishWave, L3, makeEnemy, openWave, place, tiers, spec } from "../core/test-helpers";
 import { MISSIONS } from "../content/missions";
 import { TOWERS } from "../content/towers";
 import type { Enemy, Tower } from "../core/types";
@@ -62,7 +62,7 @@ describe("Bounty Beacon paths", () => {
   it("Lure slows enemies in its radius, never slow-immune ones", () => {
     const g = new Game();
     place(g, "beacon", 5, 5, tiers("lure", 3, L3));
-    expect(lureFactor(g, makeEnemy(1, "drone", 5, 6))).toBeCloseTo(0.8);
+    expect(lureFactor(g, makeEnemy(1, "drone", 5, 6))).toBeCloseTo(1 - spec("beacon", "lure", 3).slow);
     expect(lureFactor(g, makeEnemy(2, "drone", 14, 9))).toBe(1);
     const immune = (Object.keys(g.content.enemies) as Enemy["type"][]).find((id) => g.content.enemies[id].traits?.some((t) => t.kind === "slowImmune"));
     if (immune) expect(lureFactor(g, makeEnemy(3, immune, 5, 6))).toBe(1);

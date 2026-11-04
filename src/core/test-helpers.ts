@@ -29,6 +29,15 @@ export const LEVELS = ["level-2", "level-3", "level-4", "level-5"];
 export const L3 = LEVELS.slice(0, 2);
 /** `base` (the plain levels by default) plus the tiers 1..`tier` of the path `slug`. */
 export const tiers = (slug: string, tier: number, base: string[] = LEVELS) => [...base, ...Array.from({ length: tier }, (_, i) => `${slug}-${i + 1}`)];
+/** The effects of the upgrade `<slug>-<tier>` of `tower`. */
+export function tierEffects(tower: TowerId, slug: string, tier: number, content: ContentPack = DEFAULT_CONTENT) {
+  const upgrade = content.towers[tower].upgrades.find((u) => u.id === `${slug}-${tier}`);
+  if (!upgrade) throw new Error(`no upgrade ${slug}-${tier} on ${tower}`);
+  return upgrade.effects;
+}
+/** The numeric values of the specialization of `<slug>-<tier>` of `tower`, as defined in the content. */
+export const spec = (tower: TowerId, slug: string, tier: number, content?: ContentPack) =>
+  tierEffects(tower, slug, tier, content).specialization as unknown as Readonly<Record<string, number>>;
 /** HP an enemy has lost. */
 export const lost = (e: Enemy) => e.maxHp - e.hp;
 /** A tower that belongs to no state. */
