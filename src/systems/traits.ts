@@ -4,17 +4,23 @@ import type { Hit } from "./damage";
 import { dist } from "./path";
 import { createEnemy } from "./spawn";
 import { armorDissolved, hasStatus } from "./status";
-import { armoryPierce } from "./support";
-import { critPierce } from "./combat-paths-b";
-import { shieldbreakerBonus, weakPointPierce } from "./combat-paths-a";
-import { fieldPierce } from "./aura-paths";
+/**
+ * What breaks through the armor and shield traits beyond the traits themselves (`DEFENCE_BREAKERS` in
+ * `damage-modifiers.ts`, passed in by `deal`), so this module needs none of the support modules.
+ */
+export interface DefenceBreakers {
+  /** Share of the armor reduction the hit ignores. */
+  pierce(sim: Sim, e: Enemy, hit?: Hit): number;
+  /** How many times the hit counts against a shield; 1 for a plain hit. */
+  shieldBoost(sim: Sim, dot: boolean, hit?: Hit): number;
+}
 /** Spacing in cells between enemies released by `splitOnDeath`. */
 const SPLIT_SPACING = 0.15;
 interface TraitModule<T extends Trait> {
   /** Error message when the trait is malformed. */
   validate(trait: T, content: ContentPack): string | undefined;
   /** Returns the damage that actually lands. `dot`: a burn step, not a hit. */
-  onDamage?(trait: T, amount: number, enemy: Enemy, sim: Sim, dot: boolean, hit?: Hit): number;
+  onDamage?(trait: T, amount: number, enemy: Enemy, sim: Sim, dot: boolean, hit: Hit | undefined, breakers: DefenceBreakers): number;
   /** After a hit changed HP. */
   onHit?(trait: T, enemy: Enemy, sim: Sim, dot: boolean, hit?: Hit): void;
   onSpawn?(trait: T, enemy: Enemy): void;
@@ -36,19 +42,10 @@ const first = (...errors: (string | undefined)[]) => errors.find(Boolean);
 const TRAITS: Registry = {
   armor: {
     validate: (t) => (t.reduction >= 0 && t.reduction < 1 ? undefined : "reduction must be in [0, 1)."),
-    // Armor Pierce (on the hit) and Armor Dissolver (on the enemy) each remove a share of the reduction; they multiply, never add.
-    onDamage: (t, amount, e, sim, _dot, hit) => {
-      const special = hit?.special?.kind === "armor-pierce" ? hit.special.fraction : 0,
-        // An Armory near the firing tower combines like a second pierce; without one the value stays exactly as before.
-        // Aura Piercing Field: the higher of it and the Armory counts.
-        armory = Math.max(armoryPierce(sim, hit?.tower), fieldPierce(sim, hit?.tower)),
-        // Fire Control Penetrator and Tracker Weak Point ignore further shares, combined the same way; without
-        // either the value stays exactly as before.
-        penetrator = critPierce(hit),
-        weak = weakPointPierce(sim, e),
-        pierce = armory || penetrator || weak ? 1 - (1 - special) * (1 - armory) * (1 - penetrator) * (1 - weak) : special;
-      return amount * (1 - t.reduction * (1 - pierce) * (1 - armorDissolved(e, sim.state.time)));
-    },
+    // Pierce (the hit's Armor Pierce and the damage modifiers' shares) and Armor Dissolver (on the enemy) each remove
+    // a share of the reduction; they multiply, never add.
+    onDamage: (t, amount, e, sim, _dot, hit, breakers) =>
+      amount * (1 - t.reduction * (1 - breakers.pierce(sim, e, hit)) * (1 - armorDissolved(e, sim.state.time))),
   },
   regen: {
     validate: (t) =>
@@ -85,10 +82,10 @@ const TRAITS: Registry = {
     onSpawn: (t, e) => {
       e.shield = t.capacity * e.maxHp;
     },
-    onDamage: (_, amount, e, sim, dot, hit) => {
+    onDamage: (_, amount, e, sim, dot, hit, breakers) => {
       e.lastHit = sim.state.time;
       // Armory Shieldbreaker: the hit counts `boost` times against the shield; 1 without one, so nothing changes.
-      const boost = 1 + shieldbreakerBonus(sim, dot, hit),
+      const boost = breakers.shieldBoost(sim, dot, hit),
         absorbed = Math.min(e.shield ?? 0, amount * boost);
       e.shield = (e.shield ?? 0) - absorbed;
       return amount - absorbed / boost;
@@ -347,11 +344,11 @@ export function validateTrait(trait: Trait, content: ContentPack): string | unde
   const module = moduleOf(trait);
   return module ? module.validate(trait, content) : `Unknown trait '${(trait as Trait).kind}'.`;
 }
-export function modifyDamage(sim: Sim, e: Enemy, amount: number, dot = false, hit?: Hit) {
+export function modifyDamage(sim: Sim, e: Enemy, amount: number, breakers: DefenceBreakers, dot = false, hit?: Hit) {
   amount *= 1 - leaderBonus(sim, e).resist;
   for (const t of [...traitsOf(sim, e)].sort((a, b) => stage(a) - stage(b))) {
     if (amount <= 0) break;
-    amount = moduleOf(t)!.onDamage?.(t, amount, e, sim, dot, hit) ?? amount;
+    amount = moduleOf(t)!.onDamage?.(t, amount, e, sim, dot, hit, breakers) ?? amount;
   }
   return amount;
 }

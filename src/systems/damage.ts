@@ -1,17 +1,10 @@
 import type { AttackKind, CritRider, DamageSource, Enemy, SpecializationSpec, Sim } from "../core/types";
 import { earn } from "../core/economy";
 import { absorbEncased } from "./encase";
-import { damageTaken, hasStatus, statusDeath } from "./status";
-import { bountyBonus, markFactor } from "./support";
-import { economyKill } from "./economy-paths";
-import { skylinkFactor } from "./support";
-import { recycleOverkill } from "./recycler";
-import { afterHit, hasTrait, layerOf, linkedGroup, modifyDamage, onDeath } from "./traits";
+import { statusDeath } from "./status";
+import { afterHit, linkedGroup, modifyDamage, onDeath } from "./traits";
 import { afterDealt } from "./links";
-import { executionFactor } from "./aura-paths";
-import { protocolAfterHit, protocolFactor, protocolKill } from "./protocols";
-import { pathsAfterHit, pathsFactor } from "./combat-paths-b";
-import { combatPathsAfterHit, combatPathsFactor } from "./combat-paths-a";
+import { DEFENCE_BREAKERS, HOOKS } from "./damage-modifiers";
 export type { DamageSource } from "../core/types";
 /**
  * Context of a hit for traits; absent for dots. `instant`: chain, pierce, focus, quake, pull, disrupt. `area`: splash (centre incl.),
@@ -37,8 +30,9 @@ export interface DamageOutcome {
   killed: boolean;
   overkill: number;
 }
-/** Max HP from which an enemy counts as a heavy target for specializations. */
+/** Max HP from which an enemy counts as a heavy target (specializations, Beacon paths, Titan Reactor Core). */
 export const HEAVY_HP = 1000;
+export const isHeavy = (e: Pick<Enemy, "maxHp">) => e.maxHp >= HEAVY_HP;
 const INSTANT: ReadonlySet<AttackKind> = new Set(["chain", "pierce", "focus", "quake", "pull", "disrupt"]);
 const AREA: ReadonlySet<AttackKind> = new Set<AttackKind>([
   "splash", "mortar", "airburst", "pool", "quake", "charge",
@@ -57,20 +51,6 @@ export const hitOf = (kind: AttackKind, src: DamageSource, extra: Partial<Hit> =
 });
 /** The source without its specialization: secondary hits never trigger another proc. */
 export const plain = (src: DamageSource): DamageSource => ({ tower: src.tower, type: src.type });
-/** Conditional damage bonus of a specialization, judged on impact; `isolated` is judged at fire time instead. */
-function conditionalFactor(sim: Sim, e: Enemy, hit?: Hit) {
-  const special = hit?.special;
-  if (special?.kind !== "conditional-damage") return 1;
-  const applies = {
-    heavy: () => e.maxHp >= HEAVY_HP,
-    "heavy-air": () => e.maxHp >= HEAVY_HP && layerOf(sim, e) === "air",
-    armored: () => hasTrait(sim, e, "armor"),
-    // Checked before the hit's own burn is applied, so only an earlier burn counts.
-    burning: () => hasStatus(e, "burn", sim.state.time),
-    isolated: () => false,
-  }[special.predicate]();
-  return applies ? 1 + special.bonus : 1;
-}
 /**
  * The single damage pipeline: traits, HP, reward, kill credit and events. `dot`: a burn step, not a hit.
  * An infinite amount (Fallgrube) is lethal whatever shield or armor absorb; a dodge still avoids it.
@@ -87,36 +67,39 @@ export function applyDamage(sim: Sim, src: DamageSource, e: Enemy, amount: numbe
   }
   return outcome;
 }
+/** One hit on one enemy. Everything besides the enemy's own traits comes from `DAMAGE_MODIFIERS`, hook by hook in its order. */
 function deal(sim: Sim, src: DamageSource, e: Enemy, amount: number, dot: boolean, hit?: Hit): DamageOutcome | undefined {
   if (e.hp <= 0) return undefined;
-  amount *= skylinkFactor(sim, src, e, dot, hit);
+  for (const incoming of HOOKS.incoming) amount *= incoming(sim, src, e, dot, hit);
   if (absorbEncased(sim, e, amount)) return undefined;
   const s = sim.state,
-    hpBefore = e.hp,
-    // Weakening and marking first, so armor absorbs a share of the amplified hit.
-    raw = modifyDamage(sim, e, amount * damageTaken(e, s.time) * markFactor(sim, e) * conditionalFactor(sim, e, hit) * executionFactor(sim, e, dot, hit) * protocolFactor(sim, src, e, dot, hit) * pathsFactor(sim, src, e, dot) * combatPathsFactor(sim, e, dot, hit), dot, hit),
+    hpBefore = e.hp;
+  // Weakening and marking before armor, so armor absorbs a share of the amplified hit.
+  for (const factor of HOOKS.factor) amount *= factor(sim, src, e, dot, hit);
+  const raw = modifyDamage(sim, e, amount, DEFENCE_BREAKERS, dot, hit),
     dealt = Number.isFinite(raw) || raw <= 0 ? raw : e.hp;
   e.hp -= dealt;
   s.events.push({ type: "damage", at: { x: e.x, y: e.y }, amount: dealt, enemy: e.id });
   afterDealt(sim, e, Math.min(dealt, hpBefore));
   afterHit(sim, e, dot, hit);
-  protocolAfterHit(sim, src, e, dot, hit);
-  pathsAfterHit(sim, src, e, hit);
-  combatPathsAfterHit(sim, e, dot, hit); // support combat: Shred
+  for (const after of HOOKS.afterHit) after(sim, src, e, dot, hit);
   const outcome = { hpBefore, dealt, killed: e.hp <= 0, overkill: Math.max(0, dealt - hpBefore) };
   if (e.hp > 0) return outcome;
-  const d = sim.content.enemies[e.type],
-    // Enemies sent by an opponent in versus pay nothing.
-    reward = e.sentBy === undefined ? d.reward + bountyBonus(sim, e, d.reward) : 0;
+  const d = sim.content.enemies[e.type];
+  // Enemies sent by an opponent in versus pay nothing.
+  let reward = 0;
+  if (e.sentBy === undefined) {
+    reward = d.reward;
+    for (const bounty of HOOKS.bounty) reward += bounty(sim, e, d.reward);
+  }
   earn(s, reward);
-  economyKill(sim, e); // Beacon paths: Big Game, Field Rations
+  for (const kill of HOOKS.onKill) kill(sim, e);
   s.kills++;
   const tower = s.towers.find((t) => t.id === src.tower);
   if (tower) tower.kills++;
   s.events.push({ type: "kill", at: { x: e.x, y: e.y }, color: d.color, reward });
   onDeath(sim, e);
   statusDeath(sim, e);
-  protocolKill(sim, e);
-  recycleOverkill(sim, src, e, outcome, hit); // Recycler
+  for (const after of HOOKS.afterDeath) after(sim, src, e, outcome, hit);
   return outcome;
 }

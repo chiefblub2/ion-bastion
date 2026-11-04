@@ -3,7 +3,7 @@ import type { Sim } from "../core/types";
 import { dist } from "./path";
 import { hasCloakField, hasTrait, isSuppressed } from "./traits";
 import { scannerReveals } from "./protocols";
-import { afterimageHolds } from "./combat-paths-a";
+import { afterimageHolds } from "./target-paths";
 import { activeFlares, flareReveals } from "./trap-paths";
 /** Marks stealthed enemies inside any detector's range as revealed for this tick. */
 export function updateDetection(sim: Sim) {

@@ -6,8 +6,8 @@ import type { Hit } from "./damage";
 import { dist } from "./path";
 import { isNetted } from "./status";
 import { isSuppressed, layerOf } from "./traits";
-import { windowBoost } from "./combat-paths-b";
-import { resetScrapYards, trackerMark } from "./combat-paths-a";
+import { windowBoost } from "./fire-support-paths";
+import { resetScrapYards, trackerMark } from "./target-paths";
 import { closeEconomyWave, interestBase, payCleanSheet, payOverflow, reserveCells, salvage, shockwave } from "./economy-paths";
 /**
  * Effects of the passive support towers. Like auras they are derived from the current

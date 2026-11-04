@@ -3,7 +3,7 @@ import type { DamageSource, Enemy, Sim } from "../core/types";
 import { applyDamage, hitOf, plain, type DamageOutcome, type Hit } from "./damage";
 import { dist } from "./path";
 import { isSuppressed } from "./traits";
-import { recyclerPaths, scrapYard } from "./combat-paths-a";
+import { recyclerPaths, scrapYard } from "./target-paths";
 export interface Recycler {
   share: number;
   reach: number;

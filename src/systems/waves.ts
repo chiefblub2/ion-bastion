@@ -4,7 +4,7 @@ import type { Sim } from "../core/types";
 import { createEnemy } from "./spawn";
 import { repairReactor, settleEconomy } from "./support";
 import { restoreBarricades } from "./barricade";
-import { resetSalvos } from "./combat-paths-b";
+import { resetSalvos } from "./fire-support-paths";
 import { incomeOf, payCompounding } from "./economy-paths";
 export { DEFAULT_HP_GROWTH } from "./spawn";
 /** Seconds of build time after a wave before the next one starts by itself. */

@@ -5,7 +5,7 @@ import { isSupport } from "./attacks";
 import type { AuraBonuses, AuraStat, ContentPack, Point, Sim, TowerId } from "../core/types";
 import { isSuppressed, towerDebuffs } from "./traits";
 import { siphonBoost } from "./siphon";
-import { nexusBoost } from "./combat-paths-b";
+import { nexusBoost } from "./fire-support-paths";
 import { fieldBonuses } from "./aura-paths";
 import { economyBoost } from "./economy-paths";
 

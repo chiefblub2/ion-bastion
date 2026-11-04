@@ -6,7 +6,7 @@ import { dist, len } from "./path";
 import { isDefused, taunters } from "./traits";
 import { critFactor, overclockRate, synergyFactor } from "./support";
 import { markedFirst, protocolRate } from "./protocols";
-import { chargedFactor, critRider, openSalvos } from "./combat-paths-b";
+import { chargedFactor, critRider, openSalvos } from "./fire-support-paths";
 import { volleyFactor } from "./trap-paths";
 /** Homing projectiles whose target died look for a new one within this radius. */
 export const RETARGET_RADIUS = 1.5;

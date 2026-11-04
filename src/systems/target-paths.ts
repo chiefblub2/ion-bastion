@@ -9,7 +9,8 @@ import { strongestSpecial, withSpecial } from "./support";
 import { hasTrait, inCloakField } from "./traits";
 import { jumpOverkill, type Recycler } from "./recycler";
 /**
- * Support combat paths, part A: Tracker (Weak Point, Hunter's Mark, Lingering Tag), Detector (Exposure Scan,
+ * Target paths: the support combat paths that act on the enemy being hit (its mark, reveal, armor, shield or
+ * overkill), the counterpart of `fire-support-paths.ts`. Tracker (Weak Point, Hunter's Mark, Lingering Tag), Detector (Exposure Scan,
  * Static Pulse, Afterimage), Recycler (Cascade, Meltdown, Scrap Yard) and Armory (Shred, Hollow Points,
  * Shieldbreaker). Every effect is derived from the towers per query, except the few per-enemy expiries
  * (`Enemy.tag`, `Enemy.revealUntil`) and the Scrap Yard counter (`Tower.scrapYard`), which stay absent until used.
@@ -176,11 +177,11 @@ function shred(sim: Sim, e: Enemy, dot: boolean, hit?: Hit) {
 
 // ── hooks ──
 /** Damage factor of these paths in `deal` (Exposure Scan, Hollow Points); exactly 1 on a board without them. */
-export const combatPathsFactor = (sim: Sim, e: Enemy, dot: boolean, hit?: Hit) => exposureFactor(sim, e) * hollowFactor(sim, e, dot, hit);
+export const targetPathsFactor = (sim: Sim, e: Enemy, dot: boolean, hit?: Hit) => exposureFactor(sim, e) * hollowFactor(sim, e, dot, hit);
 /** After a hit changed HP (Shred). */
-export const combatPathsAfterHit = (sim: Sim, e: Enemy, dot: boolean, hit?: Hit) => shred(sim, e, dot, hit);
+export const targetPathsAfterHit = (sim: Sim, e: Enemy, dot: boolean, hit?: Hit) => shred(sim, e, dot, hit);
 /** Once per tick right after detection: lingering marks and reveals, Static Pulse. */
-export function tickCombatPathsA(sim: Sim, dt: number) {
+export function tickTargetPaths(sim: Sim, dt: number) {
   tickLingeringTags(sim);
   tickAfterimages(sim);
   tickStaticPulses(sim, dt);
