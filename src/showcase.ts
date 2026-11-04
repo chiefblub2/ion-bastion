@@ -1,35 +1,25 @@
 import Phaser from "phaser";
 import { DEFAULT_CONTENT } from "./content";
-import { isFullyUpgraded, towerColor, towerLevel, towerPath, upgradeOptions } from "./core/upgrades";
 import { drawEffect, type EffectOrigin, type VisualEvent } from "./render/effects";
 import { MUZZLES } from "./render/muzzles";
 import { PROJECTILES } from "./render/projectiles";
 import { CELL, type Pen } from "./render/shapes";
-import { drawTower } from "./render/towers";
 import { Trails } from "./render/trails";
+import { built as buy, drawBuilt, font as fontAt, maskedTile } from "./review-kit";
 import type { Projectile, Tower, TowerId, TurretStyle } from "./core/types";
 // Dev-only page, drawn by the battlefield's own functions at a fixed time so a screenshot shows a whole look at once:
-// `/gallery.html?showcase` has every tower at several levels and in its firing pose, `?showcase=shots` every
-// projectile in flight, muzzle flash, impact, beam, chain and pulse. Never sets `__gallery.cells`, so
-// `scripts/readme-images.ts` ignores it.
+// `/gallery.html?showcase` (or `?showcase=shots`) has every projectile in flight, muzzle flash, impact, beam, chain and
+// pulse. The towers at their levels, paths and headings are on the tilt review (`?tilt`, `tilt-review.ts`). Never sets
+// `__gallery.cells`, so `scripts/readme-images.ts` ignores it.
 
 const ZOOM = 2;
-const TILE = CELL + 8,
-  GAP = 6,
-  LABEL = 92;
-/** Tile columns per tower row. */
-const COLUMNS = 6;
+const GAP = 6;
 const params = new URLSearchParams(location.search);
-const SHOTS = params.get("showcase") === "shots";
 /** Fixed animation time (`&clock=<s>` overrides), so every run draws the same frame. */
 const CLOCK = Number(params.get("clock") ?? 0.6);
 
 const content = DEFAULT_CONTENT,
   towers = Object.keys(content.towers) as TowerId[];
-/** Tower row groups side by side, so the sheet stays roughly square. */
-const GROUPS = 2,
-  perGroup = Math.ceil(towers.length / GROUPS),
-  groupWidth = LABEL + COLUMNS * (TILE + GAP);
 /** Layout of the shots sheet: wide tiles for flights, beams and chains, big ones for pulses. */
 const WIDE = { w: 150, h: 64 },
   SMALL = 64,
@@ -47,88 +37,23 @@ const sections = [
   { title: "Beams (Lance at 0.02 / 0.2 s, Focus at power 0.2 / 1) and chains at 0.1 s", rows: 2, h: WIDE.h },
   { title: "Pulses at 0.12 s, then 0.35 s", rows: 2, h: PULSE },
 ];
-const width = SHOTS ? SHOTS_WIDTH : GAP + GROUPS * (groupWidth + 3 * GAP),
-  height = SHOTS ? 30 + sections.reduce((sum, s) => sum + 28 + s.rows * (s.h + GAP), 0) : 40 + perGroup * (TILE + GAP);
+const width = SHOTS_WIDTH,
+  height = 30 + sections.reduce((sum, s) => sum + 28 + s.rows * (s.h + GAP), 0);
 /** Grid coordinate of a pixel position, the inverse of `px`. */
 const grid = (v: number) => v / CELL - 0.5;
-const font = (size: number, color = "#cfe3ef") => ({ fontFamily: "monospace", fontSize: `${size}px`, color, resolution: ZOOM });
+const font = fontAt(ZOOM);
 
-/** A tower as if bought up to `level` (path upgrades only from `path`, Aura's tracks only from `track`), or as far as it goes with `"max"`. */
-function built(type: TowerId, level: number | "max", path?: string, cooldown = 0, angle = -Math.PI / 4, track?: string): Tower {
-  const t: Tower = { id: 0, type, x: 0, y: 0, upgrades: [], cooldown, spent: 0, angle, kills: 0, owner: 0 };
-  while (level === "max" || towerLevel(t, content) < level) {
-    const next = upgradeOptions(t, Infinity, content).find(
-      (o) => o.status === "available" && (!o.definition!.path || o.definition!.path === path) && (!track || !o.definition!.track || o.definition!.track === track),
-    );
-    if (!next) break;
-    t.upgrades.push(next.definition!.id);
-  }
-  return t;
-}
-/** The tiles of one tower row: label and tower state. */
-function variants(type: TowerId): { label: string; tower: Tower }[] {
-  const d = content.towers[type],
-    paths = Object.keys(d.visual.paths ?? {});
-  // Aura: each track at its tier III (level 4), then each path at level 7 on the track in the same slot.
-  if (d.attack.kind === "aura") {
-    const tracks = Object.keys(d.visual.tracks ?? {});
-    return [
-      ...tracks.map((k) => ({ label: `L4 ${k}`, tower: built(type, 4, undefined, 0, undefined, k) })),
-      ...paths.map((p, i) => ({ label: `L7 ${d.visual.paths![p].name ?? p}`, tower: built(type, "max", p, 0, undefined, tracks[i]) })),
-    ];
-  }
-  if (paths.length) {
-    // The last plain level (5, support towers 3), then every path at its last tier.
-    const plain = Math.max(1, ...d.upgrades.filter((u) => !u.path).map((u) => u.effects.level ?? 1));
-    return [
-      { label: "L1", tower: built(type, 1) },
-      { label: "L1 fire", tower: built(type, 1, undefined, 0.92) },
-      { label: `L${plain}`, tower: built(type, plain) },
-      ...paths.map((p) => {
-        const t = built(type, "max", p);
-        return { label: `L${towerLevel(t, content)} ${d.visual.paths![p].name ?? p}`, tower: t };
-      }),
-    ];
-  }
-  return [
-    { label: "L1", tower: built(type, 1) },
-    { label: "L1 fire", tower: built(type, 1, undefined, 0.92) },
-    { label: "L3", tower: built(type, 3) },
-    { label: "max", tower: built(type, "max") },
-  ];
-}
+/** A tower at `level` in its firing pose (`cooldown`) aiming at `angle`. */
+const built = (type: TowerId, level: number, cooldown: number, angle: number) => buy(type, level, { cooldown, angle, id: 0 });
 /** Draws a tower the way the battlefield does. */
-function tower(pen: Pen, x: number, y: number, t: Tower) {
-  drawTower(pen, x, y, t, content.towers[t.type], CLOCK, {
-    markers: towerLevel(t, content),
-    maxed: isFullyUpgraded(t, content),
-    color: towerColor(t, content),
-    path: towerPath(t, content),
-    boosted: false,
-  });
-}
+const tower = (pen: Pen, x: number, y: number, t: Tower) => drawBuilt(pen, x, y, t, CLOCK);
 /** The first tower with this turret. */
 const withTurret = (turret: TurretStyle) => towers.find((t) => content.towers[t].visual.turret === turret)!;
 
 export class Showcase extends Phaser.Scene {
   create() {
     this.cameras.main.setOrigin(0, 0).setZoom(ZOOM);
-    if (SHOTS) this.shots();
-    else this.towers();
-  }
-  private towers() {
-    this.add.text(GAP, 8, `Towers at clock ${CLOCK}`, font(12));
-    towers.forEach((type, i) => {
-      const group = Math.floor(i / perGroup),
-        x0 = GAP + group * (groupWidth + 3 * GAP),
-        y = 40 + (i % perGroup) * (TILE + GAP);
-      this.add.text(x0, y + 4, content.towers[type].name, { ...font(11), wordWrap: { width: LABEL - 6 } });
-      variants(type).forEach((v, j) => {
-        const x = x0 + LABEL + j * (TILE + GAP);
-        this.tile(x, y, TILE, TILE, (pen, cx, cy) => tower(pen, cx, cy, v.tower));
-        this.add.text(x + 2, y + TILE - 9, v.label, font(7, "#7f97a6"));
-      });
-    });
+    this.shots();
   }
   private shots() {
     let y = 10;
@@ -151,7 +76,7 @@ export class Showcase extends Phaser.Scene {
       const d = content.towers[type],
         arc = !!(d.visual.projectile && PROJECTILES[d.visual.projectile].arc),
         ty = top + (arc ? h - 12 : h / 2),
-        t = built(type, 1, undefined, 0.5, 0),
+        t = built(type, 1, 0.5, 0),
         trails = new Trails();
       t.x = grid(x + 24);
       t.y = grid(ty);
@@ -169,7 +94,7 @@ export class Showcase extends Phaser.Scene {
     heading(sections[1].title);
     for (const age of [0.03, 0.18])
       row(barrels, SMALL, SMALL, 16, (pen, x, top, type) => {
-        const t = built(type, 1, undefined, 0.97, -Math.PI / 6);
+        const t = built(type, 1, 0.97, -Math.PI / 6);
         t.x = grid(x + SMALL / 2);
         t.y = grid(top + SMALL / 2);
         tower(pen, x + SMALL / 2, top + SMALL / 2, t);
@@ -200,7 +125,7 @@ export class Showcase extends Phaser.Scene {
         this.effect(pen, { type: "chain", from, to, color: d.color }, item.age);
         return `${item.label} (${d.name})`;
       }
-      const t = built(type, 1, undefined, 0.95, Math.atan2(to.y - from.y, to.x - from.x));
+      const t = built(type, 1, 0.95, Math.atan2(to.y - from.y, to.x - from.x));
       t.x = from.x;
       t.y = from.y;
       tower(pen, x + 24, top + h / 2, t);
@@ -220,17 +145,7 @@ export class Showcase extends Phaser.Scene {
   }
   /** One masked tile with a normal and an additive ink, like a battlefield cell. */
   private tile(x: number, y: number, w: number, h: number, draw: (pen: Pen, cx: number, cy: number) => void) {
-    const back = this.add.graphics(),
-      shape = this.make.graphics({}, false),
-      g = this.add.graphics(),
-      glow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-    back.fillStyle(0x0d1820);
-    back.fillRoundedRect(x, y, w, h, 8);
-    shape.fillRoundedRect(x, y, w, h, 8);
-    const mask = shape.createGeometryMask();
-    g.setMask(mask);
-    glow.setMask(mask);
-    draw({ g, glow }, x + w / 2, y + h / 2);
+    maskedTile(this, x, y, w, h, draw);
   }
 }
 
