@@ -75,6 +75,30 @@ export function landDistance(map: MapDefinition, sea: ReadonlySet<string>, x: nu
     }
   return best;
 }
+/** One stretch of the shoreline: a sea cell's side facing dry land, with the normal pointing out to sea. */
+export interface ShoreEdge { x0: number; y0: number; x1: number; y1: number; nx: number; ny: number }
+const EDGES = new Map<string, ShoreEdge[]>();
+/** The sides of the sea cells that face dry land, straight along the grid (for fences and walls along a border). */
+export function shoreEdges(map: MapDefinition): readonly ShoreEdge[] {
+  const cached = EDGES.get(map.id);
+  if (cached) return cached;
+  const sea = seaCells(map),
+    edges: ShoreEdge[] = [],
+    land = (x: number, y: number) => x >= 0 && y >= 0 && x < map.columns && y < map.rows && !sea.has(key(x, y));
+  for (const k of sea) {
+    const [x, y] = k.split(",").map(Number),
+      l = x * CELL,
+      t = y * CELL,
+      r = l + CELL,
+      b = t + CELL;
+    if (land(x, y - 1)) edges.push({ x0: l, y0: t, x1: r, y1: t, nx: 0, ny: 1 });
+    if (land(x, y + 1)) edges.push({ x0: l, y0: b, x1: r, y1: b, nx: 0, ny: -1 });
+    if (land(x - 1, y)) edges.push({ x0: l, y0: t, x1: l, y1: b, nx: 1, ny: 0 });
+    if (land(x + 1, y)) edges.push({ x0: r, y0: t, x1: r, y1: b, nx: -1, ny: 0 });
+  }
+  EDGES.set(map.id, edges);
+  return edges;
+}
 /** Offsets the sea depth is averaged over: a ring of radius `RING` px, which rounds every corner of the cell grid. */
 const RING = 13;
 const RING_POINTS = [[0, 0], ...Array.from({ length: 8 }, (_, i) => [Math.cos((i * Math.PI) / 4) * RING, Math.sin((i * Math.PI) / 4) * RING])];

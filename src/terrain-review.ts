@@ -1,24 +1,29 @@
 import Phaser from "phaser";
 import { parseMap } from "./content/maps";
+import { DEFAULT_CONTENT } from "./content";
+import { findMission } from "./content/missions";
 import { drawAmbient, drawGates, drawTerrain } from "./render/terrain";
 import { THEMES } from "./render/terrain-themes";
 import { CELL, px } from "./render/shapes";
 import { built, drawBuilt } from "./review-kit";
 import { mulberry32 } from "./render/terrain-themes/kit";
+import { SHEETS } from "./terrain-sheets";
 import { type BushKind, bushOf, bushShadow, drawBush, drawPalm, palmOf, palmShadow, type Posture } from "./render/terrain-themes/island-flora";
 import type { MapTheme, TowerId } from "./core/types";
 // Dev-only page `/gallery.html?terrain`: one sample map through the battlefield's own terrain functions (baked
 // terrain, live ambient and gates) with a few towers standing on it, to judge a theme's obstacles, landmarks and path
 // against the tilted towers. `&theme=<id>` (default `island`), `&clock=<s>` freezes the animation at that time,
-// `&towers=0` leaves the towers out, `&seed=<text>` re-rolls the decoration, `&focus=<x>,<y>` zooms in on a cell; `&flora` instead
-// shows Palm Atoll's plants on sand (every palm posture and age, every bush, three rolls each). Never sets `__gallery.cells`, so `scripts/readme-images.ts` ignores it.
+// `&towers=0` leaves the towers out, `&seed=<text>` re-rolls the decoration, `&map=<missionId>` shows a real mission's map, `&focus=<x>,<y>` zooms in on a cell; `&flora` instead
+// shows Palm Atoll's plants on sand, `&props` the theme's prop sheet (`terrain-sheets.ts`), (every palm posture and age, every bush, three rolls each). Never sets `__gallery.cells`, so `scripts/readme-images.ts` ignores it.
 
 const params = new URLSearchParams(location.search),
   /** `&focus=<x>,<y>`: a close-up of 6 × 4 cells around that cell instead of the whole board, at `&zoom=` (default 4). */
   focus = params.get("focus")?.split(",").map(Number),
   flora = params.has("flora"),
-  ZOOM = Number(params.get("zoom") ?? (focus || flora ? 3 : 2)),
-  VIEW = flora ? { w: 9, h: 6 } : focus ? { w: 6, h: 4 } : undefined,
+  /** `&props`: the theme's prop sheet (`terrain-sheets.ts`). */
+  props = params.has("props"),
+  ZOOM = Number(params.get("zoom") ?? (focus || flora || props ? 3 : 2)),
+  VIEW = props ? { w: 9, h: 8 } : flora ? { w: 9, h: 6 } : focus ? { w: 6, h: 4 } : undefined,
   theme = (params.get("theme") ?? "island") as MapTheme,
   frozen = params.has("clock") ? Number(params.get("clock")) : undefined,
   withTowers = params.get("towers") !== "0",
@@ -29,7 +34,9 @@ if (!THEMES[theme]) throw new Error(`Unknown theme "${theme}"`);
  * Sample board: a serpentine path, single obstacles, pairs and 2×2 blocks (landmarks and big pieces), and a coast of
  * obstacles along the left and bottom edges (open sea on a coastal theme; a pair at the top edge is too small for it).
  */
-const map = parseMap(
+/** `&map=<missionId>`: that mission's real map (in its own theme unless `&theme=` is given) instead of the sample board. */
+const real = params.get("map") ? findMission(params.get("map")!, DEFAULT_CONTENT)?.map : undefined;
+const sample = parseMap(
   `terrain-review-${theme}${seed}`,
   "Terrain Review",
   [
@@ -47,6 +54,7 @@ const map = parseMap(
   ],
   theme,
 );
+const map = real ? { ...real, id: `${real.id}${seed}`, ...(params.has("theme") && { theme }) } : sample;
 /** Towers on buildable cells, to compare the terrain's tilt with theirs. */
 const TOWERS: readonly [TowerId, number, number, number][] = [
   ["pulse", 4, 2, 3],
@@ -63,6 +71,7 @@ export class TerrainReview extends Phaser.Scene {
   create() {
     this.cameras.main.setOrigin(0, 0).setZoom(ZOOM);
     if (flora) return this.flora();
+    if (props) return this.props();
     if (focus && VIEW) this.cameras.main.setScroll((focus[0] + 0.5 - VIEW.w / 2) * CELL, (focus[1] + 0.5 - VIEW.h / 2) * CELL);
     const blocked = new Set(map.blocked.map((p) => `${p.x},${p.y}`));
     drawTerrain(this, map, (x, y) => blocked.has(`${x},${y}`));
@@ -111,8 +120,30 @@ export class TerrainReview extends Phaser.Scene {
     });
     (window as unknown as { __terrain: object }).__terrain = { ready: true, theme };
   }
+  /** The theme's props, five tiles of 1.8 cells to a row (landmarks two tiles wide), on the theme's ground colour. */
+  private props() {
+    const items = SHEETS[theme] ?? [],
+      g = this.add.graphics(),
+      tile = CELL * 1.8,
+      shadows = this.add.graphics(),
+      bodies = this.add.graphics();
+    g.fillStyle(THEMES[theme].ground[0]);
+    g.fillRect(0, 0, 9 * CELL, 8 * CELL);
+    let slot = 0;
+    for (const item of items) {
+      const span = item.span ?? 1;
+      if ((slot % 5) + span > 5) slot += 5 - (slot % 5);
+      const x = (slot % 5) * tile + (tile * span) / 2,
+        y = Math.floor(slot / 5) * tile * 1.05 + tile * 0.72;
+      item.shadow(shadows, x, y);
+      item.draw(bodies, x, y);
+      this.add.text(x - tile * span * 0.45, y + tile * 0.12, item.label, { fontFamily: "monospace", fontSize: "7px", color: "#9aa49e", resolution: ZOOM });
+      slot += span;
+    }
+    (window as unknown as { __terrain: object }).__terrain = { ready: true, theme };
+  }
   override update(time: number) {
-    if (flora) return;
+    if (flora || props) return;
     if (frozen === undefined) this.draw(time / 1000);
   }
   private draw(clock: number) {
