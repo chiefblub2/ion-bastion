@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
@@ -7,5 +7,7 @@ export default defineConfig({
     // Test files share a worker's module graph, about 3× faster than isolating each file. So tests never mutate
     // shared module state (content packs, registries) and never stub globals without restoring them.
     isolate: false,
+    // Agent worktrees (.claude/worktrees) hold whole checkouts of the repository.
+    exclude: [...configDefaults.exclude, ".claude/**"],
   },
 });
