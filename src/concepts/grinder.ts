@@ -1,122 +1,132 @@
 import { halo } from "../render/material";
 import { shade } from "../render/shapes";
 import type { TurretContext } from "../render/tower-art/kit";
-import { OUTLINE, SQUASH, X, Y, tube } from "../render/tower-art/tilt";
+import { OUTLINE, X, tube } from "../render/tower-art/tilt";
 import { DROP, IRON, at, box2, chase, readyLight, readySocket, recess, slab, trapTilt, trim } from "./kit-traps-b";
 import type { Concept } from "./types";
 
 /**
- * Two rollers lying side by side in a sunken frame, one behind the other, their axles running east-west so only their
- * tops stand proud of the bed. Roller centres (v), axle height, radius and half length; frame half sizes and wall
- * height.
+ * A long, shallow trench across the full width of the path (the path runs east-west on the sheet, so the trench runs
+ * north-south), two toothed rollers lying in it side by side, their axles across the walking direction, so whatever
+ * walks the path must cross both. Trench half sizes (u along the path, v across it), wall height; rollers' centres
+ * (u), axle height, radius and half length (v).
  */
-const ROLLERS = [-5.8, 5.8],
-  AXLE = 1,
-  R = 5,
-  LEN = 11.5,
-  FRAME_U = 15.5,
-  FRAME_V = 14,
-  WALL = 2.6,
+const FRAME_U = 13,
+  FRAME_V = 22,
+  WALL = 2.4,
+  ROLLERS = [-5.2, 5.2],
+  AXLE = 0.8,
+  R = 4.7,
+  LEN = 18.5,
   TEETH = 8,
-  /** Spikes along each tooth row (u). */
-  SPIKES = [-8.5, -4.2, 0, 4.2, 8.5];
-/** Direction towards the viewer (as in `towardViewer`): a tooth on the roller faces it when visible. */
-const WV = Math.sqrt(1 - SQUASH * SQUASH),
-  WH = SQUASH;
+  /** Rows of spikes along each roller (v). */
+  SPIKES = [-15, -9, -3, 3, 9, 15],
+  T = 2.4;
+/** The lamp on the back right corner; the chasing lights along the front wall. */
+const LAMP = [FRAME_U - 1.3, -FRAME_V + 1.3] as const;
 
 function base({ g, x, y, level, definition, color }: TurretContext) {
   const y0 = y + DROP,
     c = definition.color,
     outer = box2(-FRAME_U, FRAME_U, -FRAME_V, FRAME_V);
-  recess(g, x, y0, outer, 1.06);
-  // Back wall, the dark pit, then the rollers' bodies back to front (their teeth turn live), then the walls in front.
-  slab(g, x, y0, box2(-FRAME_U, FRAME_U, -FRAME_V, -FRAME_V + 2.6), 0, WALL, 0, IRON.wall, IRON.top, IRON.metal);
-  const [px0, py0] = at(x, y0, -FRAME_U + 2.6, -FRAME_V + 2.6, 0),
-    [px1, py1] = at(x, y0, FRAME_U - 2.6, FRAME_V - 2.6, 0);
+  recess(g, x, y0, outer, 1.05);
+  // Back wall, the dark trench floor, the side walls, the rollers' bodies (their teeth turn live), the front wall.
+  slab(g, x, y0, box2(-FRAME_U, FRAME_U, -FRAME_V, -FRAME_V + T), 0, WALL, 0, IRON.wall, IRON.top, IRON.metal);
+  const [px0, py0] = at(x, y0, -FRAME_U + T, -FRAME_V + T, 0),
+    [px1, py1] = at(x, y0, FRAME_U - T, FRAME_V - T, 0);
   g.fillStyle(0x070908);
   g.fillRect(px0, py0, px1 - px0, py1 - py0);
-  for (const v of ROLLERS) {
-    tube(g, X(x, -LEN), y0 + v * SQUASH, 0, AXLE, 0, 2 * LEN, R, shade(c, -0.35));
-    // End caps on the axle, in steel.
-    for (const u of [-LEN - 0.8, LEN + 0.8]) tube(g, X(x, u - 0.8), y0 + v * SQUASH, 0, AXLE, 0, 1.6, 1.8, IRON.metal, 1, false);
-  }
-  for (const side of [-1, 1])
-    slab(g, x, y0, box2(side > 0 ? FRAME_U - 2.6 : -FRAME_U, side > 0 ? FRAME_U : -FRAME_U + 2.6, -FRAME_V + 2.6, FRAME_V - 2.6), 0, WALL, 0, IRON.wall, IRON.top, IRON.metal);
-  slab(g, x, y0, box2(-FRAME_U, FRAME_U, FRAME_V - 2.6, FRAME_V), 0, WALL, 0, IRON.wall, IRON.top, IRON.metal);
-  // Olive bearing blocks on the side walls where the axles end; hazard chevrons from level 3; a trim rim from 5.
-  for (const v of ROLLERS)
-    for (const u of [-FRAME_U + 1.3, FRAME_U - 1.3]) slab(g, x, y0, box2(u - 1.8, u + 1.8, v - 2, v + 2), WALL, WALL + 1.4, 0, shade(c, -0.45), shade(c, -0.2), shade(c, 0.3));
-  if (level >= 3)
-    for (const u of [-9, 0, 9]) {
-      const [ax, ay] = at(x, y0, u - 1.6, FRAME_V - 1.3, WALL),
-        [bx, by] = at(x, y0, u + 1.6, FRAME_V - 1.3, WALL);
-      g.fillStyle(0xd9b43a, 0.9);
-      g.fillTriangle(ax, ay + 0.6, bx, by + 0.6, (ax + bx) / 2, ay - 1);
+  for (const u of [-FRAME_U, FRAME_U - T]) slab(g, x, y0, box2(u, u + T, -FRAME_V + T, FRAME_V - T), 0, WALL, 0, IRON.wall, IRON.top, IRON.metal);
+  for (const u of ROLLERS) {
+    tube(g, X(x, u), y0, Math.PI / 2, AXLE, -LEN, LEN, R, shade(c, -0.35));
+    // Dark grooves round the roller between the spike rows.
+    for (const v of SPIKES.slice(0, -1)) {
+      const [ax, ay] = at(x, y0, u - R + 0.6, v + 3, AXLE + 0.6),
+        [bx, by] = at(x, y0, u + R - 0.6, v + 3, AXLE + 0.6),
+        [mx, my] = at(x, y0, u, v + 3, AXLE + R);
+      g.lineStyle(0.7, shade(c, -0.65), 0.9);
+      g.beginPath();
+      g.moveTo(ax, ay);
+      g.lineTo((ax + mx) / 2 - 0.4, my + 1.2);
+      g.lineTo(mx, my);
+      g.lineTo((bx + mx) / 2 + 0.4, my + 1.2);
+      g.lineTo(bx, by);
+      g.strokePath();
     }
+  }
+  slab(g, x, y0, box2(-FRAME_U, FRAME_U, FRAME_V - T, FRAME_V), 0, WALL, 0, IRON.wall, IRON.top, IRON.metal);
+  // Olive bearing blocks where the axles end, on the back and front walls.
+  for (const u of ROLLERS)
+    for (const v of [-FRAME_V + 1.2, FRAME_V - 1.2]) slab(g, x, y0, box2(u - 2, u + 2, v - 1.6, v + 1.6), WALL, WALL + 1.4, 0, shade(c, -0.45), shade(c, -0.2), shade(c, 0.3));
+  // Level 3: hazard chevrons on the side walls (where enemies step in); level 5: a trim line on the front wall.
+  if (level >= 3)
+    for (const u of [-FRAME_U + 1.2, FRAME_U - 1.2])
+      for (const v of [-10, 0, 10]) {
+        const [ax, ay] = at(x, y0, u, v - 2, WALL),
+          [bx, by] = at(x, y0, u, v + 2, WALL);
+        g.fillStyle(0xd9b43a, 0.9);
+        g.fillTriangle(ax - 0.9, ay, ax + 0.9, ay, bx, by);
+      }
   if (level >= 5) {
     const [ax, ay] = at(x, y0, -FRAME_U, FRAME_V, WALL),
       [bx, by] = at(x, y0, FRAME_U, FRAME_V, WALL);
     g.lineStyle(0.9, shade(color, -0.1), 1);
     g.lineBetween(ax, ay + 0.4, bx, by + 0.4);
   }
-  if (level >= 2) readySocket(g, x, y0, FRAME_U - 1.3, -FRAME_V + 1.3, WALL + 0.2, c);
+  if (level >= 2) readySocket(g, x, y0, LAMP[0], LAMP[1], WALL + 0.2, c);
 }
 /** From level 4 lights chase along the front wall. */
 function below(ctx: TurretContext) {
-  chase(ctx, ctx.x, ctx.y + DROP, [-12, -4, 4, 12].map((u) => [u, FRAME_V - 0.4] as const), WALL - 1.2);
+  chase(ctx, ctx.x, ctx.y + DROP, [-7.5, -2.5, 2.5, 7.5].map((u) => [u, FRAME_V - 0.4] as const), WALL - 1.2);
 }
 /**
- * The rollers' teeth: ridges along each roller that turn against each other (jerking on every bite, `kick`), lit on the
- * side turned to the light. The back roller only shows the teeth its front neighbour leaves free; the nip between
- * them glows hot after a bite from level 5.
+ * The rollers' teeth: rows of spikes round each roller that turn against each other (jerking on every bite, `kick`);
+ * only the upper half of each roller stands proud of the trench, so only teeth turned up show, lit on the side turned to
+ * the light. The nip between the rollers glows hot after a bite from level 5.
  */
 function above(ctx: TurretContext) {
   const { g, glow, x, y, tower, definition, level, clock, kick } = ctx,
     y0 = y + DROP,
     c = definition.color,
     spin = clock * 3 + tower.id + kick * 0.6,
-    // The front roller's top edge on the screen: back teeth below it are hidden.
-    frontTop = Y(y0, ROLLERS[1], AXLE + R) - 0.5;
-  for (const [i, v] of ROLLERS.entries()) {
+    out = 2.2;
+  for (const [i, u] of ROLLERS.entries()) {
     const rot = (i ? -1 : 1) * spin;
     for (let k = 0; k < TEETH; k++) {
       const phi = rot + (k * 2 * Math.PI) / TEETH,
-        facing = Math.cos(phi) * WV + Math.sin(phi) * WH;
-      if (facing < 0.2) continue;
-      const tv = v + Math.cos(phi) * R,
-        th = AXLE + Math.sin(phi) * R;
-      if (th < WALL - 0.4 && Math.abs(tv) > FRAME_V - 3) continue;
-      const ty = Y(y0, tv, th);
-      if (i === 0 && ty > frontTop) continue;
-      // A row of short spikes pointing out of the roller, lit on the side turned to the light.
-      const out = 2.4,
-        lit = shade(c, 0.05 + 0.45 * Math.max(0, Math.sin(phi + 0.5)) * facing);
-      for (const u of SPIKES) {
-        const bx = X(x, u),
-          tx = X(x, u),
-          tipY = Y(y0, tv + Math.cos(phi) * out, th + Math.sin(phi) * out);
+        up = Math.sin(phi);
+      if (up < 0.12) continue;
+      const bu = u + Math.cos(phi) * R,
+        bh = AXLE + up * R,
+        tu = u + Math.cos(phi) * (R + out),
+        th = AXLE + up * (R + out),
+        lit = shade(c, 0.05 + 0.45 * Math.max(0, -Math.cos(phi) * 0.7 + up * 0.5));
+      for (const v of SPIKES) {
+        const [b0x, b0y] = at(x, y0, bu, v - 1.3, bh),
+          [b1x, b1y] = at(x, y0, bu, v + 1.3, bh),
+          [tx, ty] = at(x, y0, tu, v, th);
         g.fillStyle(OUTLINE, 0.9);
-        g.fillTriangle(bx - 1.9, ty + 0.4, bx + 1.9, ty + 0.4, tx, tipY - 0.5);
+        g.fillTriangle(b0x - 0.5, b0y - 0.4, b1x - 0.5, b1y + 0.4, tx, ty - 0.5);
         g.fillStyle(lit);
-        g.fillTriangle(bx - 1.3, ty, bx + 1.3, ty, tx, tipY);
+        g.fillTriangle(b0x, b0y, b1x, b1y, tx, ty);
       }
     }
   }
-  // The nip between the rollers.
-  const [nx, ny] = at(x, y0, -LEN + 1, 0, AXLE + R * 0.75),
-    [mx] = at(x, y0, LEN - 1, 0, AXLE + R * 0.75);
+  // The nip between the rollers, along the trench.
   if (kick > 0 && level >= 5) {
+    const [nx, ny] = at(x, y0, 0, -LEN + 1, AXLE + R * 0.7),
+      [, my] = at(x, y0, 0, LEN - 1, AXLE + R * 0.7);
     glow.lineStyle(2.4, trim(ctx), 0.4 * kick);
-    glow.lineBetween(nx, ny, mx, ny);
-    halo(glow, (nx + mx) / 2, ny, 9, c, 0.25 * kick);
+    glow.lineBetween(nx, ny, nx, my);
+    halo(glow, nx, (ny + my) / 2, 9, c, 0.25 * kick);
   }
-  if (level >= 2) readyLight(ctx, x, y0, FRAME_U - 1.3, -FRAME_V + 1.3, WALL + 0.2);
+  if (level >= 2) readyLight(ctx, x, y0, LAMP[0], LAMP[1], WALL + 0.2);
 }
 
 export const concept: Concept = {
   tower: "grinder",
-  name: "Roller Pit",
-  idea: "Two olive toothed rollers side by side in a sunken steel frame, only their tops proud of the bed; the teeth turn against each other and jerk on every bite.",
+  name: "Roller Trench",
+  idea: "A long, shallow trench across the full width of the path with two spiked olive rollers lying in it side by side, axles across the walking direction; the teeth turn against each other and jerk on every bite.",
   tilt: trapTilt(WALL),
   base,
   below,

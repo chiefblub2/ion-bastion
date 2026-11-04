@@ -1,11 +1,13 @@
-import { disc, shade } from "../render/shapes";
+import { disc, oval, ring, shade } from "../render/shapes";
 import type { TurretContext } from "../render/tower-art/kit";
 import { OUTLINE, SQUASH, X, Y, drum, fillPoints, onGround, point } from "../render/tower-art/tilt";
 import { part, rect } from "../render/tower-art/tilt-parts";
-import { DROP, STEEL, armedLight, chasers, frame, lampSocket } from "./kit-traps-a";
+import { DROP, STEEL } from "./kit-traps-a";
+import { chase, readyLight, readySocket } from "./kit-traps-b";
 import type { Concept } from "./types";
 
-const S = 19,
+/** The round pan: radius and height. */
+const PAN = 18.5,
   H = 2,
   TOP = H + 1,
   /** Jaw radius (outer), its width and the teeth. */
@@ -51,39 +53,64 @@ function jaw(ctx: TurretContext, side: number, fold: number) {
   }
 }
 
-/** Bear Trap: a steel-jawed trap on a plate; open flat at rest, the two jaws swing up and bite on a strike. */
+/** The lamp on the pan's back right rim; the chasing lights along its front rim. */
+const LAMP = [11.5, -12.5] as const,
+  FRONT = [-0.9, -0.3, 0.3, 0.9].map((t) => [Math.sin(t) * (PAN - 1.6), Math.cos(t) * (PAN - 1.6)] as const);
+
+/** Bear Trap: a round steel pan with two toothed jaws lying open on it; they swing up and bite on a strike. */
 export const concept: Concept = {
   tower: "snare",
   name: "Iron Jaws",
-  idea: "Two toothed half-ring jaws lie open flat around a pressure pan on a steel plate, with coil springs at the hinges; on a strike they swing up and bite.",
+  idea: "A round steel pan set into the path with two toothed half-ring jaws lying open on it round a pressure plate, coil springs at the hinges; on a strike the jaws swing up and bite.",
   tilt: { drop: DROP, squash: SQUASH, height: 0, deck: TOP },
   base: (ctx) => {
-    const { g, x, y, definition: d, level } = ctx,
+    const { g, x, y, definition: d, level, color } = ctx,
       c = d.color,
       y0 = y + DROP;
-    frame(ctx, S, H);
+    // Contact shadow, then the round pan with its lip and a dished floor.
+    onGround(g, x, y0, 0, () => oval(g, 1.5, 2.2, PAN + 2.6, PAN + 2.2, 0x050b10, 0.32));
+    drum(g, x, y0, PAN, 0, H, STEEL.wall, STEEL.top, 20);
+    onGround(g, x, y0, H, () => {
+      ring(g, 0, 0, PAN - 1.2, 1.4, shade(STEEL.top, 0.18), 0.9);
+      oval(g, 0, 0.5, PAN - 3, PAN - 3.2, shade(STEEL.wall, -0.15));
+      // Radial ribs of the dish; bolts round the rim, three at the front from L1, nine all round from L3.
+      g.lineStyle(0.6, STEEL.deep, 0.7);
+      for (let k = 0; k < 8; k++) {
+        const a = (k * Math.PI) / 4 + Math.PI / 8;
+        g.lineBetween(Math.cos(a) * 7, Math.sin(a) * 7, Math.cos(a) * (PAN - 3.4), Math.sin(a) * (PAN - 3.4));
+      }
+      const bolts = level >= 3 ? Array.from({ length: 9 }, (_, k) => (k * 2 * Math.PI) / 9 + 0.35) : [Math.PI / 2 - 0.7, Math.PI / 2, Math.PI / 2 + 0.7];
+      for (const a of bolts) {
+        disc(g, Math.cos(a) * (PAN - 1.3), Math.sin(a) * (PAN - 1.3), 0.9, STEEL.deep);
+        disc(g, Math.cos(a) * (PAN - 1.3) - 0.3, Math.sin(a) * (PAN - 1.3) - 0.3, 0.4, STEEL.metal);
+      }
+      // L5: an inlay round the rim in the trap's colour, the path colour from L6.
+      if (level >= 5) ring(g, 0, 0, PAN - 2.6, 0.8, level >= 6 ? color : shade(c, 0.2), 0.9);
+    });
     // Hinge blocks with coil springs at both ends of the axis.
     for (const u of [-1, 1]) {
-      part(g, x, y0, 0, rect(u * (JR + 1) - 2.2, u * (JR + 1) + 2.2, -2.6, 2.6), TOP - 0.5, TOP + 1.8, 0, STEEL.wall, STEEL.top, STEEL.metal);
+      part(g, x, y0, 0, rect(u * (JR + 1) - 2.2, u * (JR + 1) + 2.2, -2.6, 2.6), H, TOP + 1.8, 0, STEEL.wall, STEEL.top, STEEL.metal);
       onGround(g, x, y0, TOP + 1.8, () => {
         g.lineStyle(0.8, shade(c, -0.3), 1);
         for (let k = -1; k <= 1; k++) g.lineBetween(u * (JR + 1) - 1.6, k * 1.4, u * (JR + 1) + 1.6, k * 1.4 + 0.6);
       });
     }
-    // The pressure pan in the middle.
+    // The pressure plate in the middle.
     drum(g, x, y0, 5.6, TOP - 0.3, TOP + 0.7, STEEL.wall, shade(c, -0.2), 12);
     onGround(g, x, y0, TOP + 0.7, () => {
       disc(g, 0, 0, 1.4, OUTLINE);
       if (level >= 3) for (const a of [0, Math.PI]) disc(g, Math.cos(a) * 3, 0, 0.6, STEEL.metal);
     });
-    lampSocket(ctx, S, TOP);
+    if (level >= 2) readySocket(g, x, y0, LAMP[0], LAMP[1], H + 0.2, c);
   },
-  below: (ctx) => chasers(ctx, S, H),
+  below: (ctx) => chase(ctx, ctx.x, ctx.y + DROP, FRONT, H * 0.5),
   // Open at rest; a strike swings both jaws up (the back one first, so the front one covers it).
   turret: (ctx) => {
     const fold = ctx.kick;
     jaw(ctx, -1, fold);
     jaw(ctx, 1, fold);
   },
-  above: (ctx) => armedLight(ctx, S, TOP),
+  above: (ctx) => {
+    if (ctx.level >= 2) readyLight(ctx, ctx.x, ctx.y + DROP, LAMP[0], LAMP[1], H + 0.2);
+  },
 };
