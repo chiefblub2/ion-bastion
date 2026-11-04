@@ -37,7 +37,7 @@ type Piece =
   | { kind: "pool"; rx: number; ry: number; rocks: Rock[] }
   | { kind: "boat"; angle: number; side: 1 | -1; paint: number };
 
-const palmOf = (rand: Random, du: number, dv: number, dir: number, lean = 0.35 + rand() * 0.6, height = 32 + rand() * 12): Palm => ({
+const palmOf = (rand: Random, du: number, dv: number, dir: number, lean = 0.5 + rand() * 0.7, height = 42 + rand() * 14): Palm => ({
   du,
   dv,
   lean,
@@ -65,7 +65,7 @@ function pieceOf(rand: Random): Piece {
       tuft = rand() < 0.6;
     if (count < 0.45) return { kind: "palms", palms: [palmOf(rand, 0, 0, rand() * Math.PI * 2)], tuft };
     if (count < 0.85) return { kind: "palms", palms: [palmOf(rand, -8, -4, Math.PI), palmOf(rand, 9, 5, 0)], tuft };
-    return { kind: "palms", palms: [palmOf(rand, -10, -6, Math.PI * 1.1), palmOf(rand, 10, -5, -0.2), palmOf(rand, 1, 8, Math.PI / 2, 0.3, 26 + rand() * 6)], tuft };
+    return { kind: "palms", palms: [palmOf(rand, -10, -6, Math.PI * 1.1), palmOf(rand, 10, -5, -0.2), palmOf(rand, 1, 8, Math.PI / 2, 0.4, 32 + rand() * 6)], tuft };
   }
   if (kind < ROCKS) {
     const rocks = [rock(rand, -6 + rand() * 4, -4 + rand() * 3, 11 + rand() * 4), rock(rand, 8 + rand() * 4, 3 + rand() * 3, 7 + rand() * 3)];
@@ -80,9 +80,9 @@ function pieceOf(rand: Random): Piece {
 const groundOf = (x: number, y: number) => ({ cx: x + CELL / 2, y0: y + 36 });
 
 // ── Palm ────────────────────────────────────────────────────────────────────────────────────────────────────────────
-/** Ground offset of the trunk at height fraction t: it curves out along its lean. */
+/** Ground offset of the trunk at height fraction t: a long lean along `dir` that curves up a little towards the crown. */
 const bend = (p: Palm, t: number) => {
-  const d = p.lean * p.height * 0.36 * t * t;
+  const d = p.lean * p.height * 0.42 * t ** 1.35;
   return { u: Math.cos(p.dir) * d, v: Math.sin(p.dir) * d };
 };
 type Pt = { x: number; y: number };
@@ -91,20 +91,20 @@ const trunkAt = (gx: number, gy: number, p: Palm, t: number): Pt => {
   const o = bend(p, t);
   return { x: gx + o.u, y: gy + o.v * SQUASH - t * p.height };
 };
-const BARK = { body: 0x9a8264, lit: 0xc2ab88, dark: 0x6a5640, ring: 0x5e4c38 } as const;
+const BARK = { body: 0x8c7f6c, lit: 0xb6a892, dark: 0x5c5244, ring: 0x4a4236 } as const;
 /**
  * A smooth, tapering trunk along its curve: a flared foot, the lit left side and shaded right side, fine ring scars
  * that bow with the round trunk, and the fibrous collar under the crown.
  */
 function trunk(g: Ink, gx: number, gy: number, p: Palm) {
   const n = 14,
-    scale = Math.min(1.25, p.height / 40),
+    scale = Math.min(1.2, p.height / 48),
     spine: Pt[] = [],
     half: number[] = [];
   for (let i = 0; i <= n; i++) {
     const t = i / n;
     spine.push(trunkAt(gx, gy, p, t));
-    half.push((3.4 - 1.2 * t + 2.2 * Math.max(0, 1 - t / 0.14) ** 2) * scale);
+    half.push((2.7 - 0.8 * t + 1.8 * Math.max(0, 1 - t / 0.12) ** 2) * scale);
   }
   const side = (k: number, f: number) =>
     spine.map((c, i) => {
@@ -124,14 +124,15 @@ function trunk(g: Ink, gx: number, gy: number, p: Palm) {
   band(-1, 1, BARK.body);
   band(-1, -0.35, BARK.dark);
   band(0.35, 0.8, BARK.lit, 0.9);
-  // Ring scars: short bowed strokes across the trunk every few pixels, fainter towards the top.
-  for (let i = 1; i < n * 3; i++) {
-    const t = i / (n * 3),
+  // Rough ring scars: short bowed strokes across the trunk every couple of pixels, uneven in strength.
+  const rings = Math.round(p.height / 2.4);
+  for (let i = 1; i < rings; i++) {
+    const t = i / rings,
       j = Math.min(n - 1, Math.floor(t * n)),
       f = t * n - j,
       c = { x: spine[j].x + (spine[j + 1].x - spine[j].x) * f, y: spine[j].y + (spine[j + 1].y - spine[j].y) * f },
       w = half[j] + (half[j + 1] - half[j]) * f;
-    g.lineStyle(0.8, BARK.ring, 0.55 - 0.25 * t);
+    g.lineStyle(0.7 + 0.5 * hash01(p.spin, i, 3), BARK.ring, (0.3 + 0.4 * hash01(i, p.spin, 4)) * (1 - 0.4 * t));
     g.beginPath();
     g.moveTo(c.x - w, c.y - 0.4);
     g.lineTo(c.x, c.y + 0.9);
@@ -144,11 +145,11 @@ function trunk(g: Ink, gx: number, gy: number, p: Palm) {
   oval(g, top.x - 0.8, top.y + 0.8, 3.4 * scale, 2 * scale, 0x7a6038);
 }
 /** One frond of the crown: its ground direction, length, how high it arches and how far it droops, and its colour. */
-interface Frond { a: number; len: number; rise: number; droop: number; color: number; leaflet: number }
-const LEAF = { young: 0x74c44c, mature: 0x3e9e3c, old: 0x2c7a34, dead: 0xb08a4a, rib: 0x9ab850 } as const;
-const OUTER = 9,
+interface Frond { a: number; len: number; rise: number; droop: number; color: number; leaflet: number; hang: number; brown: boolean }
+const LEAF = { young: 0x86c850, mature: 0x3f923a, old: 0x2e7032, dead: 0xa88444, rib: 0xb0c868, tip: 0x9a7a3a } as const;
+const OUTER = 10,
   INNER = 5,
-  FROND_LEN = 24;
+  FROND_LEN = 36;
 /**
  * The crown of a palm: an outer ring of mature fronds that arch out and droop, an inner ring of young ones that stand
  * higher, and on some palms an old frond hanging limp or a dead brown one. Derived from the palm's spin alone, so the
@@ -161,35 +162,45 @@ function crown(p: Palm): Frond[] {
   for (let i = 0; i < OUTER; i++)
     fronds.push({
       a: p.spin + (i * Math.PI * 2) / OUTER + 0.22 * (hash01(seed, i, 1) - 0.5),
-      len: len * (1 + 0.22 * hash01(seed, i, 2)),
-      rise: 7 + 3 * hash01(seed, i, 3),
-      droop: 9 + 5 * hash01(seed, i, 4),
+      len: len * (0.9 + 0.25 * hash01(seed, i, 2)),
+      rise: 11 + 5 * hash01(seed, i, 3),
+      droop: 11 + 6 * hash01(seed, i, 4),
       color: hash01(seed, i, 5) < 0.3 ? LEAF.old : LEAF.mature,
-      leaflet: 6.5,
+      leaflet: 7,
+      hang: 0.6,
+      brown: hash01(seed, i, 6) < 0.35,
     });
   for (let i = 0; i < INNER; i++)
     fronds.push({
       a: p.spin + ((i + 0.5) * Math.PI * 2) / INNER,
-      len: len * 0.6,
-      rise: 11,
-      droop: 3,
+      len: len * 0.42,
+      rise: 15,
+      droop: 0,
       color: LEAF.young,
       leaflet: 4.5,
+      hang: 0.15,
+      brown: false,
     });
-  if (hash01(seed, 9, 9) < 0.45) fronds.push({ a: p.spin + Math.PI * 0.5 + hash01(seed, 9, 8), len: len * 0.7, rise: 1, droop: 24, color: LEAF.dead, leaflet: 4 });
+  if (hash01(seed, 9, 9) < 0.45) fronds.push({ a: p.spin + Math.PI * 0.5 + hash01(seed, 9, 8), len: len * 0.7, rise: 1, droop: 26, color: LEAF.dead, leaflet: 4.5, hang: 0.8, brown: false });
   return fronds;
 }
 /** Screen point `t` along a frond's rachis from the crown top (tx, ty): out along its direction, up, then down. */
-const rachis = (tx: number, ty: number, f: Frond, t: number): Pt => ({
-  x: tx + Math.cos(f.a) * f.len * t,
-  y: ty + Math.sin(f.a) * f.len * t * SQUASH - f.rise * Math.sin(Math.PI * Math.min(1, t * 1.1)) + f.droop * t * t,
-});
+const rachis = (tx: number, ty: number, f: Frond, t: number): Pt => {
+  // A frond reaching towards the viewer droops less on screen, so it never curtains the trunk.
+  const toward = Math.max(0, Math.sin(f.a)),
+    droop = f.droop * (1 - 0.6 * toward);
+  return {
+    x: tx + Math.cos(f.a) * f.len * t,
+    y: ty + Math.sin(f.a) * f.len * t * SQUASH * (1 - 0.35 * toward) - f.rise * Math.sin(Math.PI * Math.min(1, t * 1.1)) + droop * t * t,
+  };
+};
 /**
- * A pinnate frond: thin leaflets in pairs along the rachis, hanging down and outwards, longest at mid frond; the
- * leaflets on the side facing the light are lighter, tips a touch yellower. Then the rachis as a thin lit rib.
+ * A pinnate frond: long thin leaflets in pairs along the rachis that hang down off both sides like a fringe (young
+ * fronds hold theirs stiffly out), longest at mid frond, the sunlit side lighter, some frond tips browning. Then the
+ * rachis as a thin lit rib.
  */
 function frond(g: Ink, tx: number, ty: number, f: Frond) {
-  const n = 14,
+  const n = 12,
     pts = Array.from({ length: n + 1 }, (_, i) => rachis(tx, ty, f, i / n)),
     lit = facing(f.a);
   for (let i = 1; i <= n; i++) {
@@ -202,9 +213,10 @@ function frond(g: Ink, tx: number, ty: number, f: Frond) {
       size = f.leaflet * (0.35 + Math.sin(Math.PI * Math.min(1, t * 1.05)) * 0.85);
     for (const side of [-1, 1]) {
       // Out to the side, swept forward along the frond and pulled down by its weight.
-      const ex = c.x - dy * side * size + dx * size * 0.4,
-        ey = c.y + dx * side * size * SQUASH + dy * size * 0.4 + size * 0.28,
-        tone = shade(f.color, 0.22 * lit + (side > 0 ? -0.1 : 0.08) + (t > 0.8 ? 0.06 : 0));
+      const ex = c.x - dy * side * size * 0.75 + dx * size * 0.3,
+        ey = c.y + dx * side * size * 0.75 * SQUASH + dy * size * 0.3 + size * f.hang,
+        base = f.brown && t > 0.82 ? blend(f.color, LEAF.tip, (t - 0.82) / 0.18) : f.color,
+        tone = shade(base, 0.25 * lit + (side < 0 ? 0.1 : -0.12));
       g.fillStyle(OUTLINE, 0.35);
       g.fillTriangle(c.x - dx * 1.6, c.y - dy * 1.6 + 0.6, c.x + dx * 0.6, c.y + dy * 0.6 + 0.6, ex, ey + 0.8);
       g.fillStyle(tone);
@@ -388,7 +400,7 @@ function shorePalms(map: MapDefinition): readonly StandingPiece[] {
     for (const s of shoreLine(map, 3, 32)) {
       const rand = mulberry32(fnv(`${map.id}:shore-palm:${Math.round(s.x)}:${Math.round(s.y)}`));
       if (rand() > 0.4 || path.some((p) => (p.x - s.x) ** 2 + (p.y - s.y) ** 2 < 46 * 46)) continue;
-      const p = palmOf(rand, 0, 0, Math.atan2(s.ny, s.nx), 0.45 + rand() * 0.4, 36 + rand() * 14);
+      const p = palmOf(rand, 0, 0, Math.atan2(s.ny, s.nx), 0.95 + rand() * 0.5, 48 + rand() * 14);
       list.push({ x: s.x, y: s.y, shadow: (g) => palmShadow(g, s.x, s.y, p), draw: (g) => palm(g, s.x, s.y, p) });
     }
   SHORE_PALMS.set(map.id, list);
@@ -466,11 +478,11 @@ function shackShadow(g: Ink) {
 /** The grove's palms (the first two hold the hammock, the others stand clear of it at the sides), in its 2×2 frame. */
 function grovePalms(rand: Random): Palm[] {
   return [
-    palmOf(rand, -27, -10, Math.PI * 1.05, 0.35, 54 + rand() * 6),
-    palmOf(rand, 25, -13, -0.1, 0.35, 50 + rand() * 6),
-    palmOf(rand, 36, 22, 0.4, 0.6, 40 + rand() * 6),
-    palmOf(rand, -38, 24, Math.PI * 0.9, 0.6, 36),
-  ].map((p) => ({ ...p, size: 1.25 }));
+    palmOf(rand, -27, -10, Math.PI * 1.05, 0.45, 64 + rand() * 6),
+    palmOf(rand, 25, -13, -0.1, 0.45, 60 + rand() * 6),
+    palmOf(rand, 36, 22, 0.4, 0.9, 50 + rand() * 6),
+    palmOf(rand, -38, 24, Math.PI * 0.9, 0.9, 46),
+  ].map((p) => ({ ...p, size: 1 }));
 }
 const HAMMOCK = [0xe8483a, 0xf2c84a, 0x23a9bd, 0xf6f0e0] as const;
 /** A striped hammock slung between two trunks at height h, sagging in the middle. */
