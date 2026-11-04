@@ -1,4 +1,4 @@
-import { resolveUpgrades } from "../core/upgrades";
+import { eachOfKind } from "./tower-kinds";
 import type { Enemy, Sim, SpecializationSpec, Tower } from "../core/types";
 import { trance } from "./attacks/confuse";
 import { dist } from "./path";
@@ -65,11 +65,9 @@ export function volleyFactor(t: Tower) {
 export function activeFlares(sim: Sim): { x: number; y: number; radius: number }[] {
   const time = sim.state.time,
     flares: { x: number; y: number; radius: number }[] = [];
-  for (const t of sim.state.towers) {
-    if (t.flare === undefined || time >= t.flare) continue;
-    const attack = resolveUpgrades(t, sim.content).attack;
-    if (attack.kind === "alarm") flares.push({ x: t.x, y: t.y, radius: attack.radius });
-  }
+  eachOfKind(sim.state.towers, sim.content, "alarm", (attack, t) => {
+    if (t.flare !== undefined && time < t.flare) flares.push({ x: t.x, y: t.y, radius: attack.radius });
+  });
   return flares;
 }
 export const flareReveals = (e: Enemy, flares: readonly { x: number; y: number; radius: number }[]) =>

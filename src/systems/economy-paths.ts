@@ -5,6 +5,7 @@ import type { ContentPack, Enemy, GameEvent, Point, Sim, Tower, TowerEconomy, To
 import { isSupport } from "./attacks";
 import { HEAVY_HP, isHeavy } from "./damage";
 import { dist } from "./path";
+import { eachOfKind } from "./tower-kinds";
 import { applyStatus } from "./status";
 import { isSuppressed, layerOf, resists } from "./traits";
 /**
@@ -102,14 +103,13 @@ function setCount(t: Tower, count: number) {
 // ── Refinery ──
 /** Advance: at a wave's start every Refinery on the path pays its share of the coming income. */
 export function payAdvance(sim: Sim) {
-  for (const t of sim.state.towers) {
-    const spec = specOf(t, "advance", sim.content),
-      attack = resolveUpgrades(t, sim.content).attack;
-    if (!spec || attack.kind !== "income") continue;
+  eachOfKind(sim.state.towers, sim.content, "income", (attack, t) => {
+    const spec = specOf(t, "advance", sim.content);
+    if (!spec) return;
     const amount = Math.min(spec.amount, attack.amount);
     towerEconomy(t).advanced = amount;
     pay(sim, t, amount);
-  }
+  });
 }
 /** The income a Refinery pays after a wave: its amount minus what Advance paid at the start; `amount` without the path. */
 export function incomeOf(t: Tower, amount: number) {

@@ -32,9 +32,9 @@ describe("Workshop", () => {
       far = place(g, "pulse", 14, 9),
       shop = place(g, "workshop", 6, 5);
     place(g, "workshop", 5, 6, ["level-2"]);
-    expect(upgradeDiscount(pulse, g.state.towers)).toBe(0.25);
-    expect(upgradeDiscount(far, g.state.towers)).toBe(0);
-    expect(upgradeDiscount(shop, g.state.towers)).toBe(0);
+    expect(upgradeDiscount(pulse, g.state.towers, g.content)).toBe(0.25);
+    expect(upgradeDiscount(far, g.state.towers, g.content)).toBe(0);
+    expect(upgradeDiscount(shop, g.state.towers, g.content)).toBe(0);
     const cost = TOWERS.pulse.upgrades[0].cost;
     expect(g.command({ type: "upgrade", id: pulse.id, upgrade: "level-2" }).ok).toBe(true);
     expect(g.state.wallets[0]).toBe(1000 - discountedCost(cost, 0.25));

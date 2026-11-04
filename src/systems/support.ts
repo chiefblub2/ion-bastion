@@ -1,9 +1,10 @@
 import { resolveUpgrades } from "../core/upgrades";
 import { credit } from "../core/economy";
-import type { AttackKind, AttackSpec, CritAttack, DamageSource, Enemy, OverclockAttack, Point, Sim, Tower, TowerId } from "../core/types";
+import type { AttackKind, CritAttack, DamageSource, Enemy, OverclockAttack, Point, Sim, Tower, TowerId } from "../core/types";
 import type { SupportSpecialization } from "../core/specialization-types";
 import type { Hit } from "./damage";
 import { dist } from "./path";
+import { eachOfKind, type AttackOf } from "./tower-kinds";
 import { isNetted } from "./status";
 import { isSuppressed, layerOf } from "./traits";
 import { windowBoost } from "./fire-support-paths";
@@ -15,11 +16,10 @@ import { closeEconomyWave, interestBase, payCleanSheet, payOverflow, reserveCell
  */
 function strongest(sim: Sim, kind: AttackKind, key: string, e?: Enemy) {
   let best = 0;
-  for (const t of sim.state.towers) {
-    const resolved = resolveUpgrades(t, sim.content);
-    if (resolved.attack.kind !== kind || (e && dist(e, t) > resolved.stats.range) || isSuppressed(sim, t)) continue;
-    best = Math.max(best, (resolved.attack as unknown as Record<string, number>)[key]);
-  }
+  eachOfKind(sim.state.towers, sim.content, kind, (attack, t, range) => {
+    if ((e && dist(e, t) > range) || isSuppressed(sim, t)) return;
+    best = Math.max(best, (attack as unknown as Record<string, number>)[key]);
+  });
   return best;
 }
 /** The specialization of kind `kind` a tower holds, if any. */
@@ -63,27 +63,19 @@ export const markFactor = (sim: Sim, e: Enemy) => 1 + trackerMark(sim, e, strong
 /** Reparaturdock: after a completed wave each dock restores energy, never above the mission's start value. */
 export function repairReactor(sim: Sim) {
   const s = sim.state;
-  for (const t of s.towers) {
-    const attack = resolveUpgrades(t, sim.content).attack;
-    if (attack.kind !== "repair") continue;
+  eachOfKind(s.towers, sim.content, "repair", (attack, t) => {
     const amount = Math.min(attack.amount, sim.mission.reactorEnergy - s.lives);
     salvage(sim, t, attack.amount - Math.max(0, amount)); // Dock path: Salvage
-    if (amount <= 0) continue;
+    if (amount <= 0) return;
     s.lives += amount;
     s.events.push({ type: "repair", at: { x: t.x, y: t.y }, amount, color: sim.content.towers[t.type].color });
-  }
+  });
 }
-/**
- * Calls `fn` for every unsuppressed support tower of `kind` whose radius reaches `at`, with its resolved attack and
- * radius. The base definition is checked first, so a board without such a tower costs one pass over the towers.
- */
-function reaching<K extends AttackKind>(sim: Sim, kind: K, at: Point, fn: (attack: Extract<AttackSpec, { kind: K }>, tower: Tower, range: number) => void) {
-  for (const t of sim.state.towers) {
-    if (sim.content.towers[t.type].attack.kind !== kind) continue;
-    const resolved = resolveUpgrades(t, sim.content);
-    if (dist(at, t) > resolved.stats.range || isSuppressed(sim, t)) continue;
-    fn(resolved.attack as Extract<AttackSpec, { kind: K }>, t, resolved.stats.range);
-  }
+/** Calls `fn` for every unsuppressed support tower of `kind` whose radius reaches `at`, with its resolved attack and radius. */
+function reaching<K extends AttackKind>(sim: Sim, kind: K, at: Point, fn: (attack: AttackOf<K>, tower: Tower, range: number) => void) {
+  eachOfKind(sim.state.towers, sim.content, kind, (attack, t, range) => {
+    if (dist(at, t) <= range && !isSuppressed(sim, t)) fn(attack, t, range);
+  });
 }
 /** Overclock: whether a burst window is open at `time`; every Overclock shares the same wave-time grid. */
 export const overclockActive = (a: OverclockAttack, time: number) => time % a.period < a.window;
@@ -160,12 +152,10 @@ export const interestOn = (credits: number, rate: number, cap: number) => Math.m
 export function payInterest(sim: Sim) {
   const s = sim.state,
     best = new Map<number, { tower: Tower; amount: number }>();
-  for (const t of s.towers) {
-    const attack = resolveUpgrades(t, sim.content).attack;
-    if (attack.kind !== "interest") continue;
+  eachOfKind(s.towers, sim.content, "interest", (attack, t) => {
     const amount = interestOn(interestBase(sim, t), attack.rate, attack.cap); // Investment Account
     if (amount > (best.get(t.owner)?.amount ?? 0)) best.set(t.owner, { tower: t, amount });
-  }
+  });
   const restored = { done: false };
   for (const [owner, { tower: t, amount }] of best) {
     credit(s, owner, amount);
@@ -186,15 +176,14 @@ export function absorbLeak(sim: Sim, e: Enemy, leak: number) {
   const s = sim.state;
   let rest = leak;
   const takers: Tower[] = [];
-  for (const t of s.towers) {
-    if (rest <= 0) break;
-    const take = Math.min(rest, barrierLeft(sim, t));
-    if (take <= 0) continue;
+  eachOfKind(s.towers, sim.content, "barrier", (attack, t) => {
+    const take = Math.min(rest, Math.max(0, attack.amount - (t.barrier ?? 0)));
+    if (take <= 0) return;
     takers.push(t);
     t.barrier = (t.barrier ?? 0) + take;
     rest -= take;
     s.events.push({ type: "barrier", from: { x: t.x, y: t.y }, at: { x: e.x, y: e.y }, amount: take, color: sim.content.towers[t.type].color });
-  }
+  });
   if (takers.length) shockwave(sim, takers); // Shield Generator path: Shockwave
   return rest;
 }
