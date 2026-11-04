@@ -10,8 +10,8 @@ import { disc, oval, polygon, shade } from "../shapes";
 import type { TurretContext } from "./kit";
 import { FOOT, INSET, OUTLINE, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, towardViewer, tube, turn } from "./tilt";
 
-const TILT = TILTS.heavy!,
-  RECOIL = MUZZLES.heavy!.recoil,
+const TILT = TILTS.heavy,
+  RECOIL = MUZZLES.heavy.recoil,
   DROP = TILT.drop,
   HB = TILT.height,
   PITCH = TILT.pitch ?? 0;
@@ -104,7 +104,7 @@ const geometry = ({ x, y, tower, level, kick }: TurretContext) => {
     ca,
     sa,
     y0,
-    end: MUZZLES.heavy!.reach(level) - kick * RECOIL,
+    end: MUZZLES.heavy.reach(level) - kick * RECOIL,
     back: -kick * RECOIL,
     /** Point `p` along the aim, `q` across it, at height `h`. */
     P: (p: number, q: number, h: number) => [X(x, p * ca - q * sa), Y(y0, p * sa + q * ca, h)] as const,

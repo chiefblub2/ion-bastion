@@ -9,33 +9,21 @@ describe("tower menu pages", () => {
     const byPage = TOWER_PAGES.map((_, i) => Object.values(TOWERS).filter((t) => pageOf(t) === i).map((t) => t.id));
     expect(byPage[page("Attack")]).toEqual([
       "pulse", "blast", "flak", "skyburst", "tesla", "lance", "inferno", "decay", "focus", "mortar", "quake", "executioner", "shrapnel", "catalyst",
-      // ── new towers: g1 (Attack+Control A) ──
       "orbital",
-      // ── end g1 ──
     ]);
     expect(byPage[page("Control")]).toEqual([
       "frost", "stasis", "acid", "gravity", "jammer", "net", "plasma",
-      // ── new towers: g1 (Attack+Control A) ──
       "mesmer", "amber", "magnetar", "cyclone",
-      // ── end g1 ──
-      // ── new towers: g2 (Control B) ──
       "tether", "shrink", "hex", "siphon",
-      // ── end g2 ──
     ]);
     expect(byPage[page("Traps")]).toEqual([
       "mine", "spikes", "tar", "snare", "grill", "spring", "limpet", "pit", "tripwire",
-      // ── new towers: g3 (Traps) ──
       "barricade", "warp", "arc", "oil", "grinder", "harpoon",
-      // ── end g3 ──
     ]);
     expect(byPage[page("Support")]).toEqual([
       "aura", "refinery", "detector", "beacon", "dock", "tracker",
-      // ── new towers: g4 (Support A) ──
       "overclock", "firectl", "armory", "skylink", "nexus",
-      // ── end g4 ──
-      // ── new towers: g5 (Support B) ──
       "workshop", "vault", "shieldgen", "recycler",
-      // ── end g5 ──
     ]);
   });
   it("orders the menu and hotkeys page by page", () => {

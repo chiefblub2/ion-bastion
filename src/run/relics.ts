@@ -43,10 +43,10 @@ export interface Relic {
   /** Player-facing names of the two families of `combo`. */
   comboText?: readonly [string, string];
   /**
-   * Combat rules the mission carries (`systems/protocols.ts`). Unstable Reactor's `reactorMax` is filled in by
-   * `applyRelics` from the run.
+   * Combat rules the mission carries (`systems/protocols.ts`); a function receives the run's reactor maximum
+   * (`applyRelics`), which Unstable Reactor scales by.
    */
-  protocol?: Protocols;
+  protocol?: Protocols | ((reactorMax: number) => Protocols);
   /** Signature relics: the boss modifier whose technology it is; offered only at the act transition after that boss. */
   boss?: BossModId;
 }
@@ -193,7 +193,7 @@ export const RELICS = [
     description: "Towers deal up to 30% more damage as the reactor drains (from 80% energy down to 30%); the reactor holds 25% less.",
     downside: "The reactor holds 25% less.",
     reactor: { factor: 0.75 },
-    protocol: { unstable: { reactorMax: 0, from: 0.8, to: 0.3, max: 0.3 } },
+    protocol: (reactorMax: number) => ({ unstable: { reactorMax: Math.max(1, reactorMax), from: 0.8, to: 0.3, max: 0.3 } }),
   },
   // Legendary: act rewards, elite prizes and events only.
   {
@@ -302,8 +302,7 @@ export function applyRelics(base: ContentPack, mission: MissionDefinition, relic
     if (r.content) content = r.content(content);
     if (r.mission) m = r.mission(m);
     if (r.protocol) {
-      const p: Protocols = { ...r.protocol };
-      if (p.unstable) p.unstable = { ...p.unstable, reactorMax: Math.max(1, reactorMax) };
+      const p: Protocols = typeof r.protocol === "function" ? r.protocol(reactorMax) : r.protocol;
       m = { ...m, protocols: { ...m.protocols, ...p } };
     }
   }

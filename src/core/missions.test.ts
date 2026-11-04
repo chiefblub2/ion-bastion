@@ -3,7 +3,7 @@ import { ENEMIES } from "../content/enemies";
 import { isCircleSector, MISSIONS, SECTORS, sectorOf } from "../content/missions";
 import { Game } from "./game";
 import { hasStealth, RESERVE_ENEMIES } from "./mission-checks";
-import { STRATEGIES } from "./strategies";
+import { STRATEGIES } from "../strategies";
 import { validateMission } from "./validation";
 /** Campaign-wide content rules; mission balance is checked with `scripts/balance.ts`. */
 describe("missions", () => {

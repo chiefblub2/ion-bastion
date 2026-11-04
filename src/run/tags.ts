@@ -1,6 +1,6 @@
 import type { ContentPack, TowerDefinition, TowerId } from "../core/types";
 import { isSupport } from "../systems/attacks";
-import { pageOf } from "../ui/tower-pages";
+import { pageOf } from "../core/tower-pages";
 /**
  * Build tags for the draft: towers that share tags with the roster are offered more often, so archetypes form
  * (burn, chill, chain, traps, ...) without being forced. Derived from the attack kind, the targets and the placement.

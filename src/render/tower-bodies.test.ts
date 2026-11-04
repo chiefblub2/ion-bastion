@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import type { Tower, TowerId } from "../core/types";
-import { drawTower, isTilted, stillBody, stillTurret, type TowerBadges } from "./towers";
+import { drawTower, stillBody, stillTurret, type TowerBadges } from "./towers";
 import { towerColor, towerLevel, towerPath, upgradeOptions } from "../core/upgrades";
 import type { Ink } from "./shapes";
 
@@ -59,7 +59,7 @@ function maxed(type: TowerId, path?: string) {
 }
 
 describe("cached tilted turrets", () => {
-  const tilted = (Object.keys(DEFAULT_CONTENT.towers) as TowerId[]).filter((id) => isTilted(DEFAULT_CONTENT.towers[id]));
+  const tilted = Object.keys(DEFAULT_CONTENT.towers) as TowerId[];
 
   it("draw their turret ink from the look, angle and recoil alone, without glow, at every level and path", () => {
     expect(tilted).toEqual(expect.arrayContaining(["pulse", "blast"]));

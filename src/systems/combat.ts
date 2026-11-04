@@ -6,7 +6,7 @@ import { dist, len } from "./path";
 import { isDefused, taunters } from "./traits";
 import { critFactor, overclockRate, synergyFactor } from "./support";
 import { markedFirst, protocolRate } from "./protocols";
-import { chargedFactor, critRider, openSalvos } from "./combat-paths-b";
+import { chargedFactor, critRider, openSalvos } from "./fire-support-paths";
 import { volleyFactor } from "./trap-paths";
 /** Homing projectiles whose target died look for a new one within this radius. */
 export const RETARGET_RADIUS = 1.5;
@@ -24,6 +24,37 @@ export function compareTargets(priority: TargetPriority = "first", from: Point) 
   const key = PRIORITY_KEYS[priority];
   return (a: Enemy, b: Enemy) => key(a, from) - key(b, from) || b.distance - a.distance || a.id - b.id;
 }
+/** What a tower would fire at now: its target and every candidate in priority order (volley extras and Flak Curtain draw on them). */
+export interface Selection {
+  target: Enemy;
+  candidates: Enemy[];
+}
+/**
+ * The target rules, read only: range and dead zone, acquisition (traps trigger on anything that steps on them,
+ * stealthed or not), priority, taunts (not for traps), the Singularity mark and the module's `choose`. Shared by
+ * `attackEnemies` and the render-side turret prediction; undefined without a candidate.
+ */
+export function selectTarget(sim: Sim, t: Tower, range: number): Selection | undefined {
+  const d = sim.content.towers[t.type],
+    { attack } = resolveUpgrades(t, sim.content),
+    module = attackModule(attack)!,
+    min = module.minRange?.(attack) ?? 0,
+    triggers = d.placement === "path" ? canTarget : canAcquire;
+  const candidates = sim.state.enemies
+    .filter((e) => {
+      if (e.hp <= 0) return false;
+      // Cheap range check first; the trigger rules (layer, hidden) walk the traits.
+      const r = dist(e, t);
+      return r <= range && r >= min && triggers(sim, t.type, e);
+    })
+    .sort(compareTargets(t.priority, t));
+  if (!candidates.length) return undefined;
+  // Taunters in reach must be picked among (traps ignore them); volley extras still come from every candidate.
+  const forced = d.placement === "path" ? undefined : (taunters(sim, t, candidates) ?? markedFirst(sim, t, candidates)),
+    pool = forced ?? candidates,
+    target = module.choose?.(sim, t.type, { x: t.x, y: t.y }, range, pool, attack, t) ?? pool[0];
+  return { target, candidates };
+}
 export function attackEnemies(sim: Sim, dt: number) {
   const s = sim.state,
     { towers } = sim.content,
@@ -39,24 +70,11 @@ export function attackEnemies(sim: Sim, dt: number) {
     // A rate change preserves progress instead of resetting or granting a free shot.
     t.cooldown = Math.max(0, t.cooldown - (dt * overclockRate(sim, t) * protocolRate(sim, t, stats.range)) / stats.interval);
     if (t.cooldown > 0) continue;
-    const { attack, specialization: special } = resolveUpgrades(t, sim.content),
+    const selection = selectTarget(sim, t, stats.range);
+    if (!selection) continue;
+    const { target, candidates } = selection,
+      { attack, specialization: special } = resolveUpgrades(t, sim.content),
       module = attackModule(attack)!,
-      min = module.minRange?.(attack) ?? 0;
-    // Traps go off under anything that steps on them, stealthed or not.
-    const triggers = d.placement === "path" ? canTarget : canAcquire;
-    const candidates = s.enemies
-      .filter((e) => {
-        if (e.hp <= 0) return false;
-        // Cheap range check first; the trigger rules (layer, hidden) walk the traits.
-        const r = dist(e, t);
-        return r <= stats.range && r >= min && triggers(sim, t.type, e);
-      })
-      .sort(compareTargets(t.priority, t));
-    if (!candidates.length) continue;
-    // Taunters in reach must be picked among (traps ignore them); volley extras still come from every candidate.
-    const forced = d.placement === "path" ? undefined : (taunters(sim, t, candidates) ?? markedFirst(sim, t, candidates)),
-      pool = forced ?? candidates,
-      target = module.choose?.(sim, t.type, { x: t.x, y: t.y }, stats.range, pool, attack, t) ?? pool[0],
       // A volley adds the next candidates in priority order, each a different enemy.
       extra = (module.volley?.(attack) ?? 1) - 1,
       targets = extra > 0 ? [target, ...candidates.filter((c) => c !== target).slice(0, extra)] : [target];

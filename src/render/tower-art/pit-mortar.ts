@@ -1,7 +1,7 @@
 /**
  * Pit Mortar: Mortar's look in the 3/4 tilt (see `tilt.ts`): a fat, short tube at a steep pitch on a bipod and breech
  * cradle, in a sandbagged pit round a bolted turntable. The pit (`base`) bakes per level and trim colour; cradle, tube
- * and bipod (`turret`) depend only on the aim and recoil and are cached per angle (`TurretCache`); the turntable's
+ * and bipod (`turret`) depend only on the aim and recoil and are cached per angle (`TowerPictures`); the turntable's
  * chasing lights (`below`) and the shell nose, smoke, heat and lamp light (`above`) are live. The projection lives in
  * `TILTS.mortar`, the tube in `MUZZLES.mortar`.
  */
@@ -14,9 +14,9 @@ import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, o
 import { SX, SY, frame, project, rod } from "./tilt-frame";
 
 // Mortar: a fat, short tube at a steep pitch on a bipod, in a sandbagged pit round a bolted turntable.
-const TILT = TILTS.mortar!,
-  reach = MUZZLES.mortar!.reach,
-  RECOIL = MUZZLES.mortar!.recoil;
+const TILT = TILTS.mortar,
+  reach = MUZZLES.mortar.reach,
+  RECOIL = MUZZLES.mortar.recoil;
 const GUN = 0x3a4549,
   GUN_TOP = 0x56646a,
   METAL = 0x8a9a9c,

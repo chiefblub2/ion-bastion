@@ -5,7 +5,7 @@
  * levels and tiers), so both spend the same: the path run on the tiers, the level-3 run on the strategy's towers. For
  * economy towers the level-3 run gets only its own levels, so the comparison isolates what the path earns.
  * Usage: npx vite-node scripts/support-check.ts -- <sector module> <strategies module> [sector index] [--tower id,…] [--mission id] [--band 0.25]
- * e.g.   npx vite-node scripts/support-check.ts -- src/content/sectors/frost.ts src/core/strategies/frost.ts --tower beacon,vault
+ * e.g.   npx vite-node scripts/support-check.ts -- src/content/sectors/frost.ts src/strategies/frost.ts --tower beacon,vault
  * WARN: an economy path earns back more than half its price in extra credits while both runs win, or a path
  * does better than spending its price elsewhere: a loss turns into a win, or reactor energy left (on a ring: the peak
  * crowd) improves by more than `band` of the start. The same changes for the worse print as "weak". Missions whose
@@ -18,7 +18,7 @@ import { isSpecialization } from "../src/core/upgrades";
 import { isSupport } from "../src/systems/attacks";
 import { dist } from "../src/systems/path";
 import type { MissionDefinition, MissionSector, TowerId } from "../src/core/types";
-import type { Strategies } from "../src/core/strategies/build";
+import type { Strategies } from "../src/strategies/build";
 
 const ECONOMY: ReadonlySet<string> = new Set(["beacon", "refinery", "vault", "workshop", "dock", "shieldgen"]);
 /** Share of its price an economy path may earn back in extra credits before it counts as too strong. */

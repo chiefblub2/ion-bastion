@@ -64,47 +64,28 @@ export const AURA_UPGRADES: readonly UpgradeDefinition[] = AURA_TRACKS.flatMap((
   })),
 );
 
-/** Refinery: two levels that raise the credits paid after every wave. */
-const REFINERY_LEVELS = [
-  { level: 2, cost: 100, amount: 40 },
-  { level: 3, cost: 160, amount: 60 },
-] as const;
-
-export const REFINERY_UPGRADES: readonly UpgradeDefinition[] = REFINERY_LEVELS.map(({ level, cost, amount }) => ({
-  id: `level-${level}`,
-  label: `Level ${level}`,
-  description: `More output: ${amount} credits after every completed wave.`,
-  cost,
-  requires: level === 2 ? [] : [`level-${level - 1}`],
-  effects: { level, attack: { amount } },
-}));
-
-/** Detector: two levels that widen the revealed area. */
-const DETECTOR_LEVELS = [
-  { level: 2, cost: 70, range: 4.25 },
-  { level: 3, cost: 120, range: 5 },
-] as const;
-
-export const DETECTOR_UPGRADES: readonly UpgradeDefinition[] = DETECTOR_LEVELS.map(({ level, cost, range }) => ({
-  id: `level-${level}`,
-  label: `Level ${level}`,
-  description: `Stronger Scanner: reveals stealthed enemies within ${range} cells.`,
-  cost,
-  requires: level === 2 ? [] : [`level-${level - 1}`],
-  effects: { level, stats: { range } },
-}));
-
 /** Support levels: cost plus attack and stat overrides; level 1 is the build itself. */
-function supportUpgrades(levels: readonly { cost: number; attack: Record<string, number>; range?: number; description: string }[]): readonly UpgradeDefinition[] {
+function supportUpgrades(levels: readonly { cost: number; attack?: Record<string, number>; range?: number; description: string }[]): readonly UpgradeDefinition[] {
   return levels.map(({ cost, attack, range, description }, i) => ({
     id: `level-${i + 2}`,
     label: `Level ${i + 2}`,
     description,
     cost,
     requires: i === 0 ? [] : [`level-${i + 1}`],
-    effects: { level: i + 2, attack, ...(range === undefined ? {} : { stats: { range } }) },
+    effects: { level: i + 2, ...(attack === undefined ? {} : { attack }), ...(range === undefined ? {} : { stats: { range } }) },
   }));
 }
+
+/** Refinery: two levels that raise the credits paid after every wave. */
+export const REFINERY_UPGRADES = supportUpgrades([
+  { cost: 100, attack: { amount: 40 }, description: "More output: 40 credits after every completed wave." },
+  { cost: 160, attack: { amount: 60 }, description: "More output: 60 credits after every completed wave." },
+]);
+/** Detector: two levels that widen the revealed area. */
+export const DETECTOR_UPGRADES = supportUpgrades([
+  { cost: 70, range: 4.25, description: "Stronger Scanner: reveals stealthed enemies within 4.25 cells." },
+  { cost: 120, range: 5, description: "Stronger Scanner: reveals stealthed enemies within 5 cells." },
+]);
 
 /** Bounty Beacon: more bonus per kill, the last level also a wider radius. */
 export const BEACON_UPGRADES = supportUpgrades([
@@ -122,13 +103,6 @@ export const TRACKER_UPGRADES = supportUpgrades([
   { cost: 200, attack: { amount: 0.25 }, range: 2.8, description: "Target Lock: enemies within radius 2.8 take 25% more damage." },
 ]);
 
-// ── new towers: g1 (Attack+Control A) ──
-// ── end g1 ──
-// ── new towers: g2 (Control B) ──
-// ── end g2 ──
-// ── new towers: g3 (Traps) ──
-// ── end g3 ──
-// ── new towers: g4 (Support A) ──
 /** Overclock: a longer burst, then a harder one in a wider radius. */
 export const OVERCLOCK_UPGRADES = supportUpgrades([
   { cost: 130, attack: { window: 4 }, range: 2.5, description: "Long Burst: towers within radius 2.5 fire twice as fast for 4 s of every 10 s." },
@@ -154,8 +128,6 @@ export const NEXUS_UPGRADES = supportUpgrades([
   { cost: 130, attack: { bonus: 0.05 }, range: 2.5, description: "Wide Mesh: towers within radius 2.5 deal 5% more damage per tower type around it, up to 6 types." },
   { cost: 210, attack: { bonus: 0.06, cap: 7 }, range: 2.8, description: "Grand Lattice: radius 2.8, 6% more damage per tower type, up to 7 types." },
 ]);
-// ── end g4 ──
-// ── new towers: g5 (Support B) ──
 /** Workshop: a deeper discount in a wider radius. */
 export const WORKSHOP_UPGRADES = supportUpgrades([
   { cost: 110, attack: { amount: 0.25 }, range: 2.8, description: "Tool Racks: upgrades of towers within radius 2.8 cost 25% less." },
@@ -176,7 +148,6 @@ export const RECYCLER_UPGRADES = supportUpgrades([
   { cost: 120, attack: { share: 1.25, reach: 2.5 }, description: "Scrap Press: 125% of the overkill jumps up to 2.5 cells." },
   { cost: 200, attack: { share: 1.5, reach: 3 }, range: 3, description: "Reclaimer Core: 150% of the overkill jumps up to 3 cells, for kills within radius 3." },
 ]);
-// ── end g5 ──
 
 /**
  * A trap: an attack tower on a path cell; its trigger radius stays the same at every level. Like an attack tower it

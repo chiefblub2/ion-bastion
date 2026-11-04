@@ -12,10 +12,10 @@ import { FOOT, INSET, OUTLINE, X, Y, block, drum, endFace, fillPoints, onGround,
 import { MUZZLES, TILTS } from "../muzzles";
 import type { TiltedArt } from "./tilted";
 
-const TILT = TILTS.lens!,
+const TILT = TILTS.lens,
   DROP = TILT.drop,
   HB = TILT.height,
-  reach = MUZZLES.lens!.reach;
+  reach = MUZZLES.lens.reach;
 /** Plinth: lower and upper diamond radius and their heights; the bearing post; the yoke. */
 const R0 = 21,
   R1 = 14,

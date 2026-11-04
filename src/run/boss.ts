@@ -70,5 +70,4 @@ export const BOSS_MODS = [
 export type BossModId = (typeof BOSS_MODS)[number]["id"];
 export const BOSS_MOD_IDS: readonly BossModId[] = BOSS_MODS.map((m) => m.id);
 export const bossModOf = (id: BossModId): BossMod => BOSS_MODS.find((m) => m.id === id)!;
-export const isBossMod = (id: unknown): id is BossModId => BOSS_MOD_IDS.includes(id as BossModId);
 export const harden = (waves: WaveDefinition[], f: number) => waves.map((w) => hp(w, f));

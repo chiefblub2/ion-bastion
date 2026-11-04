@@ -6,6 +6,8 @@ import type { AttackModule } from "./types";
  */
 export const strike: AttackModule<StrikeAttack> = {
   aim: "point",
+  area: true,
+  explosive: true,
   projectile: "optional",
   params: {
     radius: { label: "Strike radius", valid: (v) => v > 0, unit: " cells" },

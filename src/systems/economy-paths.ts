@@ -3,7 +3,9 @@ import { maxTowerLevel, resolveUpgrades, type UpgradeProgress } from "../core/up
 import type { SupportSpecialization } from "../core/specialization-types";
 import type { ContentPack, Enemy, GameEvent, Point, Sim, Tower, TowerEconomy, TowerId, WaveEconomy } from "../core/types";
 import { isSupport } from "./attacks";
+import { HEAVY_HP, isHeavy } from "./damage";
 import { dist } from "./path";
+import { eachOfKind } from "./tower-kinds";
 import { applyStatus } from "./status";
 import { isSuppressed, layerOf, resists } from "./traits";
 /**
@@ -15,8 +17,6 @@ import { isSuppressed, layerOf, resists } from "./traits";
  */
 type Kind = SupportSpecialization["kind"];
 type Spec<K extends Kind> = Extract<SupportSpecialization, { kind: K }>;
-/** Max HP from which an enemy counts as heavy, like `HEAVY_HP` in `damage.ts`; a type of that base HP is a boss. */
-const HEAVY = 1000;
 /** Shockwave: seconds after its stun in which an enemy cannot be stunned again (the Stasis tower's recovery). */
 const SHOCK_RECOVERY = 1.5;
 /** Damage Control: share of the reactor's start value below which it boosts. */
@@ -68,7 +68,7 @@ export function lureFactor(sim: Sim, e: Enemy) {
 /** After a kill: Big Game pays for heavy enemies and bosses, Field Rations counts the kill toward energy. */
 export function economyKill(sim: Sim, e: Enemy) {
   const s = sim.state;
-  const heavy = e.maxHp >= HEAVY || sim.content.enemies[e.type].hp >= HEAVY;
+  const heavy = isHeavy(e) || sim.content.enemies[e.type].hp >= HEAVY_HP; // a type of heavy base HP is a boss
   // Enemies sent by an opponent in versus pay nothing, as their kill reward.
   const hunter = heavy && e.sentBy === undefined ? lead(sim, "big-game", (spec) => spec.amount, e) : undefined;
   if (hunter) {
@@ -103,14 +103,13 @@ function setCount(t: Tower, count: number) {
 // ── Refinery ──
 /** Advance: at a wave's start every Refinery on the path pays its share of the coming income. */
 export function payAdvance(sim: Sim) {
-  for (const t of sim.state.towers) {
-    const spec = specOf(t, "advance", sim.content),
-      attack = resolveUpgrades(t, sim.content).attack;
-    if (!spec || attack.kind !== "income") continue;
+  eachOfKind(sim.state.towers, sim.content, "income", (attack, t) => {
+    const spec = specOf(t, "advance", sim.content);
+    if (!spec) return;
     const amount = Math.min(spec.amount, attack.amount);
     towerEconomy(t).advanced = amount;
     pay(sim, t, amount);
-  }
+  });
 }
 /** The income a Refinery pays after a wave: its amount minus what Advance paid at the start; `amount` without the path. */
 export function incomeOf(t: Tower, amount: number) {

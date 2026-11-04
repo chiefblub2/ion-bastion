@@ -34,7 +34,7 @@ export function urlOf(screen: Screen, missionId: string, path = "/") {
   if (screen.view === "game") return `${path}?mission=${encodeURIComponent(missionId)}`;
   return screen.page === "home" ? path : `${path}#${SLUGS[screen.page]}`;
 }
-export const sameScreen = (a: Screen, b: Screen) => a.view === b.view && (a.view === "game" || a.page === (b as typeof a).page);
+const sameScreen = (a: Screen, b: Screen) => a.view === b.view && (a.view === "game" || a.page === (b as typeof a).page);
 type Entry = Screen & { depth: number };
 /**
  * Navigation through the History API: every screen is a history entry, so the browser's Back button works.
@@ -82,4 +82,3 @@ export function createScreens(missions: readonly MissionDefinition[], missionId:
     },
   };
 }
-export type Screens = ReturnType<typeof createScreens>;

@@ -1,9 +1,9 @@
-import { resolveUpgrades } from "../core/upgrades";
+import { eachOfKind } from "./tower-kinds";
 import type { DamageSource, Enemy, Sim } from "../core/types";
 import { applyDamage, hitOf, plain, type DamageOutcome, type Hit } from "./damage";
 import { dist } from "./path";
 import { isSuppressed } from "./traits";
-import { recyclerPaths, scrapYard } from "./combat-paths-a";
+import { recyclerPaths, scrapYard } from "./target-paths";
 export interface Recycler {
   share: number;
   reach: number;
@@ -14,12 +14,10 @@ export interface Recycler {
 /** The strongest Recycler whose range covers `at`: share of the overkill passed on and its jump distance. */
 export function recyclerAt(sim: Sim, at: Enemy) {
   let best: Recycler | undefined;
-  for (const t of sim.state.towers) {
-    const r = resolveUpgrades(t, sim.content);
-    if (r.attack.kind !== "overkill" || dist(at, t) > r.stats.range || isSuppressed(sim, t)) continue;
-    if (!best || r.attack.share > best.share)
-      best = { share: r.attack.share, reach: r.attack.reach, color: sim.content.towers[t.type].color, x: t.x, y: t.y };
-  }
+  eachOfKind(sim.state.towers, sim.content, "overkill", (attack, t, range) => {
+    if (dist(at, t) > range || isSuppressed(sim, t)) return;
+    if (!best || attack.share > best.share) best = { share: attack.share, reach: attack.reach, color: sim.content.towers[t.type].color, x: t.x, y: t.y };
+  });
   return best;
 }
 /**

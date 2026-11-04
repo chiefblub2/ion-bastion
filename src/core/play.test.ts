@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { MISSIONS } from "../content/missions";
 import { play } from "./play";
 import { isSpecialization } from "./upgrades";
-import { STRATEGIES } from "./strategies";
+import { STRATEGIES } from "../strategies";
 import type { Strategy } from "./play";
 
-/** A mission whose strategy A names a Detector path, played rich enough to buy everything. */
+/** A mission whose strategy A names a Detector path, played rich enough to buy everything (one wave is enough). */
 const rich = (strategy: Strategy) => {
   const m = MISSIONS.find((m) => m.id === "prismenschacht")!;
-  return play({ ...m, startingCredits: 100000 }, strategy).game;
+  return play({ ...m, startingCredits: 100000, waves: m.waves.slice(0, 1) }, strategy).game;
 };
 const tiers = (game: ReturnType<typeof rich>) =>
   game.state.towers.map((t) => [t.type, t.upgrades.filter((id) => isSpecialization(game.content.towers[t.type].upgrades.find((u) => u.id === id)!))] as const);

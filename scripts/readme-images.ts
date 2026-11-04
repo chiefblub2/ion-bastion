@@ -15,7 +15,7 @@ import { resolve } from "node:path";
 import type { Browser } from "playwright-core";
 import { missionById } from "../src/content/missions";
 import { DEFAULT_CONTENT } from "../src/content";
-import { STRATEGIES } from "../src/core/strategies";
+import { STRATEGIES } from "../src/strategies";
 import type { GalleryCell } from "../src/gallery";
 import { buildAffordable, call, fail, launch, open, prepare } from "./browser";
 

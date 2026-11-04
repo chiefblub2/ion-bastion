@@ -8,6 +8,7 @@ import type { AttackModule } from "./types";
 /** Gravitron pulse: drags every enemy around the target back along the path; recovery prevents a permanent lock. */
 export const pull: AttackModule<PullAttack> = {
   aim: "enemy",
+  instant: true,
   projectile: "forbidden",
   params: {
     radius: { label: "Pulse radius", valid: (v) => v > 0, unit: " cells" },

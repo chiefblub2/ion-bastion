@@ -1,5 +1,5 @@
 import type { MissionSector } from "../core/types";
-import { isCircleSector } from "../content/missions";
+import { WORLD_TIERS, worldsOf as groupWorlds, type WorldEntry as Entry, type WorldTier } from "../content/worlds";
 import type { BiomeId } from "./planet-surface";
 import type { Point } from "./world-map";
 /**
@@ -9,30 +9,21 @@ import type { Point } from "./world-map";
  * turns to the viewer), may hold one sector as a station in orbit above it, and paints its unclaimed land in its own
  * biome.
  */
-export interface World {
-  id: string;
-  name: string;
+export interface World extends WorldTier {
   epithet: string;
-  moon?: boolean;
-  /** Campaign sectors on this planet, in play order; the last planet takes any beyond. The moon takes the Circuit. */
-  count?: number;
   /** The territory centre of each sector in play order; a station's is the point its deck floats over. */
   centres: Point[];
   /** The sector (index on this world) that is a station in orbit instead of a territory. */
   station?: number;
   wild: BiomeId;
-  /** The atmosphere's colour, on the planet's horizon and around its sphere in the system view. */
-  atmosphere: string;
   /** The world's place and size in the system view, on wide views and on phones (`SYSTEM` units). */
   orbit: { x: number; y: number; r: number };
   orbitNarrow: { x: number; y: number; r: number };
 }
 export const WORLDS: readonly World[] = [
   {
-    id: "vigil",
-    name: "Vigil",
+    ...WORLD_TIERS[0],
     epithet: "Frontier world",
-    count: 4,
     centres: [
       { x: 80, y: 48 },
       { x: 104, y: 36 },
@@ -41,15 +32,12 @@ export const WORLDS: readonly World[] = [
     ],
     station: 3,
     wild: "tundra",
-    atmosphere: "#7fd0ff",
     orbit: { x: 270, y: 270, r: 62 },
     orbitNarrow: { x: 270, y: 210, r: 95 },
   },
   {
-    id: "ashkar",
-    name: "Ashkar",
+    ...WORLD_TIERS[1],
     epithet: "Dead world",
-    count: 4,
     centres: [
       { x: 76, y: 48 },
       { x: 104, y: 32 },
@@ -57,15 +45,12 @@ export const WORLDS: readonly World[] = [
       { x: 98, y: 66 },
     ],
     wild: "waste",
-    atmosphere: "#ffb070",
     orbit: { x: 500, y: 180, r: 70 },
     orbitNarrow: { x: 730, y: 190, r: 100 },
   },
   {
-    id: "thessaly",
-    name: "Thessaly Prime",
+    ...WORLD_TIERS[2],
     epithet: "Wild world",
-    count: 4,
     centres: [
       { x: 78, y: 60 },
       { x: 86, y: 36 },
@@ -73,22 +58,18 @@ export const WORLDS: readonly World[] = [
       { x: 122, y: 64 },
     ],
     wild: "verdant",
-    atmosphere: "#8cffb4",
     orbit: { x: 730, y: 270, r: 78 },
     orbitNarrow: { x: 300, y: 520, r: 100 },
   },
   {
-    id: "kepler",
-    name: "Kepler's Ring",
+    ...WORLD_TIERS[3],
     epithet: "The Circuit · moon",
-    moon: true,
     centres: [
       { x: 86, y: 48 },
       { x: 110, y: 38 },
       { x: 114, y: 62 },
     ],
     wild: "regolith",
-    atmosphere: "#ff8fe0",
     orbit: { x: 880, y: 150, r: 34 },
     orbitNarrow: { x: 730, y: 510, r: 70 },
   },
@@ -99,25 +80,8 @@ export const SYSTEM = {
   narrow: { w: 1000, h: 750, sun: { x: -200, y: -150, r: 560 } },
 };
 /** A world with the sectors it shows. */
-export interface WorldEntry {
-  world: World;
-  sectors: MissionSector[];
-}
+export type WorldEntry = Entry<World>;
 /** Splits the sectors over the worlds: campaign sectors in order by each planet's `count`, the Circuit on the moon. */
-export function worldsOf(sectors: readonly MissionSector[], worlds: readonly World[] = WORLDS): WorldEntry[] {
-  const campaign = sectors.filter((s) => !isCircleSector(s)),
-    planets = worlds.filter((w) => !w.moon);
-  let from = 0;
-  return worlds
-    .map((world) => {
-      if (world.moon) return { world, sectors: sectors.filter(isCircleSector) };
-      const last = world === planets.at(-1),
-        to = last ? campaign.length : from + (world.count ?? 0),
-        entry = { world, sectors: campaign.slice(from, to) };
-      from = to;
-      return entry;
-    })
-    .filter((e) => e.sectors.length);
-}
+export const worldsOf = (sectors: readonly MissionSector[], worlds: readonly World[] = WORLDS): WorldEntry[] => groupWorlds(sectors, worlds);
 /** The world entry that holds a sector. */
 export const worldOf = (entries: readonly WorldEntry[], sector: MissionSector) => entries.find((e) => e.sectors.includes(sector));

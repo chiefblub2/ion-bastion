@@ -1,6 +1,7 @@
 import type { Game } from "../core/game";
-import type { AttackKind, TowerDefinition, TowerId } from "../core/types";
-import { isSupport } from "../systems/attacks";
+import type { TowerId } from "../core/types";
+import { pageOf } from "../core/tower-pages";
+export { pageOf };
 /** Category tabs of the build menu, in display order. */
 export const TOWER_PAGES = [
   { id: "attack", name: "Attack" },
@@ -8,24 +9,8 @@ export const TOWER_PAGES = [
   { id: "trap", name: "Traps" },
   { id: "support", name: "Support" },
 ] as const;
-/** Attack kinds whose main job is to hinder or weaken enemies rather than to kill them. */
-const CONTROL_KINDS: ReadonlySet<AttackKind> = new Set<AttackKind>([
-  "slow", "stun", "corrode", "pull", "disrupt", "net", "pool",
-  // ── new towers: g1 (Attack+Control A) ──
-  "confuse", "encase", "gather",
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
-  "tether", "shrink", "echo", "siphon",
-  // ── end g2 ──
-]);
 /** With fewer available towers the menu shows them all, without tabs. */
 export const PAGED_FROM = 10;
-/** Index into `TOWER_PAGES`, derived from placement and attack, so content needs no extra field. */
-export function pageOf(d: Readonly<TowerDefinition>) {
-  if (d.placement === "path") return 2;
-  if (isSupport(d.attack)) return 3;
-  return CONTROL_KINDS.has(d.attack.kind) ? 1 : 0;
-}
 /** The mission's towers grouped by page, otherwise in content order; menu order and hotkeys follow it. */
 export function towerOrder(game: Game): TowerId[] {
   const towers = game.content.towers;

@@ -1,6 +1,6 @@
 import type { ContentPack, GameEvent, TurretStyle } from "../core/types";
 import { glowLine, halo, SHADOW } from "./material";
-import { MUZZLES, TILTS, muzzleHeading, muzzleTips, type FlashStyle } from "./muzzles";
+import { MUZZLES, muzzleHeading, muzzleTips, type FlashStyle } from "./muzzles";
 import { drawFieldEffect } from "./field-effects";
 import { fadeOut, IMPACTS, impactOf } from "./projectiles";
 import { drawTrapEffect, TRAP_EFFECT_LIFE } from "./trap-effects";
@@ -27,41 +27,21 @@ export type VisualEvent = Extract<
   {
     type:
       | "shot" | "chain" | "beam" | "pulse" | "income" | "repair" | "impact" | "kill" | "leak" | "build" | "sell" | "upgrade" | "evade" | "overload"
-      // ── new towers: g1 (Attack+Control A) ──
       | "strike" | "shatter" | "gather"
-      // ── end g1 ──
-      // ── new towers: g2 (Control B) ──
       | "echo"
-      // ── end g2 ──
-      // ── new towers: g3 (Traps) ──
       | "warp" | "breach"
-      // ── end g3 ──
-      // ── new towers: g4 (Support A) ──
       | "crit"
-      // ── end g4 ──
-      // ── new towers: g5 (Support B) ──
       | "recycle" | "barrier" | "discount"
-      // ── end g5 ──
       | "protocol"
   }
 >;
 const VISUAL = new Set<GameEvent["type"]>([
   "shot", "chain", "beam", "pulse", "income", "repair", "impact", "kill", "leak", "build", "sell", "upgrade", "evade", "overload",
-  // ── new towers: g1 (Attack+Control A) ──
   "strike", "shatter", "gather",
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
   "echo",
-  // ── end g2 ──
-  // ── new towers: g3 (Traps) ──
   "warp", "breach",
-  // ── end g3 ──
-  // ── new towers: g4 (Support A) ──
   "crit",
-  // ── end g4 ──
-  // ── new towers: g5 (Support B) ──
   "recycle", "barrier", "discount",
-  // ── end g5 ──
   "protocol",
 ]);
 export const isVisual = (e: GameEvent): e is VisualEvent => VISUAL.has(e.type);
@@ -554,8 +534,8 @@ export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: Conte
       const turret = sourceOf(content, e.color);
       let fx = px(e.from.x),
         fy = px(e.from.y);
-      // From a tilted tower (the first hop): the arc leaves its raised emit point or barrel tip.
-      if (turret && TILTS[turret] && origin.angle !== undefined) {
+      // From a tower (the first hop): the arc leaves its raised emit point or barrel tip.
+      if (turret && origin.angle !== undefined) {
         const tip = muzzleTips(turret, origin.level ?? 1, fx, fy, origin.angle)[0];
         if (tip) ({ x: fx, y: fy } = tip);
       }
@@ -654,8 +634,8 @@ export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: Conte
         aim = Math.atan2(ty - fy, tx - fx);
       // Tesla: lightning leaps from the rim of the coil.
       if (d.visual.muzzle === "bolt") {
-        // A tilted coil fires from its raised top (`TILTS.coil.emit`), a flat one from its rim.
-        const top = TILTS[d.visual.turret] ? muzzleTips(d.visual.turret, origin.level ?? 1, fx, fy, aim)[0] : undefined;
+        // The coil fires from its raised top (`TILTS.coil.emit`); a bolt turret without an emit point from its rim.
+        const top = muzzleTips(d.visual.turret, origin.level ?? 1, fx, fy, aim)[0];
         lightning(pen, top?.x ?? fx + Math.cos(aim) * 10, top?.y ?? fy + Math.sin(aim) * 10, tx, ty, e.color, alpha, hash01(tx, ty, Math.floor(age * 20)));
         halo(glow, tx, ty, 7, e.color, 0.5 * alpha);
         return;
@@ -665,7 +645,7 @@ export function drawEffect(pen: Pen, e: VisualEvent, age: number, content: Conte
       // The flash sits on every barrel tip, as the turret pointed when it fired.
       const angle = origin.angle ?? aim;
       for (const tip of muzzleTips(d.visual.turret, origin.level ?? 1, fx, fy, angle)) {
-        const heading = TILTS[d.visual.turret] ? muzzleHeading(d.visual.turret, angle) : Math.atan2(tip.y - fy, tip.x - fx);
+        const heading = muzzleHeading(d.visual.turret, angle);
         FLASHES[spec.flash](pen, tip.x, tip.y, heading, age, e.color, d.visual.turret === "mortar");
         // A soft afterglow lingers at the muzzle once the flash is gone.
         if (age < AFTERGLOW) halo(glow, tip.x, tip.y, 7, e.color, 0.12 * fadeOut(age / AFTERGLOW));

@@ -1,14 +1,15 @@
 import Phaser from "phaser";
 import { DEFAULT_CONTENT } from "./content";
-import { isFullyUpgraded, towerColor, towerLevel, towerPath, upgradeOptions } from "./core/upgrades";
-import type { Tower, TowerId } from "./core/types";
+import { towerLevel } from "./core/upgrades";
+import type { TowerId } from "./core/types";
 import { muzzleTips } from "./render/muzzles";
 import { CELL, type Pen } from "./render/shapes";
-import { drawTower, isTilted } from "./render/towers";
+import { built, drawBuilt, font as fontAt } from "./review-kit";
 import { pageOf } from "./ui/tower-pages";
-// Dev-only review sheet of the towers drawn in the 3/4 tilt (`/gallery.html?tilt`), through the battlefield's own
-// `drawTower`: per tower L1, firing (red crosses on `muzzleTips`: barrel tips or the emit point), the last plain level,
-// each path at its top tier and the last plain level at five headings; traps stand on a strip of path. Dashed squares are the tower's cell, so the reach into the cell above shows.
+// Dev-only review sheet of every tower (`/gallery.html?tilt`), through the battlefield's own `drawTower`: per tower L1,
+// firing (red crosses on `muzzleTips`: barrel tips or the emit point), the last plain level, Aura's tracks at their
+// tier III, each path at its top tier (Aura's on the track in the same slot) and the last plain level at five
+// headings; traps stand on a strip of path. Dashed squares are the tower's cell, so the reach into the cell above shows.
 // `&only=flak,lance` limits the rows, `&tab=attack|control|traps|support` one tab, `&clock=<s>` picks the frame. Screenshots: `scripts/tilt-review.ts`.
 
 const ZOOM = 2;
@@ -18,9 +19,7 @@ const only = params.get("only")?.split(",");
 const content = DEFAULT_CONTENT;
 const TAB = params.get("tab"),
   TABS: Record<string, number> = { attack: 0, control: 1, traps: 2, support: 3 };
-const rows = (Object.keys(content.towers) as TowerId[]).filter(
-  (id) => isTilted(content.towers[id]) && (!only || only.includes(id)) && (!TAB || pageOf(content.towers[id]) === TABS[TAB]),
-);
+const rows = (Object.keys(content.towers) as TowerId[]).filter((id) => (!only || only.includes(id)) && (!TAB || pageOf(content.towers[id]) === TABS[TAB]));
 const TW = 70,
   TH = 84,
   GAP = 4,
@@ -32,37 +31,27 @@ const TW = 70,
     { label: "W", a: Math.PI },
     { label: "N", a: -Math.PI / 2 },
   ];
-const COLUMNS = 6 + HEADINGS.length;
+const tracksOf = (id: TowerId) => Object.keys(content.towers[id].visual.tracks ?? {});
+const COLUMNS = 6 + HEADINGS.length + Math.max(0, ...rows.map((id) => tracksOf(id).length));
 export const tiltReviewSize = { width: (LABEL + COLUMNS * (TW + GAP) + 10) * ZOOM, height: (30 + rows.length * (TH + GAP)) * ZOOM };
-const font = (size: number, color = "#cfe3ef") => ({ fontFamily: "monospace", fontSize: `${size}px`, color, resolution: ZOOM });
-
-/** A tower bought up to `level`, path upgrades only from `path` (`"max"`: as far as it goes). */
-function built(type: TowerId, level: number | "max", path?: string, cooldown = 0, angle = -Math.PI / 4): Tower {
-  const t: Tower = { id: 3, type, x: 0, y: 0, upgrades: [], cooldown, spent: 0, angle, kills: 0, owner: 0 };
-  while (level === "max" || towerLevel(t, content) < level) {
-    const next = upgradeOptions(t, Infinity, content).find((o) => o.status === "available" && (!o.definition!.path || o.definition!.path === path));
-    if (!next) break;
-    t.upgrades.push(next.definition!.id);
-  }
-  return t;
-}
-const badges = (t: Tower) => ({ markers: towerLevel(t, content), maxed: isFullyUpgraded(t, content), color: towerColor(t, content), path: towerPath(t, content), boosted: false });
+const font = fontAt(ZOOM);
 /** The last plain level (5 for attack towers and traps, 3 for support, 4 for Aura): one below the lowest path tier. */
 function plainLevel(type: TowerId) {
   const levels = content.towers[type].upgrades.filter((u) => u.path && u.effects.level !== undefined).map((u) => u.effects.level!);
   return levels.length ? Math.min(...levels) - 1 : 5;
 }
-const draw = (pen: Pen, x: number, y: number, t: Tower) => drawTower(pen, x, y, t, content.towers[t.type], CLOCK, badges(t));
+const draw = (pen: Pen, x: number, y: number, t: ReturnType<typeof built>) => drawBuilt(pen, x, y, t, CLOCK);
 
 export class TiltReview extends Phaser.Scene {
   create() {
     this.cameras.main.setOrigin(0, 0).setZoom(ZOOM);
-    this.add.text(GAP, 6, `Tilted towers at clock ${CLOCK}: L1 | L1 fire | last plain level | each path at its top | headings`, font(10));
+    this.add.text(GAP, 6, `Towers at clock ${CLOCK}: L1 | L1 fire | last plain level | Aura's tracks | each path at its top | headings`, font(10));
     rows.forEach((id, i) => {
       const y = 26 + i * (TH + GAP),
         d = content.towers[id];
       this.add.text(GAP, y + 2, d.name, { ...font(9), wordWrap: { width: LABEL - 8 } });
       const paths = Object.keys(d.visual.paths ?? {}),
+        tracks = tracksOf(id),
         plain = plainLevel(id),
         trap = d.placement === "path";
       const tiles: { label: string; draw: (pen: Pen, x: number, y: number) => void }[] = [
@@ -70,7 +59,7 @@ export class TiltReview extends Phaser.Scene {
         {
           label: "L1 fire",
           draw: (pen, x, y) => {
-            const t = built(id, 1, undefined, 0.97);
+            const t = built(id, 1, { cooldown: 0.97 });
             draw(pen, x, y, t);
             pen.glow.lineStyle(1, 0xff3040, 1);
             for (const p of muzzleTips(d.visual.turret, 1, x, y, t.angle, Math.max(0, (t.cooldown - 0.7) / 0.3) ** 2)) {
@@ -80,11 +69,12 @@ export class TiltReview extends Phaser.Scene {
           },
         },
         { label: `L${plain}`, draw: (pen, x, y) => draw(pen, x, y, built(id, plain)) },
-        ...paths.map((p) => {
-          const t = built(id, "max", p);
+        ...tracks.map((k) => ({ label: `L${plain} ${k}`, draw: (pen: Pen, x: number, y: number) => draw(pen, x, y, built(id, plain, { track: k })) })),
+        ...paths.map((p, i) => {
+          const t = built(id, "max", { path: p, track: tracks[i] });
           return { label: `L${towerLevel(t, content)} ${d.visual.paths![p].name ?? p}`, draw: (pen: Pen, x: number, y: number) => draw(pen, x, y, t) };
         }),
-        ...HEADINGS.map((h) => ({ label: `L${plain} ${h.label}`, draw: (pen: Pen, x: number, y: number) => draw(pen, x, y, built(id, plain, undefined, 0, h.a)) })),
+        ...HEADINGS.map((h) => ({ label: `L${plain} ${h.label}`, draw: (pen: Pen, x: number, y: number) => draw(pen, x, y, built(id, plain, { angle: h.a })) })),
       ];
       tiles.forEach((tile, j) => {
         const x = LABEL + j * (TW + GAP),

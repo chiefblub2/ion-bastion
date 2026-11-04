@@ -348,7 +348,6 @@ export const SPECIALIZATIONS: Readonly<Record<string, readonly [PathData, PathDa
     },
     { slug: "exposed-target", name: "Exposed Target", role: "Anti-air synergy", tiers: vulnerability("exposed-target", [0.1, 0.15, 0.2], "Netted flyers") },
   ],
-  // ── new towers: g1 (Attack+Control A) ──
   orbital: [
     { slug: "kill-sat", name: "Kill Sat", role: "Boss", tiers: conditional("heavy", [0.3, 0.55, 0.8], "against heavy targets (1,000+ max HP)") },
     {
@@ -430,8 +429,6 @@ export const SPECIALIZATIONS: Readonly<Record<string, readonly [PathData, PathDa
       })),
     },
   ],
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
   tether: [
     {
       slug: "chain-gang", name: "Chain Gang", role: "Big groups",
@@ -524,7 +521,6 @@ export const SPECIALIZATIONS: Readonly<Record<string, readonly [PathData, PathDa
       })),
     },
   ],
-  // ── end g2 ──
   // ── trap paths ──
   mine: [
     { slug: "shaped-charge", name: "Shaped Charge", role: "Armor", tiers: conditional("armored", [0.25, 0.5, 0.75], "against armored enemies") },

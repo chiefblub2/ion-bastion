@@ -28,10 +28,8 @@ import { arcBand, CELL, disc, fillRound, px, ring, strokeRound, type Pen } from 
 import { pathCoverage, towerReach } from "./coverage";
 import { drawAmbient, drawGates, drawTerrain, themeGlow } from "./terrain";
 import { FrameStats } from "./frame-stats";
-import { drawTower, type TowerBadges } from "./towers";
-import { TowerBodies } from "./tower-bodies";
-import { TurretCache, snapAngle, snapKick } from "./turret-cache";
-import { isTilted } from "./towers";
+import { bodyKey, drawTower, drawTowerBody, drawTurretInk, stillBody, stillTurret, type TowerBadges } from "./towers";
+import { angleStep, bodyPictures, snapAngle, snapKick, turretPictures, type TowerPictures } from "./tower-pictures";
 import { ScreenFx } from "./screen-fx";
 import { loadGraphics } from "./graphics-settings";
 import { Trails } from "./trails";
@@ -180,15 +178,12 @@ export class Battlefield extends Phaser.Scene {
   private trails = new Trails();
   private aim = new TurretAim();
   private scorches = new Scorches();
-  /** The angle a turret is drawn at: the aim, snapped to the cached steps on a tilted turret, so flashes and shots match its picture. */
-  private angleOf = (t: Tower) => {
-    const angle = this.aim.angle(t);
-    return isTilted(this.sim.content.towers[t.type]) ? snapAngle(angle) : angle;
-  };
+  /** The angle a turret is drawn at: the aim, snapped to the cached steps, so flashes and shots match its picture. */
+  private angleOf = (t: Tower) => snapAngle(this.aim.angle(t));
   /** Still tower bodies baked into textures; only turrets, lamps and light are drawn per frame. */
-  private bodies = new TowerBodies(this);
+  private bodies = bodyPictures(this);
   /** Pictures of tilted turrets per aim step; `?turrets=live` (dev builds) draws them live for comparisons. */
-  private turrets = new TurretCache(this);
+  private turrets = turretPictures(this);
   private liveTurrets = import.meta.env.DEV && typeof location !== "undefined" && new URLSearchParams(location.search).get("turrets") === "live";
   /** Live parts over the cached turret pictures, their level bars and badges. */
   private towerTop!: Phaser.GameObjects.Graphics;
@@ -321,8 +316,8 @@ export class Battlefield extends Phaser.Scene {
     this.hooks.refresh();
     // Dev builds only: the sprite manager for QA scripts (live and dying counts); stripped from `vite build`.
     if (import.meta.env.DEV) (window as unknown as { __enemySprites: EnemySprites }).__enemySprites = this.enemySprites;
-    if (import.meta.env.DEV) (window as unknown as { __turretCache: TurretCache }).__turretCache = this.turrets;
-    if (this.stats && !this.statsHooked) {
+    if (import.meta.env.DEV) (window as unknown as { __turretCache: TowerPictures }).__turretCache = this.turrets;
+    if (import.meta.env.DEV && this.stats && !this.statsHooked) {
       const stats = this.stats;
       let start = 0;
       this.game.events.on(Phaser.Core.Events.PRE_RENDER, () => (start = performance.now()));
@@ -592,7 +587,7 @@ export class Battlefield extends Phaser.Scene {
     if (!s.paused) for (const f of this.effects) f.age += dt;
     for (const f of this.effects) if (f.label && (f.event.type === "income" || f.event.type === "repair")) this.placeLabel(f.label, f.event.at, f.age);
     this.draw();
-    if (this.stats) {
+    if (import.meta.env.DEV && this.stats) {
       this.stats.add("sim", drawStart - simStart);
       this.stats.add("draw", performance.now() - drawStart);
     }
@@ -817,6 +812,7 @@ export class Battlefield extends Phaser.Scene {
     order.length = 0;
     for (const t of s.towers) order.push(t);
     order.sort(northFirst);
+    this.bodies.begin();
     this.turrets.begin();
     // Under the baked bodies: a trap's path motif lies around it on the path.
     const ground: Pen = { g: this.hints, glow: this.towerGlow };
@@ -826,12 +822,16 @@ export class Battlefield extends Phaser.Scene {
         x = px(t.x),
         y = px(t.y),
         angle = this.angleOf(t),
-        baked = this.bodies.place(t, d, badges, x, y),
+        key = bodyKey(t, badges),
+        baked = stillBody(t, d, badges) && this.bodies.show(t.id, key, x, y, DEPTH.towerBodies, (g, cx, cy) => drawTowerBody(g, cx, cy, t, d, badges)),
         shown = angle === t.angle ? t : { ...t, angle };
-      if (isTilted(d) && !this.liveTurrets) {
+      if (!this.liveTurrets) {
         // The live parts use the same recoil step as the picture, so a hot muzzle sits on its barrel.
         const kick = snapKick(Math.max(0, (t.cooldown - 0.7) / 0.3) ** 2),
-          cached = this.turrets.place(shown, d, badges, x, y, kick);
+          // North to south, like the live towers: a turret reaching into the cell above covers what stands there.
+          cached =
+            stillTurret(shown, d, badges) &&
+            this.turrets.show(t.id, `${key}|${angleStep(shown.angle)}|${kick}`, x, y, DEPTH.towerTurrets + t.y * 1e-4, (g, cx, cy) => drawTurretInk(g, cx, cy, shown, d, badges, kick));
         drawTower(towerPen, x, y, shown, d, this.clock, badges, { baked, top: cached ? this.towerTop : undefined, kick, ground });
       } else drawTower(towerPen, x, y, shown, d, this.clock, badges, { baked, ground });
       const family = familyOf(d),

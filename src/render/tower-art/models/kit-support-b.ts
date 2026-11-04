@@ -39,8 +39,6 @@ export function slab(g: Ink, x: number, y0: number, foot: Float64Array, inset: F
 export function flatRing(g: Ink, x: number, y0: number, h: number, r: number, width: number, color: number, alpha = 1) {
   onGround(g, x, y0, h, () => ring(g, 0, 0, r, width, color, alpha));
 }
-/** Screen point at ground (u, v) and height h. */
-export const at3 = (x: number, y0: number, u: number, v: number, h: number) => [X(x, u), Y(y0, v, h)] as const;
 /** A small sphere: outline, body lit from the upper left, a glint. */
 export function ball(g: Ink, sx: number, sy: number, r: number, color: number) {
   disc(g, sx, sy, r + 0.6, OUTLINE, 0.95);

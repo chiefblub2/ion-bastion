@@ -37,6 +37,7 @@ function arc(sim: Sim, src: DamageSource, start: Enemy, damage: number, spec: Ch
 /** Lightning: hits instantly, then jumps to the nearest unstruck enemy with falloff. */
 export const chain: AttackModule<ChainAttack> = {
   aim: "enemy",
+  instant: true,
   projectile: "forbidden",
   params: {
     jumps: { label: "Jumps", valid: (v) => Number.isInteger(v) && v >= 1 },

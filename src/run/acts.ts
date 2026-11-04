@@ -1,8 +1,8 @@
 import type { ContentPack, MissionDefinition, MissionSector } from "../core/types";
 import { isCircleSector } from "../content/missions";
-import { WORLDS, worldsOf } from "../ui/planets";
+import { WORLD_TIERS, worldsOf } from "../content/worlds";
 /**
- * The acts of a run follow the campaign's tiers, the planets of the Sector Atlas (`ui/planets.ts`, display data only):
+ * The acts of a run follow the campaign's tiers, the planets of `content/worlds.ts` (shown by the Sector Atlas):
  * act I draws its maps from Vigil, act II from Ashkar, act III from Thessaly Prime. The Final Stand takes the last
  * sectors of the last planet, which act III then leaves out.
  */
@@ -18,7 +18,7 @@ export const ACT_COUNT = 3;
 /** The three act tiers and the Final Stand's pool, in play order. */
 export function actTiers(content: ContentPack): ActTier[] {
   const sectors: readonly MissionSector[] = content.sectors ?? [{ id: "all", name: "All", missions: content.missions }],
-    planets = worldsOf(sectors.filter((s) => !isCircleSector(s)), WORLDS.filter((w) => !w.moon)),
+    planets = worldsOf(sectors.filter((s) => !isCircleSector(s)), WORLD_TIERS.filter((w) => !w.moon)),
     flat = (list: readonly MissionSector[]) => list.flatMap((s) => s.missions);
   const tiers = planets.slice(0, ACT_COUNT).map((e) => ({ name: e.world.name, color: e.world.atmosphere, sectors: e.sectors }));
   // Fewer planets than acts (a small test pack): repeat the last tier.

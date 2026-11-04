@@ -1,7 +1,7 @@
 /**
  * Rocket Rack: Skyburst's look in the 3/4 tilt (see `tilt.ts`): a four-tube pod raised on an elevating cradle between
  * two cheeks, over a chamfered plinth. The plinth (`base`) bakes per level and trim colour; the cradle, pod and tubes
- * (`turret`) depend only on the aim and recoil and are cached per angle (`TurretCache`); the plinth's chasing lights
+ * (`turret`) depend only on the aim and recoil and are cached per angle (`TowerPictures`); the plinth's chasing lights
  * (`below`) and the warhead noses, spinning radar, lamp light and tube heat (`above`) are live. The projection lives in
  * `TILTS.battery`, the barrels in `MUZZLES.battery`.
  */
@@ -14,8 +14,8 @@ import type { TurretContext } from "./kit";
 import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, towardViewer, tube, turn } from "./tilt";
 
 // --- Skyburst: a four-tube rocket rack on an elevating cradle. --------------------------------------------------------
-const TILT = TILTS.battery!,
-  SPEC = MUZZLES.battery!,
+const TILT = TILTS.battery,
+  SPEC = MUZZLES.battery,
   SIDES = SPEC.sides!,
   reach = SPEC.reach,
   RECOIL = SPEC.recoil;

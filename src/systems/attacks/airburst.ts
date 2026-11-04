@@ -12,6 +12,8 @@ import type { AttackModule } from "./types";
  */
 export const airburst: AttackModule<AirburstAttack> = {
   aim: "enemy",
+  area: true,
+  explosive: true,
   projectile: "optional",
   params: {
     radius: { label: "Blast radius", valid: (v) => v > 0, unit: " cells" },

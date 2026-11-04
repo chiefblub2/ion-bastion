@@ -66,7 +66,7 @@ ui/wave-forecast.ts, render/enemies.ts, content/enemies.ts, render/terrain.ts, c
 5. content/enemies.ts: the enemies exactly as specified, English one-line comment above each.
 6. render/terrain.ts: placeholder THEMES entries with the palette (minimal obstacle/decor, empty ambient).
 7. Stubs, NOT registered anywhere: content/sectors/<id>.ts exporting <CONST>: MissionSector (missions: []),
-   core/strategies/<id>.ts exporting <ID>_STRATEGIES = {}.
+   strategies/<id>.ts exporting <ID>_STRATEGIES = {}.
 Gate: npx tsc --noEmit; npx vitest run src/systems src/ui.
 "every enemy type appears in the campaign" fails until integration — expected. Do not commit.
 Report: files changed, test results, any deviation from the design sheet.
@@ -79,14 +79,14 @@ Report: files changed, test results, any deviation from the design sheet.
 ```
 Repo /Users/janic.wyslich/ion-bastion. Read CLAUDE.md. You build sector <id> of this mission pack:
 <DESIGN SHEET>
-Files: ONLY src/content/sectors/<id>.ts (export <CONST>) and src/core/strategies/<id>.ts (export <ID>_STRATEGIES).
-Style references: the latest sectors in src/content/sectors/ and src/core/strategies/.
+Files: ONLY src/content/sectors/<id>.ts (export <CONST>) and src/strategies/<id>.ts (export <ID>_STRATEGIES).
+Style references: the latest sectors in src/content/sectors/ and src/strategies/.
 Content: <N> missions in difficulty order with the design sheet's ids, curve and introductions; air enemies from
 mission 2 on; one twist per mission (availableTowers restriction, 10 reactor energy, echo wave with hpMultiplier, …);
 stealth only where detector is available, and then strategy A builds one. Strategy A = intended tactic using the new
 enemies' counters, B = an alternative. Maps via parseMap(id, name, sketch, "<theme>") with a one-line English comment.
 HP difficulty ONLY through mission.hpGrowth or a per-wave hpMultiplier — no helper functions that compute waves.
-Loop: npx vite-node scripts/balance.ts -- src/content/sectors/<id>.ts src/core/strategies/<id>.ts --mission <missionId>
+Loop: npx vite-node scripts/balance.ts -- src/content/sectors/<id>.ts src/strategies/<id>.ts --mission <missionId>
       --curve credits=<a>-<b>,waves=<a>-<b>   (add --why for leaks per enemy type / kills per tower)
       Once per mission when A and B first win: add --tune. It prints the HP factor window in which A/B still win and
       the thin/Nova defenses still lose (and the matching hpGrowth range). Set hpGrowth inside it rather than
@@ -127,7 +127,7 @@ Run the expensive checks once, after all edits. Agents' final balance runs count
 0. `git status`: files outside this pack mean another session works in the same tree. Leave them alone, and name them in the report.
 1. Register the sectors. The order in both lists is the campaign order.
    - `content/missions.ts`: add `import { <CONST> } from "./sectors/<id>";` and put the constant in `SECTORS` before `KREISLAUF`.
-   - `core/strategies/index.ts`: add `import { <ID>_STRATEGIES } from "./<id>";` and `...<ID>_STRATEGIES,` in `STRATEGIES`.
+   - `strategies/index.ts`: add `import { <ID>_STRATEGIES } from "./<id>";` and `...<ID>_STRATEGIES,` in `STRATEGIES`.
 2. Text work, all before the test run:
    - `npx vite-node scripts/mission-table.ts --write` updates the README intro counts (the README has no mission or enemy tables).
    - CLAUDE.md: the trait list under "Enemy", plus special rules of the new traits (e.g. an `isHidden` extension).

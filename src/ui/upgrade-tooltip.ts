@@ -22,7 +22,7 @@ export function upgradeControl(tower: Tower, towers: readonly Tower[] = [], cont
   const support = definition.attack.kind === "aura";
   const pathColor = pathColorFor(definition);
   const all = upgradeOptions(tower, Infinity, content);
-  const discount = upgradeDiscount(tower, towers, content), price = (cost: number) => discountedCost(cost, discount); // g5: Workshop
+  const discount = upgradeDiscount(tower, towers, content), price = (cost: number) => discountedCost(cost, discount); // Workshop
   // Support towers keep their newest purchase per track visible; earlier tiers are superseded.
   const hidden = (option: (typeof all)[number]) => option.status === "locked" || option.status === "excluded";
   const superseded = new Set(all.filter(option => !hidden(option)).flatMap(option => option.definition!.requires));

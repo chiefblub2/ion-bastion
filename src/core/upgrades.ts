@@ -1,4 +1,3 @@
-import { DEFAULT_CONTENT } from "../content";
 import { attackError, attackOverrideError, isSupport } from "../systems/attacks";
 import { ContentError } from "./errors";
 import { specializationError, SUPPORT_KINDS } from "./specialization-types";
@@ -47,7 +46,7 @@ export function upgradeOption(
   tower: UpgradeProgress,
   id: string,
   credits: number,
-  content: ContentPack = DEFAULT_CONTENT,
+  content: ContentPack,
   discount = 0,
 ): UpgradeOption {
   const definition = content.towers[tower.type].upgrades.find((upgrade) => upgrade.id === id);
@@ -67,7 +66,7 @@ export function upgradeOption(
 export function upgradeOptions(
   tower: UpgradeProgress,
   credits = Infinity,
-  content: ContentPack = DEFAULT_CONTENT,
+  content: ContentPack,
 ): UpgradeOption[] {
   return content.towers[tower.type].upgrades.map((definition) =>
     upgradeOption(tower, definition.id, credits, content),
@@ -75,14 +74,14 @@ export function upgradeOptions(
 }
 
 /** Upgrades open to this tower regardless of credits; the `U` hotkey buys the only one. */
-export const openUpgrades = (tower: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT) =>
+export const openUpgrades = (tower: UpgradeProgress, content: ContentPack) =>
   upgradeOptions(tower, Infinity, content).filter((option) => option.status === "available").map((option) => option.definition!.id);
 
 /** A specialization tier: a level on a path (levels 6–8, 4–6 for support towers, 5–7 for Aura); Aura's tracks are not. */
 export const isSpecialization = (upgrade: UpgradeDefinition) => upgrade.path !== undefined && upgrade.effects.level !== undefined;
 
 /** The path fixed by the first purchased path upgrade, if any. */
-export function towerPath(tower: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT): string | undefined {
+export function towerPath(tower: UpgradeProgress, content: ContentPack): string | undefined {
   const upgrades = content.towers[tower.type].upgrades;
   for (const id of tower.upgrades) {
     const path = upgrades.find((upgrade) => upgrade.id === id)?.path;
@@ -92,8 +91,10 @@ export function towerPath(tower: UpgradeProgress, content: ContentPack = DEFAULT
 }
 
 /** Aura: the track fixed by the first purchased track upgrade, if any. */
-export function towerTrack(tower: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT): string | undefined {
-  const upgrades = content.towers[tower.type].upgrades;
+export const towerTrack = (tower: UpgradeProgress, content: ContentPack) => trackOf(tower, content.towers[tower.type]);
+/** `towerTrack` from the tower's definition alone, for drawing code that holds no content pack. */
+export function trackOf(tower: UpgradeProgress, definition: Pick<TowerDefinition, "upgrades">): string | undefined {
+  const upgrades = definition.upgrades;
   for (const id of tower.upgrades) {
     const track = upgrades.find((upgrade) => upgrade.id === id)?.track;
     if (track) return track;
@@ -102,13 +103,13 @@ export function towerTrack(tower: UpgradeProgress, content: ContentPack = DEFAUL
 }
 
 /** Display colour of a built tower: its path colour once chosen, else its track colour (Aura). */
-export function towerColor(tower: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT): number {
+export function towerColor(tower: UpgradeProgress, content: ContentPack): number {
   const definition = content.towers[tower.type], path = towerPath(tower, content), track = towerTrack(tower, content);
   return (path ? definition.visual.paths?.[path]?.color : undefined) ?? (track ? definition.visual.tracks?.[track]?.color : undefined) ?? definition.color;
 }
 
 /** Nothing left to buy: every upgrade is owned or excluded by the chosen path. */
-export const isFullyUpgraded = (tower: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT) =>
+export const isFullyUpgraded = (tower: UpgradeProgress, content: ContentPack) =>
   upgradeOptions(tower, Infinity, content).every((option) => option.status === "purchased" || option.status === "excluded");
 
 const cache = new WeakMap<ContentPack, Map<string, ResolvedTower>>();
@@ -119,7 +120,7 @@ const byList = new WeakMap<readonly string[], { content: ContentPack; type: stri
  * Results are memoised per content pack and upgrade list, so the simulation can
  * ask for every tower on every tick.
  */
-export function resolveUpgrades(tower: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT): ResolvedTower {
+export function resolveUpgrades(tower: UpgradeProgress, content: ContentPack): ResolvedTower {
   const hit = byList.get(tower.upgrades);
   if (hit && hit.content === content && hit.type === tower.type && hit.length === tower.upgrades.length) return hit.result;
   let byKey = cache.get(content);
@@ -164,13 +165,13 @@ function computeUpgrades(definition: TowerDefinition, upgrades: readonly string[
   });
 }
 
-export const towerLevel = (tower: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT) =>
+export const towerLevel = (tower: UpgradeProgress, content: ContentPack) =>
   resolveUpgrades(tower, content).level;
-export const maxTowerLevel = (type: TowerId, content: ContentPack = DEFAULT_CONTENT) =>
+export const maxTowerLevel = (type: TowerId, content: ContentPack) =>
   Math.max(1, ...content.towers[type].upgrades.map((upgrade) => upgrade.effects.level ?? 1));
 
 /** Affordable or not, a legal next upgrade can be inspected without any mutation. */
-export function previewUpgrade(tower: Tower, id: string, content: ContentPack = DEFAULT_CONTENT): Tower | null {
+export function previewUpgrade(tower: Tower, id: string, content: ContentPack): Tower | null {
   if (upgradeOption(tower, id, Infinity, content).status !== "available") return null;
   return { ...tower, upgrades: [...tower.upgrades, id] };
 }
@@ -179,9 +180,9 @@ export function purchaseUpgrade(
   state: GameState,
   tower: Tower,
   id: string,
-  content: ContentPack = DEFAULT_CONTENT,
+  content: ContentPack,
 ): CommandResult {
-  const discount = upgradeDiscount(tower, state.towers, content); // g5: Workshop
+  const discount = upgradeDiscount(tower, state.towers, content); // Workshop
   const option = upgradeOption(tower, id, state.wallets[tower.owner], content, discount);
   if (option.status !== "available" || !option.definition)
     return { ok: false, code: STATUS_CODES[option.status as Exclude<UpgradeStatus, "available">] };

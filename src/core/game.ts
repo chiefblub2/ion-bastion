@@ -2,14 +2,14 @@ import { DEFAULT_CONTENT } from "../content";
 import { findMission, missionNumber } from "../content/missions";
 import { moveEnemies } from "../systems/movement";
 import { attackEnemies, moveProjectiles, TARGET_PRIORITIES } from "../systems/combat";
-import { isSupport } from "../systems/attacks";
+import { attackModule, isSupport } from "../systems/attacks";
 import { fireAftershocks } from "../systems/attacks/quake";
 import { tickStatus } from "../systems/status";
 import { tickZones } from "../systems/zones";
 import { landStrikes } from "../systems/strikes";
 import { updateDetection } from "../systems/detection";
 import { tickProtocols } from "../systems/protocols";
-import { tickCombatPathsA } from "../systems/combat-paths-a";
+import { tickTargetPaths } from "../systems/target-paths";
 import { stateHash } from "./hash";
 import { spawnEnemies, settleWave } from "../systems/waves";
 import { beginWave, earlyBonus, settleCircle, wavesLeft } from "../systems/circle";
@@ -34,7 +34,7 @@ export const FIXED_STEP = 1 / 30;
 /** Share of the total investment (build plus upgrades) returned on sale. */
 export const SELL_REFUND = 0.7;
 /** Refund of a sale; with the board, a Workshop on the Refit path may raise the share. */
-export const sellValue = (tower: Tower, towers?: readonly Tower[], content: ContentPack = DEFAULT_CONTENT) =>
+export const sellValue = (tower: Tower, towers: readonly Tower[] | undefined, content: ContentPack) =>
   Math.floor(tower.spent * (towers ? Math.max(SELL_REFUND, refitShare(tower, towers, content)) : SELL_REFUND));
 export function initialState(mission: MissionDefinition, players = 1): GameState {
   return {
@@ -55,10 +55,9 @@ export function initialState(mission: MissionDefinition, players = 1): GameState
     nextId: 1,
   };
 }
-/** Buildable towers of a mission, in content order. A ring has no reactor, so nothing repairs it. */
-export function availableTowers(mission: MissionDefinition, content: ContentPack = DEFAULT_CONTENT): TowerId[] {
-  const all = (Object.keys(content.towers) as TowerId[]).filter((id) => !(mission.circle && content.towers[id].attack.kind === "repair"))
-    .filter((id) => !(mission.circle && content.towers[id].attack.kind === "barrier")); // g5: Shield Generator
+/** Buildable towers of a mission, in content order. A ring has no reactor, so nothing that repairs or shields it (`reactorOnly`). */
+export function availableTowers(mission: MissionDefinition, content: ContentPack): TowerId[] {
+  const all = (Object.keys(content.towers) as TowerId[]).filter((id) => !(mission.circle && attackModule(content.towers[id].attack)?.reactorOnly));
   return mission.availableTowers ? all.filter((id) => mission.availableTowers!.includes(id)) : all;
 }
 
@@ -217,8 +216,6 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
   },
 };
 
-/** Every command type the simulation knows; the relay checks names only, it holds no game logic. */
-export const COMMAND_TYPES: readonly string[] = Object.keys(HANDLERS);
 /** A plain object whose `type` is a known command. */
 export function isCommand<C extends { type: string } = Command>(c: unknown, extra: readonly string[] = []): c is C {
   const type = typeof c === "object" && c !== null ? (c as { type?: unknown }).type : undefined;
@@ -343,7 +340,7 @@ export class Game implements Sim {
     tickStatus(this, dt);
     moveEnemies(this, dt);
     updateDetection(this);
-    tickCombatPathsA(this, dt); // support combat: lingering marks and reveals, Static Pulse
+    tickTargetPaths(this, dt); // support combat: lingering marks and reveals, Static Pulse
     tickProtocols(this, dt);
     moveProjectiles(this, dt);
     fireAftershocks(this);

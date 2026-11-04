@@ -4,6 +4,8 @@ import type { AttackModule } from "./types";
 /** Artillery: a slow shell with a big blast, unable to aim at enemies inside its dead zone. */
 export const mortar: AttackModule<MortarAttack> = {
   aim: "point",
+  area: true,
+  explosive: true,
   projectile: "optional",
   params: {
     radius: { label: "Blast radius", valid: (v) => v > 0, unit: " cells" },

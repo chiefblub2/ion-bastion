@@ -1,3 +1,4 @@
+import { DEFAULT_CONTENT } from "./index";
 import { describe, it, expect } from "vitest";
 import { Game, sellValue } from "../core/game";
 import { TOWERS } from "./towers";
@@ -16,12 +17,8 @@ const PRICES: Record<string, [number, number, number, number]> = {
   quake: [140, 350, 560, 840], executioner: [150, 375, 600, 900], shrapnel: [130, 325, 520, 780], jammer: [130, 325, 520, 780],
   net: [110, 275, 440, 660], gravity: [170, 425, 680, 1020], skyburst: [140, 350, 560, 840],
   catalyst: [130, 325, 520, 780], plasma: [140, 350, 560, 840],
-  // ── new towers: g1 (Attack+Control A) ──
   orbital: [220, 550, 880, 1320], mesmer: [150, 375, 600, 900], amber: [160, 400, 640, 960], magnetar: [150, 375, 600, 900], cyclone: [140, 350, 560, 840],
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
   tether: [130, 325, 520, 780], shrink: [140, 350, 560, 840], hex: [150, 375, 600, 900], siphon: [150, 375, 600, 900],
-  // ── end g2 ──
 };
 
 function built(type: TowerId, upgrades: string[] = LEVELS) {
@@ -40,7 +37,7 @@ describe("tower specializations: content", () => {
       const upgrades = TOWERS[type].upgrades, paths = new Set(upgrades.map((u) => u.path).filter(Boolean));
       expect(upgrades).toHaveLength(13);
       expect(paths.size).toBe(3);
-      expect(maxTowerLevel(type)).toBe(8);
+      expect(maxTowerLevel(type, DEFAULT_CONTENT)).toBe(8);
       expect(Object.keys(TOWERS[type].visual.paths ?? {}).sort()).toEqual([...paths].sort());
       for (const [index, { slug }] of SPECIALIZATIONS[type].entries())
         for (const tier of [1, 2, 3]) {
@@ -62,7 +59,7 @@ describe("tower specializations: content", () => {
       const trap = definition.placement === "path";
       expect(tiers, type).toHaveLength(9);
       expect(new Set(tiers.map((u) => u.path)).size, type).toBe(3);
-      expect(maxTowerLevel(type), type).toBe(trap ? 8 : type === "aura" ? 7 : 6);
+      expect(maxTowerLevel(type, DEFAULT_CONTENT), type).toBe(trap ? 8 : type === "aura" ? 7 : 6);
       expect(Object.keys(definition.visual.paths ?? {}).sort()).toEqual([...new Set(tiers.map((u) => u.path!))].sort());
       if (trap) {
         expect(tiers.every((u) => u.effects.stats?.range === undefined), type).toBe(true);
@@ -74,19 +71,19 @@ describe("tower specializations: content", () => {
     }
   });
   it("stores final values per tier instead of stacking them (M-001, M-002)", () => {
-    const overclock = resolveUpgrades({ type: "pulse", upgrades: [...LEVELS, "overclock-1", "overclock-2"] });
+    const overclock = resolveUpgrades({ type: "pulse", upgrades: [...LEVELS, "overclock-1", "overclock-2"] }, DEFAULT_CONTENT);
     expect(overclock.stats.interval).toBeCloseTo(0.2475);
-    expect(overclock.stats.damage).toBe(resolveUpgrades({ type: "pulse", upgrades: LEVELS }).stats.damage);
-    expect(resolveUpgrades({ type: "pulse", upgrades: [...LEVELS, "overclock-1"] }).stats.interval).toBeCloseTo(0.2805);
-    const storm = resolveUpgrades({ type: "tesla", upgrades: [...LEVELS, "storm-network-1", "storm-network-2", "storm-network-3"] });
+    expect(overclock.stats.damage).toBe(resolveUpgrades({ type: "pulse", upgrades: LEVELS }, DEFAULT_CONTENT).stats.damage);
+    expect(resolveUpgrades({ type: "pulse", upgrades: [...LEVELS, "overclock-1"] }, DEFAULT_CONTENT).stats.interval).toBeCloseTo(0.2805);
+    const storm = resolveUpgrades({ type: "tesla", upgrades: [...LEVELS, "storm-network-1", "storm-network-2", "storm-network-3"] }, DEFAULT_CONTENT);
     expect(storm.level).toBe(8);
     expect(storm.attack).toMatchObject({ jumps: 8, range: 2.6, falloff: 0.75 });
-    const longshot = resolveUpgrades({ type: "lance", upgrades: [...LEVELS, "longshot-1", "longshot-2", "longshot-3"] });
-    expect(longshot.stats.range).toBeCloseTo(resolveUpgrades({ type: "lance", upgrades: LEVELS }).stats.range + 2.3);
-    const ricochet = resolveUpgrades({ type: "pulse", upgrades: [...LEVELS, "ricochet-1", "ricochet-2"] });
+    const longshot = resolveUpgrades({ type: "lance", upgrades: [...LEVELS, "longshot-1", "longshot-2", "longshot-3"] }, DEFAULT_CONTENT);
+    expect(longshot.stats.range).toBeCloseTo(resolveUpgrades({ type: "lance", upgrades: LEVELS }, DEFAULT_CONTENT).stats.range + 2.3);
+    const ricochet = resolveUpgrades({ type: "pulse", upgrades: [...LEVELS, "ricochet-1", "ricochet-2"] }, DEFAULT_CONTENT);
     expect(ricochet.specialization).toEqual({ kind: "ricochet", every: 3, factor: 0.5, radius: 1.5 });
-    expect(resolveUpgrades({ type: "pulse", upgrades: LEVELS }).specialization).toBeUndefined();
-    const mobile = resolveUpgrades({ type: "mortar", upgrades: [...LEVELS, "mobile-artillery-1", "mobile-artillery-2", "mobile-artillery-3"] });
+    expect(resolveUpgrades({ type: "pulse", upgrades: LEVELS }, DEFAULT_CONTENT).specialization).toBeUndefined();
+    const mobile = resolveUpgrades({ type: "mortar", upgrades: [...LEVELS, "mobile-artillery-1", "mobile-artillery-2", "mobile-artillery-3"] }, DEFAULT_CONTENT);
     expect(mobile.attack).toMatchObject({ minRange: 0, radius: 1.7 });
   });
 });
@@ -94,25 +91,25 @@ describe("tower specializations: content", () => {
 describe("tower specializations: purchase rules", () => {
   it("unlocks the three first tiers only after level five (T-002, T-003)", () => {
     const tower = { type: "pulse" as const, upgrades: ["level-2", "level-3", "level-4"] };
-    expect(upgradeOption(tower, "ricochet-1", Infinity).status).toBe("locked");
+    expect(upgradeOption(tower, "ricochet-1", Infinity, DEFAULT_CONTENT).status).toBe("locked");
     tower.upgrades.push("level-5");
-    for (const id of ["sharpshooter-1", "overclock-1", "ricochet-1"]) expect(upgradeOption(tower, id, Infinity).status).toBe("available");
+    for (const id of ["sharpshooter-1", "overclock-1", "ricochet-1"]) expect(upgradeOption(tower, id, Infinity, DEFAULT_CONTENT).status).toBe("available");
   });
   it("fixes the path with the first tier, also against direct commands (T-004, T-005, T-006)", () => {
     const { game, tower } = built("pulse");
     expect(game.command({ type: "upgrade", id: 1, upgrade: "ricochet-2" })).toMatchObject({ ok: false, code: "upgrade-locked" });
     expect(game.command({ type: "upgrade", id: 1, upgrade: "ricochet-1" }).ok).toBe(true);
-    expect(towerPath(tower)).toBe("ricochet");
+    expect(towerPath(tower, DEFAULT_CONTENT)).toBe("ricochet");
     for (const id of ["sharpshooter-1", "overclock-1"]) {
-      expect(upgradeOption(tower, id, Infinity).status).toBe("excluded");
+      expect(upgradeOption(tower, id, Infinity, DEFAULT_CONTENT).status).toBe("excluded");
       const before = JSON.stringify(game.state);
       expect(game.command({ type: "upgrade", id: 1, upgrade: id })).toMatchObject({ ok: false, code: "upgrade-excluded" });
       expect(JSON.stringify(game.state)).toBe(before);
     }
     expect(game.command({ type: "upgrade", id: 1, upgrade: "ricochet-2" }).ok).toBe(true);
     expect(game.command({ type: "upgrade", id: 1, upgrade: "ricochet-3" }).ok).toBe(true);
-    expect(resolveUpgrades(tower).level).toBe(8);
-    expect(upgradeOptions(tower).filter((o) => o.status === "available")).toHaveLength(0);
+    expect(resolveUpgrades(tower, DEFAULT_CONTENT).level).toBe(8);
+    expect(upgradeOptions(tower, Infinity, DEFAULT_CONTENT).filter((o) => o.status === "available")).toHaveLength(0);
   });
   it("charges the tier price and refunds 70% of everything spent (T-007, T-008)", () => {
     const { game, tower } = built("pulse");
@@ -123,7 +120,7 @@ describe("tower specializations: purchase rules", () => {
     game.command({ type: "upgrade", id: 1, upgrade: "overclock-2" });
     game.command({ type: "upgrade", id: 1, upgrade: "overclock-3" });
     expect(tower.spent).toBe(spent + 1000);
-    expect(sellValue(tower)).toBe(Math.floor((spent + 1000) * 0.7));
+    expect(sellValue(tower, undefined, DEFAULT_CONTENT)).toBe(Math.floor((spent + 1000) * 0.7));
   });
   it("lets a path start from level 5 but never cross into another path (T-010)", () => {
     const pulse = TOWERS.pulse;

@@ -19,6 +19,8 @@ function behind(sim: Sim, type: TowerId, from: Point, target: Enemy, reach: numb
 /** Fokus: an instant beam that grows stronger with every consecutive hit on the same target. */
 export const focus: AttackModule<FocusAttack> = {
   aim: "enemy",
+  instant: true,
+  precision: true,
   projectile: "forbidden",
   params: {
     ramp: { label: "Charge per hit", valid: (v) => v > 0, unit: " %", show: (v) => v * 100 },

@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import type { EnemyId } from "../core/types";
-import { decodePng, islands, measureArt } from "../../scripts/png";
+import { decodePng, islands, lfsReady, measureArt, type Png } from "../../scripts/png";
 import { ART_BOUNDS } from "./enemy-art-bounds";
 import { ART_SCALE, artEdge, artFor, artScale, artUrl, ENEMY_ART, SLENDER_BOOST, type EnemyArt } from "./enemy-art";
 
@@ -67,11 +67,13 @@ describe("enemy art registry", () => {
   });
 });
 
-describe("enemy art files", () => {
-  const images = painted.map(([id, art]) => [id, art, decodePng(readFileSync(new URL(art.path.replace("assets/enemies/", ""), ART_DIR)))] as const);
+describe.skipIf(!lfsReady(ART_DIR))("enemy art files", () => {
+  let decoded: (readonly [EnemyId, EnemyArt, Png])[] | undefined;
+  /** Decoded on first use, so a checkout with LFS pointer files never decodes at collect time. */
+  const images = () => (decoded ??= painted.map(([id, art]) => [id, art, decodePng(readFileSync(new URL(art.path.replace("assets/enemies/", ""), ART_DIR)))] as const));
 
   it("are readable RGBA PNGs with real transparency: never empty, never on a background", () => {
-    for (const [id, , png] of images) {
+    for (const [id, , png] of images()) {
       expect(png.colorType, id).toBe(6);
       expect(png.width, id).toBeGreaterThan(0);
       expect(png.height, id).toBe(png.width);
@@ -89,14 +91,14 @@ describe("enemy art files", () => {
   it("carry no residue: every detached island beyond anti-aliasing specks is a reviewed part of the art", () => {
     // Detached parts of 60 px or more that belong to the art (its other islands are residue of the sheet).
     const parts: Partial<Record<EnemyId, number>> = { mender: 1 };
-    for (const [id, , png] of images) {
+    for (const [id, , png] of images()) {
       const large = islands(png).slice(1).filter((island) => island.area >= 60);
       expect(large.length, `${id}: ${large.map((i) => `${i.area} px at ${i.bounds.x0},${i.bounds.y0}`).join(", ")}`).toBe(parts[id] ?? 0);
     }
   });
 
   it("match the generated bounds table (scripts/audit-enemy-art.ts -- --write)", () => {
-    for (const [id, art, png] of images) {
+    for (const [id, art, png] of images()) {
       const m = measureArt(png),
         b = ART_BOUNDS[id]!;
       expect(art.bounds, id).toBe(b);

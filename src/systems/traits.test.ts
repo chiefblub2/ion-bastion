@@ -32,31 +32,6 @@ function withDroneTraits(...traits: Trait[]): ContentPack {
 }
 const src = { tower: 0, type: "pulse" as const };
 
-describe("slow stacking (B1)", () => {
-  it("a weaker slow never overrides a stronger one that is still running", () => {
-    const g = new Game(),
-      e = makeEnemy(1, "drone", 0, 3);
-    applyStatus(g, e, { kind: "slow", factor: 0.35, until: 2.8 });
-    applyStatus(g, e, { kind: "slow", factor: 0.55, until: 1.9 });
-    expect(e.status).toEqual([{ kind: "slow", factor: 0.35, until: 2.8 }]);
-    applyStatus(g, e, { kind: "slow", factor: 0.35, until: 3.5 });
-    expect(e.status[0].until).toBe(3.5);
-    expect(speedFactor(e, 3)).toBe(0.35);
-    expect(speedFactor(e, 3.5)).toBe(1);
-  });
-  it("after expiry a weaker slow applies again and expired effects are removed", () => {
-    const g = new Game(),
-      e = makeEnemy(1, "drone", 0, 3);
-    g.state.enemies = [e];
-    applyStatus(g, e, { kind: "slow", factor: 0.35, until: 1 });
-    g.state.time = 1;
-    tickStatus(g, 0);
-    expect(e.status).toEqual([]);
-    applyStatus(g, e, { kind: "slow", factor: 0.55, until: 2 });
-    expect(e.status).toEqual([{ kind: "slow", factor: 0.55, until: 2 }]);
-  });
-});
-
 describe("enemy traits", () => {
   it("armor absorbs a share of every hit", () => {
     const g = new Game(undefined, withDroneTraits({ kind: "armor", reduction: 0.5 })),

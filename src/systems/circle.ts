@@ -3,7 +3,7 @@ import type { GameState, Sim, Spawn } from "../core/types";
 import { settleEconomy } from "./support";
 import { payIncome } from "./waves";
 import { restoreBarricades } from "./barricade";
-import { resetSalvos } from "./combat-paths-b";
+import { resetSalvos } from "./fire-support-paths";
 import { payAdvance } from "./economy-paths";
 /** Pays a wave's bonus and the refineries; on a ring this happens when the next wave starts. */
 function payWave(sim: Sim, wave: number) {

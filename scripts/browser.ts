@@ -3,7 +3,7 @@
  * channel "chrome") driving the running dev server through the app's optional WebMCP tools (`app/webmcp.ts`).
  */
 import { chromium, type Page } from "playwright-core";
-import { STRATEGIES } from "../src/core/strategies";
+import { STRATEGIES } from "../src/strategies";
 import type { MissionDefinition } from "../src/core/types";
 
 export function fail(message: string): never {

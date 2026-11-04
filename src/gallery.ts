@@ -3,12 +3,13 @@ import { Game } from "./core/game";
 import { DEFAULT_CONTENT } from "./content";
 import { towerColor } from "./core/upgrades";
 import { CELL, type Pen } from "./render/shapes";
-import { drawTower, isTilted } from "./render/towers";
+import { drawTower } from "./render/towers";
 import { drawEnemy } from "./render/enemies";
 import { AnimReview, animReviewSize } from "./anim-review";
 import { ArtReview, artReviewSize } from "./art-review";
 import { ART_FILTERING } from "./render/enemy-art-scene";
 import { Showcase, showcaseSize } from "./showcase";
+import { maskedTile } from "./review-kit";
 import { TiltReview, tiltReviewSize } from "./tilt-review";
 import { createEnemy } from "./systems/spawn";
 import { statusFlags } from "./systems/status";
@@ -61,30 +62,17 @@ class Gallery extends Phaser.Scene {
   }
   private tile(kind: GalleryCell["kind"], id: string, i: number, top: number, size: number, draw: (pen: Pen, x: number, y: number) => void) {
     const x = GAP + (i % COLUMNS) * (Math.max(TOWER_TILE, ENEMY_TILE) + GAP),
-      y = top + Math.floor(i / COLUMNS) * (size + GAP),
-      back = this.add.graphics(),
-      shape = this.make.graphics({}, false),
-      g = this.add.graphics(),
-      glow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-    back.fillStyle(0x0d1820);
-    back.fillRoundedRect(x, y, size, size, 8);
-    // Long bodies and trails must not spill onto the neighbouring tiles.
-    shape.fillRoundedRect(x, y, size, size, 8);
-    const mask = shape.createGeometryMask();
-    g.setMask(mask);
-    glow.setMask(mask);
-    draw({ g, glow }, x + size / 2, y + size / 2);
+      y = top + Math.floor(i / COLUMNS) * (size + GAP);
+    // Masked: long bodies and trails must not spill onto the neighbouring tiles.
+    maskedTile(this, x, y, size, size, draw);
     cells.push({ kind, id, x: x * ZOOM, y: y * ZOOM, w: size * ZOOM, h: size * ZOOM });
   }
   private tower(pen: Pen, x: number, y: number, type: TowerId) {
     const definition = DEFAULT_CONTENT.towers[type],
       tower = { id: 0, type, x: 0, y: 0, upgrades: [], cooldown: 0, spent: 0, angle: -Math.PI / 4, kills: 0, owner: 0 };
     // A tilted tower reaches well into the cell above (up to about 48 px over its centre): shrunk and lowered, it fits its tile.
-    if (isTilted(definition)) {
-      for (const ink of [pen.g, pen.glow]) (ink as Phaser.GameObjects.Graphics).setPosition(x, y + TILTED_SHIFT).setScale(TILTED_SCALE);
-      x = y = 0;
-    }
-    drawTower(pen, x, y, tower, definition, CLOCK, { markers: 1, maxed: false, boosted: false, color: towerColor(tower) });
+    for (const ink of [pen.g, pen.glow]) (ink as Phaser.GameObjects.Graphics).setPosition(x, y + TILTED_SHIFT).setScale(TILTED_SCALE);
+    drawTower(pen, 0, 0, tower, definition, CLOCK, { markers: 1, maxed: false, boosted: false, color: towerColor(tower, DEFAULT_CONTENT) });
   }
   private enemy({ g }: Pen, x: number, y: number, type: EnemyId) {
     // A real spawn in a throwaway game, so shields, plates and the like start as they do on the field.
@@ -104,7 +92,7 @@ class Gallery extends Phaser.Scene {
   }
 }
 
-/** `?showcase`: levels, firing poses, shots and effects instead of the README tiles (see `showcase.ts`). */
+/** `?showcase`: shots and effects instead of the README tiles (see `showcase.ts`). */
 const query = new URLSearchParams(location.search),
   showcase = query.has("showcase"),
   /** `?art`: the painted enemy bodies through the battlefield's sprite path (see `art-review.ts`). */
@@ -115,7 +103,7 @@ const query = new URLSearchParams(location.search),
   sound = query.has("sound"),
   /** `?render`: offline music renders for scripts/render-music.ts (see `music-render.ts`); no canvas. */
   render = query.has("render"),
-  /** `?tilt`: the towers drawn in the 3/4 tilt at levels, paths and headings (see `tilt-review.ts`). */
+  /** `?tilt`: every tower at its levels, firing pose, tracks, paths and headings (see `tilt-review.ts`). */
   tilt = query.has("tilt"),
   pageSize = tilt ? tiltReviewSize : anim ? animReviewSize : art ? artReviewSize : showcase ? showcaseSize : { width: width * ZOOM, height: height * ZOOM };
 if (render)

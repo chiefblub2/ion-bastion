@@ -40,7 +40,7 @@ export function play(
   const upgrade = () => {
     const open = g.state.towers.flatMap((t) => {
       const plan = strategy!.builds.find((b) => b.x === t.x && b.y === t.y && b.tower === t.type);
-      return upgradeOptions(t, Infinity)
+      return upgradeOptions(t, Infinity, g.content)
         // A build buys only the path it names (none: no specialization) and, for Aura, only its track.
         .filter((o) => o.status === "available" && (!isSpecialization(o.definition!) || o.definition!.path === plan?.path))
         .filter((o) => !o.definition!.track || !plan?.track || o.definition!.track === plan.track)

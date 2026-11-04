@@ -5,6 +5,7 @@ import type { AttackModule } from "./types";
 /** Henker: a heavy shot that hits much harder once the target is badly wounded. */
 export const execute: AttackModule<ExecuteAttack> = {
   aim: "enemy",
+  precision: true,
   projectile: "optional",
   params: {
     threshold: { label: "Execute below", valid: (v) => v > 0 && v < 1, unit: " % HP", show: (v) => v * 100 },

@@ -15,14 +15,15 @@ import { MUSIC_ENABLED } from "../audio/settings";
 import { renderTowerCodex } from "./tower-codex";
 import { effectiveTowerStats, isInAura } from "../systems/auras";
 import type { GameState, MissionSector, TowerId } from "../core/types";
-import { starText, type Stars } from "../app/rating";
+import { starText, type Stars } from "../campaign/rating";
 import { mapPreviewSvg } from "./mission-brief";
-import { fillImage, progressOf, roman, type MapImage, unlockNotice } from "./sector-atlas";
-import type { Lock, Unlocked } from "../app/campaign-unlock";
-import type { HomeAction } from "../app/home-action";
+import { fillImage } from "./atlas/card";
+import { progressOf, roman, type MapImage, unlockNotice } from "./atlas/model";
+import type { Lock, Unlocked } from "../campaign/campaign-unlock";
+import type { HomeAction } from "../campaign/home-action";
 import { BRAND_MARK } from "./brand";
 import { isTouch } from "./touch";
-import type { CampaignRecord } from "../app/progress";
+import type { CampaignRecord } from "../campaign/record";
 import { MODE_IDS, MODES } from "../core/modes";
 import { renderPlayers, renderSends, versusOutcome, type MultiplayerSession } from "./players";
 export type { MultiplayerSession } from "./players";
@@ -36,7 +37,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 const plural = (n: number, word: string) => (n === 1 ? word : `${word}s`);
 /** Hotkeys for the towers of the open tab, from 1 again on every tab; more than ten continue with letters. */
 export const TOWER_KEYS = "1234567890qwery";
-export const towerKey = (index: number) => TOWER_KEYS[index]?.toUpperCase() ?? "";
+const towerKey = (index: number) => TOWER_KEYS[index]?.toUpperCase() ?? "";
 /** "1–9, 0, Q, W" for a tab of twelve towers; `wrap` formats each key, e.g. as `<kbd>`. */
 function towerKeyRange(count: number, wrap = (key: string) => key) {
   const keys = [...TOWER_KEYS.slice(0, count).toUpperCase()].map(wrap);
@@ -380,7 +381,7 @@ export class Interface {
       t.upgrades,
       effectiveTowerStats(t, s.towers, content).bonuses,
       TOWERS[t.type].attack.kind === "aura" ? s.towers.filter(target => isInAura(t, target, content)).length : 0,
-      upgradeDiscount(t, s.towers, content), // g5: Workshop
+      upgradeDiscount(t, s.towers, content), // Workshop
     ]) : "";
     // A selected enemy that died, leaked or vanished into stealth drops out of the panel.
     let enemy = s.enemies.find((e) => e.id === this.view.enemy);

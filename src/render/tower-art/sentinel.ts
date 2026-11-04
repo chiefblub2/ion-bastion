@@ -5,7 +5,7 @@
  * (x + u, y0 + v × squash − h), with y0 = y + drop. The projection lives in `TILTS.barrel`, so shots, flashes
  * and beams leave the drawn muzzle. The foundation (`sentinelBase`) depends only on the level and the trim colour and
  * bakes like any tower body; the turret's ink (`sentinelTurret`) depends only on the aim and the recoil and is cached
- * per angle (`TurretCache`); the lights under and over it (`sentinelBelow`, `sentinelAbove`) are live.
+ * per angle (`TowerPictures`); the lights under and over it (`sentinelBelow`, `sentinelAbove`) are live.
  */
 import { LIGHT, facing, halo, plate, sunken } from "../material";
 import { MUZZLES, TILTS } from "../muzzles";
@@ -13,8 +13,8 @@ import { arcBand, disc, oval, ring, shade, type Ink } from "../shapes";
 import type { TurretContext } from "./kit";
 import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, tube, turn } from "./tilt";
 
-const TILT = TILTS.barrel!,
-  RECOIL = MUZZLES.barrel!.recoil;
+const TILT = TILTS.barrel,
+  RECOIL = MUZZLES.barrel.recoil;
 /** Foundation: hex radius and extrusion; the ground squash, the drop below the cell centre and the barrel height. */
 const R = 21,
   H = 7,
@@ -133,7 +133,7 @@ export function sentinelBase({ g, x, y, level, color }: TurretContext) {
 
 const geometry = ({ x, y, tower, level, kick }: TurretContext) => {
   const a = tower.angle;
-  return { a, y0: y + DROP, c: Math.cos(a), s: Math.sin(a), end: MUZZLES.barrel!.reach(level) - kick * RECOIL, from: 14.5 - kick * RECOIL, x };
+  return { a, y0: y + DROP, c: Math.cos(a), s: Math.sin(a), end: MUZZLES.barrel.reach(level) - kick * RECOIL, from: 14.5 - kick * RECOIL, x };
 };
 /** Shell top point (`p` along the aim, `q` across) on the screen. */
 const onShell = (x: number, y0: number, c: number, s: number, p: number, q: number) =>

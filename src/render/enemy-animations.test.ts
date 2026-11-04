@@ -1,8 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import type { EnemyId } from "../core/types";
-import { artSignature, decodePng, identify, measureArt, VISIBLE_ALPHA, type Png } from "../../scripts/png";
+import { artSignature, decodePng, identify, lfsReady, measureArt, VISIBLE_ALPHA, type Png } from "../../scripts/png";
 import { ANIMATION_BOUNDS } from "./enemy-animation-bounds";
 import {
   allClips,
@@ -139,11 +139,24 @@ describe("animation registry", () => {
   });
 });
 
-describe("animation sheets", () => {
+describe("animation sheet files", () => {
   it("are exactly the registered types' files", () => {
     const files = readdirSync(new URL("public/assets/enemy-animations/", ROOT)).sort();
     expect(files).toEqual(ANIMATED.map((id) => `${id}.png`).sort());
   });
+});
+
+const PIXELS = lfsReady(
+  new URL("public/assets/enemy-animations/", ROOT),
+  new URL("assets-src/enemy-animations/", ROOT),
+  new URL("public/assets/enemies/", ROOT),
+);
+
+describe.skipIf(!PIXELS)("animation sheets", () => {
+  // Decoding the 2048×1024 sheets takes a few seconds; keep it out of the first test's time limit.
+  beforeAll(() => {
+    for (const id of ANIMATED) sheet(animationsFor(id)!.idle!);
+  }, 30_000);
 
   it("are grids of their declared cells, a power of two, never blank or cut, unused cells empty", () => {
     for (const id of ANIMATED) {
@@ -216,8 +229,10 @@ describe("animation sheets", () => {
     for (const [id, entry] of Object.entries(manifest.enemies)) {
       expect(DEFAULT_CONTENT.enemies[id as EnemyId], `${id} is an enemy type`).toBeDefined();
       expect(entry.sheet, id).toBe(`assets-src/enemy-animations/${id}.png`);
-      const png = decodePng(readFileSync(new URL(entry.sheet, ROOT)));
-      expect([png.width, png.height], id).toEqual([manifest.frameWidth * manifest.columns, manifest.frameHeight * manifest.rows]);
+      // The size from the header alone: the source sheets need no decoding here.
+      const head = readFileSync(new URL(entry.sheet, ROOT)),
+        size = [head.readUInt32BE(16), head.readUInt32BE(20)];
+      expect(size, id).toEqual([manifest.frameWidth * manifest.columns, manifest.frameHeight * manifest.rows]);
       if (entry.disabled) {
         expect(animationsFor(id as EnemyId), `${id} is disabled`).toBeUndefined();
         continue;

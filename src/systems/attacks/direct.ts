@@ -12,6 +12,7 @@ export function wingclip(sim: Sim, src: DamageSource, enemy: Enemy) {
 }
 export const direct: AttackModule<DirectAttack> = {
   aim: "enemy",
+  precision: true,
   projectile: "optional",
   params: {},
   apply: (sim, src, { enemy, proc }, damage) => {

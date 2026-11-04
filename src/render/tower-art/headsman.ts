@@ -13,8 +13,8 @@ import { GUN, SHADOW_INK, castShadow, depth, framer, lamp, lampInk, lampLight, p
  * is cached per aim step (`turret`); the posts' lamps (`below`) and the blade's edge glow, the counterweight lamp's
  * light, the glaive spinning over the hub once charged and the hot tip (`above`) are live.
  */
-const TILT = TILTS.blade!,
-  SPEC = MUZZLES.blade!,
+const TILT = TILTS.blade,
+  SPEC = MUZZLES.blade,
   DROP = TILT.drop,
   HB = TILT.height,
   RECOIL = SPEC.recoil,

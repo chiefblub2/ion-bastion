@@ -78,9 +78,9 @@ Report: files changed, test results, deviations from the sheet.
 Repo /Users/janic.wyslich/ion-bastion. Read CLAUDE.md. The new enemies exist already (content/enemies.ts); work them
 into sector src/content/sectors/<file>.ts:
 <ENEMY SHEET>
-Files: ONLY src/content/sectors/<file>.ts and src/core/strategies/<file>.ts, only the missions on the placement lines.
+Files: ONLY src/content/sectors/<file>.ts and src/strategies/<file>.ts, only the missions on the placement lines.
 0. Baseline FIRST, before any edit: npx vite-node scripts/balance.ts -- src/content/sectors/<file>.ts
-   src/core/strategies/<file>.ts   — keep the output.
+   src/strategies/<file>.ts   — keep the output.
 1. Put the enemies into the listed waves. Replace groups of a similar role rather than only adding, so wave length and
    difficulty stay close. Introduce each enemy in a light wave (small count, no other trait enemies), then mix it in.
 2. Adjust strategies only if needed (counters to the new enemies: flak/tesla for flyers, detector for stealth). The first

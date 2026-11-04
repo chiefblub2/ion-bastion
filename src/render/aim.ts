@@ -1,10 +1,7 @@
 import type { Enemy, Sim, Tower } from "../core/types";
-import { resolveUpgrades } from "../core/upgrades";
-import { attackModule, canAcquire, isSupport } from "../systems/attacks";
+import { isArmed } from "../systems/attacks";
 import { effectiveTowerStats, isAuraSource } from "../systems/auras";
-import { compareTargets } from "../systems/combat";
-import { dist } from "../systems/path";
-import { taunters } from "../systems/traits";
+import { selectTarget } from "../systems/combat";
 /** How fast a drawn turret turns, in radians per second: a half turn takes about 0.13 s. */
 export const TURN_RATE = 24;
 /** Frames between two target predictions of one tower (staggered by id), to bound the cost on a crowded board. */
@@ -16,27 +13,10 @@ export function turnToward(from: number, to: number, step: number) {
   const delta = Math.atan2(Math.sin(to - from), Math.cos(to - from));
   return Math.abs(delta) <= step ? to : from + Math.sign(delta) * step;
 }
-/**
- * The enemy the tower would fire at now: range, dead zone, acquisition,
- * priority, taunts and the module's `choose` as in `attackEnemies` (all read only; volleys and procs are left out).
- */
+/** The enemy an attack tower would fire at now, by the simulation's own rules (`selectTarget`); never a trap or support tower. */
 export function predictTarget(sim: Sim, t: Tower, sources: readonly Tower[]): Enemy | undefined {
-  const d = sim.content.towers[t.type];
-  if (d.placement === "path" || isSupport(d.attack)) return undefined;
-  const range = effectiveTowerStats(t, sources, sim.content, sim).range,
-    { attack } = resolveUpgrades(t, sim.content),
-    module = attackModule(attack),
-    min = module?.minRange?.(attack) ?? 0,
-    candidates = sim.state.enemies
-      .filter((e) => {
-        if (e.hp <= 0) return false;
-        const r = dist(e, t);
-        return r <= range && r >= min && canAcquire(sim, t.type, e);
-      })
-      .sort(compareTargets(t.priority, t));
-  if (!candidates.length) return undefined;
-  const pool = taunters(sim, t, candidates) ?? candidates;
-  return module?.choose?.(sim, t.type, { x: t.x, y: t.y }, range, pool, attack, t) ?? pool[0];
+  if (!isArmed(sim.content.towers[t.type])) return undefined;
+  return selectTarget(sim, t, effectiveTowerStats(t, sources, sim.content, sim).range)?.target;
 }
 const bearing = (t: Tower, e: Enemy) => Math.atan2(e.y - t.y, e.x - t.x);
 interface Aim {

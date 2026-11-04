@@ -63,7 +63,6 @@ export type AttackSpecialization =
   | { kind: "pool-dissolve"; fraction: number; duration: number }
   /** Enemies in the pool are slowed to `factor` of their speed for `duration` seconds. */
   | { kind: "pool-slow"; factor: number; duration: number }
-  // ── new towers: g1 (Attack+Control A) ──
   /** Each strike also drops `count` bomblets on the nearest enemies within `radius` outside its blast, each `factor` of the damage. */
   | { kind: "cluster"; count: number; radius: number; factor: number }
   /** The trance also takes `count` other enemies within `radius` of the target. */
@@ -74,8 +73,6 @@ export type AttackSpecialization =
   | { kind: "shatter-splash"; factor: number; radius: number }
   /** Enemies caught in the pulse are slowed to `factor` of their speed for `duration` seconds. */
   | { kind: "lodestone"; factor: number; duration: number }
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
   /** Tether: damage that reaches a linked enemy's HP is dealt `share` again to each of its partners (never passed on twice). */
   | { kind: "tether-share"; share: number }
   /** Tether: when a linked enemy dies, its partners are stunned for `duration` seconds. */
@@ -92,7 +89,6 @@ export type AttackSpecialization =
   | { kind: "siphon-fork"; radius: number; count: number }
   /** Siphon: each counted slowed enemy also gives the towers around it `bonus` more damage. */
   | { kind: "power-tap"; bonus: number }
-  // ── end g2 ──
   // ── trap paths ──
   /** Caltrops: bleeding enemies are slowed to `1 - slow` of their speed while they bleed. */
   | { kind: "hamstring"; slow: number }
@@ -221,8 +217,8 @@ export type SpecializationSpec = AttackSpecialization | SupportSpecialization;
 export type SpecializationKind = SpecializationSpec["kind"];
 type Field<K extends SpecializationKind> = Exclude<keyof Extract<SpecializationSpec, { kind: K }>, "kind" | "predicate">;
 
-/** Numeric fields per kind; the mapped type makes a missing kind or field a compile error. */
-const FIELDS: { [K in SpecializationKind]: readonly Field<K>[] } = {
+/** Numeric fields per kind of attack towers and traps; the mapped type makes a missing kind or field a compile error. */
+const ATTACK_FIELDS: { [K in AttackSpecialization["kind"]]: readonly Field<K>[] } = {
   "conditional-damage": ["bonus"],
   "armor-pierce": ["fraction"],
   ricochet: ["every", "radius", "factor"],
@@ -253,14 +249,11 @@ const FIELDS: { [K in SpecializationKind]: readonly Field<K>[] } = {
   "pool-dissolve": ["fraction", "duration"],
   "pool-slow": ["factor", "duration"],
   eruption: ["factor"],
-  // ── new towers: g1 (Attack+Control A) ──
   cluster: ["count", "radius", "factor"],
   "mass-trance": ["count", "radius"],
   "mind-break": ["bonus"],
   "shatter-splash": ["factor", "radius"],
   lodestone: ["factor", "duration"],
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
   "tether-share": ["share"],
   whiplash: ["duration"],
   "shrink-knock": ["cells"],
@@ -269,7 +262,6 @@ const FIELDS: { [K in SpecializationKind]: readonly Field<K>[] } = {
   doom: ["threshold"],
   "siphon-fork": ["radius", "count"],
   "power-tap": ["bonus"],
-  // ── end g2 ──
   // ── trap paths ──
   hamstring: ["slow"],
   "open-wounds": ["bonus"],
@@ -280,6 +272,9 @@ const FIELDS: { [K in SpecializationKind]: readonly Field<K>[] } = {
   "held-exposure": ["bonus"],
   "warp-daze": ["duration"],
   // ── end trap paths ──
+};
+/** Numeric fields per kind of support towers and Aura; its keys are `SUPPORT_KINDS`. */
+const SUPPORT_FIELDS: { [K in SupportSpecialization["kind"]]: readonly Field<K>[] } = {
   // ── support economy ──
   "big-game": ["amount", "cap"],
   lure: ["slow"],
@@ -332,38 +327,20 @@ const FIELDS: { [K in SpecializationKind]: readonly Field<K>[] } = {
   harmonics: ["bonus"],
   // ── end aura paths ──
 };
+const FIELDS: { [K in SpecializationKind]: readonly Field<K>[] } = { ...ATTACK_FIELDS, ...SUPPORT_FIELDS };
 
 /** Kinds that belong to support towers (and Aura); every other kind belongs to attack towers and traps. */
-export const SUPPORT_KINDS: ReadonlySet<SpecializationKind> = new Set<SupportSpecialization["kind"]>([
-  "big-game", "lure", "field-rations", "advance", "compounding", "fuel-line", "clean-sheet", "investment", "reserve-cells",
-  "prefab", "refit", "calibration", "triage", "salvage", "damage-control", "recharge", "shockwave", "overflow",
-  "weak-point", "hunters-mark", "lingering-tag", "afterburn", "opening-salvo", "charged-rounds", "penetrator", "stagger",
-  "spotting", "shred", "hollow-points", "shieldbreaker", "downlink", "flak-relay", "wing-tag", "nexus-resonance", "harmony",
-  "diversity", "exposure-scan", "static-pulse", "afterimage", "cascade", "meltdown", "scrap-yard",
-  "piercing-field", "execution-field", "harmonics",
-]);
+export const SUPPORT_KINDS: ReadonlySet<SpecializationKind> = new Set(Object.keys(SUPPORT_FIELDS) as SupportSpecialization["kind"][]);
 
 const COUNT = new Set([
   "every", "count", "maxPerSalvo", "min", "amount", "cap",
-  // ── new towers: g1 (Attack+Control A) ──
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
-  // ── end g2 ──
 ]);
 const POSITIVE = new Set([
   "radius", "delay", "duration", "width", "extend", "max",
-  // ── new towers: g1 (Attack+Control A) ──
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
   "cells",
-  // ── end g2 ──
 ]);
 const NON_NEGATIVE = new Set([
   "bonus", "bonusPerUnused", "boost",
-  // ── new towers: g1 (Attack+Control A) ──
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
-  // ── end g2 ──
 ]);
 const PREDICATES: readonly DamagePredicate[] = ["heavy", "heavy-air", "armored", "isolated", "burning"];
 

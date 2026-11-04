@@ -34,12 +34,8 @@ const FIELDS: Record<string, { label: string; unit: string; scale: number }> = {
   min: { label: "Min. effects", ...PLAIN },
   extend: { label: "Extension per hit", ...SECONDS },
   max: { label: "Longest effect", ...SECONDS },
-  // ── new towers: g1 (Attack+Control A) ──
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
   share: { label: "Damage shared", ...SHARE },
   cells: { label: "Knockback", ...CELLS },
-  // ── end g2 ──
   amount: { label: "Amount", ...PLAIN },
   cap: { label: "Most per wave", ...PLAIN },
   boost: { label: "Boost", ...SHARE },
@@ -57,21 +53,17 @@ const OVERRIDES: Partial<Record<SpecializationSpec["kind"], Record<string, strin
   "pool-dissolve": { fraction: "Armor removed" },
   "pool-slow": { factor: "Slowed speed" },
   eruption: { factor: "Eruption (share of burn)" },
-  // ── new towers: g1 (Attack+Control A) ──
   cluster: { count: "Bomblets", radius: "Bomblet reach", factor: "Bomblet damage" },
   "mass-trance": { count: "Extra enemies" },
   "mind-break": { bonus: "Damage taken" },
   "shatter-splash": { factor: "Shard damage (share)" },
   lodestone: { factor: "Slowed speed" },
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
   whiplash: { duration: "Stun" },
   "brittle-frame": { bonus: "Damage taken" },
   "hex-spread": { count: "Curses passed on" },
   doom: { threshold: "Kills below HP" },
   "siphon-fork": { count: "Extra beams" },
   "power-tap": { bonus: "Damage per enemy" },
-  // ── end g2 ──
   // ── trap paths ──
   hamstring: { slow: "Slow while bleeding" },
   "open-wounds": { bonus: "Damage taken" },

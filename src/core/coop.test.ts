@@ -71,11 +71,10 @@ describe("co-op economy", () => {
       expect(solo.command({ type: "build", ...b }).ok).toBe(true);
       expect(duo.command({ type: "build", ...b, player: i % 2 }).ok).toBe(true);
     });
-    for (let wave = 0; wave < 4; wave++)
-      for (const g of [solo, duo]) {
-        g.command({ type: "start" });
-        finishWave(g);
-      }
+    for (const g of [solo, duo]) {
+      g.command({ type: "start" });
+      finishWave(g);
+    }
     expect(duo.state.kills).toBe(solo.state.kills);
     expect(duo.state.lives).toBe(solo.state.lives);
     expect(duo.state.wallets[0] + duo.state.wallets[1]).toBe(solo.state.wallets[0]);

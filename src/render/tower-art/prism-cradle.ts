@@ -12,7 +12,7 @@ import type { TurretContext } from "./kit";
 import { OUTLINE, SQUASH, X, Y, drum, fillPoints, onGround, point } from "./tilt";
 import { TILTS } from "../muzzles";
 
-const TILT = TILTS.prism!,
+const TILT = TILTS.prism,
   DROP = TILT.drop;
 /** Dais (the motif's deck) and crystal (the emit point) heights. */
 const DAIS = TILT.deck,

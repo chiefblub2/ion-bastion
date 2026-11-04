@@ -1,3 +1,4 @@
+import { DEFAULT_CONTENT } from "../content";
 import { describe, expect, it } from "vitest";
 import { isFullyUpgraded, resolveUpgrades, towerColor, towerLevel, towerPath, towerTrack, upgradeOption, validateUpgradeDefinitions } from "../core/upgrades";
 import { Game } from "../core/game";
@@ -20,10 +21,10 @@ function fundedGame() { const g = new Game(); g.state.wallets[0] = 2000; return 
 describe("aura rules", () => {
   it("includes the exact radius boundary and excludes diagonal and just-outside targets", () => {
     const source = tower(1, "aura", 0, 0, ["damage"]), target = tower(2, "pulse", 3, 0);
-    expect(isInAura(source, target)).toBe(true);
-    expect(effectiveTowerStats(target, [source, target]).damage).toBeCloseTo(22.5);
-    expect(isInAura(source, { ...target, x: 3.0001 })).toBe(false);
-    expect(isInAura(source, { ...target, x: 2, y: 3 })).toBe(false);
+    expect(isInAura(source, target, DEFAULT_CONTENT)).toBe(true);
+    expect(effectiveTowerStats(target, [source, target], DEFAULT_CONTENT).damage).toBeCloseTo(22.5);
+    expect(isInAura(source, { ...target, x: 3.0001 }, DEFAULT_CONTENT)).toBe(false);
+    expect(isInAura(source, { ...target, x: 2, y: 3 }, DEFAULT_CONTENT)).toBe(false);
   });
   it("takes the strongest bonus independently per property without stacking", () => {
     const target = tower(4, "pulse", 1, 1);
@@ -31,15 +32,15 @@ describe("aura rules", () => {
     const b = tower(2, "aura", 2, 0, ["speed"]);
     const c = tower(3, "aura", 1, 0, ["range"]);
     const d = tower(5, "aura", 2, 1, ["damage"]);
-    expect(receivedAuraBonuses(target, [a, b, c, d])).toEqual({ damage: .4, speed: .2, range: .15 });
-    expect(receivedAuraBonuses(target, [d, c, b, a])).toEqual(receivedAuraBonuses(target, [a, b, c, d]));
+    expect(receivedAuraBonuses(target, [a, b, c, d], DEFAULT_CONTENT)).toEqual({ damage: .4, speed: .2, range: .15 });
+    expect(receivedAuraBonuses(target, [d, c, b, a], DEFAULT_CONTENT)).toEqual(receivedAuraBonuses(target, [a, b, c, d], DEFAULT_CONTENT));
   });
   it("applies bonuses after normal upgrades without altering source content or special effects", () => {
     const before = JSON.stringify(TOWERS);
     const sources = [tower(1, "aura", 0, 0, ["damage"]), tower(3, "aura", 0, 1, ["speed"]), tower(4, "aura", 1, 1, ["range"])];
     for (const type of ["pulse", "blast", "frost"] as const) {
       const target = { ...tower(2, type, 1, 0), upgrades: ["level-2", "level-3"] };
-      const stats = effectiveTowerStats(target, [...sources, target]), base = resolveUpgrades({ type, upgrades: ["level-2", "level-3"] }).stats;
+      const stats = effectiveTowerStats(target, [...sources, target], DEFAULT_CONTENT), base = resolveUpgrades({ type, upgrades: ["level-2", "level-3"] }, DEFAULT_CONTENT).stats;
       expect(stats.damage).toBeCloseTo(base.damage * 1.25);
       expect(stats.range).toBeCloseTo(base.range * 1.15);
       expect(stats.interval).toBeCloseTo(base.interval / 1.2);
@@ -50,15 +51,15 @@ describe("aura rules", () => {
     const a = tower(1, "aura", 0, 0, ["range", "range-2"]);
     const b = tower(2, "aura", 2, 0, ["damage"]);
     const target = tower(3, "pulse", 5, 0);
-    expect(receivedAuraBonuses(b, [a, b])).toEqual({ damage: 0, speed: 0, range: 0 });
-    expect(effectiveTowerStats(b, [a, b]).range).toBe(3);
-    expect(receivedAuraBonuses(target, [a, b])).toEqual({ damage: .25, speed: 0, range: 0 });
+    expect(receivedAuraBonuses(b, [a, b], DEFAULT_CONTENT)).toEqual({ damage: 0, speed: 0, range: 0 });
+    expect(effectiveTowerStats(b, [a, b], DEFAULT_CONTENT).range).toBe(3);
+    expect(receivedAuraBonuses(target, [a, b], DEFAULT_CONTENT)).toEqual({ damage: .25, speed: 0, range: 0 });
   });
   it("has no base bonus: an aura without a path boosts nothing", () => {
     const source = tower(1, "aura", 0, 0), target = tower(2, "pulse", 1, 0);
-    expect(auraBonuses(source)).toEqual({ damage: 0, speed: 0, range: 0 });
-    expect(effectiveTowerStats(target, [source, target]).damage).toBe(18);
-    expect(Object.values(effectiveTowerStats(target, [source, target]).bonuses).some(Boolean)).toBe(false);
+    expect(auraBonuses(source, DEFAULT_CONTENT)).toEqual({ damage: 0, speed: 0, range: 0 });
+    expect(effectiveTowerStats(target, [source, target], DEFAULT_CONTENT).damage).toBe(18);
+    expect(Object.values(effectiveTowerStats(target, [source, target], DEFAULT_CONTENT).bonuses).some(Boolean)).toBe(false);
   });
 });
 
@@ -72,23 +73,23 @@ describe("aura commands and lifecycle", () => {
     for (const path of ["damage", "speed", "range"] as const) {
       const g = fundedGame(), id = g.command({ type: "build", tower: "aura", x: 4, y: 4 }).id!;
       const t = g.state.towers[0];
-      expect(towerTrack(t)).toBeUndefined();
+      expect(towerTrack(t, DEFAULT_CONTENT)).toBeUndefined();
       expect(g.command({ type: "upgrade", id, upgrade: path }).ok).toBe(true);
-      expect(towerTrack(t)).toBe(path);
-      expect(towerPath(t)).toBeUndefined();
+      expect(towerTrack(t, DEFAULT_CONTENT)).toBe(path);
+      expect(towerPath(t, DEFAULT_CONTENT)).toBeUndefined();
       const gold = g.state.wallets[0];
       for (const other of ["damage", "speed", "range"].filter(p => p !== path))
         for (const upgrade of [other, `${other}-2`, `${other}-3`]) {
-          expect(upgradeOption(t, upgrade, Infinity).status).toBe("excluded");
+          expect(upgradeOption(t, upgrade, Infinity, DEFAULT_CONTENT).status).toBe("excluded");
           expect(g.command({ type: "upgrade", id, upgrade })).toMatchObject({ ok: false, code: "upgrade-excluded" });
         }
       expect(g.state.wallets[0]).toBe(gold);
-      expect(isFullyUpgraded(t)).toBe(false);
+      expect(isFullyUpgraded(t, DEFAULT_CONTENT)).toBe(false);
       for (const upgrade of [`${path}-2`, `${path}-3`]) expect(g.command({ type: "upgrade", id, upgrade }).ok).toBe(true);
-      expect(auraBonuses(t)).toEqual(expected[path]);
-      expect(towerLevel(t)).toBe(4);
+      expect(auraBonuses(t, DEFAULT_CONTENT)).toEqual(expected[path]);
+      expect(towerLevel(t, DEFAULT_CONTENT)).toBe(4);
       // The paths open after tier III, so a tier-III Aura is not fully upgraded yet.
-      expect(isFullyUpgraded(t)).toBe(false);
+      expect(isFullyUpgraded(t, DEFAULT_CONTENT)).toBe(false);
     }
   });
   it("offers three track starts, then only the next tier of the chosen track", () => {
@@ -116,9 +117,9 @@ describe("aura commands and lifecycle", () => {
   });
   it("takes on the colour of its track", () => {
     const t = tower(1, "aura", 0, 0);
-    expect(towerColor(t)).toBe(TOWERS.aura.color);
-    expect(towerColor({ ...t, upgrades: ["speed", "speed-2"] })).toBe(0xffd166);
-    expect(towerColor(tower(2, "pulse", 0, 0, ["level-2"]))).toBe(TOWERS.pulse.color);
+    expect(towerColor(t, DEFAULT_CONTENT)).toBe(TOWERS.aura.color);
+    expect(towerColor({ ...t, upgrades: ["speed", "speed-2"] }, DEFAULT_CONTENT)).toBe(0xffd166);
+    expect(towerColor(tower(2, "pulse", 0, 0, ["level-2"]), DEFAULT_CONTENT)).toBe(TOWERS.pulse.color);
   });
   it("rejects tracks without visuals and prerequisites from another track", () => {
     const aura = structuredClone(TOWERS.aura);
@@ -148,9 +149,9 @@ describe("aura commands and lifecycle", () => {
     const before = g.state.wallets[0];
     g.command({ type: "sell", id: a });
     expect(g.state.wallets[0] - before).toBe(308);
-    expect(effectiveTowerStats(target, g.state.towers).bonuses).toEqual({ damage: .25, speed: 0, range: 0 });
+    expect(effectiveTowerStats(target, g.state.towers, DEFAULT_CONTENT).bonuses).toEqual({ damage: .25, speed: 0, range: 0 });
     g.command({ type: "sell", id: b });
-    expect(effectiveTowerStats(target, g.state.towers).damage).toBe(18);
+    expect(effectiveTowerStats(target, g.state.towers, DEFAULT_CONTENT).damage).toBe(18);
     g.command({ type: "restart" });
     expect(g.state.towers).toEqual([]);
   });

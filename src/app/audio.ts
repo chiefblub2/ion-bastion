@@ -1,26 +1,30 @@
-import { Conductor, type Phase } from "../audio/conductor";
+import type { Ambience } from "../audio/ambience";
+import type { Phase } from "../audio/conductor";
 import { cuesFor, newlyEliminated, ReactorWatch } from "../audio/cues";
+import { Effects, type Director } from "../audio/effects";
 import { AudioEngine } from "../audio/engine";
 import { bossSpawned, intensityOf } from "../audio/intensity";
 import { moodOf } from "../audio/mood";
 import type { CueId } from "../audio/recipes";
 import { ShotMixer } from "../audio/shots";
-import { Sequencer } from "../audio/sequencer";
 import { loadSettings, MUSIC_ENABLED, saveSettings, type SoundSettings } from "../audio/settings";
 import { unlockOnGesture } from "../audio/unlock";
 import type { Game } from "../core/game";
 import type { Match } from "../core/match";
 import type { GameEvent } from "../core/types";
-// Render-side sound: reads drained events and state once per frame, never changes them. The conductor turns the
-// game's state (never the towers) into music, the sequencer schedules it ahead on the audio clock, and the shot mixer
-// keeps the towers' shots level however many fire.
+// Render-side sound: reads drained events and state once per frame, never changes them. The director plays the cues:
+// without the soundtrack (`MUSIC_ENABLED` false) `Effects` plays them at once; with it the conductor (`audio/music.ts`,
+// loaded on demand) turns the game's state (never the towers) into music and places the cues on its beat. The shot
+// mixer keeps the towers' shots level however many fire.
 
 /** Seconds of audio time between two measurements of threat, danger and the mission's progress. */
 const MEASURE = 0.5;
 interface Sound {
   ctx: AudioContext;
   engine: AudioEngine;
-  conductor: Conductor;
+  director: Director;
+  /** The soundtrack's pad, once the music has loaded. */
+  ambience?: Ambience;
   shots: ShotMixer;
 }
 export class Audio {
@@ -41,10 +45,15 @@ export class Audio {
     if (!this.sound) {
       const ctx = new AudioContext(),
         engine = new AudioEngine(ctx),
-        conductor = new Conductor(engine);
-      this.sound = { ctx, engine, conductor, shots: new ShotMixer() };
+        sound: Sound = { ctx, engine, director: new Effects(engine), shots: new ShotMixer() };
+      this.sound = sound;
       engine.volumes(this.settings);
-      if (MUSIC_ENABLED) new Sequencer(() => ctx.currentTime, (from, to) => this.live()?.conductor.window(from, to)).start();
+      if (MUSIC_ENABLED)
+        void import("../audio/music").then(({ startMusic }) => {
+          const music = startMusic(engine, () => this.live() !== null);
+          sound.director = music.conductor;
+          sound.ambience = music.ambience;
+        });
       document.addEventListener("visibilitychange", () => {
         if (document.hidden) void ctx.suspend();
         else if (this.on) void ctx.resume();
@@ -73,11 +82,11 @@ export class Audio {
   /** Seconds since the music's latest beat began, per tower family (the same for all); empty while sound is off or outside a wave. */
   pulses() {
     const s = this.live();
-    return s ? s.conductor.ages(s.ctx.currentTime) : {};
+    return s ? s.director.ages(s.ctx.currentTime) : {};
   }
   cue(id: CueId) {
     const s = this.live();
-    s?.conductor.cue(id, s.ctx.currentTime);
+    s?.director.cue(id, s.ctx.currentTime);
   }
   frame(events: readonly GameEvent[], game: Game, match: Match | null) {
     const s = this.live();
@@ -86,17 +95,17 @@ export class Audio {
       view = document.documentElement.dataset.view === "menu" ? "menu" : "game",
       state = game.state,
       mood = moodOf({ view, theme: game.map.theme ?? "outpost", status: state.status, paused: state.paused, enemies: state.enemies.length });
-    if (MUSIC_ENABLED) s.engine.ambience.set(mood);
-    s.conductor.theme(mood.drone, now);
-    if (now >= this.measured + MEASURE) {
+    s.ambience?.set(mood);
+    s.director.theme(mood.drone, now);
+    if (MUSIC_ENABLED && now >= this.measured + MEASURE) {
       this.measured = now;
-      s.conductor.measure({ ...intensityOf(state, game.content, game.mission), phase: phaseOf(view, state) });
+      s.director.measure({ ...intensityOf(state, game.content, game.mission), phase: phaseOf(view, state) });
     }
     if (view === "game") {
       for (const v of s.shots.frame(events, game.content, game.map.columns, now)) s.engine.play({ id: v.id, rate: v.rate, gain: v.gain, at: now, pan: v.pan });
       s.engine.shotDensity(s.shots.fired);
     }
-    s.conductor.play(cuesFor(events, game.content, view), now);
+    s.director.play(cuesFor(events, game.content, view), now);
     if (bossSpawned(events, state, game.content)) this.cue("boss");
     if (this.reactor.crossed(state, game.mission.reactorEnergy)) this.cue("lowReactor");
     if (match && newlyEliminated(this.eliminated, match.eliminatedAt, match.fields.indexOf(game)).length) this.cue("eliminated");

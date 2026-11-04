@@ -12,7 +12,7 @@ import type { TurretContext } from "./kit";
 import { OUTLINE, SQUASH, X, Y, block, drum, onGround } from "./tilt";
 import { TILTS } from "../muzzles";
 
-const TILT = TILTS.coil!,
+const TILT = TILTS.coil,
   DROP = TILT.drop;
 /** Plinth tiers (the upper one is the motif's deck), pylon, coil, torus and ball (the emit point) heights. */
 const LOW = 2.6,

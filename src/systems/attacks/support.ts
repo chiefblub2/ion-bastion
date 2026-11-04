@@ -12,6 +12,7 @@ export const bounty: AttackModule<BountyAttack> = {
 /** Reparaturdock: never attacks; `systems/support.ts` repairs the reactor after each wave. */
 export const repair: AttackModule<RepairAttack> = {
   aim: "none",
+  reactorOnly: true,
   projectile: "forbidden",
   params: {
     amount: { label: "Repair per wave", valid: (v) => Number.isInteger(v) && v > 0, unit: " Energie" },
