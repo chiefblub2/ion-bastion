@@ -1,5 +1,5 @@
 import type { MapDefinition, Point } from "../../core/types";
-import { type Ink, shade } from "../shapes";
+import { hash01, type Ink, shade } from "../shapes";
 // Shared pieces of the terrain themes (`terrain-themes/<theme>.ts`): the theme shape, the per-cell random numbers
 // and drawing helpers more than one theme uses.
 
@@ -85,6 +85,30 @@ export function mulberry32(a: number): Random {
   };
 }
 export const cellRandom = (map: MapDefinition, x: number, y: number) => mulberry32(seed(map.id, x, y));
+/** Voronoi plates for crack networks (Ember Pass lava crust, Frost Belt ice). */
+/**
+ * Voronoi plates over the plane: one jittered seed per `cell` px block. Returns the plate's id and how close the
+ * point lies to the plate's edge (the gap between the nearest and second nearest seed), so a small gap is a crack.
+ */
+export function plateAt(seed: number, x: number, y: number, cell: number) {
+  const bx = Math.floor(x / cell),
+    by = Math.floor(y / cell);
+  let d1 = Infinity,
+    d2 = Infinity,
+    id = 0;
+  for (let j = by - 1; j <= by + 1; j++)
+    for (let i = bx - 1; i <= bx + 1; i++) {
+      const sx = (i + 0.15 + 0.7 * hash01(seed, i, j)) * cell,
+        sy = (j + 0.15 + 0.7 * hash01(seed, j, i)) * cell,
+        d = Math.sqrt((x - sx) ** 2 + (y - sy) ** 2);
+      if (d < d1) {
+        d2 = d1;
+        d1 = d;
+        id = i * 7919 + j;
+      } else if (d < d2) d2 = d;
+    }
+  return { id, edge: d2 - d1 };
+}
 /** Point and direction at fractional cell distance `t` along the path. */
 export function along(path: readonly Point[], t: number) {
   const i = Math.min(Math.floor(t), path.length - 2),

@@ -5,6 +5,8 @@ import * as L from "./render/terrain-themes/lock-props";
 import * as S from "./render/terrain-themes/shard-props";
 import * as E from "./render/terrain-themes/ember-props";
 import * as C from "./render/terrain-themes/core-props";
+import * as F from "./render/terrain-themes/frost-props";
+import * as T from "./render/terrain-themes/toxic-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -134,5 +136,50 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
     { label: "mast", shadow: (g, x, y) => C.mastShadow(g, x, y), draw: (g, x, y) => C.drawMast(g, x, y) },
     { label: "cooling tower", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => C.coolingTowerShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => C.drawCoolingTower(g)) },
     { label: "shield spire", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => C.spireShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => C.drawSpire(g)) },
+  ],
+  frost: [
+    ...[1, 2, 3].map((n) => {
+      const p = F.pinesOf(r(3000 + n));
+      return { label: "pines", shadow: (g: Ink, x: number, y: number) => F.pinesShadow(g, x, y, p), draw: (g: Ink, x: number, y: number) => F.drawPines(g, x, y, p) };
+    }),
+    (() => {
+      const c = F.shardsOf(r(3010));
+      return { label: "ice shards", shadow: (g: Ink, x: number, y: number) => F.shardsShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => F.drawShards(g, x, y, c) };
+    })(),
+    ...[1, 2].map((n) => {
+      const k = F.rocksOf(r(3020 + n));
+      return { label: "rocks", shadow: (g: Ink, x: number, y: number) => F.rocksShadow(g, x, y, k), draw: (g: Ink, x: number, y: number) => F.drawRocks(g, x, y, k) };
+    }),
+    { label: "weather station", shadow: (g, x, y) => F.stationShadow(g, x, y), draw: (g, x, y) => { F.drawStation(g, x, y); F.anemometer(g, x, y, 0, 0); } },
+    (() => {
+      const c = F.cacheOf(r(3030));
+      return { label: "cache", shadow: (g: Ink, x: number, y: number) => F.cacheShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => F.drawCache(g, x, y, c) };
+    })(),
+    { label: "research dome", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => F.domeShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => F.drawDome(g)) },
+    { label: "ice serac", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => F.seracShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => F.drawSerac(g)) },
+  ],
+  toxic: [
+    ...[1, 2, 3].map((n) => {
+      const b = T.barrelsOf(r(4000 + n));
+      return { label: "barrels", shadow: (g: Ink, x: number, y: number) => T.barrelsShadow(g, x, y, b), draw: (g: Ink, x: number, y: number) => T.drawBarrels(g, x, y, b) };
+    }),
+    (() => {
+      const t = T.treeOf(r(4010));
+      return { label: "dead tree", shadow: (g: Ink, x: number, y: number) => T.treeShadow(g, x, y, t), draw: (g: Ink, x: number, y: number) => T.drawTree(g, x, y, t) };
+    })(),
+    ...[1, 2].map((n) => {
+      const c = T.fungusOf(r(4020 + n));
+      return { label: "fungus", shadow: (g: Ink, x: number, y: number) => T.fungusShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => T.drawFungus(g, x, y, c) };
+    }),
+    (() => {
+      const t = T.tankOf(r(4030));
+      return { label: "tank", shadow: (g: Ink, x: number, y: number) => T.tankShadow(g, x, y, t), draw: (g: Ink, x: number, y: number) => T.drawTank(g, x, y, t) };
+    })(),
+    (() => {
+      const k = T.reedsOf(r(4040));
+      return { label: "cattails", shadow: (g: Ink, x: number, y: number) => T.reedsShadow(g, x, y), draw: (g: Ink, x: number, y: number) => T.drawReeds(g, x, y, k) };
+    })(),
+    { label: "digester", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => T.digesterShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => T.drawDigester(g)) },
+    { label: "pump house", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => T.pumpHouseShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => T.drawPumpHouse(g)) },
   ],
 };
