@@ -1,16 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { FRONT, headingOf, inside, jaggedBorder, planetLayout, ROUTE_SHAPES, type RouteShape, routePoints, voronoiCell, WORLD_H, WORLD_W, worldLayout, worldRows } from "./world-map";
+import { FRONT, headingOf, inside, jaggedBorder, planetLayout, ROUTE_SHAPES, type RouteShape, routePoints, voronoiCell, WORLD_H, WORLD_W } from "./world-map";
 import { WORLDS } from "./planets";
 describe("world map", () => {
-  it("lays out a serpentine for worlds without placed centres", () => {
-    const regions = worldLayout(12);
-    expect(worldRows(12)).toBe(3);
-    expect(worldRows(3)).toBe(1);
-    for (const r of regions) expect(inside(r, r.border)).toBe(true);
-    // Neighbours in play order are neighbours on the map.
-    for (let i = 1; i < regions.length; i++) expect(Math.hypot(regions[i].x - regions[i - 1].x, regions[i].y - regions[i - 1].y)).toBeLessThan(40);
-    expect(worldLayout(12)).toEqual(regions);
-  });
   it("tiles every world with its territories and wilds, a station's deck apart in orbit", () => {
     for (const w of WORLDS) {
       const { regions, wilds } = planetLayout(w.centres, w.station),
@@ -63,7 +54,7 @@ describe("world map", () => {
           for (const count of [3, 5]) for (const p of routePoints(r, count, { shape, heading: headingOf(regions, i), aside: 1 })) expect(inside(p, r.border)).toBe(true);
         });
     }
-    const regions = worldLayout(12);
+    const { regions } = planetLayout(WORLDS[0].centres, WORLDS[0].station);
     const east = routePoints(regions[0], 5, { shape: "chain", heading: 0 }),
       west = routePoints(regions[0], 5, { shape: "chain", heading: Math.PI });
     expect(east[0].x).toBeLessThan(east[4].x);

@@ -26,11 +26,6 @@ export function toSphere(p: Point): Vec3 {
     c = Math.cos(lat);
   return { x: c * Math.sin(lon), y: Math.sin(lat), z: c * Math.cos(lon) };
 }
-/** The plane point of a direction (any length). */
-export function fromSphere(v: Vec3): Point {
-  const r = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z) || 1;
-  return { x: WORLD_W / 2 + Math.atan2(v.x, v.z) / UNIT, y: WORLD_H / 2 - Math.asin(Math.max(-1, Math.min(1, v.y / r))) / UNIT };
-}
 /**
  * The camera: the longitude and latitude that face the viewer (radians), the globe's radius on screen (px) and the
  * globe centre's offset from the view's centre (px).
@@ -51,11 +46,6 @@ export function rotate(v: Vec3, { lon, lat }: Pick<Camera, "lon" | "lat">): Vec3
     ca = Math.cos(lat),
     sa = Math.sin(lat);
   return { x: x1, y: v.y * ca - z1 * sa, z: v.y * sa + z1 * ca };
-}
-/** Where a point of the globe (or above it) lands on a `width` × `height` view, px; `z` > 0 faces the viewer. */
-export function screenOf(v: Vec3, cam: Camera, width: number, height: number): Vec3 {
-  const t = rotate(v, cam);
-  return { x: width / 2 + cam.ox + cam.r * t.x, y: height / 2 + cam.oy - cam.r * t.y, z: t.z };
 }
 /** Hidden behind the globe: on its far side, and for a point in orbit, also in front of its disc. */
 export const occluded = (t: Vec3) => t.z < 0 && t.x * t.x + t.y * t.y < 1;

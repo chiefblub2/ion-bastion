@@ -155,23 +155,6 @@ export interface Planet {
   regions: Region[];
   wilds: Territory[];
 }
-/** Rows of a serpentine: one row for up to four sectors, else enough rows for cells about 3:2. */
-export const worldRows = (count: number) => (count <= 4 ? 1 : Math.ceil(Math.sqrt(count / 2)));
-/** Sector centres in a serpentine across the globe's face, for a world without enough hand-placed centres. */
-export function serpentine(count: number): Point[] {
-  const rows = worldRows(count),
-    cols = Math.ceil(count / rows),
-    cw = FRONT.w / cols,
-    ch = FRONT.h / rows;
-  return Array.from({ length: count }, (_, i) => {
-    const row = Math.floor(i / cols),
-      col = row % 2 === 1 ? cols - 1 - (i % cols) : i % cols;
-    return {
-      x: round(FRONT.x + cw * (col + 0.5) + (jitter(i, 1) - 0.5) * cw * 0.2),
-      y: round(FRONT.y + ch * (row + 0.5) + (jitter(i, 2) - 0.5) * ch * 0.26),
-    };
-  });
-}
 /** The deck of a station in orbit around `c`: a long hull with chamfered ends and a notched spine. */
 export function deckOutline(c: Point): Point[] {
   const w = 26,
@@ -247,8 +230,6 @@ export function planetLayout(centres: readonly Point[], station?: number): Plane
   });
   return { regions, wilds };
 }
-/** Sector territories in a serpentine (a world without hand-placed centres). */
-export const worldLayout = (count: number): Region[] => planetLayout(serpentine(count)).regions;
 /**
  * The shapes a sector's route of missions can take, as points in the territory's own frame: `x` runs from the
  * entry (-1) towards the exit (+1), `y` across it, both scaled to the room the territory has (`frameOf`). Each has
@@ -421,12 +402,4 @@ export const link = (a: Point, b: Point) => `M${a.x} ${a.y}L${b.x} ${b.y}`;
 /** Stars behind the globe: position as fractions of the view and a radius in px, the same on every visit. */
 export function stars(count: number): (Point & { r: number })[] {
   return Array.from({ length: count }, (_, i) => ({ x: round(jitter(i, 40) * 100) / 100, y: round(jitter(i, 41) * 100) / 100, r: round(0.4 + jitter(i, 42) ** 3 * 1.1) }));
-}
-/** What a sector zoom shows: its stations with room around them for the labels (`mx`, `my` world units). */
-export function stationBox(points: readonly Point[], mx: number, my: number): Box {
-  const xs = points.map((p) => p.x),
-    ys = points.map((p) => p.y),
-    x = Math.min(...xs) - mx,
-    y = Math.min(...ys) - my;
-  return { x, y, w: Math.max(...xs) + mx - x, h: Math.max(...ys) + my * 1.3 - y };
 }

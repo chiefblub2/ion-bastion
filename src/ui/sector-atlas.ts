@@ -9,7 +9,7 @@ import { enemyIcon } from "./wave-forecast";
 import type { CampaignRecord } from "../campaign/record";
 import { starText } from "../campaign/rating";
 import { type Lock, sectorLocked, type Unlocked } from "../campaign/campaign-unlock";
-import { type Box, GLOBE_BOX, headingOf, link, planetLayout, type Region, routePoints, routeShape, serpentine, stars, type Point, WRAP } from "./world-map";
+import { type Box, GLOBE_BOX, headingOf, link, planetLayout, type Region, routePoints, routeShape, stars, type Point, WRAP } from "./world-map";
 import { arc, type Camera, DECK_SCALE, deckAnchor, deckSpot, dragCamera, facing, fitCamera, lerpCamera, outlineOnScreen, type Spot, spotOnScreen, surfaceSpot, toSphere, UNIT, type Vec3 } from "./globe";
 import { GlobeGL } from "./globe-gl";
 import { SYSTEM, type WorldEntry, worldOf, worldsOf } from "./planets";
@@ -492,9 +492,8 @@ function renderHeader(game: Game, circle: boolean, options: AtlasOptions) {
 /** A world's territories and the seeds and biomes of its surface (the station deck paints apart). */
 function layoutOf(entry: WorldEntry) {
   const { world: w, sectors } = entry,
-    centres = w.centres.length >= sectors.length ? w.centres.slice(0, sectors.length) : serpentine(sectors.length),
-    station = w.centres.length >= sectors.length ? w.station : undefined,
-    { regions, wilds } = planetLayout(centres, station),
+    // Every world places all its sectors by hand (planets.test.ts).
+    { regions, wilds } = planetLayout(w.centres.slice(0, sectors.length), w.station),
     biomes: BiomeId[] = sectors.map((s) => s.missions[0].map.theme ?? "outpost"),
     seeds: SurfaceSeed[] = [
       ...regions.flatMap((r, i) => (r.station ? [] : [{ x: r.x, y: r.y, biome: biomes[i] }])),
