@@ -3,7 +3,7 @@ import { resolveUpgrades, type UpgradeProgress } from "../core/upgrades";
 import type { SupportSpecialization } from "../core/specialization-types";
 import type { AuraBonuses, ContentPack, Enemy, Point, Sim, TowerId } from "../core/types";
 import type { Hit } from "./damage";
-import { isSupport } from "./attacks";
+import { isArmed } from "./attacks";
 import { dist } from "./path";
 import { isSuppressed } from "./traits";
 
@@ -17,7 +17,7 @@ type Special<K extends SupportSpecialization["kind"]> = Extract<SupportSpecializ
 /** Whether `source` is an Aura whose radius holds the attack tower `target` (a trap or support tower never). */
 function supports(source: Point & { type: TowerId }, target: Point & { type: TowerId }, content: ContentPack) {
   const s = content.towers[source.type], t = content.towers[target.type];
-  return s.attack.kind === "aura" && t.placement !== "path" && !isSupport(t.attack) && dist(source, target) <= s.range;
+  return s.attack.kind === "aura" && isArmed(t) && dist(source, target) <= s.range;
 }
 
 /** Calls `fn` with every unsuppressed Aura path `kind` that supports the live tower `id` (none for a sold one). */

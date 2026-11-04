@@ -1,5 +1,5 @@
 import type { DamageSource, Enemy, Sim } from "../core/types";
-import { HEAVY_HP, type DamageOutcome, type Hit } from "./damage";
+import { isHeavy, type DamageOutcome, type Hit } from "./damage";
 import type { DefenceBreakers } from "./traits";
 import { hasTrait, layerOf } from "./traits";
 import { damageTaken, hasStatus } from "./status";
@@ -42,8 +42,8 @@ function conditionalFactor(sim: Sim, e: Enemy, hit?: Hit) {
   const special = hit?.special;
   if (special?.kind !== "conditional-damage") return 1;
   const applies = {
-    heavy: () => e.maxHp >= HEAVY_HP,
-    "heavy-air": () => e.maxHp >= HEAVY_HP && layerOf(sim, e) === "air",
+    heavy: () => isHeavy(e),
+    "heavy-air": () => isHeavy(e) && layerOf(sim, e) === "air",
     armored: () => hasTrait(sim, e, "armor"),
     // Checked before the hit's own burn is applied, so only an earlier burn counts.
     burning: () => hasStatus(e, "burn", sim.state.time),

@@ -31,6 +31,8 @@ export function fireAftershocks(sim: Sim) {
 /** Beben: a shockwave around the tower itself, weaker towards the edge of its range. */
 export const quake: AttackModule<QuakeAttack> = {
   aim: "enemy",
+  area: true,
+  instant: true,
   projectile: "forbidden",
   params: {
     edge: { label: "Edge damage", valid: (v) => v > 0 && v <= 1, unit: " %", show: (v) => v * 100 },

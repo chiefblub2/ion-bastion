@@ -1,5 +1,5 @@
 import type { ContentPack, Enemy, EnemyId, Point, Sim, StatusKind, Trait, TraitKind, UnitLayer } from "../core/types";
-import { isSupport } from "./attacks";
+import { isArmed } from "./attacks";
 import type { Hit } from "./damage";
 import { dist } from "./path";
 import { createEnemy } from "./spawn";
@@ -186,7 +186,7 @@ const TRAITS: Registry = {
     onDeath: (t, e, sim) => {
       for (const tower of sim.state.towers) {
         const d = sim.content.towers[tower.type];
-        if (d.placement === "path" || isSupport(d.attack) || dist(tower, e) > t.radius) continue;
+        if (!isArmed(d) || dist(tower, e) > t.radius) continue;
         tower.cooldown = Math.max(tower.cooldown, t.cycles);
       }
       sim.state.events.push({ type: "overload", at: { x: e.x, y: e.y }, radius: t.radius });
@@ -260,7 +260,7 @@ const TRAITS: Registry = {
       if (dot || hit?.tower === undefined) return;
       const tower = sim.state.towers.find((o) => o.id === hit.tower),
         d = tower && sim.content.towers[tower.type];
-      if (!tower || !d || d.placement === "path" || isSupport(d.attack) || dist(tower, e) > t.radius) return;
+      if (!tower || !d || !isArmed(d) || dist(tower, e) > t.radius) return;
       tower.cooldown = Math.min(tower.cooldown + t.cycles, 1 + t.cycles);
     },
   },

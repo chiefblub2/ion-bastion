@@ -2,7 +2,7 @@ import { DEFAULT_CONTENT } from "../content";
 import { findMission, missionNumber } from "../content/missions";
 import { moveEnemies } from "../systems/movement";
 import { attackEnemies, moveProjectiles, TARGET_PRIORITIES } from "../systems/combat";
-import { isSupport } from "../systems/attacks";
+import { attackModule, isSupport } from "../systems/attacks";
 import { fireAftershocks } from "../systems/attacks/quake";
 import { tickStatus } from "../systems/status";
 import { tickZones } from "../systems/zones";
@@ -55,10 +55,9 @@ export function initialState(mission: MissionDefinition, players = 1): GameState
     nextId: 1,
   };
 }
-/** Buildable towers of a mission, in content order. A ring has no reactor, so nothing repairs it. */
+/** Buildable towers of a mission, in content order. A ring has no reactor, so nothing that repairs or shields it (`reactorOnly`). */
 export function availableTowers(mission: MissionDefinition, content: ContentPack = DEFAULT_CONTENT): TowerId[] {
-  const all = (Object.keys(content.towers) as TowerId[]).filter((id) => !(mission.circle && content.towers[id].attack.kind === "repair"))
-    .filter((id) => !(mission.circle && content.towers[id].attack.kind === "barrier")); // Shield Generator
+  const all = (Object.keys(content.towers) as TowerId[]).filter((id) => !(mission.circle && attackModule(content.towers[id].attack)?.reactorOnly));
   return mission.availableTowers ? all.filter((id) => mission.availableTowers!.includes(id)) : all;
 }
 

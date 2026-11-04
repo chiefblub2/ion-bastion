@@ -5,6 +5,7 @@ import { statusDeath } from "./status";
 import { afterHit, linkedGroup, modifyDamage, onDeath } from "./traits";
 import { afterDealt } from "./links";
 import { DEFENCE_BREAKERS, HOOKS } from "./damage-modifiers";
+import { kindModule } from "./attacks";
 export type { DamageSource } from "../core/types";
 /**
  * Context of a hit for traits; absent for dots. `instant`: chain, pierce, focus, quake, pull, disrupt. `area`: splash (centre incl.),
@@ -33,17 +34,12 @@ export interface DamageOutcome {
 /** Max HP from which an enemy counts as a heavy target (specializations, Beacon paths, Titan Reactor Core). */
 export const HEAVY_HP = 1000;
 export const isHeavy = (e: Pick<Enemy, "maxHp">) => e.maxHp >= HEAVY_HP;
-const INSTANT: ReadonlySet<AttackKind> = new Set(["chain", "pierce", "focus", "quake", "pull", "disrupt"]);
-const AREA: ReadonlySet<AttackKind> = new Set<AttackKind>([
-  "splash", "mortar", "airburst", "pool", "quake", "charge",
-  "strike",
-]);
-/** Hit context for an attack of `kind`; `extra` overrides the derived flags (`chain`, `execution`). */
+/** Hit context for an attack of `kind` (`area` and `instant` from its module); `extra` overrides the derived flags (`chain`, `execution`). */
 export const hitOf = (kind: AttackKind, src: DamageSource, extra: Partial<Hit> = {}): Hit => ({
   kind,
-  area: AREA.has(kind),
+  area: !!kindModule(kind).area,
   chain: false,
-  instant: INSTANT.has(kind),
+  instant: !!kindModule(kind).instant,
   tower: src.tower,
   ...(src.special ? { special: src.special } : {}),
   ...(src.crit ? { crit: src.crit } : {}),

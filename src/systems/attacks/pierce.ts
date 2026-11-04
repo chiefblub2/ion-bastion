@@ -23,6 +23,8 @@ function line(sim: Sim, type: TowerId, from: Point, target: Enemy, reach: number
 /** Railgun: an instant line from the tower through the target to the end of its range. */
 export const pierce: AttackModule<PierceAttack> = {
   aim: "enemy",
+  instant: true,
+  precision: true,
   projectile: "forbidden",
   params: {
     width: { label: "Beam width", valid: (v) => v > 0, unit: " cells" },

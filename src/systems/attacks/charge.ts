@@ -4,6 +4,8 @@ import type { AttackModule } from "./types";
 /** Haftmine: sticks a bomb to the enemy; `systems/status.ts` sets it off after the fuse or on the carrier's death. */
 export const charge: AttackModule<ChargeAttack> = {
   aim: "enemy",
+  area: true,
+  explosive: true,
   projectile: "forbidden",
   trapOnly: true,
   params: {
