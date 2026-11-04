@@ -275,7 +275,6 @@ export function statusFlags(e: Enemy, time: number): StatusFlags {
     marked: on("singularity"),
   };
 }
-export const isSlowed = (e: Enemy, time: number) => statusFlags(e, time).slowed;
 /** Whether an effect of this kind is running; cheap enough for hot paths such as targeting. */
 export const hasStatus = (e: Enemy, kind: StatusKind, time: number) => e.status.some((s) => s.kind === kind && active(s, time));
 export const isNetted = (e: Enemy, time: number) => e.status.length > 0 && hasStatus(e, "netted", time);
