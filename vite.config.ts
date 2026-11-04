@@ -4,9 +4,9 @@ import { defineConfig } from "vite";
 export default defineConfig({
   base: process.env.VITE_BASE ?? "/",
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       // Phaser changes far less often than the game, so it gets its own long-lived cached chunk.
-      output: { manualChunks: { phaser: ["phaser"] } },
+      output: { codeSplitting: { groups: [{ name: "phaser", test: /[\\/]node_modules[\\/]phaser[\\/]/ }] } },
     },
   },
 });
