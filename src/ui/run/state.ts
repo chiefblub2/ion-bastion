@@ -3,7 +3,7 @@ import type { ContentPack, MissionDefinition, TowerId } from "../../core/types";
 import type { Journal } from "../../run/journal";
 import type { NodeKind } from "../../run/map";
 import type { RunState } from "../../run/run";
-import type { MapImage } from "../sector-atlas";
+import type { MapImage } from "../atlas/model";
 
 /** What the Run page may do in the app; implemented by `app/menu-nav.ts`. */
 export interface RunHost {

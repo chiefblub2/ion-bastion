@@ -13,7 +13,7 @@ import { parseSeed } from "../run/rng";
 import { abandon, chooseNode, chooseStarter, continueRun, deploy, eventChoice, newRun, pickDoctrine, pickRelic, pickTower, repairChoice, retire, reroll, rosterCap, type RunState } from "../run/run";
 import { buy, TARGETED } from "../run/shop";
 import { loadRun, markDaily, recordRun, runRecord, saveRun, unlocks } from "../run/storage";
-import { fillImage } from "./sector-atlas";
+import { fillImage } from "./atlas/card";
 import { page, reset, type RunHost } from "./run/state";
 import { abandonHtml, statusHtml } from "./run/pieces";
 import { introHtml, starterHtml } from "./run/intro";
