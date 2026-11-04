@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MISSIONS } from "../content/missions";
 import { play } from "./play";
 import { isSpecialization } from "./upgrades";
-import { STRATEGIES } from "./strategies";
+import { STRATEGIES } from "../strategies";
 import type { Strategy } from "./play";
 
 /** A mission whose strategy A names a Detector path, played rich enough to buy everything. */

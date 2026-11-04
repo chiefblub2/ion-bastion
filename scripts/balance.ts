@@ -1,8 +1,8 @@
 /**
  * Balancing report for one sector, with the same checks as `core/missions.test.ts`.
  * Usage: npx vite-node scripts/balance.ts -- <sector module> <strategies module>
- * e.g.   npx vite-node scripts/balance.ts -- src/content/sectors/frost.ts src/core/strategies/frost.ts
- * or     npx vite-node scripts/balance.ts -- src/content/missions.ts src/core/strategies/index.ts 0
+ * e.g.   npx vite-node scripts/balance.ts -- src/content/sectors/frost.ts src/strategies/frost.ts
+ * or     npx vite-node scripts/balance.ts -- src/content/missions.ts src/strategies/index.ts 0
  * Prints reactor energy after every wave for defenses A and B (on a ring: peak enemies per wave),
  * difficulty-band WARNs, a map check and (with --why, or on failure) a leak/kill diagnosis.
  * Options: --mission <id> checks one mission, --why always prints the diagnosis,
@@ -19,7 +19,7 @@ import { duplicateIds, hasAir, isTutorial, novaOnly, thinBuilds, unbuildable } f
 import type { Enemy, MissionDefinition, MissionSector } from "../src/core/types";
 import { waveHpScale } from "../src/systems/spawn";
 import type { Strategy } from "../src/core/play";
-import type { Strategies } from "../src/core/strategies/build";
+import type { Strategies } from "../src/strategies/build";
 
 /** `play` plus per-wave series (energy, or peak enemies on a ring) and a leak/kill diagnosis. */
 function run(mission: MissionDefinition, strategy?: Strategy) {

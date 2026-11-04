@@ -1,4 +1,4 @@
-import type { Build, Strategy } from "../test-helpers";
+import type { Build, Strategy } from "../core/play";
 /**
  * A build; `path` names the specialization path it buys (traps, support towers and Aura), `track` Aura's track.
  * Every trap, support and Aura build names a path, picked for what it stands beside: Aura takes Execution Field

@@ -8,7 +8,7 @@
 import { MISSIONS } from "../src/content/missions";
 import { stateHash } from "../src/core/hash";
 import { play } from "../src/core/play";
-import { STRATEGIES } from "../src/core/strategies/index";
+import { STRATEGIES } from "../src/strategies/index";
 
 const only = process.argv.includes("--mission") ? process.argv[process.argv.indexOf("--mission") + 1] : undefined;
 for (const mission of MISSIONS) {

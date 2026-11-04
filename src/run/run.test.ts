@@ -4,7 +4,7 @@ import { Game } from "../core/game";
 import { stateHash } from "../core/hash";
 import { validateMission } from "../core/validation";
 import { isSpecialization } from "../core/upgrades";
-import { STRATEGIES } from "../core/strategies";
+import { STRATEGIES } from "../strategies";
 import { creditsAt, runMission, waveCount } from "./generate";
 import { mark, newJournal, record } from "./journal";
 import { actMap, isMissionKind, missionsOf, nextNodes } from "./map";

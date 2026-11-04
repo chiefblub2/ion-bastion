@@ -7,7 +7,7 @@ import { isSupport } from "../src/systems/attacks";
 import { pageOf } from "../src/ui/tower-pages";
 import type { TowerId } from "../src/core/types";
 import { GREEDY, playBot, STEADY, type Habits } from "./bot";
-import { STRATEGIES } from "../src/core/strategies";
+import { STRATEGIES } from "../src/strategies";
 import { play } from "../src/core/play";
 import { actTiers } from "../src/run/acts";
 import { runMission } from "../src/run/generate";

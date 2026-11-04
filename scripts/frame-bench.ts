@@ -10,7 +10,7 @@
  * Headless SwiftShader WebGL: the numbers compare runs on one machine; they are not real-GPU frame rates.
  */
 import { MISSIONS, missionById } from "../src/content/missions";
-import { STRATEGIES } from "../src/core/strategies";
+import { STRATEGIES } from "../src/strategies";
 import { WEBGL_ARGS, buildAffordable, call, fail, launch, open, prepare } from "./browser";
 
 const args = process.argv.slice(2).filter((a) => a !== "--");
