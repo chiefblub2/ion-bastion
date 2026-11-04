@@ -104,7 +104,9 @@ describe("Nexus", () => {
     const { bonus, cap } = g.content.towers.nexus.attack as SynergyAttack;
     expect(synergyFactor(g, t)).toBeCloseTo(1 + bonus);
     const types: TowerId[] = ["blast", "flak", "tesla", "lance", "frost", "mortar", "inferno"];
-    types.forEach((type, i) => place(g, type, 3 + (i % 4), i < 4 ? 4 : 6));
+    // Every one of them stands in reach of the Nexus, so there are more types than the cap.
+    const cells = [[4, 4], [5, 4], [6, 4], [4, 6], [6, 6], [3, 5], [7, 5]];
+    types.forEach((type, i) => place(g, type, cells[i][0], cells[i][1]));
     expect(cap).toBeLessThan(1 + types.length);
     expect(synergyFactor(g, t)).toBeCloseTo(1 + bonus * cap);
     expect(synergyFactor(g, place(g, "pulse", 13, 13))).toBe(1);
