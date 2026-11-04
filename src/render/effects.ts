@@ -27,41 +27,21 @@ export type VisualEvent = Extract<
   {
     type:
       | "shot" | "chain" | "beam" | "pulse" | "income" | "repair" | "impact" | "kill" | "leak" | "build" | "sell" | "upgrade" | "evade" | "overload"
-      // ── new towers: g1 (Attack+Control A) ──
       | "strike" | "shatter" | "gather"
-      // ── end g1 ──
-      // ── new towers: g2 (Control B) ──
       | "echo"
-      // ── end g2 ──
-      // ── new towers: g3 (Traps) ──
       | "warp" | "breach"
-      // ── end g3 ──
-      // ── new towers: g4 (Support A) ──
       | "crit"
-      // ── end g4 ──
-      // ── new towers: g5 (Support B) ──
       | "recycle" | "barrier" | "discount"
-      // ── end g5 ──
       | "protocol"
   }
 >;
 const VISUAL = new Set<GameEvent["type"]>([
   "shot", "chain", "beam", "pulse", "income", "repair", "impact", "kill", "leak", "build", "sell", "upgrade", "evade", "overload",
-  // ── new towers: g1 (Attack+Control A) ──
   "strike", "shatter", "gather",
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
   "echo",
-  // ── end g2 ──
-  // ── new towers: g3 (Traps) ──
   "warp", "breach",
-  // ── end g3 ──
-  // ── new towers: g4 (Support A) ──
   "crit",
-  // ── end g4 ──
-  // ── new towers: g5 (Support B) ──
   "recycle", "barrier", "discount",
-  // ── end g5 ──
   "protocol",
 ]);
 export const isVisual = (e: GameEvent): e is VisualEvent => VISUAL.has(e.type);

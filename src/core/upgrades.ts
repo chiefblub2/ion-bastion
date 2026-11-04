@@ -181,7 +181,7 @@ export function purchaseUpgrade(
   id: string,
   content: ContentPack = DEFAULT_CONTENT,
 ): CommandResult {
-  const discount = upgradeDiscount(tower, state.towers, content); // g5: Workshop
+  const discount = upgradeDiscount(tower, state.towers, content); // Workshop
   const option = upgradeOption(tower, id, state.wallets[tower.owner], content, discount);
   if (option.status !== "available" || !option.definition)
     return { ok: false, code: STATUS_CODES[option.status as Exclude<UpgradeStatus, "available">] };

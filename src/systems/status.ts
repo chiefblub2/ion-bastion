@@ -139,7 +139,6 @@ const STATUSES: { [K in StatusKind]: StatusModule<Of<K>> } = {
   singularity: {
     merge: strongest(() => 0),
   },
-  // ── new towers: g1 (Attack+Control A) ──
   // Like pull: a reversed walk at the enemy's own speed, the recovery included in the running entry.
   confuse: {
     merge: () => false,
@@ -165,8 +164,6 @@ const STATUSES: { [K in StatusKind]: StatusModule<Of<K>> } = {
           applyDamage(sim, src, other, amount * special.factor, false, hitOf("encase", src, { area: true }));
     },
   },
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
   // The newest tether wins: an enemy belongs to one group at a time.
   tether: {
     merge: (existing, incoming) => {
@@ -193,18 +190,11 @@ const STATUSES: { [K in StatusKind]: StatusModule<Of<K>> } = {
     },
     onDeath: (sim, e, s) => jumpCurse(sim, e, s),
   },
-  // ── end g2 ──
-  // ── new towers: g3 (Traps) ──
   // Oil Slick: read by the burn step (`oilBoost`); a burning carrier sets oiled neighbours alight.
   oiled: {
     merge: strongest((s) => s.boost),
     tick: (sim, e, s) => igniteOiled(sim, e, s),
   },
-  // ── end g3 ──
-  // ── new towers: g4 (Support A) ──
-  // ── end g4 ──
-  // ── new towers: g5 (Support B) ──
-  // ── end g5 ──
 };
 const moduleOf = (effect: StatusEffect) => STATUSES[effect.kind] as StatusModule<StatusEffect>;
 /**
@@ -252,24 +242,14 @@ export interface StatusFlags {
   netted: boolean;
   bleeding: boolean;
   charged: boolean;
-  // ── new towers: g1 (Attack+Control A) ──
   confused: boolean;
   encased: boolean;
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
   tethered: boolean;
   shrunk: boolean;
   cursed: boolean;
-  // ── end g2 ──
-  // ── new towers: g3 (Traps) ──
   oiled: boolean;
-  // ── end g3 ──
   /** Singularity Protocol's priority target. */
   marked: boolean;
-  // ── new towers: g4 (Support A) ──
-  // ── end g4 ──
-  // ── new towers: g5 (Support B) ──
-  // ── end g5 ──
 }
 /** Visible states for drawing. */
 export function statusFlags(e: Enemy, time: number): StatusFlags {
@@ -286,23 +266,13 @@ export function statusFlags(e: Enemy, time: number): StatusFlags {
     netted: on("netted"),
     bleeding: on("bleeding"),
     charged: on("charged"),
-    // ── new towers: g1 (Attack+Control A) ──
     confused: e.status.some((s) => s.kind === "confuse" && time < s.release),
     encased: e.status.some((s) => s.kind === "encase" && s.stored >= 0 && time < s.release),
-    // ── end g1 ──
-    // ── new towers: g2 (Control B) ──
     tethered: on("tether"),
     shrunk: on("shrink"),
     cursed: on("echo"),
-    // ── end g2 ──
-    // ── new towers: g3 (Traps) ──
     oiled: on("oiled"),
-    // ── end g3 ──
     marked: on("singularity"),
-    // ── new towers: g4 (Support A) ──
-    // ── end g4 ──
-    // ── new towers: g5 (Support B) ──
-    // ── end g5 ──
   };
 }
 export const isSlowed = (e: Enemy, time: number) => statusFlags(e, time).slowed;

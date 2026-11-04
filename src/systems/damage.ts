@@ -42,17 +42,7 @@ export const HEAVY_HP = 1000;
 const INSTANT: ReadonlySet<AttackKind> = new Set(["chain", "pierce", "focus", "quake", "pull", "disrupt"]);
 const AREA: ReadonlySet<AttackKind> = new Set<AttackKind>([
   "splash", "mortar", "airburst", "pool", "quake", "charge",
-  // ── new towers: g1 (Attack+Control A) ──
   "strike",
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
-  // ── end g2 ──
-  // ── new towers: g3 (Traps) ──
-  // ── end g3 ──
-  // ── new towers: g4 (Support A) ──
-  // ── end g4 ──
-  // ── new towers: g5 (Support B) ──
-  // ── end g5 ──
 ]);
 /** Hit context for an attack of `kind`; `extra` overrides the derived flags (`chain`, `execution`). */
 export const hitOf = (kind: AttackKind, src: DamageSource, extra: Partial<Hit> = {}): Hit => ({
@@ -127,6 +117,6 @@ function deal(sim: Sim, src: DamageSource, e: Enemy, amount: number, dot: boolea
   onDeath(sim, e);
   statusDeath(sim, e);
   protocolKill(sim, e);
-  recycleOverkill(sim, src, e, outcome, hit); // g5: Recycler
+  recycleOverkill(sim, src, e, outcome, hit); // Recycler
   return outcome;
 }

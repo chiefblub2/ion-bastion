@@ -380,7 +380,7 @@ export class Interface {
       t.upgrades,
       effectiveTowerStats(t, s.towers, content).bonuses,
       TOWERS[t.type].attack.kind === "aura" ? s.towers.filter(target => isInAura(t, target, content)).length : 0,
-      upgradeDiscount(t, s.towers, content), // g5: Workshop
+      upgradeDiscount(t, s.towers, content), // Workshop
     ]) : "";
     // A selected enemy that died, leaked or vanished into stealth drops out of the panel.
     let enemy = s.enemies.find((e) => e.id === this.view.enemy);

@@ -122,13 +122,6 @@ export const TRACKER_UPGRADES = supportUpgrades([
   { cost: 200, attack: { amount: 0.25 }, range: 2.8, description: "Target Lock: enemies within radius 2.8 take 25% more damage." },
 ]);
 
-// ── new towers: g1 (Attack+Control A) ──
-// ── end g1 ──
-// ── new towers: g2 (Control B) ──
-// ── end g2 ──
-// ── new towers: g3 (Traps) ──
-// ── end g3 ──
-// ── new towers: g4 (Support A) ──
 /** Overclock: a longer burst, then a harder one in a wider radius. */
 export const OVERCLOCK_UPGRADES = supportUpgrades([
   { cost: 130, attack: { window: 4 }, range: 2.5, description: "Long Burst: towers within radius 2.5 fire twice as fast for 4 s of every 10 s." },
@@ -154,8 +147,6 @@ export const NEXUS_UPGRADES = supportUpgrades([
   { cost: 130, attack: { bonus: 0.05 }, range: 2.5, description: "Wide Mesh: towers within radius 2.5 deal 5% more damage per tower type around it, up to 6 types." },
   { cost: 210, attack: { bonus: 0.06, cap: 7 }, range: 2.8, description: "Grand Lattice: radius 2.8, 6% more damage per tower type, up to 7 types." },
 ]);
-// ── end g4 ──
-// ── new towers: g5 (Support B) ──
 /** Workshop: a deeper discount in a wider radius. */
 export const WORKSHOP_UPGRADES = supportUpgrades([
   { cost: 110, attack: { amount: 0.25 }, range: 2.8, description: "Tool Racks: upgrades of towers within radius 2.8 cost 25% less." },
@@ -176,7 +167,6 @@ export const RECYCLER_UPGRADES = supportUpgrades([
   { cost: 120, attack: { share: 1.25, reach: 2.5 }, description: "Scrap Press: 125% of the overkill jumps up to 2.5 cells." },
   { cost: 200, attack: { share: 1.5, reach: 3 }, range: 3, description: "Reclaimer Core: 150% of the overkill jumps up to 3 cells, for kills within radius 3." },
 ]);
-// ── end g5 ──
 
 /**
  * A trap: an attack tower on a path cell; its trigger radius stays the same at every level. Like an attack tower it

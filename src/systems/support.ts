@@ -73,13 +73,6 @@ export function repairReactor(sim: Sim) {
     s.events.push({ type: "repair", at: { x: t.x, y: t.y }, amount, color: sim.content.towers[t.type].color });
   }
 }
-// ── new towers: g1 (Attack+Control A) ──
-// ── end g1 ──
-// ── new towers: g2 (Control B) ──
-// ── end g2 ──
-// ── new towers: g3 (Traps) ──
-// ── end g3 ──
-// ── new towers: g4 (Support A) ──
 /**
  * Calls `fn` for every unsuppressed support tower of `kind` whose radius reaches `at`, with its resolved attack and
  * radius. The base definition is checked first, so a board without such a tower costs one pass over the towers.
@@ -158,8 +151,6 @@ export function synergyFactor(sim: Sim, t: Point) {
   reaching(sim, "synergy", t, (a, nexus, range) => (best = Math.max(best, a.bonus * Math.min(a.cap, nexusTypes(sim, nexus, range).length))));
   return 1 + best;
 }
-// ── end g4 ──
-// ── new towers: g5 (Support B) ──
 /** Vault: interest of `rate` on `credits`, rounded down and capped. */
 export const interestOn = (credits: number, rate: number, cap: number) => Math.min(cap, Math.floor(Math.max(0, credits) * rate));
 /**
@@ -216,4 +207,3 @@ export function settleEconomy(sim: Sim) {
   resetScrapYards(sim); // support combat: Scrap Yard
   closeEconomyWave(sim);
 }
-// ── end g5 ──

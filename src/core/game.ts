@@ -58,7 +58,7 @@ export function initialState(mission: MissionDefinition, players = 1): GameState
 /** Buildable towers of a mission, in content order. A ring has no reactor, so nothing repairs it. */
 export function availableTowers(mission: MissionDefinition, content: ContentPack = DEFAULT_CONTENT): TowerId[] {
   const all = (Object.keys(content.towers) as TowerId[]).filter((id) => !(mission.circle && content.towers[id].attack.kind === "repair"))
-    .filter((id) => !(mission.circle && content.towers[id].attack.kind === "barrier")); // g5: Shield Generator
+    .filter((id) => !(mission.circle && content.towers[id].attack.kind === "barrier")); // Shield Generator
   return mission.availableTowers ? all.filter((id) => mission.availableTowers!.includes(id)) : all;
 }
 

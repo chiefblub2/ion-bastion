@@ -829,7 +829,6 @@ export const PROJECTILES: Record<ProjectileStyle, ProjectileLook> = {
       },
     },
   },
-  // ── new towers: g1 (Attack+Control A) ──
   // Orbital: a designator dart, a red-hot needle with a blinking beacon, trailing a thin laser line.
   "beacon-mark": {
     body: ({ g, glow }, p, c) => {
@@ -865,10 +864,6 @@ export const PROJECTILES: Record<ProjectileStyle, ProjectileLook> = {
       },
     },
   },
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
-  // ── end g2 ──
-  // ── new towers: g3 (Traps) ──
   // Harpoon: a barbed steel head on a short shaft, trailing its rope back to the trap.
   harpoon: {
     body: ({ g, glow }, p, c) => {
@@ -911,11 +906,6 @@ export const PROJECTILES: Record<ProjectileStyle, ProjectileLook> = {
       },
     },
   },
-  // ── end g3 ──
-  // ── new towers: g4 (Support A) ──
-  // ── end g4 ──
-  // ── new towers: g5 (Support B) ──
-  // ── end g5 ──
 };
 /** What a tower's shot looks like when it lands: its projectile's own impact, else its `visual.impact`. */
 export function impactOf(d: Readonly<TowerDefinition>): ImpactDrawing {

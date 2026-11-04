@@ -127,25 +127,15 @@ export const MUZZLES: Partial<Record<TurretStyle, MuzzleSpec>> = {
   flask: { reach: (l) => 15 + l, recoil: 2, flash: "spray" },
   caster: { reach: (l) => 16 + l, recoil: 6, flash: "heavy" },
   battery: { reach: (l) => 15 + l, recoil: 3, sides: [-5.4, -1.8, 1.8, 5.4], flash: "heavy" },
-  // ── new towers: g1 (Attack+Control A) ──
   uplink: { reach: (l) => 13 + l, recoil: 1, flash: "energy" },
   spiral: { reach: (l) => 15 + l, recoil: 1, flash: "energy" },
   resin: { reach: (l) => 15 + l, recoil: 3, flash: "spray" },
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
   tether: { reach: (l) => 17 + l, recoil: 4, flash: "gun" },
   shrinker: { reach: (l) => 17 + l, recoil: 1, flash: "energy" },
   sigil: { reach: (l) => 14 + l * 0.5, recoil: 0, flash: "energy" },
   siphon: { reach: (l) => 16 + l, recoil: 1, flash: "energy" },
-  // ── end g2 ──
-  // ── new towers: g3 (Traps) ──
   // Harpoon: the Sky Lance's launcher tube (traps show no muzzle flash; harpoons leave its tip).
   harpoon: { reach: (l) => 8.5 + 0.2 * l, recoil: 2, flash: "gun" },
-  // ── end g3 ──
-  // ── new towers: g4 (Support A) ──
-  // ── end g4 ──
-  // ── new towers: g5 (Support B) ──
-  // ── end g5 ──
 };
 /**
  * Barrel tips in pixels for a turret at (`x`, `y`) aiming at `angle`: one per parallel or fanned barrel, projected on a

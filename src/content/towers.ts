@@ -493,7 +493,6 @@ export const TOWER_CONTENT = {
       description: "Sun Pool: a wide pool that burns for six seconds.",
     },
   }),
-  // ── new towers: g1 (Attack+Control A) ──
   orbital: attackTower({
     id: "orbital",
     name: "Orbital",
@@ -612,8 +611,6 @@ export const TOWER_CONTENT = {
       description: "Eye of the Storm: flyers in the wide radius are thrown back longer and harder.",
     },
   }),
-  // ── end g1 ──
-  // ── new towers: g2 (Control B) ──
   tether: attackTower({
     id: "tether",
     name: "Tether",
@@ -707,7 +704,6 @@ export const TOWER_CONTENT = {
       description: "Wellspring: +8% per enemy, counting six, for towers within 2.6 cells.",
     },
   }),
-  // ── end g2 ──
   // Traps: built on path cells, triggered by ground enemies walking over them, stealthed ones included.
   mine: trapTower({
     id: "mine",
@@ -862,7 +858,6 @@ export const TOWER_CONTENT = {
     4: { attack: { radius: 3 }, description: "Longer Wire: alerts towers in radius 3." },
     5: { attack: { radius: 3.5 }, description: "Full Alert: alerts towers in radius 3.5." },
   }),
-  // ── new towers: g3 (Traps) ──
   barricade: trapTower({
     id: "barricade",
     name: "Barricade",
@@ -968,7 +963,6 @@ export const TOWER_CONTENT = {
     4: { attack: { pin: 1.3, duration: 3.5 }, description: "Barbed Head: pins for 1.3 s, netted for 3.5 s." },
     5: { attack: { pin: 1.6, duration: 4 }, description: "Whaler: pins for 1.6 s, netted for 4 s." },
   }),
-  // ── end g3 ──
   refinery: supportTower({
     id: "refinery",
     name: "Refinery",
@@ -1044,7 +1038,6 @@ export const TOWER_CONTENT = {
     visual: { icon: "⌾", turret: "tracker" },
     upgrades: TRACKER_UPGRADES,
   }),
-  // ── new towers: g4 (Support A) ──
   overclock: supportTower({
     id: "overclock",
     name: "Overclock",
@@ -1120,8 +1113,6 @@ export const TOWER_CONTENT = {
     visual: { icon: "✣", turret: "nexus" },
     upgrades: NEXUS_UPGRADES,
   }),
-  // ── end g4 ──
-  // ── new towers: g5 (Support B) ──
   workshop: supportTower({
     id: "workshop",
     name: "Workshop",
@@ -1182,7 +1173,6 @@ export const TOWER_CONTENT = {
     visual: { icon: "♻︎", turret: "recycler" },
     upgrades: RECYCLER_UPGRADES,
   }),
-  // ── end g5 ──
 } satisfies Record<string, TowerDefinition>;
 export const TOWERS: Readonly<Record<TowerId, Readonly<TowerDefinition>>> =
   TOWER_CONTENT;
