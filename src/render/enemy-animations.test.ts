@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import type { EnemyId } from "../core/types";
-import { artSignature, decodePng, identify, measureArt, VISIBLE_ALPHA, type Png } from "../../scripts/png";
+import { artSignature, decodePng, identify, lfsReady, measureArt, VISIBLE_ALPHA, type Png } from "../../scripts/png";
 import { ANIMATION_BOUNDS } from "./enemy-animation-bounds";
 import {
   allClips,
@@ -139,12 +139,20 @@ describe("animation registry", () => {
   });
 });
 
-describe("animation sheets", () => {
+describe("animation sheet files", () => {
   it("are exactly the registered types' files", () => {
     const files = readdirSync(new URL("public/assets/enemy-animations/", ROOT)).sort();
     expect(files).toEqual(ANIMATED.map((id) => `${id}.png`).sort());
   });
+});
 
+const PIXELS = lfsReady(
+  new URL("public/assets/enemy-animations/", ROOT),
+  new URL("assets-src/enemy-animations/", ROOT),
+  new URL("public/assets/enemies/", ROOT),
+);
+
+describe.skipIf(!PIXELS)("animation sheets", () => {
   it("are grids of their declared cells, a power of two, never blank or cut, unused cells empty", () => {
     for (const id of ANIMATED) {
       const set = animationsFor(id)!,
