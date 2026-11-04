@@ -16,7 +16,8 @@ const ROCK = { wall: 0x2e2840, top: 0x463e5e } as const;
 
 // ── Crystal prism ───────────────────────────────────────────────────────────────────────────────────────────────────
 /** One crystal: base offset, the ground direction it leans to and how far (0 upright), length, radius and colour. */
-export interface Crystal { u: number; v: number; a: number; lean: number; len: number; r: number; color: number; z?: number }
+/** `flat`: a flat top instead of the pointed tip (basalt columns); `core`: the pale line up the middle (default on). */
+export interface Crystal { u: number; v: number; a: number; lean: number; len: number; r: number; color: number; z?: number; flat?: boolean; core?: boolean }
 type Vec = [number, number, number];
 const add = (p: Vec, q: Vec, k = 1): Vec => [p[0] + q[0] * k, p[1] + q[1] * k, p[2] + q[2] * k];
 /**
@@ -32,7 +33,7 @@ export function crystal(g: Ink, gx: number, gy: number, c: Crystal) {
     E: Vec = [-sa, ca, 0],
     N: Vec = [-ca * Math.sin(p), -sa * Math.sin(p), Math.cos(p)],
     base: Vec = [c.u, c.v, c.z ?? 0],
-    tip = c.r * 1.6,
+    tip = c.flat ? 0 : c.r * 1.6,
     at = (d: number, t: number, r = c.r): Vec => add(add(add(base, D, d), E, Math.cos(t) * r), N, Math.sin(t) * r),
     screen = (q: Vec) => ({ x: X(gx, q[0]), y: Y(gy, q[1], q[2]) }),
     apex = screen(add(base, D, c.len + tip)),
@@ -46,8 +47,11 @@ export function crystal(g: Ink, gx: number, gy: number, c: Crystal) {
       faces.push({ pts: [screen(at(0, t0)), screen(at(0, t1)), screen(at(c.len, t1)), screen(at(c.len, t0))], tone: shade(c.color, -0.35 + 0.45 * lit(n[0], n[1], n[2])), depth: 0 });
     // The tip face over this side: its normal tilts towards the axis.
     const tn: Vec = [n[0] * 0.75 + D[0] * 0.66, n[1] * 0.75 + D[1] * 0.66, n[2] * 0.75 + D[2] * 0.66];
-    if (seen(tn[1], tn[2]) > 0.01) faces.push({ pts: [screen(at(c.len, t0)), screen(at(c.len, t1)), apex], tone: shade(c.color, -0.25 + 0.5 * lit(tn[0], tn[1], tn[2])), depth: 1 });
+    if (!c.flat && seen(tn[1], tn[2]) > 0.01) faces.push({ pts: [screen(at(c.len, t0)), screen(at(c.len, t1)), apex], tone: shade(c.color, -0.25 + 0.5 * lit(tn[0], tn[1], tn[2])), depth: 1 });
   }
+  // A flat top: the hexagon across the end, lit as a face turned up along the axis.
+  if (c.flat && seen(D[1], D[2]) > 0.01)
+    faces.push({ pts: Array.from({ length: 6 }, (_, k) => screen(at(c.len, (k / 6) * Math.PI * 2 + 0.3))), tone: shade(c.color, -0.2 + 0.5 * lit(D[0], D[1], D[2])), depth: 1 });
   // Outline round the whole crystal, then the faces, sides before the tip.
   g.fillStyle(OUTLINE, 0.6);
   for (const f of faces) g.fillPoints(f.pts.map((q) => ({ x: q.x + (q.x - apex.x) * 0.02, y: q.y + 0.7 })), true);
@@ -57,6 +61,7 @@ export function crystal(g: Ink, gx: number, gy: number, c: Crystal) {
     g.lineStyle(0.6, shade(f.tone, 0.35), 0.8);
     g.lineBetween(f.pts[0].x, f.pts[0].y, f.pts[f.pts.length - 1].x, f.pts[f.pts.length - 1].y);
   }
+  if (c.core === false || c.flat) return;
   const foot = screen(add(base, D, c.r * 0.5));
   g.lineStyle(Math.max(0.8, c.r * 0.35), 0xffffff, 0.28);
   g.lineBetween(foot.x, foot.y, apex.x, apex.y);

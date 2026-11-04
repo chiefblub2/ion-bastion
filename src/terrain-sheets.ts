@@ -3,6 +3,7 @@ import { mulberry32 } from "./render/terrain-themes/kit";
 import * as O from "./render/terrain-themes/outpost-props";
 import * as L from "./render/terrain-themes/lock-props";
 import * as S from "./render/terrain-themes/shard-props";
+import * as E from "./render/terrain-themes/ember-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -88,5 +89,27 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
     { label: "crystal", shadow: (g, x, y) => S.crystalShadow(g, x, y, { u: 0, v: 0, a: 0.8, lean: 0.3, len: 30, r: 7, color: 0x9d8cff }), draw: (g, x, y) => S.crystal(g, x, y, { u: 0, v: 0, a: 0.8, lean: 0.3, len: 30, r: 7, color: 0x9d8cff }) },
     { label: "monolith", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => S.monolithShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => S.drawMonolith(g, 0xb8a6ff)) },
     { label: "split geode", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => S.splitGeodeShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => S.drawSplitGeode(g, 0x9d8cff)) },
+  ],
+  ember: [
+    ...[1, 2].map((n) => {
+      const c = E.columnsOf(r(1000 + n));
+      return { label: "columns", shadow: (g: Ink, x: number, y: number) => E.columnsShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => E.drawColumns(g, x, y, c) };
+    }),
+    (() => {
+      const b = E.boulderOf(r(1010));
+      return { label: "boulder", shadow: (g: Ink, x: number, y: number) => E.boulderShadow(g, x, y, b), draw: (g: Ink, x: number, y: number) => E.drawBoulder(g, x, y, b) };
+    })(),
+    { label: "fumarole", shadow: (g, x, y) => E.fumaroleShadow(g, x, y, 1), draw: (g, x, y) => E.drawFumarole(g, x, y, 1) },
+    (() => {
+      const t = E.treeOf(r(1020));
+      return { label: "tree", shadow: (g: Ink, x: number, y: number) => E.treeShadow(g, x, y, t), draw: (g: Ink, x: number, y: number) => E.drawTree(g, x, y, t) };
+    })(),
+    (() => {
+      const o = E.obsidianOf(r(1030));
+      return { label: "obsidian", shadow: (g: Ink, x: number, y: number) => E.obsidianShadow(g, x, y, o), draw: (g: Ink, x: number, y: number) => E.drawObsidian(g, x, y, o) };
+    })(),
+    { label: "brazier", shadow: (g, x, y) => E.brazierShadow(g, x, y), draw: (g, x, y) => E.drawBrazier(g, x, y) },
+    { label: "cinder cone", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => E.coneShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => E.drawCone(g)) },
+    { label: "shrine", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => E.shrineShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => E.drawShrine(g)) },
   ],
 };
