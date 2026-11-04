@@ -1,7 +1,7 @@
 import { halo } from "../render/material";
 import { disc, oval, shade } from "../render/shapes";
 import type { TurretContext } from "../render/tower-art/kit";
-import { drum, onGround, towardViewer } from "../render/tower-art/tilt";
+import { OUTLINE, drum, onGround, towardViewer } from "../render/tower-art/tilt";
 import { box, frame } from "../render/tower-art/tilt-frame";
 import { GUN, castShadow, depth, endAt, framer, muzzleAt, paint, part, rect, tubeAt } from "../render/tower-art/tilt-parts";
 import { bolts, chase, contact, frontArc, plinth } from "./kit-control-a";
@@ -42,7 +42,7 @@ function base({ g, x, y, level, color, definition }: TurretContext) {
 }
 
 /** The net crate, the cradle cheeks and the two launch tubes, back to front (cached per aim step and recoil). */
-function turret({ g, x, y, tower, definition, level, kick, tip }: TurretContext) {
+function turret({ g, x, y, tower, definition, level, kick, tip, color }: TurretContext) {
   const a = tower.angle,
     y0 = y + DROP,
     c = definition.color,
@@ -64,6 +64,12 @@ function turret({ g, x, y, tower, definition, level, kick, tip }: TurretContext)
           g.lineBetween(...P(-11.5 + (k + 2) * 1.4, -5.6, lid), ...P(-11.5 + (k + 2) * 1.4, 5.6, lid));
         }
         if (level >= 5) box(g, x, y0, crate, -13.5, -4.5, -7.2, 7.2, 0, 1.6, GUN.side, GUN.top);
+        // The crate's lamp socket from level 2, in the crate's own depth order (its light is live).
+        if (level >= 2) {
+          const [lx, ly] = P(-12, 0, lid + 0.2);
+          disc(g, lx, ly, 1.3, OUTLINE);
+          disc(g, lx, ly, 0.8, shade(color, 0.3));
+        }
       },
     ],
     ...SIDES.map(
@@ -112,10 +118,10 @@ function above({ g, glow, x, y, tower, level, kick, charge, color, definition }:
       halo(glow, mx, my, 4 * (1 + kick), c, 0.25 * kick);
     }
   }
+  // The crate lamp's light only: its socket is turret ink, so a tube in front of it hides the lamp.
   if (level >= 2) {
     const [lx, ly] = framer(x, y0, a)(-12, 0, TABLE + 7.8);
     disc(glow, lx, ly, 2.4, color, 0.35);
-    disc(g, lx, ly, 0.8, shade(color, 0.3));
   }
 }
 
