@@ -183,10 +183,14 @@ function quayPieces(map: MapDefinition): readonly StandingPiece[] {
       width = map.columns * CELL,
       height = map.rows * CELL;
     let best: { d: number; x: number; y: number } | undefined;
-    for (let y = 24; y < height - 24; y += 8)
-      for (let x = 50; x < width - 50; x += 8) {
+    // Clear of the board edges by about a cell, so it never hides under a corner label or runs off the board.
+    for (let y = CELL * 0.9; y < height - CELL * 0.9; y += 8)
+      for (let x = CELL * 1.8; x < width - CELL * 1.8; x += 8) {
+        // The map's name label sits in one of the board corners: keep out of all four.
+        const corner = (x < CELL * 5 || x > width - CELL * 5) && (y < CELL * 1.8 || y > height - CELL * 1.8);
+        if (corner) continue;
         const d = Math.min(...[[-44, -14], [44, -14], [-44, 14], [44, 14], [0, 0]].map(([dx, dy]) => depthAt(x + dx, y + dy)));
-        if (d > 14 && (!best || d > best.d)) best = { d, x, y };
+        if (d > 10 && (!best || d > best.d)) best = { d, x, y };
       }
     if (best) {
       const { x, y } = best;
