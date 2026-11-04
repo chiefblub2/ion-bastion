@@ -14,9 +14,9 @@ import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, o
 import { SX, SY, frame, project, rod } from "./tilt-frame";
 
 // Mortar: a fat, short tube at a steep pitch on a bipod, in a sandbagged pit round a bolted turntable.
-const TILT = TILTS.mortar!,
-  reach = MUZZLES.mortar!.reach,
-  RECOIL = MUZZLES.mortar!.recoil;
+const TILT = TILTS.mortar,
+  reach = MUZZLES.mortar.reach,
+  RECOIL = MUZZLES.mortar.recoil;
 const GUN = 0x3a4549,
   GUN_TOP = 0x56646a,
   METAL = 0x8a9a9c,

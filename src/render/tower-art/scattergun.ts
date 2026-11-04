@@ -13,8 +13,8 @@ import { GUN, SHADOW_INK, castShadow, depth, framer, lampInk, lampLight, paint, 
  * bakes per level and trim colour; the turret's ink is cached per aim step (`turret`); the pedestal's vents (`below`)
  * and the drum's chambers, the lamp's light and the hot muzzles (`above`) are live.
  */
-const TILT = TILTS.scatter!,
-  SPEC = MUZZLES.scatter!,
+const TILT = TILTS.scatter,
+  SPEC = MUZZLES.scatter,
   DROP = TILT.drop,
   HB = TILT.height,
   RECOIL = SPEC.recoil,

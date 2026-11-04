@@ -4,7 +4,7 @@ import { isFullyUpgraded, towerColor, towerLevel, towerPath, upgradeOptions } fr
 import type { Tower, TowerId } from "./core/types";
 import { muzzleTips } from "./render/muzzles";
 import { CELL, type Pen } from "./render/shapes";
-import { drawTower, isTilted } from "./render/towers";
+import { drawTower } from "./render/towers";
 import { pageOf } from "./ui/tower-pages";
 // Dev-only review sheet of the towers drawn in the 3/4 tilt (`/gallery.html?tilt`), through the battlefield's own
 // `drawTower`: per tower L1, firing (red crosses on `muzzleTips`: barrel tips or the emit point), the last plain level,
@@ -19,7 +19,7 @@ const content = DEFAULT_CONTENT;
 const TAB = params.get("tab"),
   TABS: Record<string, number> = { attack: 0, control: 1, traps: 2, support: 3 };
 const rows = (Object.keys(content.towers) as TowerId[]).filter(
-  (id) => isTilted(content.towers[id]) && (!only || only.includes(id)) && (!TAB || pageOf(content.towers[id]) === TABS[TAB]),
+  (id) => (!only || only.includes(id)) && (!TAB || pageOf(content.towers[id]) === TABS[TAB]),
 );
 const TW = 70,
   TH = 84,

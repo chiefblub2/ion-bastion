@@ -15,10 +15,10 @@ import { SX, SY, box, frame, lit, plane, project, rod } from "./tilt-frame";
 
 // Orbital: an uplink dish looking up at the sky, leaning a little towards the target, on a fork over a mast; under it a
 // level designator laser is the muzzle. A calm octagonal pad with two short antenna posts at the back.
-const TILT = TILTS.uplink!,
+const TILT = TILTS.uplink,
   HB = TILT.height,
-  reach = MUZZLES.uplink!.reach,
-  RECOIL = MUZZLES.uplink!.recoil;
+  reach = MUZZLES.uplink.reach,
+  RECOIL = MUZZLES.uplink.recoil;
 /** The dish leans this far from upright towards the aim; its centre sits at `DISH_H`. */
 const LEAN = 0.32,
   DISH_H = 17.5;

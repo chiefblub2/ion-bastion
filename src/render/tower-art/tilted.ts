@@ -48,7 +48,8 @@ export interface TiltedConcept extends TiltedArt {
   sides?: readonly number[];
   fan?: (level: number) => { count: number; step: number };
 }
-export const TILTED: Partial<Record<TurretStyle, TiltedArt>> = {
+/** Every look by `visual.turret`; this type fails to compile while a style has no model. */
+export const TILTED: Record<TurretStyle, TiltedArt> = {
   ...MODELS,
   // Pulse: the Hex Sentinel.
   barrel: { base: sentinelBase, below: sentinelBelow, turret: sentinelTurret, above: sentinelAbove },

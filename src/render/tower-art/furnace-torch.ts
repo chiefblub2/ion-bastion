@@ -11,11 +11,11 @@ import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, o
 import { MUZZLES, TILTS } from "../muzzles";
 import type { TiltedArt } from "./tilted";
 
-const TILT = TILTS.flame!,
+const TILT = TILTS.flame,
   DROP = TILT.drop,
   HB = TILT.height,
-  RECOIL = MUZZLES.flame!.recoil,
-  reach = MUZZLES.flame!.reach;
+  RECOIL = MUZZLES.flame.recoil,
+  reach = MUZZLES.flame.reach;
 /** Plinth: octagon radius and height; turntable top; body heights. */
 const R = 20,
   H = 5,

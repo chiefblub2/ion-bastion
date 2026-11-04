@@ -31,7 +31,6 @@ import { FrameStats } from "./frame-stats";
 import { drawTower, type TowerBadges } from "./towers";
 import { TowerBodies } from "./tower-bodies";
 import { TurretCache, snapAngle, snapKick } from "./turret-cache";
-import { isTilted } from "./towers";
 import { ScreenFx } from "./screen-fx";
 import { loadGraphics } from "./graphics-settings";
 import { Trails } from "./trails";
@@ -180,11 +179,8 @@ export class Battlefield extends Phaser.Scene {
   private trails = new Trails();
   private aim = new TurretAim();
   private scorches = new Scorches();
-  /** The angle a turret is drawn at: the aim, snapped to the cached steps on a tilted turret, so flashes and shots match its picture. */
-  private angleOf = (t: Tower) => {
-    const angle = this.aim.angle(t);
-    return isTilted(this.sim.content.towers[t.type]) ? snapAngle(angle) : angle;
-  };
+  /** The angle a turret is drawn at: the aim, snapped to the cached steps, so flashes and shots match its picture. */
+  private angleOf = (t: Tower) => snapAngle(this.aim.angle(t));
   /** Still tower bodies baked into textures; only turrets, lamps and light are drawn per frame. */
   private bodies = new TowerBodies(this);
   /** Pictures of tilted turrets per aim step; `?turrets=live` (dev builds) draws them live for comparisons. */
@@ -828,7 +824,7 @@ export class Battlefield extends Phaser.Scene {
         angle = this.angleOf(t),
         baked = this.bodies.place(t, d, badges, x, y),
         shown = angle === t.angle ? t : { ...t, angle };
-      if (isTilted(d) && !this.liveTurrets) {
+      if (!this.liveTurrets) {
         // The live parts use the same recoil step as the picture, so a hot muzzle sits on its barrel.
         const kick = snapKick(Math.max(0, (t.cooldown - 0.7) / 0.3) ** 2),
           cached = this.turrets.place(shown, d, badges, x, y, kick);

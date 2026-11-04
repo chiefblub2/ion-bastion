@@ -29,10 +29,10 @@ export interface Tilt {
   emit?: number;
 }
 /**
- * Towers drawn in the 3/4 tilt, by turret style (Pulse's Hex Sentinel, Nova's Siege Cannon). Barrels, flashes and
- * shots of these turrets are projected through their entry; a tilted tower may have no barrel (`emit`).
+ * Projection of every turret style: all towers are drawn in the 3/4 tilt. Barrels, flashes and shots are projected
+ * through their entry; a tower may have no barrel (`emit`).
  */
-export const TILTS: Partial<Record<TurretStyle, Tilt>> = {
+export const TILTS: Record<TurretStyle, Tilt> = {
   barrel: { drop: 5, squash: 0.65, height: 15, deck: 7 },
   heavy: { drop: 6, squash: 0.65, height: 14, pitch: 0.35, deck: 0.5 },
   // Flak: the Skyguard's twin guns.
@@ -112,7 +112,7 @@ export const TILTS: Partial<Record<TurretStyle, Tilt>> = {
  * Barrels of the turrets that have one. Turret drawings, muzzle flashes and the starting point of projectiles
  * all read this table, so a flash always sits on the barrel tip. Radial turrets (coil, crystal, emitter, …) have none.
  */
-export const MUZZLES: Partial<Record<TurretStyle, MuzzleSpec>> = {
+const BARRELS = {
   barrel: { reach: (l) => 21 + l, recoil: 5, flash: "gun" },
   heavy: { reach: (l) => 22 + l, recoil: 6, flash: "heavy" },
   twin: { reach: (l) => 20 + l, recoil: 4, sides: [-4, 4], flash: "gun" },
@@ -136,19 +136,20 @@ export const MUZZLES: Partial<Record<TurretStyle, MuzzleSpec>> = {
   siphon: { reach: (l) => 16 + l, recoil: 1, flash: "energy" },
   // Harpoon: the Sky Lance's launcher tube (traps show no muzzle flash; harpoons leave its tip).
   harpoon: { reach: (l) => 8.5 + 0.2 * l, recoil: 2, flash: "gun" },
-};
+} satisfies Partial<Record<TurretStyle, MuzzleSpec>>;
+/** Indexed by any turret style it may miss one; a style named directly (`MUZZLES.lens`) is known to have a barrel. */
+export const MUZZLES: Partial<Record<TurretStyle, MuzzleSpec>> & typeof BARRELS = BARRELS;
 /**
- * Barrel tips in pixels for a turret at (`x`, `y`) aiming at `angle`: one per parallel or fanned barrel, projected on a
- * tilted turret (offsets across the aim lie on the ground plane); the emit point of a tilted turret without a barrel;
- * empty for other turrets without one. `flat`: the board point under each tip instead (no squash, no height), where a
- * shot's ground path starts.
+ * Barrel tips in pixels for a turret at (`x`, `y`) aiming at `angle`: one per parallel or fanned barrel, projected
+ * (offsets across the aim lie on the ground plane); the emit point of a turret without a barrel, empty without one.
+ * `flat`: the board point under each tip instead (no squash, no height), where a shot's ground path starts.
  */
 export function muzzleTips(turret: TurretStyle, level: number, x: number, y: number, angle: number, kick = 0, flat = false): Point[] {
   const spec = MUZZLES[turret],
     tilt = flat ? undefined : TILTS[turret];
   if (!spec) return tilt?.emit !== undefined ? [{ x, y: y + tilt.drop - tilt.emit }] : [];
   const d = spec.reach(level) - kick * spec.recoil,
-    p = TILTS[turret]?.pitch ?? 0,
+    p = TILTS[turret].pitch ?? 0,
     ground = d * Math.cos(p),
     tip = (a: number, side: number) => {
       const c = Math.cos(a),
@@ -163,10 +164,9 @@ export function muzzleTips(turret: TurretStyle, level: number, x: number, y: num
   }
   return (spec.sides ?? [0]).map((side) => tip(angle, side));
 }
-/** Screen direction a barrel points in when its turret aims at `angle`: the aim itself, foreshortened on a tilted turret. */
+/** Screen direction a barrel points in when its turret aims at `angle`: the aim, foreshortened by the tilt. */
 export function muzzleHeading(turret: TurretStyle, angle: number) {
-  const tilt = TILTS[turret];
-  if (!tilt) return angle;
-  const p = tilt.pitch ?? 0;
+  const tilt = TILTS[turret],
+    p = tilt.pitch ?? 0;
   return Math.atan2(Math.sin(angle) * Math.cos(p) * tilt.squash - Math.sin(p), Math.cos(angle) * Math.cos(p));
 }

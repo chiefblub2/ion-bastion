@@ -14,8 +14,8 @@ import type { TurretContext } from "./kit";
 import { FOOT, INSET, OUTLINE, SQUASH, X, Y, block, drum, endFace, fillPoints, onGround, point, quad, towardViewer, tube, turn } from "./tilt";
 
 // --- Skyburst: a four-tube rocket rack on an elevating cradle. --------------------------------------------------------
-const TILT = TILTS.battery!,
-  SPEC = MUZZLES.battery!,
+const TILT = TILTS.battery,
+  SPEC = MUZZLES.battery,
   SIDES = SPEC.sides!,
   reach = SPEC.reach,
   RECOIL = SPEC.recoil;

@@ -13,8 +13,8 @@ import { OUTLINE, X, Y, drum, onGround, quad, towardViewer } from "./tilt";
  * (`base`) bakes per level and trim colour; the turret's ink is cached per aim step (`turret`); the plinth's wall slots
  * (`below`) and the belt rounds, lamp light and hot muzzles (`above`) are live.
  */
-const TILT = TILTS.twin!,
-  SPEC = MUZZLES.twin!,
+const TILT = TILTS.twin,
+  SPEC = MUZZLES.twin,
   DROP = TILT.drop,
   HB = TILT.height,
   PITCH = TILT.pitch ?? 0,
