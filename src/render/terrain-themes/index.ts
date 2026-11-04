@@ -1,0 +1,22 @@
+import type { MapTheme } from "../../core/types";
+import type { Theme } from "./kit";
+import { outpost } from "./outpost";
+import { lock } from "./lock";
+import { shard } from "./shard";
+import { ember } from "./ember";
+import { core } from "./core";
+import { frost } from "./frost";
+import { toxic } from "./toxic";
+import { orbit } from "./orbit";
+import { ruin } from "./ruin";
+import { rift } from "./rift";
+import { dune } from "./dune";
+import { abyss } from "./abyss";
+import { storm } from "./storm";
+import { jungle } from "./jungle";
+import { volcano } from "./volcano";
+import { geode } from "./geode";
+import { gear } from "./gear";
+import { tide } from "./tide";
+/** Map looks by `map.theme`, one module per theme. A new look is one module plus an entry here. */
+export const THEMES: Record<MapTheme, Theme> = { outpost, lock, shard, ember, core, frost, toxic, orbit, ruin, rift, dune, abyss, storm, jungle, volcano, geode, gear, tide };
