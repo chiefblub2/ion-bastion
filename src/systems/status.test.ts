@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Game } from "../core/game";
 import { makeEnemy } from "../core/test-helpers";
-import { applyStatus, damageTaken, speedFactor, statusFlags } from "./status";
+import { applyStatus, damageTaken, speedFactor, statusFlags, tickStatus } from "./status";
 
 const src = { tower: 0, type: "inferno" as const };
 const burn = (dps: number, until: number) => ({ kind: "burn" as const, dps, next: 0.5, until, source: src });
@@ -27,6 +27,17 @@ describe("status merge rules", () => {
     expect(e.status[0].until).toBe(4);
     applyStatus(g, e, { ...burn(20, 3), source: { tower: 7, type: "inferno" } });
     expect(e.status[0]).toMatchObject({ dps: 20, until: 3, source: { tower: 7 } });
+  });
+  it("drops expired effects, after which a weaker one applies again", () => {
+    const g = new Game(),
+      e = makeEnemy(1, "drone", 0, 3);
+    g.state.enemies = [e];
+    applyStatus(g, e, { kind: "slow", factor: 0.35, until: 1 });
+    g.state.time = 1;
+    tickStatus(g, 0);
+    expect(e.status).toEqual([]);
+    applyStatus(g, e, { kind: "slow", factor: 0.55, until: 2 });
+    expect(e.status).toEqual([{ kind: "slow", factor: 0.55, until: 2 }]);
   });
   it("the strongest weakening counts", () => {
     const g = new Game(),
