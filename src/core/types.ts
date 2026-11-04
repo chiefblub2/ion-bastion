@@ -665,7 +665,7 @@ export interface EnemyDefinition {
   visual: EnemyVisual;
 }
 /** Terrain look, drawn by `render/terrain.ts`. */
-export type MapTheme = "outpost" | "lock" | "shard" | "ember" | "core" | "frost" | "toxic" | "orbit" | "ruin" | "rift" | "dune" | "abyss" | "storm" | "jungle" | "volcano" | "geode" | "gear" | "tide";
+export type MapTheme = "outpost" | "lock" | "shard" | "ember" | "core" | "frost" | "toxic" | "orbit" | "ruin" | "rift" | "dune" | "abyss" | "storm" | "jungle" | "volcano" | "geode" | "gear" | "tide" | "island";
 export interface MapDefinition {
   id: string;
   name: string;

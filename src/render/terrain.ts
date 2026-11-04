@@ -1,14 +1,14 @@
 import type { MapDefinition, Point } from "../core/types";
 import { arcBand, arcPath, CELL, disc, hash01, type Ink, type Pen, polygon, px, ring, shade, strokeRound } from "./shapes";
-import { blend, drawBoardLight, drawGround, GROUND_FAMILY, groundRandom } from "./ground";
-import { landmarkAt, landmarkSpots } from "./landmarks";
+import { blend, drawBoardLight, drawGround, GROUND_FAMILY, type GroundFamily, groundRandom } from "./ground";
+import { landmarkAt, type LandmarkSpot, landmarkSpots } from "./landmarks";
 import { type ObstaclePiece, obstaclePieces } from "./obstacle-pieces";
-import { contactShadow, drawLandmark, landmarkLight } from "./landmark-art";
+import { contactShadow, drawLandmark, landmarkFrame, landmarkLight } from "./landmark-art";
 import { drawPathMaterial } from "./path-material";
 import { halo } from "./material";
 import { fnv } from "../core/hash";
 import type Phaser from "phaser";
-import { along, cellRandom } from "./terrain-themes/kit";
+import { along, cellRandom, type Theme } from "./terrain-themes/kit";
 import { THEMES } from "./terrain-themes";
 export { THEMES };
 const themeOf = (map: MapDefinition) => THEMES[map.theme ?? "outpost"];
@@ -71,10 +71,13 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
   const g = scene.add.graphics();
   // One light for every theme: a soft shadow to the lower right under each obstacle, then the theme's own drawing.
   // Obstacles as pieces: single cells, and in groups some 2×2 blocks drawn as the theme's own obstacle at twice the size.
+  // Tilted themes stand their pieces up after the path instead (`drawStanding`).
   const parts = pieces(map);
-  for (const p of parts) contactShadow(g, (p.x + p.size / 2) * CELL, (p.y + p.size / 2) * CELL, CELL * 0.46 * p.size, CELL * 0.38 * p.size);
-  for (const p of parts) enlarged(g, p, () => theme.obstacle(g, p.x * CELL, p.y * CELL, cellRandom(map, p.x, p.y)));
-  for (const spot of spots) drawLandmark(g, spot, family, theme, groundRandom(map, "landmark", spot.x, spot.y));
+  if (!theme.tilted) {
+    for (const p of parts) contactShadow(g, (p.x + p.size / 2) * CELL, (p.y + p.size / 2) * CELL, CELL * 0.46 * p.size, CELL * 0.38 * p.size);
+    for (const p of parts) enlarged(g, p, () => theme.obstacle(g, p.x * CELL, p.y * CELL, cellRandom(map, p.x, p.y)));
+    for (const spot of spots) drawLandmark(g, spot, family, theme, groundRandom(map, "landmark", spot.x, spot.y));
+  }
   const path = pixelPath(map),
     bed = theme.path.bed;
   // The road sits in the ground: a cast shadow, a lit and a shaded lip, a sunken bed with its inner shadow.
@@ -126,6 +129,7 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
     for (const sign of [-1, 1])
       g.lineBetween(p.x, p.y, p.x - Math.cos(a + sign * 0.65) * 7, p.y - Math.sin(a + sign * 0.65) * 7);
   }
+  drawStanding(g, map, theme, parts, spots, family);
   const start = path[0],
     end = path[path.length - 1],
     accent = theme.accent;
@@ -181,6 +185,26 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
   else if (clear(map.rows - 1, false)) name.setPosition(20, height - name.height - 22);
   else name.setPosition(width - name.width - 20, clear(0, true) ? 22 : height - name.height - 22);
   return scene.children.list.slice(first);
+}
+/**
+ * The pieces and landmarks of a tilted theme, over the path: every shadow first, then the bodies row by row from the
+ * north (by their bottom row, then west to east), so a tall piece overlaps the row above it and is overlapped by the
+ * one below. Flat themes draw nothing here.
+ */
+function drawStanding(g: Ink, map: MapDefinition, theme: Theme, parts: readonly ObstaclePiece[], spots: readonly LandmarkSpot[], family: GroundFamily) {
+  const tilted = theme.tilted;
+  if (!tilted) return;
+  for (const p of parts) enlarged(g, p, () => tilted.shadow(g, p.x * CELL, p.y * CELL, cellRandom(map, p.x, p.y)));
+  const items = [
+    ...parts.map((p) => ({ x: p.x, row: p.y + p.size, draw: () => enlarged(g, p, () => theme.obstacle(g, p.x * CELL, p.y * CELL, cellRandom(map, p.x, p.y))) })),
+    ...spots.map((spot) => {
+      const rand = groundRandom(map, "landmark", spot.x, spot.y),
+        { x, y, s } = landmarkFrame(spot);
+      return { x: spot.x, row: spot.y + spot.size, draw: () => (tilted.landmark ? tilted.landmark(g, x, y, s, spot.variant, rand) : drawLandmark(g, spot, family, theme, rand)) };
+    }),
+  ];
+  items.sort((a, b) => a.row - b.row || a.x - b.x);
+  for (const item of items) item.draw();
 }
 /** Landmark spots per map, computed once (ambient asks every frame). */
 const LANDMARKS = new Map<string, ReturnType<typeof landmarkSpots>>();
@@ -240,7 +264,13 @@ export function drawAmbient(g: Ink, glow: Ink, map: MapDefinition, clock: number
   const family = GROUND_FAMILY[map.theme ?? "outpost"],
     time = still ? 0 : clock,
     lit = themeGlow(map);
-  for (const spot of landmarks(map)) landmarkLight(g, glow, spot, family, themeOf(map).accent, time, lit);
+  const own = themeOf(map).tilted;
+  for (const spot of landmarks(map)) {
+    if (own?.landmark && own.landmarkLight) {
+      const { x, y, s } = landmarkFrame(spot);
+      own.landmarkLight(g, glow, x, y, s, spot.variant, time, lit);
+    } else if (!own?.landmark) landmarkLight(g, glow, spot, family, themeOf(map).accent, time, lit);
+  }
   const frame = ambientFrame(map);
   themeOf(map).ambient({ g, glow, lit, map, clock: time, still, ...frame });
   // Big pieces: the theme's ambient once more per piece, for its top-left cell only, scaled like the piece. No path

@@ -47,6 +47,7 @@ export const MUSIC: Record<DroneId, ThemeMusic> = {
   geode: m(90, 37, "aeolian", [0, 3, 6, 4], "half"),
   gear: m(100, 34, "dorian", [0, 6, 3, 4], "straight"),
   tide: m(88, 32, "aeolian", [0, 5, 3, 4], "half"),
+  island: m(100, 36, "mixolydian", [0, 3, 4, 0], "straight"),
 };
 
 /** MIDI notes of the bar's chord, stacked in thirds from its degree: triad, + 7th, + 9th. */

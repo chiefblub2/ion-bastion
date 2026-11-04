@@ -18,5 +18,6 @@ import { volcano } from "./volcano";
 import { geode } from "./geode";
 import { gear } from "./gear";
 import { tide } from "./tide";
+import { island } from "./island";
 /** Map looks by `map.theme`, one module per theme. A new look is one module plus an entry here. */
-export const THEMES: Record<MapTheme, Theme> = { outpost, lock, shard, ember, core, frost, toxic, orbit, ruin, rift, dune, abyss, storm, jungle, volcano, geode, gear, tide };
+export const THEMES: Record<MapTheme, Theme> = { outpost, lock, shard, ember, core, frost, toxic, orbit, ruin, rift, dune, abyss, storm, jungle, volcano, geode, gear, tide, island };

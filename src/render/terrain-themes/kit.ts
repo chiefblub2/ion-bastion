@@ -35,6 +35,21 @@ export interface Theme {
   decor: CellDrawing;
   /** Animated layer, redrawn every frame below towers and enemies. */
   ambient: (ctx: AmbientContext) => void;
+  /** Terrain in the towers' 3/4 tilt (see `TiltedTerrain`); absent: flat obstacles under the path. */
+  tilted?: TiltedTerrain;
+}
+/**
+ * A theme whose obstacles stand up out of the board in the towers' 3/4 tilt (`tower-art/tilt.ts`). Its obstacles and
+ * landmarks are drawn after the path, north to south, so a tall piece may reach into the cell above; the generic
+ * contact shadow is left out, the theme casts its own. `shadow` gets the same `cellRandom` stream as `obstacle` and
+ * runs for every piece before any body, so no shadow lies on a body.
+ */
+export interface TiltedTerrain {
+  shadow: CellDrawing;
+  /** The theme's own landmark on a spot with centre (x, y) and half size `s` (shadow included); replaces the family's. */
+  landmark?: (g: Ink, x: number, y: number, s: number, variant: 0 | 1, rand: Random) => void;
+  /** Its animated part on the ambient layer (motion on `g`, light on `glow`, scaled by `lit`). */
+  landmarkLight?: (g: Ink, glow: Ink, x: number, y: number, s: number, variant: 0 | 1, clock: number, lit: number) => void;
 }
 /** FNV-1a over the map id and cell, so decoration never moves between redraws. */
 export function seed(id: string, x: number, y: number) {

@@ -27,6 +27,7 @@ export const GROUND_FAMILY: Record<MapTheme, GroundFamily> = {
   rift: "crystal",
   abyss: "water",
   tide: "water",
+  island: "sand",
 };
 interface GroundTheme {
   backdrop: number;

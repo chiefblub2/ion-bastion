@@ -43,6 +43,7 @@ export const BIOMES: Record<BiomeId, Biome> = {
   geode: { ramp: [0x28223e, 0x483e68, 0x8a7ab0], relief: 0.8, cracks: 0x5ef2e0 },
   gear: { ramp: [0x3a2c1a, 0x684e2e, 0x9e7a48], relief: 0.3, plates: 3 },
   tide: { ramp: [0x2e4a50, 0x4a706e, 0x88aea6], relief: 0.45, sea: { level: 0.55, deep: 0x06283a, shallow: 0x1a7a8a } },
+  island: { ramp: [0xc9b88e, 0xe6dcc0, 0xf6f0de], relief: 0.25, sea: { level: 0.5, deep: 0x0a6a86, shallow: 0x3fd0d0 } },
 };
 /** The flat colour a territory shows before its surface is painted. */
 export const biomeGround = (id: BiomeId) => `#${BIOMES[id].ramp[1].toString(16).padStart(6, "0")}`;
