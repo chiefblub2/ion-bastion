@@ -291,8 +291,8 @@ function boatShadow(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "boa
 // ── Palms on the beach ──────────────────────────────────────────────────────────────────────────────────────────────
 const SHORE_PALMS = new Map<string, StandingPiece[]>();
 /**
- * Palms leaning out over the beach: on the dry sand along the shore (`shoreLine` close to the land), about every
- * third spot, never near the path (entry and reactor included), each leaning towards the sea.
+ * Palms at the back of the beach, where the dry sand meets the land (`shoreLine` at the land's edge), well away from
+ * the waterline: about every third spot, never near the path (entry and reactor included), leaning a little seaward.
  */
 function shorePalms(map: MapDefinition): readonly StandingPiece[] {
   const cached = SHORE_PALMS.get(map.id);
@@ -300,10 +300,10 @@ function shorePalms(map: MapDefinition): readonly StandingPiece[] {
   const list: StandingPiece[] = [],
     path = map.path.map((p) => ({ x: (p.x + 0.5) * CELL, y: (p.y + 0.5) * CELL }));
   if (seaCells(map).size)
-    for (const s of shoreLine(map, 6, 32)) {
+    for (const s of shoreLine(map, 3, 32)) {
       const rand = mulberry32(fnv(`${map.id}:shore-palm:${Math.round(s.x)}:${Math.round(s.y)}`));
       if (rand() > 0.4 || path.some((p) => (p.x - s.x) ** 2 + (p.y - s.y) ** 2 < 46 * 46)) continue;
-      const p = palmOf(rand, 0, 0, Math.atan2(s.ny, s.nx), 0.8 + rand() * 0.5, 36 + rand() * 14);
+      const p = palmOf(rand, 0, 0, Math.atan2(s.ny, s.nx), 0.45 + rand() * 0.4, 36 + rand() * 14);
       list.push({ x: s.x, y: s.y, shadow: (g) => palmShadow(g, s.x, s.y, p), draw: (g) => palm(g, s.x, s.y, p) });
     }
   SHORE_PALMS.set(map.id, list);
@@ -480,20 +480,20 @@ function drawChannel(g: Ink, map: MapDefinition) {
     }
   }
 }
-/** Shore colours by sea depth (`coast.ts` `seaDepth`): a wide white beach, wet sand, the foam line, lagoon shallows, then the deep ocean. */
+/** Shore colours by sea depth (`coast.ts` `seaDepth`): a wide white beach (palms stand at its back), wet sand, the foam line, lagoon shallows, then the deep ocean. */
 const SHORE: readonly [number, number][] = [
   [0, 0xf4ecdc],
-  [7, 0xefe5cf],
-  [11, 0xd9c8a0],
-  [11.01, WATER.foam],
-  [13.5, WATER.foam],
-  [16, 0x9cf2e4],
-  [40, 0x34d2d4],
-  [95, 0x0fa0c8],
-  [170, 0x0a62a0],
+  [22, 0xefe5cf],
+  [29, 0xd9c8a0],
+  [29.01, WATER.foam],
+  [31.5, WATER.foam],
+  [34, 0x9cf2e4],
+  [58, 0x34d2d4],
+  [110, 0x0fa0c8],
+  [180, 0x0a62a0],
 ];
 /** Depth of the foam line, where the surf runs. */
-const FOAM = 12.3;
+const FOAM = 30.3;
 function shoreColor(d: number) {
   if (d <= SHORE[0][0]) return SHORE[0][1];
   for (let i = 1; i < SHORE.length; i++) {
@@ -549,7 +549,7 @@ function surf(g: Ink, glow: Ink, map: MapDefinition, clock: number, lit: number)
     const lap = 0.5 + 0.5 * Math.sin(clock * 0.9 + (p.x + p.y * 1.3) * 0.012);
     dash(p, -8 * lap + 4, 1.8, 0.7 * lap);
   }
-  for (const p of shoreLine(map, 34, 9)) {
+  for (const p of shoreLine(map, 52, 9)) {
     const roll = (clock * 0.2 + (p.x + p.y * 1.3) * 0.004) % 1;
     dash(p, -20 * roll, 1.4, 0.35 * Math.sin(Math.PI * roll));
   }
@@ -559,7 +559,7 @@ function surf(g: Ink, glow: Ink, map: MapDefinition, clock: number, lit: number)
     for (let j = 0; j < 2; j++) {
       const tx = Math.floor(hash01(x, y, j) * n),
         ty = Math.floor(hash01(y, x, j + 5) * n);
-      if (depths[ty * n + tx] > 24) twinkle(g, glow, x * CELL + (tx + 0.5) * SEA_TILE, y * CELL + (ty + 0.5) * SEA_TILE, clock, hash01(j, x, y), lit);
+      if (depths[ty * n + tx] > 42) twinkle(g, glow, x * CELL + (tx + 0.5) * SEA_TILE, y * CELL + (ty + 0.5) * SEA_TILE, clock, hash01(j, x, y), lit);
     }
   }
 }
