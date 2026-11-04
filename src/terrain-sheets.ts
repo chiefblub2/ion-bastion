@@ -4,6 +4,7 @@ import * as O from "./render/terrain-themes/outpost-props";
 import * as L from "./render/terrain-themes/lock-props";
 import * as S from "./render/terrain-themes/shard-props";
 import * as E from "./render/terrain-themes/ember-props";
+import * as C from "./render/terrain-themes/core-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -111,5 +112,27 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
     { label: "brazier", shadow: (g, x, y) => E.brazierShadow(g, x, y), draw: (g, x, y) => E.drawBrazier(g, x, y) },
     { label: "cinder cone", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => E.coneShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => E.drawCone(g)) },
     { label: "shrine", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => E.shrineShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => E.drawShrine(g)) },
+  ],
+  core: [
+    ...[1, 2].map((n) => {
+      const t = C.transformerOf(r(2000 + n));
+      return { label: "transformer", shadow: (g: Ink, x: number, y: number) => C.transformerShadow(g, x, y, t), draw: (g: Ink, x: number, y: number) => C.drawTransformer(g, x, y, t) };
+    }),
+    ...[1, 2].map((n) => {
+      const c = C.capacitorsOf(r(2010 + n));
+      return { label: "capacitors", shadow: (g: Ink, x: number, y: number) => C.capacitorsShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => C.drawCapacitors(g, x, y, c) };
+    }),
+    ...[1, 2].map((n) => {
+      const c = { a: 0.15 * (n - 1.5), count: n };
+      return { label: "cabinets", shadow: (g: Ink, x: number, y: number) => C.cabinetsShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => C.drawCabinets(g, x, y, c) };
+    }),
+    (() => {
+      const t = { flip: false, gauge: true };
+      return { label: "tanks", shadow: (g: Ink, x: number, y: number) => C.tanksShadow(g, x, y, t), draw: (g: Ink, x: number, y: number) => C.drawTanks(g, x, y, t) };
+    })(),
+    { label: "vent", shadow: (g, x, y) => C.ventShadow(g, x, y), draw: (g, x, y) => { C.drawVent(g, x, y); C.ventFan(g, x, y, 0, 0); } },
+    { label: "mast", shadow: (g, x, y) => C.mastShadow(g, x, y), draw: (g, x, y) => C.drawMast(g, x, y) },
+    { label: "cooling tower", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => C.coolingTowerShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => C.drawCoolingTower(g)) },
+    { label: "shield spire", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => C.spireShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => C.drawSpire(g)) },
   ],
 };
