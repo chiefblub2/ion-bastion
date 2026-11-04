@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Game } from "../core/game";
-import { finishWave, foe, L3, place } from "../core/test-helpers";
+import { foe, L3, place, emptyWave } from "../core/test-helpers";
 import type { Enemy, EnemyId, Tower } from "../core/types";
 import { resetScrapYards, tickTargetPaths } from "./target-paths";
 import { applyDamage, hitOf } from "./damage";
@@ -191,17 +191,12 @@ describe("Armory paths", () => {
 describe("boards without these paths", () => {
   it("keep the level-3 effects and never set the new fields", () => {
     const g = new Game();
-    g.state.wallets[0] = 5000;
-    for (const [tower, x, y] of [["tracker", 3, 2], ["detector", 6, 2], ["recycler", 9, 2], ["armory", 12, 2], ["pulse", 4, 4], ["blast", 8, 4]] as const) {
-      expect(g.command({ type: "build", tower, x, y }).ok).toBe(true);
-      const id = g.state.towers.at(-1)!.id;
-      if (tower !== "pulse" && tower !== "blast") for (const upgrade of L3) expect(g.command({ type: "upgrade", id, upgrade }).ok).toBe(true);
-    }
+    for (const [tower, x, y] of [["tracker", 3, 2], ["detector", 6, 2], ["recycler", 9, 2], ["armory", 12, 2]] as const) place(g, tower, x, y, L3);
+    place(g, "pulse", 4, 4);
+    place(g, "blast", 8, 4);
     const e = enemy(g, "drone", 3, 3);
     expect(markFactor(g, e)).toBe(1.25);
-    g.state.enemies = [];
-    g.command({ type: "start" });
-    finishWave(g);
+    emptyWave(g);
     for (const t of g.state.towers) expect(t.scrapYard).toBeUndefined();
     expect(JSON.stringify(g.state)).not.toMatch(/"tag"|revealUntil|scrapYard/);
   });

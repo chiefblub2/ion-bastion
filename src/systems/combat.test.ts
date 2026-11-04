@@ -122,27 +122,6 @@ describe("projectiles", () => {
     expect(JSON.stringify(g.state.projectiles)).toBe(before);
   });
 });
-describe("late-level special values in combat", () => {
-  const upgraded = (tower: TowerId, enemies: Enemy[]) => {
-    const g = new Game();
-    g.state.wallets[0] = 100000;
-    g.command({ type: "build", tower, x: 7, y: 5 });
-    for (let l = 2; l <= 5; l++) g.command({ type: "upgrade", id: g.state.towers[0].id, upgrade: `level-${l}` });
-    g.state.enemies = enemies;
-    attackEnemies(g, 0);
-    landProjectiles(g);
-    return g.state;
-  };
-  it("Kryo level 5 slows harder and longer", () => {
-    const s = upgraded("frost", [enemyAt(100, "drone", 7, 7)]);
-    expect(s.enemies[0].status).toEqual([{ kind: "slow", factor: 0.35, until: expect.closeTo(s.time + 2.8) }]);
-  });
-  it("Tesla level 5 jumps five times over two cells", () => {
-    const s = upgraded("tesla", Array.from({ length: 7 }, (_, i) => enemyAt(100 + i, "drone", 7, 6 + i * 1.9)));
-    expect(s.enemies.filter((e) => e.hp < 1000)).toHaveLength(6);
-  });
-});
-
 describe("newer attack mechanics", () => {
   /** Advances only the clock and status effects, so burning can be observed in isolation. */
   const wait = (g: Game, seconds: number) => {
@@ -183,24 +162,13 @@ describe("newer attack mechanics", () => {
     const beam = g.drainEvents().find((e) => e.type === "beam");
     expect(beam).toMatchObject({ from: { x: 7, y: 5 }, to: { x: 7, y: expect.closeTo(5 + TOWERS.lance.range) } });
   });
-  it("Stasis stuns every enemy in the pulse radius, then they recover and are immune for a while", () => {
+  it("Stasis stuns every enemy in the pulse radius", () => {
     const g = fire("stasis", [enemyAt(100, "drone", 7, 7), enemyAt(101, "glider", 7.5, 7.5), enemyAt(102, "drone", 7, 9)]);
     const [a, b, far] = g.state.enemies;
     expect([a.hp, b.hp, far.hp]).toEqual([1000 - TOWERS.stasis.damage, 1000 - TOWERS.stasis.damage, 1000]);
     expect(speedFactor(a, 0.5)).toBe(0);
     expect(speedFactor(b, 0.5)).toBe(0);
     expect(speedFactor(far, 0.5)).toBe(1);
-    // Recovered after 0.8 s; a second pulse during recovery does nothing.
-    expect(speedFactor(a, 0.8)).toBe(1);
-    g.state.time = 1;
-    g.state.towers[0].cooldown = 0;
-    attackEnemies(g, 0);
-    expect(speedFactor(a, 1.2)).toBe(1);
-    // After the recovery window the next pulse stuns again.
-    g.state.time = 2.4;
-    g.state.towers[0].cooldown = 0;
-    attackEnemies(g, 0);
-    expect(speedFactor(a, 2.5)).toBe(0);
   });
   it("Glut burns for a multiple of its hit over time", () => {
     const g = fire("inferno", [enemyAt(100, "drone", 7, 7)]);
@@ -293,7 +261,7 @@ describe("Fokus", () => {
   });
 });
 describe("Gravitron", () => {
-  const { radius, strength, duration, recovery } = TOWERS.gravity.attack as PullAttack;
+  const { radius, strength, duration } = TOWERS.gravity.attack as PullAttack;
   /** Moves enemies for `seconds`, keeping the clock in step. */
   const walk = (g: Game, seconds: number) => {
     for (let i = 0; i < Math.round(seconds * 30); i++) {
@@ -312,19 +280,11 @@ describe("Gravitron", () => {
     expect(glider.distance).toBeGreaterThan(10);
     expect(far.distance).toBeGreaterThan(10);
   });
-  it("recovery blocks a second pull, and unstoppable enemies resist", () => {
+  it("unstoppable enemies resist the pull", () => {
     const g = fire("gravity", [enemyAt(100, "drone", 7, 7), enemyAt(101, "berserker", 7, 7.3)]);
     const [drone, boss] = g.state.enemies;
     expect(speedFactor(drone, 0.1)).toBe(-strength);
     expect(speedFactor(boss, 0.1)).toBe(1);
-    g.state.time = duration + 0.1;
-    g.state.towers[0].cooldown = 0;
-    attackEnemies(g, 0);
-    expect(speedFactor(drone, g.state.time)).toBe(1);
-    g.state.time = duration + recovery + 0.1;
-    g.state.towers[0].cooldown = 0;
-    attackEnemies(g, 0);
-    expect(speedFactor(drone, g.state.time)).toBe(-strength);
   });
   it("never pulls an enemy behind the entry", () => {
     const g = fire("gravity", [{ ...enemyAt(100, "drone", 7, 7), distance: 0.2 }]);

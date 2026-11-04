@@ -3,7 +3,7 @@ import { DEFAULT_CONTENT } from "../content";
 import { Game } from "../core/game";
 import { makeEnemy, place } from "../core/test-helpers";
 import type { Tower, TowerId } from "../core/types";
-import { towerLevel, towerPath, towerTrack, upgradeOption } from "../core/upgrades";
+import { isFullyUpgraded, towerLevel, towerPath, towerTrack, upgradeOption } from "../core/upgrades";
 import { lockSpecializations } from "../run/transform";
 import { receivedAuraBonuses } from "./auras";
 import { applyDamage, hitOf } from "./damage";
@@ -27,6 +27,14 @@ describe("Aura tracks and paths", () => {
       const t = aura([track, `${track}-2`, `${track}-3`]);
       expect(towerLevel(t, DEFAULT_CONTENT)).toBe(4);
       expect(upgradeOption(t, "piercing-field-1", Infinity, DEFAULT_CONTENT).status).toBe("available");
+    }
+    for (const track of ["damage", "speed", "range"]) {
+      const t = aura([track]);
+      expect([towerTrack(t, DEFAULT_CONTENT), towerPath(t, DEFAULT_CONTENT)]).toEqual([track, undefined]);
+      for (const other of ["damage", "speed", "range"].filter((o) => o !== track))
+        for (const upgrade of [other, `${other}-2`, `${other}-3`]) expect(upgradeOption(t, upgrade, Infinity, DEFAULT_CONTENT).status).toBe("excluded");
+      // The paths open after tier III, so a tier-III Aura is not fully upgraded yet.
+      expect(isFullyUpgraded(aura([track, `${track}-2`, `${track}-3`]), DEFAULT_CONTENT)).toBe(false);
     }
     const t = aura([...DAMAGE, "harmonics-1"]);
     expect([towerTrack(t, DEFAULT_CONTENT), towerPath(t, DEFAULT_CONTENT), towerLevel(t, DEFAULT_CONTENT)]).toEqual(["damage", "harmonics", 5]);
