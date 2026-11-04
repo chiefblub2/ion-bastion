@@ -1,12 +1,12 @@
 import type { MapDefinition, Point } from "../core/types";
-import { arcBand, arcPath, CELL, disc, hash01, type Ink, type Pen, polygon, px, ring, shade, strokeRound } from "./shapes";
-import { blend, drawBoardLight, drawGround, GROUND_FAMILY, type GroundFamily, groundRandom } from "./ground";
+import { CELL, disc, hash01, type Ink, type Pen, px, shade } from "./shapes";
+import { drawBoardLight, drawGround, GROUND_FAMILY, type GroundFamily, groundRandom } from "./ground";
 import { landmarkAt, type LandmarkSpot, landmarkSpots } from "./landmarks";
 import { type ObstaclePiece, obstaclePieces } from "./obstacle-pieces";
 import { contactShadow, drawLandmark, landmarkFrame, landmarkLight } from "./landmark-art";
 import { drawPathMaterial } from "./path-material";
+import { drawGateBases, drawGateLife } from "./gates";
 import { landOf, seaCells } from "./coast";
-import { halo } from "./material";
 import { fnv } from "../core/hash";
 import type Phaser from "phaser";
 import { along, cellRandom, type Theme } from "./terrain-themes/kit";
@@ -25,16 +25,6 @@ const hex = (color: number) => `#${color.toString(16).padStart(6, "0")}`;
 /** Path in pixels; a ring repeats its first cell at the end so lines and markers close the loop. */
 const pixelPath = (map: MapDefinition) =>
   (map.loop ? [...map.path, map.path[0]] : map.path).map((p) => ({ x: px(p.x), y: px(p.y) }));
-/** Reactor in the theme's accent; `drawGates` pulses its core and a ring between the two outlines. */
-function drawReactor(g: Phaser.GameObjects.Graphics, end: Point, accent: number, backdrop: number) {
-  g.lineStyle(1, accent, 0.3);
-  strokeRound(g, end.x, end.y, 31);
-  disc(g, end.x, end.y, 24, backdrop);
-  g.lineStyle(2, accent);
-  strokeRound(g, end.x, end.y, 22);
-  polygon(g, end.x, end.y, 13, 6, accent, Math.PI / 6);
-  polygon(g, end.x, end.y, 7, 6, shade(accent, -0.65), Math.PI / 6);
-}
 /** A polyline moved sideways by `d` pixels (positive to the right of travel), with mitred corners. */
 function offsetPath(path: readonly Point[], d: number) {
   const normal = (a: Point, b: Point) => {
@@ -90,24 +80,8 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
   const start = path[0],
     end = path[path.length - 1],
     accent = theme.accent;
-  contactShadow(g, start.x, start.y, 26, 22, 0.35);
-  if (!map.loop) contactShadow(g, end.x, end.y, 30, 26, 0.35);
-  // A ring has no reactor; its entry portal glows in the accent colour instead.
-  const portal = map.loop ? accent : 0xf0cf87;
-  // Entry: amber in every theme, pointing along the path, inside a dashed ring.
-  disc(g, start.x, start.y, 25, theme.backdrop, 0.6);
-  g.lineStyle(2, portal, 0.5);
-  for (let i = 0; i < 8; i++) {
-    const a = (i * Math.PI) / 4;
-    g.beginPath();
-    arcPath(g, start.x, start.y, 24, a, a + Math.PI / 8);
-    g.strokePath();
-  }
-  disc(g, start.x, start.y, 19, theme.backdrop);
-  g.lineStyle(2, portal);
-  strokeRound(g, start.x, start.y, 18);
-  polygon(g, start.x, start.y, 8, 3, portal, Math.atan2(path[1].y - start.y, path[1].x - start.x));
-  if (!map.loop) drawReactor(g, end, accent, theme.backdrop);
+  // Entry breach and reactor core in the towers' 3/4 tilt (`gates.ts`); a ring has no reactor.
+  drawGateBases(g, path, !!map.loop, accent);
   drawBoardLight(scene.add.graphics(), map, theme, themeGlow(map));
   const label = (x: number, y: number, text: string, color: string) =>
     scene.add.text(x, y, text, {
@@ -126,14 +100,13 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
       Math.min(Math.max(x - text.width / 2, 4), width - text.width - 4),
       Math.min(Math.max(y, 4), height - text.height - 4),
     );
-  // Below the entry when the map name label occupies the space above it.
+  // Below the gates, clear of their pylons and the core's hologram ring; above them (higher still) on the bottom row.
   place(
     label(0, 0, map.loop ? "PORTAL" : "ENTRY", map.loop ? hex(accent) : "#efd297"),
     start.x,
-    start.y < CELL * 2 ? start.y + 26 : start.y - 54,
+    start.y + 34 + 30 < height ? start.y + 34 : start.y - 84,
   );
-  // Below the reactor unless it sits in the bottom row.
-  if (!map.loop) place(label(0, 0, "REACTOR", hex(accent)), end.x, end.y + 32 + 30 < height ? end.y + 32 : end.y - 58);
+  if (!map.loop) place(label(0, 0, "REACTOR", hex(accent)), end.x, end.y + 36 + 30 < height ? end.y + 36 : end.y - 98);
   // Map name in the top-left corner, or in the first corner the path keeps clear.
   const name = label(0, 0, map.name.toUpperCase(), hex(shade(theme.grid, 0.35))),
     clear = (row: number, fromRight: boolean) =>
@@ -295,45 +268,12 @@ export function drawAmbient(g: Ink, glow: Ink, map: MapDefinition, clock: number
     if (p.size > 1)
       enlarged(g, p, () => enlarged(glow, p, () => themeOf(map).ambient({ g, glow, lit, map: empty, clock: time, still, hash: frame.hash, path: [], blocked: [{ x: p.x, y: p.y }] })));
 }
-const DANGER = 0xff647c;
-/** Portal colour: amber at a reactor map's entry, the accent on a ring's portal (as `drawTerrain` paints it). */
-const portalColor = (map: MapDefinition) => (map.loop ? themeOf(map).accent : 0xf0cf87);
 /**
- * The live part of the entry and the reactor, drawn every frame over the baked terrain: a vortex turning in the entry
- * portal (light on `glow`, thin arcs on `g`) and the reactor core pulsing, with a ring breathing between its outlines.
- * `alarm` (0 to 1) turns the reactor red and quickens it; a ring map has no reactor, so its portal takes the alarm.
- * `still` (reduced motion) keeps everything in place.
+ * The live part of the entry breach and the reactor core, drawn every frame over the baked terrain (`gates.ts`
+ * `drawGateLife`): the vortex and lightning of the breach, the core's pulse and hologram ring. `alarm` (0 to 1) turns
+ * the reactor red and quickens it; a ring map has no reactor, so its breach takes the alarm. `still` (reduced motion)
+ * keeps everything in place.
  */
-export function drawGates({ g, glow }: Pen, map: MapDefinition, clock: number, still: boolean, alarm: number) {
-  const path = pixelPath(map),
-    start = path[0],
-    accent = themeOf(map).accent,
-    lit = themeGlow(map),
-    t = still ? 0 : clock,
-    portal = portalColor(map),
-    danger = Math.max(0, Math.min(1, alarm));
-  // Entry vortex: three arms spiralling inwards, a soft core light.
-  for (let i = 0; i < 3; i++) {
-    const a = -t * 1.2 + (i * Math.PI * 2) / 3;
-    arcBand(glow, start.x, start.y, 11, 3, a, a + 1.4, portal, 0.18 * lit);
-    arcBand(glow, start.x, start.y, 6, 2, a + 0.8, a + 2, portal, 0.14 * lit);
-    g.lineStyle(1, portal, 0.35);
-    g.beginPath();
-    arcPath(g, start.x, start.y, 15, a + 0.4, a + 1.3);
-    g.strokePath();
-  }
-  halo(glow, start.x, start.y, 22, portal, (0.16 + 0.06 * Math.sin(t * 1.7)) * lit);
-  const gate = map.loop ? start : path[path.length - 1],
-    color = danger > 0 ? blend(map.loop ? portal : accent, DANGER, danger) : map.loop ? portal : accent,
-    speed = 1 + danger * 1.5,
-    beat = 0.5 + 0.5 * Math.sin(t * 2.2 * speed);
-  if (!map.loop) {
-    // Reactor core: a breathing light over the hexagon, flaring with the alarm.
-    halo(glow, gate.x, gate.y, 26 + 6 * danger, color, (0.14 + 0.1 * beat + 0.14 * danger) * lit);
-    disc(glow, gate.x, gate.y, 6, color, (0.12 + 0.1 * beat) * lit);
-  }
-  // The ring between the outer and inner outline, as the battlefield drew it before.
-  g.lineStyle(1, color, 0.35 + 0.2 * Math.sin(t * 3 * speed));
-  strokeRound(g, gate.x, gate.y, 26 + Math.sin(t * 2) * 2);
-  if (danger > 0) ring(glow, gate.x, gate.y, 28 + 4 * beat, 3, DANGER, 0.22 * danger * lit);
+export function drawGates(pen: Pen, map: MapDefinition, clock: number, still: boolean, alarm: number) {
+  drawGateLife(pen, pixelPath(map), !!map.loop, themeOf(map).accent, clock, still, alarm, themeGlow(map));
 }
