@@ -1,27 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { Game } from "../core/game";
 import { stateHash } from "../core/hash";
-import { finishWave, makeEnemy } from "../core/test-helpers";
+import { finishWave, makeEnemy, place, emptyWave } from "../core/test-helpers";
 import { TOWERS } from "../content/towers";
-import type { Tower, TowerDefinition, TowerId } from "../core/types";
+import type { TowerDefinition } from "../core/types";
 import { validateTower } from "../core/validation";
 import { applyDamage } from "./damage";
 import { moveEnemies } from "./movement";
 import { interestOn } from "./support";
 import { discountedCost, upgradeDiscount } from "./workshop";
-/** Places a tower straight into the state; the economy towers are pure queries over the towers. */
-function place(g: Game, type: TowerId, x: number, y: number, upgrades: string[] = [], owner = 0) {
-  const t: Tower = { id: g.state.nextId++, type, x, y, upgrades, cooldown: 0, spent: 0, angle: 0, kills: 0, owner };
-  g.state.towers.push(t);
-  return t;
-}
-/** Runs one empty wave to its end, so the after-wave payouts happen. */
-function emptyWave(g: Game) {
-  g.command({ type: "start" });
-  g.state.queue = [];
-  g.state.enemies = [];
-  finishWave(g);
-}
 const src = { tower: 0, type: "pulse" as const };
 describe("Workshop", () => {
   it("charges the discounted price for towers in range, takes the strongest Workshop and never discounts itself", () => {
@@ -60,8 +47,8 @@ describe("Vault", () => {
   it("pays each owner once after a wave from their best Vault, on their own wallet", () => {
     const g = new Game();
     g.setPlayers(2);
-    place(g, "vault", 0, 0, [], 0);
-    place(g, "vault", 0, 1, ["level-2"], 0);
+    place(g, "vault", 0, 0);
+    place(g, "vault", 0, 1, ["level-2"]);
     g.state.wallets = [400, 1000];
     const bonus = g.mission.waves[0].bonus;
     emptyWave(g);

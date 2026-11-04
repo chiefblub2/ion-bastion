@@ -6,6 +6,7 @@ import { maxTowerLevel, openUpgrades, purchaseUpgrade, previewUpgrade, resolveUp
 import { effectiveTowerStats } from "../systems/auras";
 import { isSupport } from "../systems/attacks";
 import type { TowerDefinition, TowerId } from "./types";
+import { place } from "./test-helpers";
 
 function setup(type: TowerId) {
   const game = new Game(); game.state.wallets[0] = 2000;
@@ -32,16 +33,19 @@ describe("unified upgrade purchases", () => {
     expect(upgradeOption(tower, "level-3", game.state.wallets[0], DEFAULT_CONTENT).status).toBe("available");
   });
   it("keeps preview, affordability and the eventual purchase in agreement for every existing upgrade", () => {
+    // One game for the whole sweep: each tower type stands alone on the board, and a path that the
+    // previous one excludes restarts from the shared levels on the same tower.
+    const game = new Game();
     for (const type of Object.keys(TOWERS) as TowerId[]) {
-      let { game, tower } = setup(type);
+      const cell = TOWERS[type].placement === "path" ? game.mission.map.path[1] : { x: 4, y: 4 };
+      game.state.towers = [];
+      const tower = place(game, type, cell.x, cell.y);
       for (const upgrade of TOWERS[type].upgrades) {
-        // Paths exclude each other; the catalog is sorted by path, so start a fresh tower per path.
-        // Specialization paths branch off level 5, so the fresh tower gets the shared levels first.
+        // Specialization paths branch off level 5, so the restarted tower gets the shared levels first.
         if (upgradeOption(tower, upgrade.id, Infinity, DEFAULT_CONTENT).status === "excluded") {
-          ({ game, tower } = setup(type));
           // Aura: a new track starts on a bare tower; a path needs one whole track (the first) underneath.
           const track = TOWERS[type].upgrades.find((u) => u.track)?.track;
-          tower.upgrades.push(...TOWERS[type].upgrades.filter((u) => !u.path && (upgrade.track ? !u.track : !u.track || u.track === track)).map((u) => u.id));
+          tower.upgrades = TOWERS[type].upgrades.filter((u) => !u.path && (upgrade.track ? !u.track : !u.track || u.track === track)).map((u) => u.id);
         }
         game.state.wallets[0] = upgrade.cost - 1;
         const before = JSON.stringify(game.state);

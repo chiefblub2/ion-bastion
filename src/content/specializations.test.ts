@@ -1,4 +1,5 @@
 import { DEFAULT_CONTENT } from "./index";
+import { towerAt } from "../core/test-helpers";
 import { describe, it, expect } from "vitest";
 import { Game, sellValue } from "../core/game";
 import { TOWERS } from "./towers";
@@ -24,7 +25,7 @@ const PRICES: Record<string, [number, number, number, number]> = {
 function built(type: TowerId, upgrades: string[] = LEVELS) {
   const game = new Game();
   game.state.wallets[0] = 100000;
-  const tower = game.state.towers[game.state.towers.push({ id: 1, type, x: 4, y: 4, upgrades: [...upgrades], cooldown: 0, spent: TOWERS[type].cost, angle: 0, kills: 0, owner: 0 }) - 1];
+  const tower = game.state.towers[game.state.towers.push({ ...towerAt(1, type, 4, 4, [...upgrades]), spent: TOWERS[type].cost }) - 1];
   game.state.nextId = 2;
   return { game, tower };
 }

@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { towerAt } from "../core/test-helpers";
 import type { Tower, TowerId } from "../core/types";
 import { initialState } from "../core/game";
 import { MISSIONS } from "../content/missions";
 import { cardChoices, cardTower, towerCardHtml } from "./tower-card";
 
 const LEVELS = ["level-2", "level-3", "level-4", "level-5"];
-const tower = (type: TowerId, upgrades: string[] = []): Tower => ({ id: 1, type, x: 0, y: 0, upgrades, cooldown: 0, spent: 80, angle: 0, kills: 0, owner: 0 });
+const tower = (type: TowerId, upgrades: string[] = []): Tower => ({ ...towerAt(1, type, 0, 0, upgrades), spent: 80 });
 const options = (over = {}) => ({ credits: 10000, slim: false, ...over });
 
 describe("tower card content", () => {

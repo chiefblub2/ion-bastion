@@ -1,23 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { Game } from "../core/game";
-import { finishWave, makeEnemy } from "../core/test-helpers";
+import { finishWave, makeEnemy, place } from "../core/test-helpers";
 import { MISSIONS } from "../content/missions";
 import { ENEMIES } from "../content/enemies";
-import type { Tower, TowerId } from "../core/types";
+import type { BountyAttack } from "../core/types";
 import { applyDamage } from "./damage";
 import { applyStatus } from "./status";
 import { bountyBonus, markFactor } from "./support";
-/** Places a tower straight into the state; support effects are pure queries over the towers. */
-function place(g: Game, type: TowerId, x: number, y: number, upgrades: string[] = []) {
-  const t: Tower = { id: g.state.nextId++, type, x, y, upgrades, cooldown: 0, spent: 0, angle: 0, kills: 0, owner: 0 };
-  g.state.towers.push(t);
-  return t;
-}
 const src = { tower: 0, type: "pulse" as const };
 describe("Bounty Beacon", () => {
-  it("adds half the reward for kills in range, nothing outside, and never stacks", () => {
+  it("adds its share of the reward for kills in range, nothing outside, and never stacks", () => {
     const g = new Game(),
-      reward = ENEMIES.tank.reward;
+      reward = ENEMIES.tank.reward,
+      { bonus } = g.content.towers.beacon.attack as BountyAttack;
     place(g, "beacon", 5, 5);
     place(g, "beacon", 5, 6);
     const near = makeEnemy(1, "tank", 5, 6.5),
@@ -25,9 +20,9 @@ describe("Bounty Beacon", () => {
     g.state.enemies = [near, far];
     const before = g.state.wallets[0];
     applyDamage(g, src, near, 5000);
-    expect(g.state.wallets[0] - before).toBe(reward + Math.round(reward * 0.5));
+    expect(g.state.wallets[0] - before).toBe(reward + Math.round(reward * bonus));
     applyDamage(g, src, far, 5000);
-    expect(g.state.wallets[0] - before).toBe(2 * reward + Math.round(reward * 0.5));
+    expect(g.state.wallets[0] - before).toBe(2 * reward + Math.round(reward * bonus));
   });
   it("pays nothing for enemies sent by an opponent, and more after upgrades", () => {
     const g = new Game();

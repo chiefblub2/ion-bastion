@@ -1,31 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { Game } from "../core/game";
 import { stateHash } from "../core/hash";
-import { makeEnemy } from "../core/test-helpers";
-import type { AttackSpec, Tower, TowerId } from "../core/types";
+import { makeEnemy, place } from "../core/test-helpers";
+import type { AttackSpec, OverclockAttack, SynergyAttack, Tower, TowerId } from "../core/types";
 import { attackError, canTarget } from "./attacks";
 import { attackEnemies } from "./combat";
 import { applyDamage, hitOf } from "./damage";
 import { critFactor, overclockRate, skylinkFactor, synergyFactor } from "./support";
-/** Places a tower straight into the state; support effects are pure queries over the towers. */
-function place(g: Game, type: TowerId, x: number, y: number, upgrades: string[] = []) {
-  const t: Tower = { id: g.state.nextId++, type, x, y, upgrades, cooldown: 0, spent: 0, angle: 0, kills: 0, owner: 0 };
-  g.state.towers.push(t);
-  return t;
-}
 describe("Overclock", () => {
-  it("doubles the cooling rate of towers in reach during the first 3 s of every 10 s", () => {
+  it("speeds up the cooling of towers in reach during the window of every period", () => {
     const g = new Game(),
       near = place(g, "pulse", 5, 6),
       far = place(g, "pulse", 12, 12);
     place(g, "overclock", 5, 5);
-    g.state.time = 1;
-    expect(overclockRate(g, near)).toBe(2);
+    const { boost, window, period } = g.content.towers.overclock.attack as OverclockAttack;
+    g.state.time = window / 2;
+    expect(overclockRate(g, near)).toBe(1 + boost);
     expect(overclockRate(g, far)).toBe(1);
-    g.state.time = 5;
+    g.state.time = (window + period) / 2;
     expect(overclockRate(g, near)).toBe(1);
-    g.state.time = 21.5;
-    expect(overclockRate(g, near)).toBe(2);
+    g.state.time = 2 * period + window / 2;
+    expect(overclockRate(g, near)).toBe(1 + boost);
   });
   it("rejects a burst as long as its cycle", () => {
     expect(attackError({ kind: "overclock", boost: 1, window: 10, period: 10 } as AttackSpec)).toBeDefined();
@@ -100,16 +95,20 @@ describe("Skylink", () => {
   });
 });
 describe("Nexus", () => {
-  it("adds 4 % per distinct attack tower type in reach, capped, support towers not counted", () => {
+  it("adds its bonus per distinct attack tower type in reach, capped, support towers not counted", () => {
     const g = new Game(),
       t = place(g, "pulse", 5, 6);
     place(g, "nexus", 5, 5);
     place(g, "pulse", 4, 5);
     place(g, "tracker", 6, 5);
-    expect(synergyFactor(g, t)).toBeCloseTo(1.04);
+    const { bonus, cap } = g.content.towers.nexus.attack as SynergyAttack;
+    expect(synergyFactor(g, t)).toBeCloseTo(1 + bonus);
     const types: TowerId[] = ["blast", "flak", "tesla", "lance", "frost", "mortar", "inferno"];
-    types.forEach((type, i) => place(g, type, 3 + (i % 4), i < 4 ? 4 : 6));
-    expect(synergyFactor(g, t)).toBeCloseTo(1.24);
+    // Every one of them stands in reach of the Nexus, so there are more types than the cap.
+    const cells = [[4, 4], [5, 4], [6, 4], [4, 6], [6, 6], [3, 5], [7, 5]];
+    types.forEach((type, i) => place(g, type, cells[i][0], cells[i][1]));
+    expect(cap).toBeLessThan(1 + types.length);
+    expect(synergyFactor(g, t)).toBeCloseTo(1 + bonus * cap);
     expect(synergyFactor(g, place(g, "pulse", 13, 13))).toBe(1);
   });
 });

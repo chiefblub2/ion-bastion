@@ -1,27 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { Game } from "../core/game";
-import { finishWave, makeEnemy } from "../core/test-helpers";
-import type { EnemyId, Tower, TowerId } from "../core/types";
+import { foe, L3, place, emptyWave } from "../core/test-helpers";
+import type { Enemy, EnemyId, Tower } from "../core/types";
 import { resetScrapYards, tickTargetPaths } from "./target-paths";
 import { applyDamage, hitOf } from "./damage";
 import { updateDetection } from "./detection";
 import { armorDissolved, hasStatus } from "./status";
 import { markFactor } from "./support";
 
-const L3 = ["level-2", "level-3"];
-/** Places a tower straight into the state; support effects are pure queries over the towers. */
-function place(g: Game, type: TowerId, x: number, y: number, upgrades: string[] = []) {
-  const t: Tower = { id: g.state.nextId++, type, x, y, upgrades, cooldown: 0, spent: 0, angle: 0, kills: 0, owner: 0 };
-  g.state.towers.push(t);
-  return t;
-}
-function enemy(g: Game, type: EnemyId, x: number, y: number, hp = 1000) {
-  const e = { ...makeEnemy(g.state.nextId++, type, x, y), hp, maxHp: Math.max(hp, 1000) };
-  g.state.enemies.push(e);
-  return e;
-}
+const enemy = (g: Game, type: EnemyId, x: number, y: number, hp?: number) => foe(g.state.nextId++, type, x, y, { hp, into: g });
 /** A plain hit of `amount` from the Pulse tower `t`; returns the HP the enemy lost. */
-function hit(g: Game, t: Tower, e: ReturnType<typeof enemy>, amount = 100) {
+function hit(g: Game, t: Tower, e: Enemy, amount = 100) {
   const before = e.hp,
     src = { tower: t.id, type: t.type };
   applyDamage(g, src, e, amount, false, hitOf("direct", src));
@@ -202,17 +191,12 @@ describe("Armory paths", () => {
 describe("boards without these paths", () => {
   it("keep the level-3 effects and never set the new fields", () => {
     const g = new Game();
-    g.state.wallets[0] = 5000;
-    for (const [tower, x, y] of [["tracker", 3, 2], ["detector", 6, 2], ["recycler", 9, 2], ["armory", 12, 2], ["pulse", 4, 4], ["blast", 8, 4]] as const) {
-      expect(g.command({ type: "build", tower, x, y }).ok).toBe(true);
-      const id = g.state.towers.at(-1)!.id;
-      if (tower !== "pulse" && tower !== "blast") for (const upgrade of L3) expect(g.command({ type: "upgrade", id, upgrade }).ok).toBe(true);
-    }
+    for (const [tower, x, y] of [["tracker", 3, 2], ["detector", 6, 2], ["recycler", 9, 2], ["armory", 12, 2]] as const) place(g, tower, x, y, L3);
+    place(g, "pulse", 4, 4);
+    place(g, "blast", 8, 4);
     const e = enemy(g, "drone", 3, 3);
     expect(markFactor(g, e)).toBe(1.25);
-    g.state.enemies = [];
-    g.command({ type: "start" });
-    finishWave(g);
+    emptyWave(g);
     for (const t of g.state.towers) expect(t.scrapYard).toBeUndefined();
     expect(JSON.stringify(g.state)).not.toMatch(/"tag"|revealUntil|scrapYard/);
   });

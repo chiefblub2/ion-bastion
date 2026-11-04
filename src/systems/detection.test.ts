@@ -1,16 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
-import { ENEMIES } from "../content/enemies";
 import { Game } from "../core/game";
-import { landProjectiles, makeEnemy } from "../core/test-helpers";
+import { landProjectiles, makeEnemy, withTraits } from "../core/test-helpers";
 import type { ContentPack } from "../core/types";
 import { attackEnemies } from "./combat";
 import { updateDetection } from "./detection";
 
-const stealthDrones: ContentPack = {
-  ...DEFAULT_CONTENT,
-  enemies: { ...ENEMIES, drone: { ...ENEMIES.drone, traits: [{ kind: "stealth" }] } },
-};
+const stealthDrones: ContentPack = withTraits({ drone: [{ kind: "stealth" }] });
 /** A tower at (7,5) on the outpost map and one stealthed drone next to it. */
 function setup(tower: "pulse" | "blast", detector?: { x: number; y: number }) {
   const g = new Game(undefined, stealthDrones);

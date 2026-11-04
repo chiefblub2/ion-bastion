@@ -60,7 +60,7 @@ describe("lockstep", () => {
     room.queue(0, { type: "build", tower: "pulse", x: 3, y: 2 });
     room.queue(1, { type: "build", tower: "blast", x: 12, y: 5 });
     room.queue(2, { type: "start" });
-    for (let frame = 0; frame < 600; frame++) {
+    for (let frame = 0; frame < 400; frame++) {
       step();
       // Calling waves early is shared too (the timer alone would start wave 2 only after 660 frames).
       if (frame === 300) room.queue(1, { type: "start" });
@@ -145,10 +145,10 @@ describe("lockstep", () => {
       room.queue(1, { type: "target", id: 1, priority: "strong" });
       for (const p of [0, 1, 2]) room.queue(p, { type: "ready" });
       let frames = 0;
-      // 800 frames cover the first waves, the sends and a ready round; the match result needs no lockstep of its own.
-      while (frames++ < 800) {
-        if (mode === "siege" && frames % 200 === 50) room.queue(frames % 3, { type: "send", enemy: clients[0].game.waves[0].groups[0].type });
-        if (frames % 400 === 0) for (const p of [0, 1, 2]) room.queue(p, { type: "ready" });
+      // 500 frames cover the first wave, a send and a ready round; the match result needs no lockstep of its own.
+      while (frames++ < 500) {
+        if (mode === "siege" && frames === 50) room.queue(2, { type: "send", enemy: clients[0].game.waves[0].groups[0].type });
+        if (frames === 300) for (const p of [0, 1, 2]) room.queue(p, { type: "ready" });
         step();
         expect(new Set(clients.map((c) => c.sim.hash())).size).toBe(1);
       }

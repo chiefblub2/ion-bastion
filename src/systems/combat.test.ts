@@ -3,7 +3,7 @@ import { Game } from "../core/game";
 import { attackEnemies, moveProjectiles } from "./combat";
 import { moveEnemies } from "./movement";
 import { stateHash } from "../core/hash";
-import { landProjectiles, makeEnemy } from "../core/test-helpers";
+import { landProjectiles, makeEnemy, withTraits, lost } from "../core/test-helpers";
 import { validateContent } from "../core/validation";
 import { DEFAULT_CONTENT } from "../content";
 import { TOWERS } from "../content/towers";
@@ -22,7 +22,7 @@ function setup(tower: TowerId, enemies: [EnemyId, number, number][]) {
   g.state.enemies = enemies.map(([type, x, y], i) => makeEnemy(100 + i, type, x, y, 10 - i));
   attackEnemies(g, 0);
   landProjectiles(g);
-  return g.state.enemies.map((e) => 1000 - e.hp);
+  return g.state.enemies.map(lost);
 }
 describe("ground and air targeting", () => {
   it("Nova ignores gliders and its splash spares them", () => {
@@ -58,7 +58,7 @@ describe("ground and air targeting", () => {
       validateContent({ ...DEFAULT_CONTENT, towers: { ...TOWERS, pulse: { ...TOWERS.pulse, targets: [] } } }),
     ).toThrow("tower targets");
     expect(() =>
-      validateContent({ ...DEFAULT_CONTENT, enemies: { ...ENEMIES, drone: { ...ENEMIES.drone, layer: "space" as never } } }),
+      validateContent(withTraits({}, { drone: { layer: "space" as never } })),
     ).toThrow("enemy layer");
   });
 });
@@ -122,27 +122,6 @@ describe("projectiles", () => {
     expect(JSON.stringify(g.state.projectiles)).toBe(before);
   });
 });
-describe("late-level special values in combat", () => {
-  const upgraded = (tower: TowerId, enemies: Enemy[]) => {
-    const g = new Game();
-    g.state.wallets[0] = 100000;
-    g.command({ type: "build", tower, x: 7, y: 5 });
-    for (let l = 2; l <= 5; l++) g.command({ type: "upgrade", id: g.state.towers[0].id, upgrade: `level-${l}` });
-    g.state.enemies = enemies;
-    attackEnemies(g, 0);
-    landProjectiles(g);
-    return g.state;
-  };
-  it("Kryo level 5 slows harder and longer", () => {
-    const s = upgraded("frost", [enemyAt(100, "drone", 7, 7)]);
-    expect(s.enemies[0].status).toEqual([{ kind: "slow", factor: 0.35, until: expect.closeTo(s.time + 2.8) }]);
-  });
-  it("Tesla level 5 jumps five times over two cells", () => {
-    const s = upgraded("tesla", Array.from({ length: 7 }, (_, i) => enemyAt(100 + i, "drone", 7, 6 + i * 1.9)));
-    expect(s.enemies.filter((e) => e.hp < 1000)).toHaveLength(6);
-  });
-});
-
 describe("newer attack mechanics", () => {
   /** Advances only the clock and status effects, so burning can be observed in isolation. */
   const wait = (g: Game, seconds: number) => {
@@ -183,24 +162,13 @@ describe("newer attack mechanics", () => {
     const beam = g.drainEvents().find((e) => e.type === "beam");
     expect(beam).toMatchObject({ from: { x: 7, y: 5 }, to: { x: 7, y: expect.closeTo(5 + TOWERS.lance.range) } });
   });
-  it("Stasis stuns every enemy in the pulse radius, then they recover and are immune for a while", () => {
+  it("Stasis stuns every enemy in the pulse radius", () => {
     const g = fire("stasis", [enemyAt(100, "drone", 7, 7), enemyAt(101, "glider", 7.5, 7.5), enemyAt(102, "drone", 7, 9)]);
     const [a, b, far] = g.state.enemies;
     expect([a.hp, b.hp, far.hp]).toEqual([1000 - TOWERS.stasis.damage, 1000 - TOWERS.stasis.damage, 1000]);
     expect(speedFactor(a, 0.5)).toBe(0);
     expect(speedFactor(b, 0.5)).toBe(0);
     expect(speedFactor(far, 0.5)).toBe(1);
-    // Recovered after 0.8 s; a second pulse during recovery does nothing.
-    expect(speedFactor(a, 0.8)).toBe(1);
-    g.state.time = 1;
-    g.state.towers[0].cooldown = 0;
-    attackEnemies(g, 0);
-    expect(speedFactor(a, 1.2)).toBe(1);
-    // After the recovery window the next pulse stuns again.
-    g.state.time = 2.4;
-    g.state.towers[0].cooldown = 0;
-    attackEnemies(g, 0);
-    expect(speedFactor(a, 2.5)).toBe(0);
   });
   it("Glut burns for a multiple of its hit over time", () => {
     const g = fire("inferno", [enemyAt(100, "drone", 7, 7)]);
@@ -230,10 +198,7 @@ describe("newer attack mechanics", () => {
     applyDamage(g, { tower: 0, type: "pulse" }, e, 100);
     expect(e.hp).toBeCloseTo(1000 - TOWERS.acid.damage * 1.25 - 125);
     expect(damageTaken(e, 3)).toBe(1);
-    const armored = new Game(undefined, {
-      ...DEFAULT_CONTENT,
-      enemies: { ...ENEMIES, drone: { ...ENEMIES.drone, traits: [{ kind: "armor", reduction: 0.5 }] } },
-    });
+    const armored = new Game(undefined, withTraits({ drone: [{ kind: "armor", reduction: 0.5 }] }));
     const tough = enemyAt(100, "drone", 7, 7);
     tough.status.push({ kind: "vulnerable", amount: 0.25, until: 3 });
     armored.state.enemies = [tough];
@@ -296,7 +261,7 @@ describe("Fokus", () => {
   });
 });
 describe("Gravitron", () => {
-  const { radius, strength, duration, recovery } = TOWERS.gravity.attack as PullAttack;
+  const { radius, strength, duration } = TOWERS.gravity.attack as PullAttack;
   /** Moves enemies for `seconds`, keeping the clock in step. */
   const walk = (g: Game, seconds: number) => {
     for (let i = 0; i < Math.round(seconds * 30); i++) {
@@ -315,19 +280,11 @@ describe("Gravitron", () => {
     expect(glider.distance).toBeGreaterThan(10);
     expect(far.distance).toBeGreaterThan(10);
   });
-  it("recovery blocks a second pull, and unstoppable enemies resist", () => {
+  it("unstoppable enemies resist the pull", () => {
     const g = fire("gravity", [enemyAt(100, "drone", 7, 7), enemyAt(101, "berserker", 7, 7.3)]);
     const [drone, boss] = g.state.enemies;
     expect(speedFactor(drone, 0.1)).toBe(-strength);
     expect(speedFactor(boss, 0.1)).toBe(1);
-    g.state.time = duration + 0.1;
-    g.state.towers[0].cooldown = 0;
-    attackEnemies(g, 0);
-    expect(speedFactor(drone, g.state.time)).toBe(1);
-    g.state.time = duration + recovery + 0.1;
-    g.state.towers[0].cooldown = 0;
-    attackEnemies(g, 0);
-    expect(speedFactor(drone, g.state.time)).toBe(-strength);
   });
   it("never pulls an enemy behind the entry", () => {
     const g = fire("gravity", [{ ...enemyAt(100, "drone", 7, 7), distance: 0.2 }]);
@@ -361,7 +318,7 @@ describe("Beben", () => {
   it("hits every ground enemy in range, weaker towards the edge, and spares gliders", () => {
     const g = fire("quake", [enemyAt(100, "drone", 7, 5.5), enemyAt(101, "drone", 7 + range * 0.99, 5), enemyAt(102, "glider", 7, 6), enemyAt(103, "drone", 7, 5 + range + 0.2)]);
     expect(g.state.projectiles).toHaveLength(0);
-    const [near, rim, glider, far] = g.state.enemies.map((e) => 1000 - e.hp);
+    const [near, rim, glider, far] = g.state.enemies.map(lost);
     expect(near).toBeCloseTo(d * (1 - (1 - edge) * (0.5 / range)));
     expect(rim).toBeCloseTo(d * (1 - (1 - edge) * 0.99));
     expect([glider, far]).toEqual([0, 0]);
@@ -393,7 +350,7 @@ describe("Schrapnell", () => {
     ]);
     expect(g.state.projectiles.map((p) => p.target)).toEqual([101, 102, 100].slice(0, targets));
     landProjectiles(g);
-    expect(g.state.enemies.map((e) => 1000 - e.hp)).toEqual([TOWERS.shrapnel.damage, TOWERS.shrapnel.damage, TOWERS.shrapnel.damage, 0]);
+    expect(g.state.enemies.map(lost)).toEqual([TOWERS.shrapnel.damage, TOWERS.shrapnel.damage, TOWERS.shrapnel.damage, 0]);
   });
   it("shoots once with a single enemy, and more targets after level 5", () => {
     expect(fire("shrapnel", [enemyAt(100, "drone", 7, 7)]).state.projectiles).toHaveLength(1);

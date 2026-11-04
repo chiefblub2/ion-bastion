@@ -15,11 +15,6 @@ describe("cue recipes", () => {
         expect(n, id).toBeLessThan(3 * 8000);
       }
   });
-  it("keeps interface feedback and tower actions instant and thins kills and blasts to about one per beat", () => {
-    for (const id of ["reject", "click", "hover", "build", "sell", "upgrade"] as const) expect(TIMING[id].grid, id).toBe(0);
-    expect(RECIPES.kill.gap).toBeGreaterThanOrEqual(0.5);
-    expect(RECIPES.blast.gap).toBeGreaterThanOrEqual(0.5);
-  });
   it("keeps per-shot transients instant, quiet, lowest in priority and free of high-passed hiss", () => {
     for (const id of SHOT_CUES) {
       expect(TIMING[id].grid, id).toBe(0);

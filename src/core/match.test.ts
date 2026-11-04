@@ -90,13 +90,14 @@ describe("versus match", () => {
     expect(statuses(m)).toEqual(["ready", "ready"]);
   });
   it("crowns the last reactor standing", () => {
+    // Undefended reactors: the first leak of wave 1 ends field 1, a later one field 2.
     const m = match("race", 3);
     m.fields[0].state.lives = 10000;
     m.fields[1].state.lives = 1;
-    m.fields[2].state.lives = 5000;
-    lastWave(m);
+    m.fields[2].state.lives = 3;
     readyAll(m);
     finishWaves(m);
+    expect(m.fields[0].state.wave).toBe(1);
     expect(m.isAlive(1)).toBe(false);
     expect(m.result?.winner).toBe(0);
     expect(m.result?.ranking).toEqual([0, 2, 1]);
