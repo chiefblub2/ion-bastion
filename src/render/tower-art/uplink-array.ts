@@ -2,7 +2,7 @@
  * Uplink Array: Orbital's look in the 3/4 tilt (see `tilt.ts`): an uplink dish looking up at the sky, leaning a little
  * towards the target, on a fork over a mast, with a level designator laser under it as the muzzle; a calm octagonal pad
  * with two short antenna posts at the back. The pad and mast (`base`) bake per level and trim colour; fork, dish and
- * designator (`turret`) depend only on the aim and recoil and are cached per angle (`TurretCache`); the deck's
+ * designator (`turret`) depend only on the aim and recoil and are cached per angle (`TowerPictures`); the deck's
  * countdown gauge and the post and turntable lamps (`below`) and the dish beacon's blink and the designator's glow
  * (`above`) are live. The projection lives in `TILTS.uplink`, the laser in `MUZZLES.uplink`.
  */

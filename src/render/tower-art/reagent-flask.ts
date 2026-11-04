@@ -2,7 +2,7 @@
  * Reagent Flask: Catalyst's look in the 3/4 tilt (see `tilt.ts`): a round glass flask on a cup cradle over a lab bench,
  * its neck the barrel. The flask never turns, so its glass is part of the baked bench (`base`); the reagent rising with
  * the charge, its bubbles, the shine and the bench's chasing lights are live under the turret (`below`); the neck and
- * the filler port (`turret`) depend only on the aim and recoil and are cached per angle (`TurretCache`), so a neck
+ * the filler port (`turret`) depend only on the aim and recoil and are cached per angle (`TowerPictures`), so a neck
  * aimed at the viewer lies over the reagent, and one aimed away starts where it leaves the flask's outline. The vapour
  * after a shot is `above`. The projection lives in `TILTS.flask`, the neck in `MUZZLES.flask`.
  */

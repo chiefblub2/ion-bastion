@@ -28,7 +28,7 @@ const fillTypes = flag("--towers")?.split(",");
 /** Measures with the Bloom setting off (`render/graphics-settings.ts`); on by default on a desktop. */
 const noBloom = args.includes("--no-bloom");
 if (noBloom) args.splice(args.indexOf("--no-bloom"), 1);
-/** Draws tilted turrets live instead of from `TurretCache` (`?turrets=live`), for a before/after comparison. */
+/** Draws tilted turrets live instead of from their cached pictures (`TowerPictures`, `?turrets=live`), for a before/after comparison. */
 const liveTurrets = args.includes("--live-turrets");
 if (liveTurrets) args.splice(args.indexOf("--live-turrets"), 1);
 const size = (m: (typeof MISSIONS)[number], w: number) => m.waves[w].groups.reduce((n, g) => n + g.count, 0);
