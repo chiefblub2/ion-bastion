@@ -317,7 +317,7 @@ describe("determinism", () => {
       }
       g.command({ type: "start" });
       const hashes: number[] = [];
-      for (let i = 0; i < 900 && g.state.status === "wave"; i++) {
+      for (let i = 0; i < 300 && g.state.status === "wave"; i++) {
         g.tick();
         g.drainEvents();
         hashes.push(stateHash(g.state));

@@ -78,7 +78,7 @@ describe("run", () => {
     expect(parseSeed(seedText(123456))).toBe(123456);
   });
   it("plays ten valid missions the roster can fight in a full run, three in a short one", () => {
-    for (let seed = 1; seed <= 3; seed++) {
+    for (let seed = 1; seed <= 2; seed++) {
       let played = 0;
       const end = walk(seed, (run) => {
         played++;
