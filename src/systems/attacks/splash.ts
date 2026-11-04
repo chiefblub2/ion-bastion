@@ -18,6 +18,8 @@ export function blast(sim: Sim, src: DamageSource, at: Point, radius: number, da
 /** Splash damage centred on a point, so a shell can land where its target no longer is. */
 export const splash: AttackModule<SplashAttack> = {
   aim: "point",
+  area: true,
+  explosive: true,
   projectile: "optional",
   params: {
     radius: { label: "Blast radius", valid: (v) => v > 0, unit: " cells" },

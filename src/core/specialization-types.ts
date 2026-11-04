@@ -217,8 +217,8 @@ export type SpecializationSpec = AttackSpecialization | SupportSpecialization;
 export type SpecializationKind = SpecializationSpec["kind"];
 type Field<K extends SpecializationKind> = Exclude<keyof Extract<SpecializationSpec, { kind: K }>, "kind" | "predicate">;
 
-/** Numeric fields per kind; the mapped type makes a missing kind or field a compile error. */
-const FIELDS: { [K in SpecializationKind]: readonly Field<K>[] } = {
+/** Numeric fields per kind of attack towers and traps; the mapped type makes a missing kind or field a compile error. */
+const ATTACK_FIELDS: { [K in AttackSpecialization["kind"]]: readonly Field<K>[] } = {
   "conditional-damage": ["bonus"],
   "armor-pierce": ["fraction"],
   ricochet: ["every", "radius", "factor"],
@@ -272,6 +272,9 @@ const FIELDS: { [K in SpecializationKind]: readonly Field<K>[] } = {
   "held-exposure": ["bonus"],
   "warp-daze": ["duration"],
   // ── end trap paths ──
+};
+/** Numeric fields per kind of support towers and Aura; its keys are `SUPPORT_KINDS`. */
+const SUPPORT_FIELDS: { [K in SupportSpecialization["kind"]]: readonly Field<K>[] } = {
   // ── support economy ──
   "big-game": ["amount", "cap"],
   lure: ["slow"],
@@ -324,16 +327,10 @@ const FIELDS: { [K in SpecializationKind]: readonly Field<K>[] } = {
   harmonics: ["bonus"],
   // ── end aura paths ──
 };
+const FIELDS: { [K in SpecializationKind]: readonly Field<K>[] } = { ...ATTACK_FIELDS, ...SUPPORT_FIELDS };
 
 /** Kinds that belong to support towers (and Aura); every other kind belongs to attack towers and traps. */
-export const SUPPORT_KINDS: ReadonlySet<SpecializationKind> = new Set<SupportSpecialization["kind"]>([
-  "big-game", "lure", "field-rations", "advance", "compounding", "fuel-line", "clean-sheet", "investment", "reserve-cells",
-  "prefab", "refit", "calibration", "triage", "salvage", "damage-control", "recharge", "shockwave", "overflow",
-  "weak-point", "hunters-mark", "lingering-tag", "afterburn", "opening-salvo", "charged-rounds", "penetrator", "stagger",
-  "spotting", "shred", "hollow-points", "shieldbreaker", "downlink", "flak-relay", "wing-tag", "nexus-resonance", "harmony",
-  "diversity", "exposure-scan", "static-pulse", "afterimage", "cascade", "meltdown", "scrap-yard",
-  "piercing-field", "execution-field", "harmonics",
-]);
+export const SUPPORT_KINDS: ReadonlySet<SpecializationKind> = new Set(Object.keys(SUPPORT_FIELDS) as SupportSpecialization["kind"][]);
 
 const COUNT = new Set([
   "every", "count", "maxPerSalvo", "min", "amount", "cap",

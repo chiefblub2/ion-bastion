@@ -1,3 +1,4 @@
+import { DEFAULT_CONTENT } from "../content";
 import { describe, it, expect } from "vitest";
 import { Game } from "./game";
 import { TOWERS } from "../content/towers";
@@ -23,12 +24,12 @@ describe("unified upgrade purchases", () => {
       expect(game.command({ type: "upgrade", id: tower.id, upgrade: id }).ok).toBe(false);
       expect(JSON.stringify(game.state)).toBe(before);
     }
-    expect(upgradeOption(tower, "level-3", game.state.wallets[0]).status).toBe("locked");
+    expect(upgradeOption(tower, "level-3", game.state.wallets[0], DEFAULT_CONTENT).status).toBe("locked");
     expect(game.command({ type: "upgrade", id: tower.id, upgrade: "level-2" }).ok).toBe(true);
     const before = JSON.stringify(game.state);
     expect(game.command({ type: "upgrade", id: tower.id, upgrade: "level-2" }).ok).toBe(false);
     expect(JSON.stringify(game.state)).toBe(before);
-    expect(upgradeOption(tower, "level-3", game.state.wallets[0]).status).toBe("available");
+    expect(upgradeOption(tower, "level-3", game.state.wallets[0], DEFAULT_CONTENT).status).toBe("available");
   });
   it("keeps preview, affordability and the eventual purchase in agreement for every existing upgrade", () => {
     for (const type of Object.keys(TOWERS) as TowerId[]) {
@@ -36,7 +37,7 @@ describe("unified upgrade purchases", () => {
       for (const upgrade of TOWERS[type].upgrades) {
         // Paths exclude each other; the catalog is sorted by path, so start a fresh tower per path.
         // Specialization paths branch off level 5, so the fresh tower gets the shared levels first.
-        if (upgradeOption(tower, upgrade.id, Infinity).status === "excluded") {
+        if (upgradeOption(tower, upgrade.id, Infinity, DEFAULT_CONTENT).status === "excluded") {
           ({ game, tower } = setup(type));
           // Aura: a new track starts on a bare tower; a path needs one whole track (the first) underneath.
           const track = TOWERS[type].upgrades.find((u) => u.track)?.track;
@@ -44,20 +45,20 @@ describe("unified upgrade purchases", () => {
         }
         game.state.wallets[0] = upgrade.cost - 1;
         const before = JSON.stringify(game.state);
-        const preview = previewUpgrade(tower, upgrade.id)!;
+        const preview = previewUpgrade(tower, upgrade.id, DEFAULT_CONTENT)!;
         expect(preview).not.toBeNull();
         expect(preview).not.toBe(tower);
         expect(preview.upgrades).not.toBe(tower.upgrades);
-        expect(upgradeOption(tower, upgrade.id, game.state.wallets[0]).status).toBe("unaffordable");
-        expect(purchaseUpgrade(game.state, tower, upgrade.id).ok).toBe(false);
+        expect(upgradeOption(tower, upgrade.id, game.state.wallets[0], DEFAULT_CONTENT).status).toBe("unaffordable");
+        expect(purchaseUpgrade(game.state, tower, upgrade.id, DEFAULT_CONTENT).ok).toBe(false);
         expect(JSON.stringify(game.state)).toBe(before);
         game.state.wallets[0] = upgrade.cost;
         const investment = tower.spent;
         expect(game.command({ type: "upgrade", id: tower.id, upgrade: upgrade.id }).ok).toBe(true);
-        expect(resolveUpgrades(tower)).toEqual(resolveUpgrades(preview));
+        expect(resolveUpgrades(tower, DEFAULT_CONTENT)).toEqual(resolveUpgrades(preview, DEFAULT_CONTENT));
         expect(tower.spent).toBe(investment + upgrade.cost);
         expect(game.state.wallets[0]).toBe(0);
-        expect(previewUpgrade(tower, upgrade.id)).toBeNull();
+        expect(previewUpgrade(tower, upgrade.id, DEFAULT_CONTENT)).toBeNull();
       }
     }
   });
@@ -70,7 +71,7 @@ describe("unified upgrade purchases", () => {
     for (const type of Object.keys(original) as (keyof typeof original)[]) {
       const { game, tower } = setup(type), base = original[type];
       for (let level = 1; level <= 3; level++) {
-        const own = resolveUpgrades(tower);
+        const own = resolveUpgrades(tower, DEFAULT_CONTENT);
         expect(own.level).toBe(level);
         expect(own.stats.damage).toBe(Math.round(base.damage * Math.pow(1.65, level - 1)));
         expect(own.stats.range).toBeCloseTo(base.range + (level - 1) * .3);
@@ -91,17 +92,17 @@ describe("unified upgrade purchases", () => {
     const source = game.command({ type: "build", tower: "aura", x: 3, y: 4 }).id!;
     game.command({ type: "upgrade", id: source, upgrade: "damage" });
     tower.cooldown = .42;
-    const preview = previewUpgrade(tower, "level-2")!;
-    const expected = effectiveTowerStats(preview, game.state.towers);
+    const preview = previewUpgrade(tower, "level-2", DEFAULT_CONTENT)!;
+    const expected = effectiveTowerStats(preview, game.state.towers, DEFAULT_CONTENT);
     game.command({ type: "upgrade", id: tower.id, upgrade: "level-2" });
-    expect(effectiveTowerStats(tower, game.state.towers)).toEqual(expected);
+    expect(effectiveTowerStats(tower, game.state.towers, DEFAULT_CONTENT)).toEqual(expected);
     expect(expected.damage).toBe(37.5);
     expect(tower.cooldown).toBe(.42);
   });
   it("derives results independently of the purchased-list order", () => {
     const { tower } = setup("pulse");
-    expect(resolveUpgrades({ ...tower, upgrades: ["level-3", "level-2"] }))
-      .toEqual(resolveUpgrades({ ...tower, upgrades: ["level-2", "level-3"] }));
+    expect(resolveUpgrades({ ...tower, upgrades: ["level-3", "level-2"] }, DEFAULT_CONTENT))
+      .toEqual(resolveUpgrades({ ...tower, upgrades: ["level-2", "level-3"] }, DEFAULT_CONTENT));
   });
   it("still rejects purchases after mission end and clears them on restart", () => {
     const { game, tower } = setup("aura");
@@ -138,14 +139,14 @@ describe("late levels 4 and 5", () => {
   const attackTowers = (Object.keys(TOWERS) as TowerId[]).filter((id) => !isSupport(TOWERS[id].attack));
   const levels = (n: number) => Array.from({ length: n - 1 }, (_, i) => `level-${i + 2}`);
   const dpsPerCredit = (type: TowerId, n: number) => {
-    const { stats } = resolveUpgrades({ type, upgrades: levels(n) });
+    const { stats } = resolveUpgrades({ type, upgrades: levels(n) }, DEFAULT_CONTENT);
     const spent = TOWERS[type].cost + levels(n).reduce((sum, id) => sum + TOWERS[type].upgrades.find((u) => u.id === id)!.cost, 0);
     return stats.damage / stats.interval / spent;
   };
   it("every attack tower reaches level 5 (8 with a specialization), each step costs more than the one it requires", () => {
     for (const type of attackTowers) {
       const upgrades = TOWERS[type].upgrades;
-      expect(maxTowerLevel(type)).toBe(upgrades.some((u) => u.path) ? 8 : 5);
+      expect(maxTowerLevel(type, DEFAULT_CONTENT)).toBe(upgrades.some((u) => u.path) ? 8 : 5);
       for (const upgrade of upgrades)
         for (const id of upgrade.requires) {
           const parent = upgrades.find((u) => u.id === id)!;
@@ -155,14 +156,14 @@ describe("late levels 4 and 5", () => {
     }
   });
   it("the upgrade hotkey's open upgrades: one level at a time, a path choice at level 5, one tier per chosen path", () => {
-    expect(openUpgrades({ type: "pulse", upgrades: [] })).toEqual(["level-2"]);
-    const choice = openUpgrades({ type: "pulse", upgrades: levels(5) });
+    expect(openUpgrades({ type: "pulse", upgrades: [] }, DEFAULT_CONTENT)).toEqual(["level-2"]);
+    const choice = openUpgrades({ type: "pulse", upgrades: levels(5) }, DEFAULT_CONTENT);
     expect(choice.length).toBeGreaterThan(1);
     const tier = TOWERS.pulse.upgrades.find((u) => u.id === choice[0])!;
-    const next = openUpgrades({ type: "pulse", upgrades: [...levels(5), tier.id] });
+    const next = openUpgrades({ type: "pulse", upgrades: [...levels(5), tier.id] }, DEFAULT_CONTENT);
     expect(next).toHaveLength(1);
     expect(TOWERS.pulse.upgrades.find((u) => u.id === next[0])!.path).toBe(tier.path);
-    expect(openUpgrades({ type: "pulse", upgrades: [...levels(5), tier.id, ...next, ...openUpgrades({ type: "pulse", upgrades: [...levels(5), tier.id, ...next] })] })).toEqual([]);
+    expect(openUpgrades({ type: "pulse", upgrades: [...levels(5), tier.id, ...next, ...openUpgrades({ type: "pulse", upgrades: [...levels(5), tier.id, ...next] }, DEFAULT_CONTENT)] }, DEFAULT_CONTENT)).toEqual([]);
   });
   it("one high-level tower beats several base towers per credit", () => {
     for (const type of attackTowers) {
@@ -176,8 +177,8 @@ describe("late levels 4 and 5", () => {
       for (const n of [4, 5]) {
         const values = TOWERS[type].upgrades.find((u) => u.id === `level-${n}`)?.effects.attack;
         if (!values) continue;
-        const before = resolveUpgrades({ type, upgrades: levels(n - 1) }).attack as unknown as Record<string, unknown>,
-          after = resolveUpgrades({ type, upgrades: levels(n) }).attack;
+        const before = resolveUpgrades({ type, upgrades: levels(n - 1) }, DEFAULT_CONTENT).attack as unknown as Record<string, unknown>,
+          after = resolveUpgrades({ type, upgrades: levels(n) }, DEFAULT_CONTENT).attack;
         expect(after, `${type} level-${n}`).toMatchObject(values);
         expect(Object.entries(values).some(([key, value]) => before[key] !== value), `${type} level-${n}`).toBe(true);
         special.push(type);
@@ -187,8 +188,8 @@ describe("late levels 4 and 5", () => {
   });
   it("the refinery has three levels that raise its income", () => {
     // Three plain levels, then the three paths (levels 4 to 6).
-    expect(maxTowerLevel("refinery")).toBe(6);
-    const income = (upgrades: string[]) => resolveUpgrades({ type: "refinery", upgrades }).attack;
+    expect(maxTowerLevel("refinery", DEFAULT_CONTENT)).toBe(6);
+    const income = (upgrades: string[]) => resolveUpgrades({ type: "refinery", upgrades }, DEFAULT_CONTENT).attack;
     expect(income([])).toMatchObject({ amount: 25 });
     expect(income(["level-2"])).toMatchObject({ amount: 40 });
     expect(income(["level-2", "level-3"])).toMatchObject({ amount: 60 });

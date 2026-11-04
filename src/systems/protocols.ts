@@ -1,6 +1,6 @@
-import type { AttackKind, DamageSource, Enemy, Sim, Tower } from "../core/types";
-import { isSupport } from "./attacks";
-import type { Hit } from "./damage";
+import type { DamageSource, Enemy, Sim, Tower } from "../core/types";
+import { attackModule, isArmed, kindModule } from "./attacks";
+import { isHeavy, type Hit } from "./damage";
 import { dist } from "./path";
 import { applyStatus, hasStatus, speedFactor } from "./status";
 import { hasTrait, isHidden, layerOf } from "./traits";
@@ -10,18 +10,10 @@ import { hasTrait, isHidden, layerOf } from "./traits";
  * before. Damage factors multiply into `deal` before armor; side effects (an ended slow, a net, broken armor) follow
  * the hit and never deal damage themselves, so nothing here can chain into itself.
  */
-/** Max HP from which an enemy counts as heavy (Titan Reactor Core), as for specializations. */
-const HEAVY = 1000;
-/** Explosive attacks for Thermal Fracture. */
-const EXPLOSIVE: ReadonlySet<AttackKind> = new Set(["splash", "mortar", "strike", "charge", "airburst"]);
-/** Precision attacks for Singularity Protocol: one aimed shot or beam at one enemy. */
-const PRECISION: ReadonlySet<AttackKind> = new Set(["direct", "pierce", "focus", "execute"]);
 const towerOf = (sim: Sim, src: DamageSource) => sim.content.towers[src.type];
-/** A tower that fires (not a trap, not a support tower). */
-const armed = (sim: Sim, t: Pick<Tower, "type">) => {
-  const d = sim.content.towers[t.type];
-  return d.placement !== "path" && !isSupport(d.attack);
-};
+const armed = (sim: Sim, t: Pick<Tower, "type">) => isArmed(sim.content.towers[t.type]);
+/** Singularity Protocol favours precision towers (the attack module's `precision`): one aimed shot or beam at one enemy. */
+const precise = (sim: Sim, t: Pick<Tower, "type">) => !!attackModule(sim.content.towers[t.type].attack)?.precision;
 const slowOf = (e: Enemy, time: number) => {
   const s = e.status.find((x) => x.kind === "slow");
   return s && s.kind === "slow" && time < s.until ? s : undefined;
@@ -39,7 +31,7 @@ export function protocolFactor(sim: Sim, src: DamageSource, e: Enemy, dot: boole
   }
   if (dot || !hit) return f;
   const d = towerOf(sim, src);
-  if (p.fracture && EXPLOSIVE.has(hit.kind)) {
+  if (p.fracture && kindModule(hit.kind).explosive) {
     const slow = slowOf(e, s.time);
     if (slow && slow.factor <= p.fracture.slowAt) {
       // The frost shatters: one stronger hit, and the slow is gone until the next one lands.
@@ -48,9 +40,9 @@ export function protocolFactor(sim: Sim, src: DamageSource, e: Enemy, dot: boole
       s.events.push({ type: "protocol", protocol: "fracture", at: { x: e.x, y: e.y } });
     }
   }
-  if (p.singularity && PRECISION.has(d.attack.kind) && hasStatus(e, "singularity", s.time)) f *= 1 + p.singularity.bonus;
+  if (p.singularity && precise(sim, src) && hasStatus(e, "singularity", s.time)) f *= 1 + p.singularity.bonus;
   if (p.killbox && d.placement === "path" && speedFactor(e, s.time) <= p.killbox.speedAt) f *= 1 + p.killbox.bonus;
-  if (p.titan && e.maxHp >= HEAVY) f *= 1 + p.titan.bonus;
+  if (p.titan && isHeavy(e)) f *= 1 + p.titan.bonus;
   if (p.scanner && e.revealed) f *= 1 + p.scanner.bonus;
   return f;
 }
@@ -82,7 +74,7 @@ export function protocolAfterHit(sim: Sim, src: DamageSource, e: Enemy, dot: boo
 /** Titan Reactor Core: a heavy enemy died, so the towers around it reload at once. */
 export function protocolKill(sim: Sim, e: Enemy) {
   const titan = sim.mission.protocols?.titan;
-  if (!titan || e.maxHp < HEAVY) return;
+  if (!titan || !isHeavy(e)) return;
   for (const t of sim.state.towers) if (armed(sim, t) && dist(t, e) <= titan.reload) t.cooldown = 0;
   sim.state.events.push({ type: "protocol", protocol: "titan", at: { x: e.x, y: e.y }, radius: titan.reload });
 }
@@ -118,7 +110,7 @@ export function tickProtocols(sim: Sim, dt: number) {
 }
 /** Singularity Protocol: a precision tower that can reach the marked enemy aims at it first. */
 export function markedFirst(sim: Sim, t: Tower, candidates: Enemy[]): Enemy[] | undefined {
-  if (!sim.mission.protocols?.singularity || !PRECISION.has(sim.content.towers[t.type].attack.kind) || !armed(sim, t)) return undefined;
+  if (!sim.mission.protocols?.singularity || !precise(sim, t) || !armed(sim, t)) return undefined;
   const marked = candidates.find((e) => hasStatus(e, "singularity", sim.state.time));
   return marked ? [marked] : undefined;
 }

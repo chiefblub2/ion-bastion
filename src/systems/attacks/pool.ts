@@ -7,6 +7,7 @@ import type { AttackModule } from "./types";
  */
 export const pool: AttackModule<PoolAttack> = {
   aim: "point",
+  area: true,
   projectile: "optional",
   params: {
     radius: { label: "Pool radius", valid: (v) => v > 0, unit: " cells" },

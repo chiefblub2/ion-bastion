@@ -6,7 +6,8 @@ import { applyStatus } from "./status";
 import { isSuppressed, layerOf, resists } from "./traits";
 import { nexusTypes, overclockActive, specialOf, withSpecial } from "./support";
 /**
- * Support combat paths of Overclock, Fire Control, Skylink and Nexus. Every effect is derived per query from the
+ * Fire-support paths: the support combat paths that boost the firing towers (rate, crits, reach, damage), of
+ * Overclock, Fire Control, Skylink and Nexus; the counterpart of `target-paths.ts`. Every effect is derived per query from the
  * towers' specializations; the only state is `Tower.salvo` (Opening Salvo) and `Enemy.spotted` (Spotting), both
  * absent until a path uses them, so boards without these paths behave exactly as before.
  */
@@ -95,7 +96,7 @@ export function nexusBoost(sim: Sim, at: Point) {
  * Damage factor of the combat paths on one hit, before armor: Spotting (consumes the mark), Wing Tag, Flak Relay
  * and Diversity. Different paths multiply; within a path only the strongest tower counts.
  */
-export function pathsFactor(sim: Sim, src: DamageSource, e: Enemy, dot: boolean) {
+export function fireSupportFactor(sim: Sim, src: DamageSource, e: Enemy, dot: boolean) {
   let factor = 1;
   if (e.spotted && !dot && e.spotted.by !== src.tower) {
     factor *= 1 + e.spotted.bonus;
@@ -123,7 +124,7 @@ export function pathsFactor(sim: Sim, src: DamageSource, e: Enemy, dot: boolean)
   return factor * (1 + wing) * (1 + flak) * (1 + diversity);
 }
 /** After a hit: a crit with Stagger slows its target, a crit with Spotting marks it for the next tower. */
-export function pathsAfterHit(sim: Sim, src: DamageSource, e: Enemy, hit?: Hit) {
+export function fireSupportAfterHit(sim: Sim, src: DamageSource, e: Enemy, hit?: Hit) {
   const crit = hit?.crit;
   if (!crit || e.hp <= 0) return;
   if (crit.slow) applyStatus(sim, e, { kind: "slow", factor: 1 - crit.slow, until: sim.state.time + crit.duration! });

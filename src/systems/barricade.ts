@@ -3,6 +3,7 @@ import type { ContentPack, Enemy, MapDefinition, Sim, Tower, TowerDefinition } f
 import { canTarget } from "./attacks/targeting";
 import { hasTrait, isBurrowed, isDefused, layerOf } from "./traits";
 import { resetTrapPaths } from "./trap-paths";
+import { eachOfKind } from "./tower-kinds";
 /** Enemies halt this far before a barricade's cell centre: on the edge of the cell, where a Grinder next to it reaches them. */
 export const WALL_GAP = 0.5;
 /** Wall damage per second of a pressing enemy, per unit of body size (a Drone about 23, a Titan about 46). */
@@ -17,25 +18,24 @@ function pathIndex(map: MapDefinition, x: number, y: number) {
   }
   return index.get(`${x},${y}`);
 }
-const isBarricade = (sim: Sim, t: Tower) => sim.content.towers[t.type].attack.kind === "block";
 /** The wall's full HP at the tower's current level. */
-export function wallHp(t: Tower, content?: ContentPack) {
+export function wallHp(t: Tower, content: ContentPack) {
   const attack = resolveUpgrades(t, content).attack;
   return attack.kind === "block" ? attack.hp : 0;
 }
 /** Share of the wall left, 1 when whole and 0 when breached; render and UI read it. */
-export const wallShare = (t: Tower, content?: ContentPack) => {
+export const wallShare = (t: Tower, content: ContentPack) => {
   const hp = wallHp(t, content);
   return hp > 0 ? Math.max(0, 1 - (t.wall ?? 0) / hp) : 0;
 };
 /** Standing barricades: whole enough to block and not defused, with the path distance enemies halt at. */
 function standing(sim: Sim) {
   const walls: { tower: Tower; stop: number }[] = [];
-  for (const t of sim.state.towers) {
-    if (!isBarricade(sim, t) || wallShare(t, sim.content) <= 0 || isDefused(sim, t)) continue;
+  eachOfKind(sim.state.towers, sim.content, "block", (_attack, t) => {
+    if (wallShare(t, sim.content) <= 0 || isDefused(sim, t)) return;
     const i = pathIndex(sim.mission.map, t.x, t.y);
     if (i !== undefined) walls.push({ tower: t, stop: i - WALL_GAP });
-  }
+  });
   return walls;
 }
 /** The first halt point at or after `from` on the path (every lap on a ring). */

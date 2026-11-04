@@ -1,3 +1,4 @@
+import { DEFAULT_CONTENT } from "../content";
 import { describe, expect, it } from "vitest";
 import { Game, sellValue } from "../core/game";
 import { finishWave, makeEnemy } from "../core/test-helpers";
@@ -218,7 +219,7 @@ describe("Workshop paths", () => {
       near = { ...place(g, "pulse", 6, 5), spent: 100 },
       far = { ...place(g, "pulse", 14, 9), spent: 100 };
     expect(sellValue(near, g.state.towers, g.content)).toBe(90);
-    expect(sellValue(near)).toBe(70);
+    expect(sellValue(near, undefined, DEFAULT_CONTENT)).toBe(70);
     expect(sellValue(far, g.state.towers, g.content)).toBe(70);
     expect(sellValue({ ...shop, spent: 100 }, g.state.towers, g.content)).toBe(70);
     shop.upgrades = L3;

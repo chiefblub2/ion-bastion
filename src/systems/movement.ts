@@ -7,7 +7,7 @@ import { blinkJump, traitSpeedFactor } from "./traits";
 import { blockMove } from "./barricade";
 import { leakOf } from "./shrink";
 import { tetherStep } from "./tether";
-import { downlinkFactor } from "./combat-paths-b";
+import { downlinkFactor } from "./fire-support-paths";
 export function moveEnemies(sim: Sim, dt: number) {
   const s = sim.state,
     { path, loop } = sim.mission.map;

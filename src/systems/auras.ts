@@ -1,11 +1,10 @@
 import { dist } from "./path";
-import { DEFAULT_CONTENT } from "../content";
 import { resolveUpgrades, type UpgradeProgress } from "../core/upgrades";
-import { isSupport } from "./attacks";
+import { isArmed, isSupport } from "./attacks";
 import type { AuraBonuses, AuraStat, ContentPack, Point, Sim, TowerId } from "../core/types";
 import { isSuppressed, towerDebuffs } from "./traits";
 import { siphonBoost } from "./siphon";
-import { nexusBoost } from "./combat-paths-b";
+import { nexusBoost } from "./fire-support-paths";
 import { fieldBonuses } from "./aura-paths";
 import { economyBoost } from "./economy-paths";
 
@@ -14,17 +13,17 @@ const emptyBonuses = (): AuraBonuses => ({ damage: 0, speed: 0, range: 0 });
 export type TowerPosition = Point & UpgradeProgress;
 
 /** Pure queries shared by simulation, drawing, UI and upgrade previews. */
-export function auraBonuses(source: UpgradeProgress, content: ContentPack = DEFAULT_CONTENT): AuraBonuses {
+export function auraBonuses(source: UpgradeProgress, content: ContentPack): AuraBonuses {
   return resolveUpgrades(source, content).aura;
 }
 
-export const isAuraSource = (tower: { type: TowerId }, content: ContentPack = DEFAULT_CONTENT) =>
+export const isAuraSource = (tower: { type: TowerId }, content: ContentPack) =>
   content.towers[tower.type].attack.kind === "aura";
 
 export function isInAura(
   source: Point & { type: TowerId },
   target: Point & { type: TowerId },
-  content: ContentPack = DEFAULT_CONTENT,
+  content: ContentPack,
 ): boolean {
   return isAuraSource(source, content) &&
     !isSupport(content.towers[target.type].attack) &&
@@ -34,7 +33,7 @@ export function isInAura(
 export function receivedAuraBonuses(
   target: TowerPosition,
   towers: readonly TowerPosition[],
-  content: ContentPack = DEFAULT_CONTENT,
+  content: ContentPack,
   sim?: Sim,
 ): AuraBonuses {
   const combined = emptyBonuses();
@@ -49,7 +48,7 @@ export function receivedAuraBonuses(
 export function effectiveTowerStats(
   target: TowerPosition,
   towers: readonly TowerPosition[],
-  content: ContentPack = DEFAULT_CONTENT,
+  content: ContentPack,
   /** With the running simulation, enemy effects apply: suppressed aura sources, blind (range) and jam (interval). UI previews omit it. */
   sim?: Sim,
 ) {
@@ -57,11 +56,11 @@ export function effectiveTowerStats(
   const bonuses = receivedAuraBonuses(target, towers, content, sim);
   // Blind and jam only touch attack towers: traps and support towers keep their stats.
   const d = content.towers[target.type],
-    debuffs = sim && d.placement !== "path" && !isSupport(d.attack) ? towerDebuffs(sim, target) : { range: 0, interval: 0 };
+    debuffs = sim && isArmed(d) ? towerDebuffs(sim, target) : { range: 0, interval: 0 };
   // Siphon: hindered enemies near a Siphon speed up the attack towers around it (Power Tap: and strengthen them).
-  const siphon = sim && d.placement !== "path" && !isSupport(d.attack) ? siphonBoost(sim, target) : { rate: 0, damage: 0 };
+  const siphon = sim && isArmed(d) ? siphonBoost(sim, target) : { rate: 0, damage: 0 };
   // Nexus Resonance and Harmony: more range and fire rate per tower type around the Nexus.
-  const nexus = sim && d.placement !== "path" && !isSupport(d.attack) ? nexusBoost(sim, target) : { range: 0, rate: 0 };
+  const nexus = sim && isArmed(d) ? nexusBoost(sim, target) : { range: 0, rate: 0 };
   // Economy paths: Fuel Line and Damage Control (fire rate), Calibration (damage).
   const economy = sim ? economyBoost(sim, target) : { rate: 0, damage: 0 };
   return {

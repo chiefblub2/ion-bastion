@@ -28,6 +28,16 @@ export interface AttackModule<S extends AttackSpec = AttackSpec> {
   params: { [K in Exclude<keyof S, "kind">]?: ParamRule };
   /** Dead zone around the tower in cells; enemies closer than this are never targeted. */
   minRange?: (spec: S) => number;
+  /** Its hits are area hits (`Hit.area`: Blastproof, Armorbreaker Matrix). */
+  area?: true;
+  /** Its hits land instantly, without a projectile (`Hit.instant`: Refract). */
+  instant?: true;
+  /** Explosive: Thermal Fracture shatters frozen enemies with it. */
+  explosive?: true;
+  /** Precision: one aimed shot or beam at one enemy; Singularity Protocol favours it. */
+  precision?: true;
+  /** Needs a reactor to work on: not offered on circle missions. */
+  reactorOnly?: true;
   /** Only traps may use this kind; validation rejects it elsewhere. */
   trapOnly?: true;
   /** A trap of this kind may target air (Harpoon); every other trap is limited to ground targets. */

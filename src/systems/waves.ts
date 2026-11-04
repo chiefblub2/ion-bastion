@@ -1,10 +1,10 @@
 import { credit, earn } from "../core/economy";
-import { resolveUpgrades } from "../core/upgrades";
+import { eachOfKind } from "./tower-kinds";
 import type { Sim } from "../core/types";
 import { createEnemy } from "./spawn";
 import { repairReactor, settleEconomy } from "./support";
 import { restoreBarricades } from "./barricade";
-import { resetSalvos } from "./combat-paths-b";
+import { resetSalvos } from "./fire-support-paths";
 import { incomeOf, payCompounding } from "./economy-paths";
 export { DEFAULT_HP_GROWTH } from "./spawn";
 /** Seconds of build time after a wave before the next one starts by itself. */
@@ -47,14 +47,12 @@ export function settleWave(sim: Sim) {
 /** Refineries pay out once per completed wave. */
 export function payIncome(sim: Sim) {
   const s = sim.state;
-  for (const t of s.towers) {
-    const attack = resolveUpgrades(t, sim.content).attack;
-    if (attack.kind !== "income") continue;
+  eachOfKind(s.towers, sim.content, "income", (attack, t) => {
     // Advance (Refinery path) paid part of it at the wave's start.
     const amount = incomeOf(t, attack.amount);
-    if (amount <= 0) continue;
+    if (amount <= 0) return;
     credit(s, t.owner, amount);
     s.events.push({ type: "income", at: { x: t.x, y: t.y }, amount, color: sim.content.towers[t.type].color });
-  }
+  });
   payCompounding(sim); // Refinery path: Compounding
 }

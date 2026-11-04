@@ -3,7 +3,7 @@ import { Game } from "../core/game";
 import { landProjectiles, makeEnemy } from "../core/test-helpers";
 import type { DamageSource, Tower, TowerId } from "../core/types";
 import { effectiveTowerStats } from "./auras";
-import { chargedFactor, critRider, downlinkFactor, nexusBoost, openSalvos, pathsFactor, resetSalvos } from "./combat-paths-b";
+import { chargedFactor, critRider, downlinkFactor, nexusBoost, openSalvos, fireSupportFactor, resetSalvos } from "./fire-support-paths";
 import { attackEnemies } from "./combat";
 import { applyDamage, hitOf } from "./damage";
 import { speedFactor } from "./status";
@@ -131,13 +131,13 @@ describe("Skylink paths", () => {
       mortar = place(g, "mortar", 6, 5),
       held = makeEnemy(1, "glider", 5, 4),
       sky = place(g, "skylink", 5, 5, path("flak-relay"));
-    expect(pathsFactor(g, source(flak), held, false)).toBeCloseTo(1.1);
-    expect(pathsFactor(g, source(flak), held, true)).toBe(1);
-    expect(pathsFactor(g, source(mortar), held, false)).toBe(1);
+    expect(fireSupportFactor(g, source(flak), held, false)).toBeCloseTo(1.1);
+    expect(fireSupportFactor(g, source(flak), held, true)).toBe(1);
+    expect(fireSupportFactor(g, source(mortar), held, false)).toBe(1);
     sky.upgrades = path("wing-tag");
-    expect(pathsFactor(g, source(mortar), held, false)).toBeCloseTo(1.1);
-    expect(pathsFactor(g, source(mortar), held, true)).toBeCloseTo(1.1);
-    expect(pathsFactor(g, source(mortar), makeEnemy(2, "tank", 5, 4), false)).toBe(1);
+    expect(fireSupportFactor(g, source(mortar), held, false)).toBeCloseTo(1.1);
+    expect(fireSupportFactor(g, source(mortar), held, true)).toBeCloseTo(1.1);
+    expect(fireSupportFactor(g, source(mortar), makeEnemy(2, "tank", 5, 4), false)).toBe(1);
   });
 });
 
@@ -160,9 +160,9 @@ describe("Nexus paths", () => {
       src = source(place(g, "pulse", 5, 4));
     place(g, "nexus", 5, 5, path("diversity"));
     (["blast", "flak", "tesla"] as TowerId[]).forEach((type, i) => place(g, type, 4 + i, 7));
-    expect(pathsFactor(g, src, e, false)).toBe(1);
+    expect(fireSupportFactor(g, src, e, false)).toBe(1);
     place(g, "frost", 6, 5);
-    expect(pathsFactor(g, src, e, true)).toBeCloseTo(1.1);
+    expect(fireSupportFactor(g, src, e, true)).toBeCloseTo(1.1);
   });
 });
 
@@ -184,7 +184,7 @@ describe("boards without these paths", () => {
     expect(critRider(g, t)).toBeUndefined();
     expect(chargedFactor(g, t)).toBe(1);
     expect(downlinkFactor(g, e)).toBe(1);
-    expect(pathsFactor(g, source(t), e, false)).toBe(1);
+    expect(fireSupportFactor(g, source(t), e, false)).toBe(1);
     expect(nexusBoost(g, t)).toEqual({ range: 0, rate: 0 });
     landProjectiles(g);
     expect(e.spotted).toBeUndefined();

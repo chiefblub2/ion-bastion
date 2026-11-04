@@ -1,4 +1,4 @@
-import type { AttackKind, AttackSpec } from "../../core/types";
+import type { AttackKind, AttackSpec, TowerDefinition } from "../../core/types";
 import { airburst } from "./airburst";
 import { alarm } from "./alarm";
 import { aura } from "./aura";
@@ -105,8 +105,12 @@ const ATTACKS: { [K in AttackKind]: AttackModule<Extract<AttackSpec, { kind: K }
   overkill,
 };
 export const attackModule = (spec: AttackSpec) => ATTACKS[spec.kind] as AttackModule | undefined;
+/** The module of an attack kind, for its per-kind flags (`area`, `instant`, `explosive`, `precision`, `reactorOnly`). */
+export const kindModule = (kind: AttackKind) => ATTACKS[kind] as AttackModule;
 /** Support towers (aura, refinery, detector, beacon, dock, tracker) never attack, are never buffed and have no targets. */
 export const isSupport = (spec: AttackSpec) => attackModule(spec)?.aim === "none";
+/** An attack tower that fires: neither a trap nor a support tower (overload, Aura paths, protocols). */
+export const isArmed = (d: Pick<TowerDefinition, "placement" | "attack">) => d.placement !== "path" && !isSupport(d.attack);
 export interface StatRow {
   key: string;
   label: string;

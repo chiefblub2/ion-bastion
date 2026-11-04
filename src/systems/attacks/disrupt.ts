@@ -7,6 +7,7 @@ import type { AttackModule } from "./types";
 /** Jammer pulse: switches off the special abilities of every enemy around the target. */
 export const disrupt: AttackModule<DisruptAttack> = {
   aim: "enemy",
+  instant: true,
   projectile: "forbidden",
   params: {
     radius: { label: "Pulse radius", valid: (v) => v > 0, unit: " cells" },

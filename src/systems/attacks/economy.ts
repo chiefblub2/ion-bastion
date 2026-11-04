@@ -22,6 +22,7 @@ export const interest: AttackModule<InterestAttack> = {
 /** Shield Generator: never attacks; `systems/support.ts` absorbs reactor damage when enemies leak. */
 export const barrier: AttackModule<BarrierAttack> = {
   aim: "none",
+  reactorOnly: true,
   projectile: "forbidden",
   params: {
     amount: { label: "Shield per wave", valid: (v) => Number.isInteger(v) && v > 0, unit: " energy" },
