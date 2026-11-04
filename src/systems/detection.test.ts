@@ -32,7 +32,7 @@ describe("stealth and detector", () => {
     expect(e.hp).toBe(1000 - DEFAULT_CONTENT.towers.pulse.damage);
   });
   it("a detector out of range does not help", () => {
-    expect(setup("pulse", { x: 0, y: 0 }).revealed).toBe(false);
+    expect(setup("pulse", { x: 17, y: 7 }).revealed).toBe(false);
   });
   it("area damage still hits an unrevealed stealthed enemy", () => {
     const g = new Game(undefined, stealthDrones);
