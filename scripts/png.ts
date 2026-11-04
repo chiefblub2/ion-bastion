@@ -1,78 +1,22 @@
 /**
- * Minimal PNG reader for the dev tools and tests (no runtime use, no dependency): decodes non-interlaced 8-bit
- * truecolour PNGs (colour type 6 RGBA or 2 RGB) with `node:zlib`, and measures the visible pixels of sprite art.
+ * PNG helpers for the dev tools and tests (no runtime use): decoding through `pngjs`, a lossless RGBA encoder whose
+ * bytes never change between runs, and measurements of the visible pixels of sprite art.
  */
-import { deflateSync, inflateSync } from "node:zlib";
+import { crc32, deflateSync } from "node:zlib";
+import { PNG } from "pngjs";
 
 export interface Png {
   width: number;
   height: number;
-  /** Colour type from the header: 6 RGBA, 2 RGB. */
+  /** Colour type from the header: 6 RGBA, 2 RGB, … */
   colorType: number;
-  /** RGBA, 4 bytes per pixel, row by row (opaque alpha for RGB files). */
+  /** RGBA, 4 bytes per pixel, row by row (opaque alpha for files without one). */
   rgba: Uint8Array;
 }
 
-const SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-
 export function decodePng(file: Uint8Array): Png {
-  if (!SIGNATURE.every((b, i) => file[i] === b)) throw new Error("not a PNG");
-  const view = new DataView(file.buffer, file.byteOffset, file.byteLength),
-    idat: Uint8Array[] = [];
-  let width = 0,
-    height = 0,
-    colorType = 0;
-  for (let at = 8; at < file.length; ) {
-    const length = view.getUint32(at),
-      type = String.fromCharCode(...file.subarray(at + 4, at + 8)),
-      data = file.subarray(at + 8, at + 8 + length);
-    if (type === "IHDR") {
-      width = view.getUint32(at + 8);
-      height = view.getUint32(at + 12);
-      const depth = data[8];
-      colorType = data[9];
-      if (depth !== 8 || (colorType !== 6 && colorType !== 2) || data[12] !== 0) throw new Error(`unsupported PNG (depth ${depth}, colour type ${colorType}, interlace ${data[12]})`);
-    } else if (type === "IDAT") idat.push(data);
-    else if (type === "IEND") break;
-    at += 12 + length;
-  }
-  const channels = colorType === 6 ? 4 : 3,
-    stride = width * channels,
-    raw = inflateSync(Buffer.concat(idat)),
-    rgba = new Uint8Array(width * height * 4);
-  let prev = new Uint8Array(stride),
-    line = new Uint8Array(stride);
-  for (let y = 0; y < height; y++) {
-    const filter = raw[y * (stride + 1)],
-      src = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
-    for (let i = 0; i < stride; i++) {
-      const a = i >= channels ? line[i - channels] : 0,
-        b = prev[i],
-        c = i >= channels ? prev[i - channels] : 0;
-      let v = src[i];
-      if (filter === 1) v += a;
-      else if (filter === 2) v += b;
-      else if (filter === 3) v += (a + b) >> 1;
-      else if (filter === 4) {
-        const p = a + b - c,
-          pa = Math.abs(p - a),
-          pb = Math.abs(p - b),
-          pc = Math.abs(p - c);
-        v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
-      }
-      line[i] = v & 255;
-    }
-    for (let x = 0; x < width; x++) {
-      const o = (y * width + x) * 4,
-        s = x * channels;
-      rgba[o] = line[s];
-      rgba[o + 1] = line[s + 1];
-      rgba[o + 2] = line[s + 2];
-      rgba[o + 3] = channels === 4 ? line[s + 3] : 255;
-    }
-    [prev, line] = [line, prev];
-  }
-  return { width, height, colorType, rgba };
+  const png = PNG.sync.read(Buffer.from(file.buffer, file.byteOffset, file.byteLength));
+  return { width: png.width, height: png.height, colorType: png.colorType, rgba: new Uint8Array(png.data.buffer, png.data.byteOffset, png.data.byteLength) };
 }
 
 /** Alpha above which a pixel counts as visible art (about 6%): faint glows stay in, compression noise stays out. */
@@ -288,16 +232,7 @@ export function identify(frames: Png[], statics: ReadonlyMap<string, Float64Arra
 /** An identity is ambiguous (worth a look by eye) when the runner-up is within this ratio of the best distance. */
 export const IDENTITY_MARGIN = 0.85;
 
-const CRC = Array.from({ length: 256 }, (_, n) => {
-  let c = n;
-  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-  return c >>> 0;
-});
-function crc32(bytes: Uint8Array) {
-  let c = 0xffffffff;
-  for (const b of bytes) c = CRC[(c ^ b) & 255] ^ (c >>> 8);
-  return (c ^ 0xffffffff) >>> 0;
-}
+const SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 function chunk(type: string, data: Uint8Array) {
   const out = new Uint8Array(12 + data.length),
     view = new DataView(out.buffer);
@@ -309,7 +244,8 @@ function chunk(type: string, data: Uint8Array) {
 }
 /**
  * Lossless RGBA PNG (colour type 6), each row with the filter that leaves the smallest absolute sum (the usual
- * heuristic of PNG encoders), deflated at level 9.
+ * heuristic of PNG encoders, on wrapped bytes), deflated at level 9. Kept instead of `pngjs`'s encoder, whose filter
+ * heuristic and deflate strategy differ, so the committed sheets (`normalize-enemy-animations.ts`) keep their bytes.
  */
 export function encodePng({ width, height, rgba }: Pick<Png, "width" | "height" | "rgba">) {
   const stride = width * 4,
