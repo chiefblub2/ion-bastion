@@ -174,15 +174,11 @@ describe("run", () => {
     expect(unlocks(record).full).toBe(false);
     expect(abandon(run).phase).toBe("lost");
   });
-  it("stores runs, and continues a version 1 run as a short run", () => {
+  it("stores runs and drops unknown versions", () => {
     const run = walk(2, undefined, "short");
     expect(parseRun(JSON.stringify(run), content)).toEqual(run);
     expect(parseRun("{broken", content)).toBeUndefined();
-    const v1 = { v: 1, seed: 5, step: 1, phase: "route", roster: ["pulse", "blast", "frost"], relics: ["salvage"], offers: {}, history: [{ mission: "x", kind: "normal", won: true }] };
-    const migrated = parseRun(JSON.stringify(v1), content)!;
-    expect(migrated.length).toBe("short");
-    expect(migrated.roster).toEqual(["pulse", "blast", "frost"]);
-    expect(mapChoices(migrated, content).length).toBeGreaterThan(0);
+    expect(parseRun(JSON.stringify({ ...run, v: 1 }), content)).toBeUndefined();
   });
   it("replays a journaled mission to the same state", () => {
     let run = chooseStarter(newRun(11), 0);

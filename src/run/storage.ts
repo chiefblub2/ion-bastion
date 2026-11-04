@@ -3,7 +3,7 @@ import type { ContentPack, TowerId } from "../core/types";
 import { parseJournal, type Journal } from "./journal";
 import { isMissionKind, missionsOf, type RunLength } from "./map";
 import { isRelic } from "./relics";
-import { newRun, runDepth, type RunPhase, type RunState } from "./run";
+import { runDepth, type RunPhase, type RunState } from "./run";
 // The run in progress, its mission journal and the run record, kept between visits like the campaign record.
 const RUN_KEY = "ion-bastion:run",
   JOURNAL_KEY = "ion-bastion:run-journal",
@@ -13,8 +13,7 @@ const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 const int = (v: unknown) => Number.isInteger(v);
 /**
  * A stored run, or undefined when it is missing, corrupt or names content this build does not have (an old run after
- * a tower or mission was removed); the player then simply starts a new one. A version 1 run (five missions, before
- * the acts) continues as a short run.
+ * a tower or mission was removed); the player then simply starts a new one.
  */
 export function parseRun(raw: string | null, content: ContentPack): RunState | undefined {
   try {
@@ -22,7 +21,6 @@ export function parseRun(raw: string | null, content: ContentPack): RunState | u
     if (!isObject(d) || !int(d.seed)) return undefined;
     const tower = (id: unknown): id is TowerId => typeof id === "string" && Object.hasOwn(content.towers, id),
       list = <T>(v: unknown, ok: (x: unknown) => x is T) => Array.isArray(v) && v.every(ok);
-    if (d.v === 1) return migrate(d, content, tower);
     if (d.v !== 2 || !PHASES.includes(d.phase as RunPhase) || !["full", "short"].includes(d.length as string)) return undefined;
     if (![d.step, d.act, d.column, d.lane, d.threat, d.scrap, d.reactor, d.reactorMax, d.rerolls].every(int)) return undefined;
     if (!list(d.roster, tower) || !list(d.relics, isRelic) || !Array.isArray(d.log) || !Array.isArray(d.mods)) return undefined;
@@ -42,24 +40,6 @@ export function parseRun(raw: string | null, content: ContentPack): RunState | u
   } catch {
     return undefined;
   }
-}
-/** A version 1 run continues as a short run with its roster and relics, at its number of cleared missions. */
-function migrate(d: Record<string, unknown>, content: ContentPack, tower: (id: unknown) => id is TowerId): RunState | undefined {
-  if (d.phase === "won" || d.phase === "lost" || !Array.isArray(d.roster) || !d.roster.every(tower)) return undefined;
-  const fresh = newRun(d.seed as number, { length: "short" }, content);
-  if (!d.roster.length) return fresh;
-  const won = Array.isArray(d.history) ? d.history.filter((h) => isObject(h) && h.won).length : 0,
-    cleared = Math.min(2, won);
-  return {
-    ...fresh,
-    roster: d.roster as TowerId[],
-    relics: (Array.isArray(d.relics) ? d.relics : []).filter(isRelic),
-    phase: "map",
-    step: cleared,
-    column: cleared === 0 ? -1 : cleared === 1 ? 0 : 2,
-    lane: 1,
-    offers: {},
-  };
 }
 export function loadRun(content: ContentPack): RunState | undefined {
   try {
@@ -118,8 +98,7 @@ export function parseRunRecord(raw: string | null): RunRecord {
   try {
     const d: unknown = raw ? JSON.parse(raw) : undefined;
     if (!isObject(d)) return EMPTY;
-    // Version 1 counted five-mission runs: a completed one counts as a short win.
-    if (d.v !== 2) return { ...EMPTY, runs: count(d.runs), shortWins: count(d.wins) };
+    if (d.v !== 2) return EMPTY;
     const levels: RunRecord["levels"] = {};
     if (isObject(d.levels)) for (const [k, v] of Object.entries(d.levels)) if (isObject(v)) levels[Number(k)] = { best: count(v.best), wins: count(v.wins) };
     const daily: RunRecord["daily"] = {};
