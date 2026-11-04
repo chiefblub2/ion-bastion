@@ -18,22 +18,25 @@ const params = new URLSearchParams(location.search),
   /** `&seed=<text>` renames the sample map, which re-rolls decor, piece kinds and landmark designs. */
   seed = params.get("seed") ?? "";
 if (!THEMES[theme]) throw new Error(`Unknown theme "${theme}"`);
-/** Sample board: a serpentine path, single obstacles, pairs and four 2×2 blocks (landmarks and big pieces). */
+/**
+ * Sample board: a serpentine path, single obstacles, pairs and 2×2 blocks (landmarks and big pieces), and a coast of
+ * obstacles along the left and bottom edges (open sea on a coastal theme; a pair at the top edge is too small for it).
+ */
 const map = parseMap(
   `terrain-review-${theme}${seed}`,
   "Terrain Review",
   [
-    "##....#.......##..",
+    "......#.......##..",
     "S=========.....#..",
-    "#........=..##....",
-    "..##.....=..##..#.",
-    "..##..#..=........",
-    ".........======...",
-    "..#...........=.##",
-    "......##......=.##",
-    ".#....##.======...",
-    "...#.....=....#...",
-    "..##.....R........",
+    "##.......=..##....",
+    "###......=..##..#.",
+    "##...#...=........",
+    "##.......======...",
+    "###...........=.##",
+    "####...##.....=.##",
+    "#####..##======...",
+    "######...=....#...",
+    "########.R........",
   ],
   theme,
 );

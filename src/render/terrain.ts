@@ -5,6 +5,7 @@ import { landmarkAt, type LandmarkSpot, landmarkSpots } from "./landmarks";
 import { type ObstaclePiece, obstaclePieces } from "./obstacle-pieces";
 import { contactShadow, drawLandmark, landmarkFrame, landmarkLight } from "./landmark-art";
 import { drawPathMaterial } from "./path-material";
+import { landOf, seaCells } from "./coast";
 import { halo } from "./material";
 import { fnv } from "../core/hash";
 import type Phaser from "phaser";
@@ -59,7 +60,10 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
     onPath = new Set(map.path.map((p) => `${p.x},${p.y}`)),
     family = GROUND_FAMILY[map.theme ?? "outpost"],
     spots = landmarks(map);
-  drawGround(scene.add.graphics(), map, theme, isBlocked, (x, y) => onPath.has(`${x},${y}`));
+  // A coastal theme paints its sea over the ground: the sea counts as open ground there, so the beach gets no contact shadow.
+  const sea = theme.sea ? seaCells(map) : undefined,
+    ground = sea?.size ? (x: number, y: number) => isBlocked(x, y) && !sea.has(`${x},${y}`) : isBlocked;
+  drawGround(scene.add.graphics(), map, theme, ground, (x, y) => onPath.has(`${x},${y}`));
   // Decor is background: drawn quieter than the ground pads, before obstacles so their shadows sit on top of it.
   const decor = scene.add.graphics().setAlpha(0.7);
   for (let y = 0; y < map.rows; y++)
@@ -78,57 +82,10 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
     for (const p of parts) enlarged(g, p, () => theme.obstacle(g, p.x * CELL, p.y * CELL, cellRandom(map, p.x, p.y)));
     for (const spot of spots) drawLandmark(g, spot, family, theme, groundRandom(map, "landmark", spot.x, spot.y));
   }
-  const path = pixelPath(map),
-    bed = theme.path.bed;
-  // The road sits in the ground: a cast shadow, a lit and a shaded lip, a sunken bed with its inner shadow.
-  g.lineStyle(54, theme.path.line, 0.06);
-  g.strokePoints(path, false);
-  g.lineStyle(46, 0x000000, 0.35);
-  g.strokePoints(shifted(path, 3, 4), false);
-  g.lineStyle(42, shade(theme.path.edge, -0.4));
-  g.strokePoints(shifted(path, 1.5, 1.5), false);
-  g.lineStyle(42, shade(theme.path.edge, 0.2));
-  g.strokePoints(shifted(path, -1, -1), false);
-  g.lineStyle(42, theme.path.edge);
-  g.strokePoints(path, false);
-  g.lineStyle(38, shade(bed, -0.3));
-  g.strokePoints(path, false);
-  g.lineStyle(35, bed);
-  g.strokePoints(shifted(path, 1.2, 1.5), false);
-  g.lineStyle(20, shade(bed, 0.06));
-  g.strokePoints(path, false);
-  drawPathMaterial(g, map, path, bed, family);
-  // Worn lanes either side of the centre.
-  for (const side of [-9, 9]) {
-    g.lineStyle(3, shade(bed, -0.12), 0.55);
-    g.strokePoints(offsetPath(path, side), false);
-  }
-  // Grit along the bed: pebbles and specks, seeded per map so they never move.
-  const grit = fnv(`${map.id}:grit`);
-  for (let i = 0; i < path.length - 1; i++) {
-    const a = path[i],
-      b = path[i + 1],
-      l = Math.hypot(b.x - a.x, b.y - a.y),
-      nx = -(b.y - a.y) / l,
-      ny = (b.x - a.x) / l;
-    for (let d = 0; d < l; d += 6) {
-      const h = hash01(grit, i, d),
-        side = (hash01(grit, d, i) - 0.5) * 30,
-        x = a.x + ((b.x - a.x) * d) / l + nx * side,
-        y = a.y + ((b.y - a.y) * d) / l + ny * side;
-      if (h < 0.5) disc(g, x, y, 0.8 + h * 1.6, shade(bed, h < 0.25 ? -0.18 : 0.1), 0.55);
-    }
-  }
-  g.lineStyle(2, theme.path.line, 0.4);
-  g.strokePoints(path, false);
-  for (let i = 2; i < path.length - 1; i += 3) {
-    const p = path[i],
-      n = path[i + 1],
-      a = Math.atan2(n.y - p.y, n.x - p.x);
-    g.lineStyle(2, theme.path.arrow, 0.45);
-    for (const sign of [-1, 1])
-      g.lineBetween(p.x, p.y, p.x - Math.cos(a + sign * 0.65) * 7, p.y - Math.sin(a + sign * 0.65) * 7);
-  }
+  if (theme.sea && sea) theme.sea(g, map, sea);
+  const path = pixelPath(map);
+  if (theme.drawPath) theme.drawPath(g, map);
+  else drawRoad(g, map, theme, path, family);
   drawStanding(g, map, theme, parts, spots, family);
   const start = path[0],
     end = path[path.length - 1],
@@ -186,6 +143,59 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
   else name.setPosition(width - name.width - 20, clear(0, true) ? 22 : height - name.height - 22);
   return scene.children.list.slice(first);
 }
+/** The default path: a road sunk into the ground with kerbs, a bed in the family's material, worn lanes, grit and arrows. */
+function drawRoad(g: Ink, map: MapDefinition, theme: Theme, path: readonly Point[], family: GroundFamily) {
+  const bed = theme.path.bed;
+  // The road sits in the ground: a cast shadow, a lit and a shaded lip, a sunken bed with its inner shadow.
+  g.lineStyle(54, theme.path.line, 0.06);
+  g.strokePoints(path, false);
+  g.lineStyle(46, 0x000000, 0.35);
+  g.strokePoints(shifted(path, 3, 4), false);
+  g.lineStyle(42, shade(theme.path.edge, -0.4));
+  g.strokePoints(shifted(path, 1.5, 1.5), false);
+  g.lineStyle(42, shade(theme.path.edge, 0.2));
+  g.strokePoints(shifted(path, -1, -1), false);
+  g.lineStyle(42, theme.path.edge);
+  g.strokePoints(path, false);
+  g.lineStyle(38, shade(bed, -0.3));
+  g.strokePoints(path, false);
+  g.lineStyle(35, bed);
+  g.strokePoints(shifted(path, 1.2, 1.5), false);
+  g.lineStyle(20, shade(bed, 0.06));
+  g.strokePoints(path, false);
+  drawPathMaterial(g, map, path, bed, family);
+  // Worn lanes either side of the centre.
+  for (const side of [-9, 9]) {
+    g.lineStyle(3, shade(bed, -0.12), 0.55);
+    g.strokePoints(offsetPath(path, side), false);
+  }
+  // Grit along the bed: pebbles and specks, seeded per map so they never move.
+  const grit = fnv(`${map.id}:grit`);
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = path[i],
+      b = path[i + 1],
+      l = Math.hypot(b.x - a.x, b.y - a.y),
+      nx = -(b.y - a.y) / l,
+      ny = (b.x - a.x) / l;
+    for (let d = 0; d < l; d += 6) {
+      const h = hash01(grit, i, d),
+        side = (hash01(grit, d, i) - 0.5) * 30,
+        x = a.x + ((b.x - a.x) * d) / l + nx * side,
+        y = a.y + ((b.y - a.y) * d) / l + ny * side;
+      if (h < 0.5) disc(g, x, y, 0.8 + h * 1.6, shade(bed, h < 0.25 ? -0.18 : 0.1), 0.55);
+    }
+  }
+  g.lineStyle(2, theme.path.line, 0.4);
+  g.strokePoints(path, false);
+  for (let i = 2; i < path.length - 1; i += 3) {
+    const p = path[i],
+      n = path[i + 1],
+      a = Math.atan2(n.y - p.y, n.x - p.x);
+    g.lineStyle(2, theme.path.arrow, 0.45);
+    for (const sign of [-1, 1])
+      g.lineBetween(p.x, p.y, p.x - Math.cos(a + sign * 0.65) * 7, p.y - Math.sin(a + sign * 0.65) * 7);
+  }
+}
 /**
  * The pieces and landmarks of a tilted theme, over the path: every shadow first, then the bodies row by row from the
  * north (by their bottom row, then west to east), so a tall piece overlaps the row above it and is overlapped by the
@@ -210,14 +220,14 @@ function drawStanding(g: Ink, map: MapDefinition, theme: Theme, parts: readonly 
 const LANDMARKS = new Map<string, ReturnType<typeof landmarkSpots>>();
 function landmarks(map: MapDefinition) {
   let spots = LANDMARKS.get(map.id);
-  if (!spots) LANDMARKS.set(map.id, (spots = landmarkSpots(map)));
+  if (!spots) LANDMARKS.set(map.id, (spots = landmarkSpots(themeOf(map).sea ? landOf(map) : map)));
   return spots;
 }
 /** Obstacle pieces per map, computed once (ambient asks every frame). */
 const PIECES = new Map<string, ObstaclePiece[]>();
 function pieces(map: MapDefinition) {
   let list = PIECES.get(map.id);
-  if (!list) PIECES.set(map.id, (list = obstaclePieces(map, landmarks(map))));
+  if (!list) PIECES.set(map.id, (list = obstaclePieces(themeOf(map).sea ? landOf(map) : map, landmarks(map))));
   return list;
 }
 /** Runs `draw` (which draws the piece's top-left cell at its normal place) scaled up about that cell's corner to the piece's size. */
@@ -248,7 +258,7 @@ function ambientFrame(map: MapDefinition): AmbientFrame {
     cells = new Float64Array(map.columns * map.rows).fill(-1);
   frame = {
     path: pixelPath(map),
-    blocked: map.blocked.filter((b) => !landmarkAt(spots, b.x, b.y) && !inBig(b.x, b.y)),
+    blocked: (themeOf(map).sea ? landOf(map) : map).blocked.filter((b) => !landmarkAt(spots, b.x, b.y) && !inBig(b.x, b.y)),
     // Cells on the board are cached; other arguments (particle and slot indices) are computed each call.
     hash: (x, y) => {
       if (x < 0 || y < 0 || x >= map.columns || y >= map.rows || x !== Math.floor(x) || y !== Math.floor(y)) return cellRandom(map, x, y)();

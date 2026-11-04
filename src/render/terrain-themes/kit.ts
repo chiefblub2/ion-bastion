@@ -35,6 +35,16 @@ export interface Theme {
   decor: CellDrawing;
   /** Animated layer, redrawn every frame below towers and enemies. */
   ambient: (ctx: AmbientContext) => void;
+  /**
+   * Replaces the default road (kerbs, sunken bed, worn lanes, grit, centre line and arrows) with the theme's own
+   * path, drawn into the static terrain at the same place: Palm Atoll's channel (`coast.ts` `channelOf`).
+   */
+  drawPath?: (g: Ink, map: MapDefinition) => void;
+  /**
+   * Coastal theme: obstacle groups at the board edge are open sea (`coast.ts` `seaCells`), left out of the obstacle
+   * pieces, landmarks and the ambient's `blocked`, and drawn by this into the static terrain before the path.
+   */
+  sea?: (g: Ink, map: MapDefinition, sea: ReadonlySet<string>) => void;
   /** Terrain in the towers' 3/4 tilt (see `TiltedTerrain`); absent: flat obstacles under the path. */
   tilted?: TiltedTerrain;
 }

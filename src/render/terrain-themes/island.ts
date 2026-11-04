@@ -3,7 +3,11 @@ import { facing } from "../material";
 import { OUTLINE, SQUASH, X, Y, block, drum, fillPoints, point, quad, tube } from "../tower-art/tilt";
 import { tubeAt } from "../tower-art/tilt-parts";
 import { box, frame, rod } from "../tower-art/tilt-frame";
-import { flow, type Random, type Theme } from "./kit";
+import { type Random, type Theme } from "./kit";
+import { bankWidth, CHANNEL_STEP, channelOf, SEA_TILE, seaCells, seaField, type ShorePoint, shoreLine } from "../coast";
+import { blend } from "../ground";
+import { fnv } from "../../core/hash";
+import type { MapDefinition } from "../../core/types";
 
 // Palm Atoll: white sand, a turquoise tidal channel as the path, and the first terrain drawn in the towers' 3/4 tilt
 // (`Theme.tilted`): palms, boulders, lagoon pools and a beached outrigger canoe stand up out of the board, north to
@@ -343,6 +347,178 @@ function lighthouseShadow(g: Ink) {
   oval(g, 3, 3, 22, 13, SHADE, 0.14);
 }
 
+// ── Channel (the path) and the sea ──────────────────────────────────────────────────────────────────────────────────
+/** Half widths of the channel's layers from the outside in: damp and wet sand, foam line, water, mid and deep water. */
+const BANKS = { damp: 27, wet: 23, foam: 19.6, water: 18.6, mid: 12.5, deep: 6.5 } as const;
+const channelSeed = (map: MapDefinition) => fnv(`${map.id}:channel`);
+/**
+ * The path as a tidal channel instead of a road: rounded turns and banks that meander a little (`coast.ts`), damp and
+ * wet sand, a foam line, the bank's shadow on the water, then shallow to deeper water; sand ripples and pebbles on
+ * the bed and sea grass on the banks. No kerbs, lanes, centre line or arrows: the drifting foam shows the way.
+ */
+function drawChannel(g: Ink, map: MapDefinition) {
+  const samples = channelOf(map),
+    seed = channelSeed(map),
+    layer = (base: number, k: number, color: number, dx = 0, dy = 0, step = 2) => {
+      for (let i = 0; i < samples.length; i += step) {
+        const p = samples[i];
+        disc(g, p.x + dx, p.y + dy, bankWidth(seed, p.s, base, k), color);
+      }
+    };
+  layer(BANKS.damp, 0, 0xddd0ad);
+  layer(BANKS.wet, 1, 0xc9b78d);
+  layer(BANKS.foam, 2, WATER.foam);
+  layer(BANKS.water, 3, shade(WATER.shallow, -0.22));
+  layer(BANKS.water - 1.4, 3, WATER.shallow, 1.4, 1.6);
+  layer(BANKS.mid, 4, WATER.mid, 1, 1.2);
+  layer(BANKS.deep, 5, 0x29a4bd, 1, 1.2);
+  for (let i = 0; i < samples.length; i += 4) {
+    const p = samples[i],
+      r = hash01(seed, i, 1),
+      half = bankWidth(seed, p.s, BANKS.water, 3);
+    // Sand ripples across the bed, bending with the current.
+    if (i % 12 === 0) {
+      const tx = p.ny,
+        ty = -p.nx,
+        bow = 2.5 + r * 2;
+      g.lineStyle(1.2, shade(WATER.mid, 0.3), 0.32);
+      g.strokePoints([-0.7, -0.35, 0, 0.35, 0.7].map((k) => ({ x: p.x + p.nx * half * k + tx * bow * (1 - 2 * k * k), y: p.y + p.ny * half * k + ty * bow * (1 - 2 * k * k) })), false);
+    }
+    if (r < 0.12) disc(g, p.x + p.nx * (hash01(seed, i, 2) - 0.5) * half * 1.4, p.y + p.ny * (hash01(seed, i, 2) - 0.5) * half * 1.4, 1 + r * 10, shade(WATER.mid, -0.18), 0.45);
+    // Sea grass and a stone here and there on the wet sand.
+    if (r > 0.94) {
+      const side = r > 0.97 ? 1 : -1,
+        o = bankWidth(seed, p.s, BANKS.wet, 1) - 1.5,
+        bx = p.x + p.nx * o * side,
+        by = p.y + p.ny * o * side;
+      for (let k = 0; k < 4; k++) {
+        const a = -Math.PI / 2 + (k - 1.5) * 0.4;
+        g.lineStyle(1.2, 0x4f8a3a, 0.85);
+        g.lineBetween(bx + k - 1.5, by + 1, bx + k - 1.5 + Math.cos(a) * 6, by + 1 + Math.sin(a) * 6);
+      }
+    } else if (r > 0.9) {
+      const side = r > 0.92 ? 1 : -1,
+        o = bankWidth(seed, p.s, BANKS.wet, 1) - 2;
+      oval(g, p.x + p.nx * o * side + 0.8, p.y + p.ny * o * side + 1, 3.6, 2.4, SHADE, 0.25);
+      oval(g, p.x + p.nx * o * side, p.y + p.ny * o * side, 3.4, 2.4, 0xa8a090);
+    }
+  }
+}
+/** Shore colours by sea depth (`coast.ts` `seaDepth`): a wide white beach, wet sand, the foam line, lagoon shallows, then the deep ocean. */
+const SHORE: readonly [number, number][] = [
+  [0, 0xebe1c7],
+  [7, 0xe6dabd],
+  [11, 0xcdbb90],
+  [11.01, WATER.foam],
+  [13.5, WATER.foam],
+  [16, 0x8fe6dc],
+  [40, 0x3fc3c9],
+  [95, 0x1d8db3],
+  [170, 0x135f8c],
+];
+/** Depth of the foam line, where the surf runs. */
+const FOAM = 12.3;
+function shoreColor(d: number) {
+  if (d <= SHORE[0][0]) return SHORE[0][1];
+  for (let i = 1; i < SHORE.length; i++) {
+    const [d1, c1] = SHORE[i];
+    if (d < d1) {
+      const [d0, c0] = SHORE[i - 1];
+      return blend(c0, c1, (d - d0) / (d1 - d0));
+    }
+  }
+  return SHORE[SHORE.length - 1][1];
+}
+/**
+ * The ocean on the sea cells, painted tile by tile from the sea's depth field (runs of one colour merged): a wide
+ * beach that continues the sand, a curving foam line, lagoon shallows and the deep blue towards the board edge.
+ */
+function drawSea(g: Ink, map: MapDefinition) {
+  const n = CELL / SEA_TILE;
+  for (const [k, depths] of seaField(map)) {
+    const [cx, cy] = k.split(",").map(Number);
+    for (let ty = 0; ty < n; ty++) {
+      let run = 0,
+        color = -1;
+      const y = cy * CELL + ty * SEA_TILE,
+        flush = (tx: number) => {
+          if (!run) return;
+          g.fillStyle(color);
+          g.fillRect(cx * CELL + (tx - run) * SEA_TILE, y, run * SEA_TILE, SEA_TILE);
+        };
+      for (let tx = 0; tx < n; tx++) {
+        const c = shoreColor(Math.round(depths[ty * n + tx] * 2) / 2);
+        if (c !== color) {
+          flush(tx);
+          run = 0;
+          color = c;
+        }
+        run++;
+      }
+      flush(n);
+    }
+  }
+}
+/** Surf on the shore: a wave washing up the beach and drawing back, a swell line rolling in behind it, sparkles out at sea. */
+function surf(g: Ink, glow: Ink, map: MapDefinition, clock: number, lit: number) {
+  if (!seaCells(map).size) return;
+  const dash = (p: ShorePoint, o: number, width: number, alpha: number) => {
+    if (alpha < 0.03) return;
+    const x = p.x + p.nx * o,
+      y = p.y + p.ny * o;
+    g.lineStyle(width, WATER.foam, alpha);
+    g.lineBetween(x + p.ny * 4.5, y - p.nx * 4.5, x - p.ny * 4.5, y + p.nx * 4.5);
+  };
+  for (const p of shoreLine(map, FOAM)) {
+    const lap = 0.5 + 0.5 * Math.sin(clock * 0.9 + (p.x + p.y * 1.3) * 0.012);
+    dash(p, -8 * lap + 4, 1.8, 0.7 * lap);
+  }
+  for (const p of shoreLine(map, 34, 9)) {
+    const roll = (clock * 0.2 + (p.x + p.y * 1.3) * 0.004) % 1;
+    dash(p, -20 * roll, 1.4, 0.35 * Math.sin(Math.PI * roll));
+  }
+  for (const [k, depths] of seaField(map)) {
+    const [x, y] = k.split(",").map(Number),
+      n = CELL / SEA_TILE;
+    for (let j = 0; j < 2; j++) {
+      const tx = Math.floor(hash01(x, y, j) * n),
+        ty = Math.floor(hash01(y, x, j + 5) * n);
+      if (depths[ty * n + tx] > 24) twinkle(g, glow, x * CELL + (tx + 0.5) * SEA_TILE, y * CELL + (ty + 0.5) * SEA_TILE, clock, hash01(j, x, y), lit);
+    }
+  }
+}
+/** The channel's life: foam lapping at both banks, foam flecks drifting with the current and sparkles. */
+function channelLife(g: Ink, glow: Ink, map: MapDefinition, clock: number, lit: number) {
+  const samples = channelOf(map),
+    seed = channelSeed(map);
+  for (let i = 0; i < samples.length; i += 4) {
+    const p = samples[i],
+      tx = p.ny,
+      ty = -p.nx;
+    for (const side of [-1, 1]) {
+      const swell = 0.5 + 0.5 * Math.sin(clock * 1.3 + p.s * 0.05 + side * 1.7),
+        o = side * (bankWidth(seed, p.s, BANKS.water, 3) - 0.5 - 2.6 * swell),
+        x = p.x + p.nx * o,
+        y = p.y + p.ny * o;
+      g.lineStyle(1.5, WATER.foam, 0.18 + 0.4 * swell);
+      g.lineBetween(x - tx * 3.5, y - ty * 3.5, x + tx * 3.5, y + ty * 3.5);
+    }
+  }
+  const total = samples[samples.length - 1].s;
+  for (let k = 0; k * 34 < total; k++) {
+    const s = (k * 34 + clock * 22) % total,
+      p = samples[Math.min(samples.length - 1, Math.floor(s / CHANNEL_STEP))],
+      side = (((k * 7) % 5) - 2) * 4;
+    g.fillStyle(WATER.foam, 0.3 + 0.15 * Math.sin(clock * 2 + k));
+    fillOval(g, p.x + p.nx * side, p.y + p.ny * side, 4 + (k % 3), 1.6);
+  }
+  for (let i = 0; i < samples.length; i += 9) {
+    const p = samples[i],
+      o = (hash01(seed, i, 7) - 0.5) * 26;
+    twinkle(g, glow, p.x + p.nx * o, p.y + p.ny * o, clock, hash01(i, seed, 8), lit);
+  }
+}
+
 // ── Theme ───────────────────────────────────────────────────────────────────────────────────────────────────────────
 /** A small sparkle that flashes briefly once per cycle; `seed` sets its phase. */
 function twinkle(g: Ink, glow: Ink, x: number, y: number, clock: number, seed: number, lit: number) {
@@ -357,6 +533,8 @@ export const island: Theme = {
   grid: 0xb3a27c,
   path: { edge: 0xd0bc8e, bed: 0x3cbcc6, line: 0xf4fffc, arrow: 0xffffff },
   accent: 0xff7d5e,
+  drawPath: drawChannel,
+  sea: drawSea,
   obstacle: (g, x, y, rand) => {
     const p = pieceOf(rand);
     if (p.kind === "palm") palm(g, x, y, p);
@@ -444,44 +622,20 @@ export const island: Theme = {
       disc(g, cx - 1.2, cy - 1.2, 1.4, 0x9a744a);
     }
   },
-  // Sunlight on the water: foam drifting down the channel, sparkles on it and in the pools, cloud shadows and gulls.
-  ambient: ({ g, glow, lit, map, path, clock, hash, blocked }) => {
+  // Sunlight on the water: surf on the shore, foam on the channel's banks and drifting down it, sparkles on the sea,
+  // the channel and the pools, cloud shadows and gulls.
+  ambient: ({ g, glow, lit, map, clock, hash, blocked }) => {
     const w = map.columns * CELL,
       h = map.rows * CELL;
-    flow(path, clock, 0.8, 0.45, (p, k) => {
-      const side = ((k * 7) % 5) - 2;
-      g.fillStyle(WATER.foam, 0.28 + 0.12 * Math.sin(clock * 2 + k));
-      fillOval(g, p.x - Math.sin(p.angle) * side * 5, p.y + Math.cos(p.angle) * side * 5, 4 + (k % 3), 1.6);
-    });
-    // Foam lapping at both banks: short dashes that swell and draw back, out of step along the channel.
-    for (let i = 0; i < path.length - 1; i++) {
-      const a = path[i],
-        b = path[i + 1],
-        l = Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2) || 1,
-        nx = -(b.y - a.y) / l,
-        ny = (b.x - a.x) / l;
-      for (const side of [-1, 1])
-        for (let d = 0; d < l; d += 14) {
-          const swell = 0.5 + 0.5 * Math.sin(clock * 1.3 + (i * l + d) * 0.09 + side),
-            o = side * (16.5 - 2.2 * swell),
-            x0 = a.x + ((b.x - a.x) * d) / l + nx * o,
-            y0 = a.y + ((b.y - a.y) * d) / l + ny * o,
-            t = Math.min(10, l - d) / l;
-          g.lineStyle(1.6, WATER.foam, 0.2 + 0.35 * swell);
-          g.lineBetween(x0, y0, x0 + (b.x - a.x) * t, y0 + (b.y - a.y) * t);
-        }
-    }
-    for (let i = 0; i < path.length; i++)
-      for (let j = 0; j < 2; j++) {
-        const s = hash01(i, j, 91);
-        twinkle(g, glow, path[i].x + (s - 0.5) * 30, path[i].y + (hash01(j, i, 92) - 0.5) * 30, clock, s, lit);
-      }
     for (const b of blocked) {
       if (hash(b.x, b.y) < ROCKS || hash(b.x, b.y) >= POOL) continue;
       const { px, py } = poolCentre(b.x * CELL, b.y * CELL);
       for (let j = 0; j < 3; j++) twinkle(g, glow, px + (hash01(b.x, b.y, j) - 0.5) * 24, py + (hash01(b.y, j, b.x) - 0.5) * 14, clock, hash01(j, b.x, b.y), lit);
     }
+    // The board-wide parts below never run in the big pieces' scaled pass (a board of size 0).
     if (!map.columns) return;
+    surf(g, glow, map, clock, lit);
+    channelLife(g, glow, map, clock, lit);
     // Two slow cloud shadows crossing the island.
     for (let k = 0; k < 2; k++) {
       const s = hash(k, 401),
