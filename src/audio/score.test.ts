@@ -38,16 +38,17 @@ describe("Score", () => {
     expect(rates).toEqual([...rates].sort((a, b) => a - b));
   });
   it("keeps every pitched cue within half an octave of its recipe in every theme, bar and extent", () => {
-    const pitched = (Object.keys(TIMING) as CueId[]).filter((id) => TIMING[id].pitched);
-    for (const music of Object.values(MUSIC))
+    const pitched = (Object.keys(TIMING) as CueId[]).filter((id) => TIMING[id].pitched),
+      outside: [string, Extent, number, CueId, number, number][] = [];
+    for (const [theme, music] of Object.entries(MUSIC))
       for (const extent of [3, 4, 5] as Extent[])
         for (let bar = 0; bar < 4; bar++)
           for (const id of pitched)
             for (let voice = 0; voice < 8; voice++) {
               const base = RECIPES[id].params[2] ?? 220,
                 rate = snap(base, chordOf(music, bar, extent), voice) / base;
-              expect(rate, id).toBeGreaterThanOrEqual(0.7);
-              expect(rate, id).toBeLessThanOrEqual(1.42);
+              if (rate < 0.7 || rate > 1.42) outside.push([theme, extent, bar, id, voice, rate]);
             }
+    expect(outside).toEqual([]);
   });
 });
