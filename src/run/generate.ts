@@ -13,7 +13,7 @@ import { runMissionId } from "./run-id";
 import { needsOf, offspring, rosterCovers, type Need } from "./threats";
 import { compose, discount, lockSpecializations, only, upgradePrice, type PackFn } from "./transform";
 import { DEPTH_HP, ECONOMY_SHARE, ELITE_HP, ELITE_WAVES, WAVES } from "./tuning";
-import { pageOf } from "../ui/tower-pages";
+import { pageOf } from "../core/tower-pages";
 /**
  * Mission formats. A mission plays a window of its source campaign mission: it enters at `enter` (a share of the
  * source's waves) with the credits a player would have had there ("hot drop"), and plays `waveCount` waves up to the

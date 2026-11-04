@@ -2,7 +2,7 @@ import { resolveUpgrades } from "../core/upgrades";
 import type { ContentPack, GameState, MissionDefinition, TowerId } from "../core/types";
 import { isSupport } from "../systems/attacks";
 import { dist } from "../systems/path";
-import { pageOf } from "../ui/tower-pages";
+import { pageOf } from "../core/tower-pages";
 import { ASSIST_CAP, ASSIST_REACH, ASSIST_SHARE } from "./tuning";
 /**
  * Assist XP: Control, trap and Support towers rarely land the kill, so rank XP from kills alone left them at rank 0

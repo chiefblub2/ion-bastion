@@ -1,5 +1,5 @@
 import type { ContentPack, TowerId } from "../core/types";
-import { pageOf } from "../ui/tower-pages";
+import { pageOf } from "../core/tower-pages";
 import { actTiers } from "./acts";
 import { threatRules } from "./ascension";
 import { actMap, type MissionKind, type RunLength, type RunNode } from "./map";

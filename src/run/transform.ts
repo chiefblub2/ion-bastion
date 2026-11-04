@@ -1,6 +1,6 @@
 import type { AttackSpec, ContentPack, TowerDefinition, TowerId, TowerStats, UpgradeDefinition } from "../core/types";
 import { isSpecialization } from "../core/upgrades";
-import { pageOf } from "../ui/tower-pages";
+import { pageOf } from "../core/tower-pages";
 /**
  * Pure content transforms for the Run: relics, doctrines, ranks and shop mods all change a run's pack through these,
  * never the simulation. Each returns a fresh pack, so the per-pack caches (`resolveUpgrades`) never serve stale values.
