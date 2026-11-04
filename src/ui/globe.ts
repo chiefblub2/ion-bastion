@@ -19,17 +19,12 @@ export const ALTITUDE = 1.32;
 /** A deck's own units on its tangent plane, relative to the surface's plane units. */
 export const DECK_SCALE = 0.42;
 /** Longitude and latitude (radians) of a plane point; the plane's middle is 0, 0, north (small y) is positive. */
-export const lonLatOf = (p: Point) => ({ lon: (p.x - WORLD_W / 2) * UNIT, lat: (WORLD_H / 2 - p.y) * UNIT });
+const lonLatOf = (p: Point) => ({ lon: (p.x - WORLD_W / 2) * UNIT, lat: (WORLD_H / 2 - p.y) * UNIT });
 /** The unit vector of a plane point: x east, y north, z towards the viewer at rest. */
 export function toSphere(p: Point): Vec3 {
   const { lon, lat } = lonLatOf(p),
     c = Math.cos(lat);
   return { x: c * Math.sin(lon), y: Math.sin(lat), z: c * Math.cos(lon) };
-}
-/** The plane point of a direction (any length). */
-export function fromSphere(v: Vec3): Point {
-  const r = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z) || 1;
-  return { x: WORLD_W / 2 + Math.atan2(v.x, v.z) / UNIT, y: WORLD_H / 2 - Math.asin(Math.max(-1, Math.min(1, v.y / r))) / UNIT };
 }
 /**
  * The camera: the longitude and latitude that face the viewer (radians), the globe's radius on screen (px) and the
@@ -43,7 +38,7 @@ export interface Camera {
   oy: number;
 }
 /** A direction turned so the camera's `lon`, `lat` faces the viewer (+z), north up (+y). */
-export function rotate(v: Vec3, { lon, lat }: Pick<Camera, "lon" | "lat">): Vec3 {
+function rotate(v: Vec3, { lon, lat }: Pick<Camera, "lon" | "lat">): Vec3 {
   const cl = Math.cos(lon),
     sl = Math.sin(lon),
     x1 = v.x * cl - v.z * sl,
@@ -51,11 +46,6 @@ export function rotate(v: Vec3, { lon, lat }: Pick<Camera, "lon" | "lat">): Vec3
     ca = Math.cos(lat),
     sa = Math.sin(lat);
   return { x: x1, y: v.y * ca - z1 * sa, z: v.y * sa + z1 * ca };
-}
-/** Where a point of the globe (or above it) lands on a `width` × `height` view, px; `z` > 0 faces the viewer. */
-export function screenOf(v: Vec3, cam: Camera, width: number, height: number): Vec3 {
-  const t = rotate(v, cam);
-  return { x: width / 2 + cam.ox + cam.r * t.x, y: height / 2 + cam.oy - cam.r * t.y, z: t.z };
 }
 /** Hidden behind the globe: on its far side, and for a point in orbit, also in front of its disc. */
 export const occluded = (t: Vec3) => t.z < 0 && t.x * t.x + t.y * t.y < 1;

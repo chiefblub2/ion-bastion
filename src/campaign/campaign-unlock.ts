@@ -1,6 +1,6 @@
 import type { MissionDefinition, MissionSector } from "../core/types";
 import { isCircleSector } from "../content/missions";
-import type { CampaignRecord } from "./progress";
+import type { CampaignRecord } from "./record";
 /**
  * Campaign progress gates, derived from the campaign record alone (nothing new is stored):
  * - the first mission of the first campaign sector is always open;

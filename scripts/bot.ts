@@ -7,7 +7,7 @@ import { attackModule, isSupport } from "../src/systems/attacks";
 import { pageOf } from "../src/ui/tower-pages";
 import type { ContentPack, MissionDefinition, TowerId, UnitLayer } from "../src/core/types";
 import type { MissionResult } from "../src/run/run";
-import { missionStars } from "../src/app/rating";
+import { missionStars } from "../src/campaign/rating";
 import { assistsOf } from "../src/run/xp";
 
 export interface Played {

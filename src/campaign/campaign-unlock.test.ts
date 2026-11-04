@@ -3,7 +3,7 @@ import { DEFAULT_CONTENT } from "../content";
 import { isCircleSector } from "../content/missions";
 import type { MissionSector } from "../core/types";
 import { campaignLocks, newlyUnlocked, sectorGate, sectorLocked } from "./campaign-unlock";
-import type { CampaignRecord } from "./progress";
+import type { CampaignRecord } from "./record";
 const sectors = DEFAULT_CONTENT.sectors ?? [],
   campaign = sectors.filter((s) => !isCircleSector(s)),
   [first, second, third] = campaign,

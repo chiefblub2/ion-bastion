@@ -1,17 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { ALTITUDE, type Camera, deckSpot, dragCamera, fitCamera, fromSphere, lerpCamera, occluded, outlineOnScreen, rotate, screenOf, slerp, spotOnScreen, surfaceSpot, toSphere } from "./globe";
+import { ALTITUDE, type Camera, deckSpot, dragCamera, fitCamera, lerpCamera, occluded, outlineOnScreen, slerp, spotOnScreen, surfaceSpot, toSphere, type Vec3 } from "./globe";
 const cam = (c: Partial<Camera> = {}): Camera => ({ lon: 0, lat: 0, r: 100, ox: 0, oy: 0, ...c });
+const screenOf = (v: Vec3, c: Camera, width: number, height: number) => spotOnScreen({ v }, c, width, height);
 describe("globe", () => {
-  it("maps the plane onto the sphere and back", () => {
-    for (const p of [
-      { x: 100, y: 50 },
-      { x: 37, y: 22 },
-      { x: 180, y: 81 },
-    ]) {
-      const back = fromSphere(toSphere(p));
-      expect(back.x).toBeCloseTo(p.x);
-      expect(back.y).toBeCloseTo(p.y);
-    }
+  it("maps the plane onto the sphere", () => {
     // The plane's middle faces the viewer; east is to the right, north up.
     expect(toSphere({ x: 100, y: 50 }).z).toBeCloseTo(1);
     expect(toSphere({ x: 150, y: 50 }).x).toBeCloseTo(1);
@@ -74,6 +66,8 @@ describe("globe", () => {
     const near = [toSphere({ x: 95, y: 50 }), toSphere({ x: 105, y: 50 }), toSphere({ x: 100, y: 45 })];
     expect(outlineOnScreen(near, cam({ lon: Math.PI }), 400, 300)).toBeNull();
     const mid = slerp(toSphere({ x: 100, y: 50 }), toSphere({ x: 150, y: 50 }), 0.5);
-    expect(fromSphere(mid).x).toBeCloseTo(125);
+    const quarter = toSphere({ x: 125, y: 50 });
+    expect(mid.x).toBeCloseTo(quarter.x);
+    expect(mid.z).toBeCloseTo(quarter.z);
   });
 });

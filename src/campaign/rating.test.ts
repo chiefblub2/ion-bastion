@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MISSIONS } from "../content/missions";
 import { Game } from "../core/game";
 import { missionStars, PeakTracker, starText } from "./rating";
-import { mergeRecord, parseRecord, storedRecord } from "./progress";
+import { mergeRecord, parseRecord, storedRecord } from "./record";
 
 const reactor = MISSIONS.find((m) => !m.circle)!,
   ring = MISSIONS.find((m) => m.circle)!,

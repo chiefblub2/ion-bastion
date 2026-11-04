@@ -2,7 +2,7 @@ import { missionById } from "../content/missions";
 import type { MissionDefinition } from "../core/types";
 import { isPlaytest } from "../editor/playtest-id";
 import { isRunMission } from "../run/run-id";
-import type { CampaignRecord } from "./progress";
+import type { CampaignRecord } from "./record";
 import type { Lock } from "./campaign-unlock";
 /**
  * What the home page's primary button does: return to the game in memory, move on to the next unwon mission, replay
@@ -31,7 +31,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
  * The first unwon, unlocked mission after `from` in its own mode (campaign or Circuit), wrapping round (back to a
  * skipped one); undefined when every open one is won.
  */
-export function nextUnwon(missions: readonly MissionDefinition[], from: MissionDefinition, record: CampaignRecord, locks?: ReadonlyMap<string, Lock>) {
+function nextUnwon(missions: readonly MissionDefinition[], from: MissionDefinition, record: CampaignRecord, locks?: ReadonlyMap<string, Lock>) {
   const mode = missions.filter((m) => !!m.circle === !!from.circle),
     at = mode.findIndex((m) => m.id === from.id);
   return [...mode.slice(at + 1), ...mode.slice(0, at + 1)].find((m) => !record[m.id] && !locks?.has(m.id));
