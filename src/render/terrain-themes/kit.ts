@@ -60,6 +60,15 @@ export interface TiltedTerrain {
   landmark?: (g: Ink, x: number, y: number, s: number, variant: 0 | 1, rand: Random) => void;
   /** Its animated part on the ambient layer (motion on `g`, light on `glow`, scaled by `lit`). */
   landmarkLight?: (g: Ink, glow: Ink, x: number, y: number, s: number, variant: 0 | 1, clock: number, lit: number) => void;
+  /** More standing pieces outside the obstacle cells (Palm Atoll's palms on the beach), sorted in with the others. */
+  extras?: (map: MapDefinition) => readonly StandingPiece[];
+}
+/** A standing piece on a ground point in pixels, with its shadow (drawn in the shadow pass) and its body. */
+export interface StandingPiece {
+  x: number;
+  y: number;
+  shadow: (g: Ink) => void;
+  draw: (g: Ink) => void;
 }
 /** FNV-1a over the map id and cell, so decoration never moves between redraws. */
 export function seed(id: string, x: number, y: number) {

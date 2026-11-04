@@ -213,6 +213,11 @@ function drawStanding(g: Ink, map: MapDefinition, theme: Theme, parts: readonly 
       return { x: spot.x, row: spot.y + spot.size, draw: () => (tilted.landmark ? tilted.landmark(g, x, y, s, spot.variant, rand) : drawLandmark(g, spot, family, theme, rand)) };
     }),
   ];
+  // Extras stand on a ground point; a cell's piece stands about 0.36 cells above its bottom edge (`groundOf` in the themes).
+  for (const extra of tilted.extras?.(map) ?? []) {
+    extra.shadow(g);
+    items.push({ x: extra.x / CELL, row: extra.y / CELL + 0.36, draw: () => extra.draw(g) });
+  }
   items.sort((a, b) => a.row - b.row || a.x - b.x);
   for (const item of items) item.draw();
 }

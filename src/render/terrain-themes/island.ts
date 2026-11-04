@@ -3,38 +3,51 @@ import { facing } from "../material";
 import { OUTLINE, SQUASH, X, Y, block, drum, fillPoints, point, quad, tube } from "../tower-art/tilt";
 import { tubeAt } from "../tower-art/tilt-parts";
 import { box, frame, rod } from "../tower-art/tilt-frame";
-import { type Random, type Theme } from "./kit";
+import { mulberry32, type Random, type StandingPiece, type Theme } from "./kit";
 import { bankWidth, CHANNEL_STEP, channelOf, SEA_TILE, seaCells, seaField, type ShorePoint, shoreLine } from "../coast";
 import { blend } from "../ground";
 import { fnv } from "../../core/hash";
 import type { MapDefinition } from "../../core/types";
 
-// Palm Atoll: white sand, a turquoise tidal channel as the path, and the first terrain drawn in the towers' 3/4 tilt
-// (`Theme.tilted`): palms, boulders, lagoon pools and a beached outrigger canoe stand up out of the board, north to
-// south after the path, so palm crowns reach over the cell above. Every piece's shape is rolled once by `pieceOf`, so
-// its shadow (drawn for all pieces first) and its body match.
+// Palm Atoll, a Caribbean cay: powder-white sand, a turquoise tidal channel as the path, palms everywhere, and the
+// first terrain drawn in the towers' 3/4 tilt (`Theme.tilted`): palm clusters, boulders, lagoon pools and painted
+// dugouts stand up out of the board, north to south after the path, so palm crowns reach over the cell above; more
+// palms lean out over the beach (`tilted.extras`). Every piece's shape is rolled once by `pieceOf`, so its shadow
+// (drawn for all pieces first) and its body match.
 
-const SAND = 0xe9dfc6;
+const SAND = 0xf2eada;
 /** Shadow colour on white sand: warm and see-through, never black. */
 const SHADE = 0x6a5634;
-const LEAF = 0x3f9a3a;
-const WATER = { deep: 0x1c90ad, mid: 0x2fb8c4, shallow: 0x67d8d2, foam: 0xf4fffc } as const;
+const LEAF = 0x3aa23e;
+const WATER = { deep: 0x0d9bc4, mid: 0x1fc3d0, shallow: 0x62e4d6, foam: 0xf6fffd } as const;
 /** Kind thresholds of the first `cellRandom` draw (`hash` in the ambient names the piece the same way). */
-const PALM = 0.42,
-  ROCKS = 0.68,
-  POOL = 0.84;
+const PALM = 0.6,
+  ROCKS = 0.72,
+  POOL = 0.85;
 /** Light falls from the upper left: a point `h` px up casts its shadow this far right and down on the ground. */
 const SUN = { x: 0.5, y: 0.3 } as const;
 const F = new Float64Array(16),
   I = new Float64Array(16);
 
+/** One palm: ground offset, lean (strength and ground direction), trunk height, crown turn and size, coconuts. */
+interface Palm { du: number; dv: number; lean: number; dir: number; height: number; spin: number; size: number; nuts: number }
 interface Rock { du: number; dv: number; r: number; h: number; radii: number[]; dark: boolean }
 type Piece =
-  | { kind: "palm"; lean: number; height: number; spin: number; nuts: number; tuft: boolean }
+  | { kind: "palms"; palms: Palm[]; tuft: boolean }
   | { kind: "rocks"; rocks: Rock[] }
   | { kind: "pool"; rx: number; ry: number; rocks: Rock[] }
-  | { kind: "canoe"; angle: number; side: 1 | -1 };
+  | { kind: "boat"; angle: number; side: 1 | -1; paint: number };
 
+const palmOf = (rand: Random, du: number, dv: number, dir: number, lean = 0.35 + rand() * 0.6, height = 32 + rand() * 12): Palm => ({
+  du,
+  dv,
+  lean,
+  dir: dir + (rand() - 0.5) * 0.9,
+  height,
+  spin: rand() * Math.PI,
+  size: 0.95 + rand() * 0.2,
+  nuts: 2 + Math.floor(rand() * 3),
+});
 const rock = (rand: Random, du: number, dv: number, r: number): Rock => ({
   du,
   dv,
@@ -43,51 +56,63 @@ const rock = (rand: Random, du: number, dv: number, r: number): Rock => ({
   radii: Array.from({ length: 6 }, () => 0.82 + rand() * 0.18),
   dark: rand() < 0.35,
 });
-/** Rolls a cell's piece; the first draw is its kind (`hash`). */
+/** Hull colours of the painted dugouts. */
+const BOAT_PAINT = [0x23a9bd, 0xe8604a, 0xf2c84a, 0x3f9a5a] as const;
+/** Rolls a cell's piece; the first draw is its kind (`hash`). Palms come alone, as a diverging pair or as a trio. */
 function pieceOf(rand: Random): Piece {
   const kind = rand();
-  if (kind < PALM) return { kind: "palm", lean: (rand() - 0.5) * 2, height: 34 + rand() * 10, spin: rand() * Math.PI, nuts: 2 + Math.floor(rand() * 3), tuft: rand() < 0.5 };
+  if (kind < PALM) {
+    const count = rand(),
+      tuft = rand() < 0.6;
+    if (count < 0.45) return { kind: "palms", palms: [palmOf(rand, 0, 0, rand() * Math.PI * 2)], tuft };
+    if (count < 0.85) return { kind: "palms", palms: [palmOf(rand, -8, -4, Math.PI), palmOf(rand, 9, 5, 0)], tuft };
+    return { kind: "palms", palms: [palmOf(rand, -10, -6, Math.PI * 1.1), palmOf(rand, 10, -5, -0.2), palmOf(rand, 1, 8, Math.PI / 2, 0.3, 26 + rand() * 6)], tuft };
+  }
   if (kind < ROCKS) {
     const rocks = [rock(rand, -6 + rand() * 4, -4 + rand() * 3, 11 + rand() * 4), rock(rand, 8 + rand() * 4, 3 + rand() * 3, 7 + rand() * 3)];
     if (rand() < 0.5) rocks.push(rock(rand, -12 + rand() * 4, 9, 4 + rand() * 2));
     return { kind: "rocks", rocks: rocks.sort((a, b) => a.dv - b.dv) };
   }
   if (kind < POOL) return { kind: "pool", rx: 19 + rand() * 3, ry: 14 + rand() * 2, rocks: [rock(rand, 15, 10, 4.5), rock(rand, -18, -6, 3.5)] };
-  return { kind: "canoe", angle: (rand() - 0.5) * 0.7, side: rand() < 0.5 ? 1 : -1 };
+  return { kind: "boat", angle: (rand() - 0.5) * 0.7, side: rand() < 0.5 ? 1 : -1, paint: BOAT_PAINT[Math.floor(rand() * BOAT_PAINT.length)] };
 }
 
 /** Ground centre of a cell's piece (x, y0 in the tilt kit's terms). */
 const groundOf = (x: number, y: number) => ({ cx: x + CELL / 2, y0: y + 36 });
 
 // ── Palm ────────────────────────────────────────────────────────────────────────────────────────────────────────────
-/** Trunk sideways offset at height fraction t. */
-const bend = (p: Extract<Piece, { kind: "palm" }>, t: number) => p.lean * p.height * 0.32 * t * t;
-const FRONDS = 8,
+/** Ground offset of the trunk at height fraction t: it curves out along its lean. */
+const bend = (p: Palm, t: number) => {
+  const d = p.lean * p.height * 0.36 * t * t;
+  return { u: Math.cos(p.dir) * d, v: Math.sin(p.dir) * d };
+};
+const FRONDS = 9,
   FROND_LEN = 23;
 /** Screen point `t` along frond `a` (ground angle) from the crown at (tx, ty): arcs up, then droops. */
-function frondPoint(tx: number, ty: number, a: number, t: number, len = FROND_LEN) {
-  return { x: tx + Math.cos(a) * len * t, y: ty + Math.sin(a) * len * t * SQUASH - 5 * Math.sin(Math.PI * t) + 15 * t * t };
+function frondPoint(tx: number, ty: number, a: number, t: number, len: number) {
+  return { x: tx + Math.cos(a) * len * t, y: ty + Math.sin(a) * len * t * SQUASH - 5 * Math.sin(Math.PI * t) + 15 * t * t * (len / FROND_LEN) };
 }
-const frondAngle = (p: Extract<Piece, { kind: "palm" }>, i: number) => p.spin + (i * Math.PI * 2) / FRONDS + 0.18 * Math.sin(i * 2.3 + p.spin * 5);
-function frond(g: Ink, tx: number, ty: number, a: number) {
+const frondAngle = (p: Palm, i: number) => p.spin + (i * Math.PI * 2) / FRONDS + 0.18 * Math.sin(i * 2.3 + p.spin * 5);
+function frond(g: Ink, tx: number, ty: number, a: number, len: number) {
   const n = 7,
+    k = len / FROND_LEN,
     mid: { x: number; y: number }[] = [],
     left: { x: number; y: number }[] = [],
     right: { x: number; y: number }[] = [];
-  for (let k = 0; k <= n; k++) mid.push(frondPoint(tx, ty, a, k / n));
-  for (let k = 0; k <= n; k++) {
-    const t = k / n,
-      a0 = mid[Math.max(0, k - 1)],
-      a1 = mid[Math.min(n, k + 1)],
+  for (let i = 0; i <= n; i++) mid.push(frondPoint(tx, ty, a, i / n, len));
+  for (let i = 0; i <= n; i++) {
+    const t = i / n,
+      a0 = mid[Math.max(0, i - 1)],
+      a1 = mid[Math.min(n, i + 1)],
       l = Math.sqrt((a1.x - a0.x) ** 2 + (a1.y - a0.y) ** 2) || 1,
       nx = -(a1.y - a0.y) / l,
       ny = (a1.x - a0.x) / l,
-      w = 5.2 * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 0.4;
-    left.push({ x: mid[k].x + nx * w, y: mid[k].y + ny * w });
-    right.push({ x: mid[k].x - nx * w * 0.8, y: mid[k].y - ny * w * 0.8 });
+      w = (5.2 * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 0.4) * k;
+    left.push({ x: mid[i].x + nx * w, y: mid[i].y + ny * w });
+    right.push({ x: mid[i].x - nx * w * 0.8, y: mid[i].y - ny * w * 0.8 });
   }
-  const tone = shade(LEAF, 0.28 * facing(a));
-  const blade = [...left, ...[...right].reverse()];
+  const tone = shade(LEAF, 0.28 * facing(a)),
+    blade = [...left, ...[...right].reverse()];
   g.fillStyle(OUTLINE, 0.5);
   g.fillPoints(blade.map((p) => ({ x: p.x, y: p.y + 0.7 })), true);
   g.fillStyle(tone);
@@ -96,34 +121,27 @@ function frond(g: Ink, tx: number, ty: number, a: number) {
   g.fillStyle(shade(tone, -0.22));
   g.fillPoints([...mid, ...[...right].reverse()], true);
   g.lineStyle(0.9, shade(tone, -0.45), 0.8);
-  for (let k = 2; k < n; k++) g.lineBetween(mid[k].x, mid[k].y, left[k].x * 0.75 + mid[k].x * 0.25, left[k].y * 0.75 + mid[k].y * 0.25);
+  for (let i = 2; i < n; i++) g.lineBetween(mid[i].x, mid[i].y, left[i].x * 0.75 + mid[i].x * 0.25, left[i].y * 0.75 + mid[i].y * 0.25);
   g.lineStyle(1, shade(tone, 0.4), 0.9);
   g.strokePoints(mid, false);
 }
-function palm(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "palm" }>) {
-  const { cx, y0 } = groundOf(x, y),
-    bx = cx - p.lean * 3;
-  // Sand mound and fallen coconuts round the foot.
-  oval(g, bx + 1, y0 + 1, 13, 13 * SQUASH, shade(SAND, -0.1));
-  oval(g, bx, y0, 11, 11 * SQUASH, shade(SAND, 0.05));
-  if (p.tuft) for (let i = 0; i < 5; i++) {
-    const a = -Math.PI / 2 + (i - 2) * 0.45;
-    g.lineStyle(1.4, 0x5a8a34, 0.9);
-    g.lineBetween(bx - 8, y0 + 3, bx - 8 + Math.cos(a) * 7, y0 + 3 + Math.sin(a) * 7);
-  }
-  // Ringed trunk: short drums stacked along the bend, every other one darker.
+/** A palm standing on the ground point (gx, gy): ringed trunk curving out along its lean, coconuts, a full crown. */
+function palm(g: Ink, gx: number, gy: number, p: Palm) {
   const segments = 9;
   for (let i = 0; i < segments; i++) {
     const t0 = i / segments,
       t1 = (i + 1) / segments,
-      r = 3.6 - 1.3 * t0;
-    drum(g, bx + bend(p, (t0 + t1) / 2), y0, r, t0 * p.height, t1 * p.height + 0.6, i % 2 ? 0x8f6d48 : 0x7a5a3a, i % 2 ? 0xa8845a : 0x93714a, 8);
+      o = bend(p, (t0 + t1) / 2),
+      r = (3.6 - 1.3 * t0) * Math.min(1.3, p.height / 40);
+    drum(g, gx + o.u, gy + o.v * SQUASH, r, t0 * p.height, t1 * p.height + 0.6, i % 2 ? 0x8f6d48 : 0x7a5a3a, i % 2 ? 0xa8845a : 0x93714a, 8);
   }
-  const tx = bx + bend(p, 1),
-    ty = y0 - p.height,
+  const top = bend(p, 1),
+    tx = gx + top.u,
+    ty = gy + top.v * SQUASH - p.height,
+    len = FROND_LEN * p.size,
     order = Array.from({ length: FRONDS }, (_, i) => frondAngle(p, i)).sort((a, b) => Math.sin(a) - Math.sin(b));
   // Back fronds, the coconut cluster, then the fronds facing the viewer.
-  for (const a of order) if (Math.sin(a) < 0) frond(g, tx, ty, a);
+  for (const a of order) if (Math.sin(a) < 0) frond(g, tx, ty, a, len);
   for (let i = 0; i < p.nuts; i++) {
     const a = (i / p.nuts) * Math.PI + 0.4;
     disc(g, tx + Math.cos(a) * 3.4, ty + 2.6 + Math.sin(a) * 1.4, 2.6, OUTLINE, 0.7);
@@ -131,25 +149,46 @@ function palm(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "palm" }>)
     disc(g, tx + Math.cos(a) * 3.4 - 0.7, ty + 1.7 + Math.sin(a) * 1.4, 0.8, 0xa07a50);
   }
   disc(g, tx, ty, 3, 0x4c6a2a);
-  for (const a of order) if (Math.sin(a) >= 0) frond(g, tx, ty, a);
+  for (const a of order) if (Math.sin(a) >= 0) frond(g, tx, ty, a, len);
 }
-function palmShadow(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "palm" }>) {
-  const { cx, y0 } = groundOf(x, y),
-    bx = cx - p.lean * 3,
-    sx = bx + bend(p, 1) + p.height * SUN.x,
-    sy = y0 + p.height * SUN.y;
+/** The palm's shadow on the sand: the trunk as a soft line, the crown as a star through the frond tips. */
+function palmShadow(g: Ink, gx: number, gy: number, p: Palm) {
+  const top = bend(p, 1),
+    sx = gx + top.u + p.height * SUN.x,
+    sy = gy + top.v * SQUASH + p.height * SUN.y,
+    len = FROND_LEN * p.size;
   g.lineStyle(4.5, SHADE, 0.16);
-  g.lineBetween(bx + 1, y0, sx, sy);
-  // The crown's shadow: a star through the frond tips, laid flat on the sand.
+  g.lineBetween(gx + 1, gy, sx, sy);
   const pts: { x: number; y: number }[] = [];
   for (let i = 0; i < FRONDS; i++) {
     const a = frondAngle(p, i),
       b = a + Math.PI / FRONDS;
-    pts.push({ x: sx + Math.cos(a) * FROND_LEN * 1.05, y: sy + Math.sin(a) * FROND_LEN * SQUASH * 1.05 + 4 });
+    pts.push({ x: sx + Math.cos(a) * len * 1.05, y: sy + Math.sin(a) * len * SQUASH * 1.05 + 4 });
     pts.push({ x: sx + Math.cos(b) * 6, y: sy + Math.sin(b) * 6 * SQUASH });
   }
-  g.fillStyle(SHADE, 0.17);
+  g.fillStyle(SHADE, 0.16);
   g.fillPoints(pts, true);
+}
+/** Sand mound, beach grass and fallen coconuts under a cell's palms, then the palms back to front. */
+function palms(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "palms" }>) {
+  const { cx, y0 } = groundOf(x, y);
+  oval(g, cx + 1, y0 + 1, 18, 18 * SQUASH, shade(SAND, -0.1));
+  oval(g, cx, y0, 16, 16 * SQUASH, shade(SAND, 0.03));
+  if (p.tuft)
+    for (const side of [-1, 1])
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI / 2 + (i - 2) * 0.45,
+          bx = cx + side * 13;
+        g.lineStyle(1.4, 0x5a9a34, 0.9);
+        g.lineBetween(bx, y0 + 3, bx + Math.cos(a) * 7, y0 + 3 + Math.sin(a) * 7);
+      }
+  disc(g, cx + 6, y0 + 5, 2.4, 0x6b4a2a);
+  disc(g, cx + 9, y0 + 4, 2.2, 0x7a5532);
+  for (const q of [...p.palms].sort((a, b) => a.dv - b.dv)) palm(g, cx + q.du, y0 + q.dv * SQUASH, q);
+}
+function palmsShadow(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "palms" }>) {
+  const { cx, y0 } = groundOf(x, y);
+  for (const q of p.palms) palmShadow(g, cx + q.du, y0 + q.dv * SQUASH, q);
 }
 
 // ── Rocks ───────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -181,7 +220,7 @@ const poolCentre = (x: number, y: number) => ({ px: x + CELL / 2, py: y + CELL /
 function pool(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "pool" }>) {
   const { px, py } = poolCentre(x, y);
   oval(g, px + 1, py + 1, p.rx + 6, p.ry + 5, shade(SAND, -0.16));
-  oval(g, px, py, p.rx + 4, p.ry + 3.5, 0xd2c39c);
+  oval(g, px, py, p.rx + 4, p.ry + 3.5, 0xd8c9a2);
   oval(g, px, py, p.rx + 1, p.ry + 0.8, WATER.foam, 0.85);
   // Sunken water: the rim's shadow lies inside on the upper left, the deep part towards the middle.
   oval(g, px, py, p.rx, p.ry, shade(WATER.mid, -0.3));
@@ -198,15 +237,15 @@ function poolShadow(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "poo
   for (const r of p.rocks) boulderShadow(g, px, py, r);
 }
 
-// ── Outrigger canoe ─────────────────────────────────────────────────────────────────────────────────────────────────
+// ── Painted dugout ──────────────────────────────────────────────────────────────────────────────────────────────────
 /** Ground offset of a point `d` along the hull and `q` across it. */
 const hullAt = (a: number, d: number, q: number) => ({ u: Math.cos(a) * d - Math.sin(a) * q, v: Math.sin(a) * d + Math.cos(a) * q });
-function canoe(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "canoe" }>) {
+function boat(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "boat" }>) {
   const { cx, y0 } = groundOf(x, y),
     a = p.angle,
     q = p.side * 13,
     float = () => {
-      tubeAt(g, cx, y0, a, q, 2.6, -13, 13, 2.2, 0xd8c4a0);
+      tubeAt(g, cx, y0, a, q, 2.6, -13, 13, 2.2, 0xf0e6d0);
       for (const d of [-7, 7]) {
         const h = hullAt(a, d, 0),
           f = hullAt(a, d, q);
@@ -214,7 +253,7 @@ function canoe(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "canoe" }
       }
     },
     hull = () => {
-      // Dugout hull: short tube pieces under an elliptic profile, the ends raised a little.
+      // Dugout hull in bright paint: short tube pieces under an elliptic profile, the ends raised a little.
       const steps = 12,
         half = 22;
       for (let i = 0; i < steps; i++) {
@@ -222,11 +261,11 @@ function canoe(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "canoe" }
           d1 = d0 + (2 * half) / steps + 0.4,
           m = (d0 + d1) / 2 / half,
           r = 5 * Math.sqrt(Math.max(0.08, 1 - m * m));
-        tube(g, cx, y0, a, 5 + 2.2 * m * m, d0, d1, r, 0x95552f, 1, true);
+        tube(g, cx, y0, a, 5 + 2.2 * m * m, d0, d1, r, Math.abs(m) > 0.8 ? 0xf6f0e0 : p.paint, 1, true);
       }
-      tube(g, cx, y0, a, 8.2, -14, 14, 2.4, 0x3a2214, 1, false);
-      // A painted band along the gunwale.
-      tube(g, cx, y0, a, 6.6, -16, 16, 0.7, 0xe2c25a, 0.9, false);
+      tube(g, cx, y0, a, 8.2, -14, 14, 2.4, 0x5a3a22, 1, false);
+      // A contrasting band along the gunwale.
+      tube(g, cx, y0, a, 6.6, -16, 16, 0.8, p.paint === 0xf2c84a ? 0xe8604a : 0xf2c84a, 0.95, false);
     };
   // The float behind the hull (north) is drawn first.
   if (hullAt(a, 0, q).v < 0) {
@@ -241,7 +280,7 @@ function canoe(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "canoe" }
   rod(g, cx, y0, s.u - 8, s.v + 1, 0.8, s.u + 9, s.v - 2, 0.8, 1.3, 0xb48a5a);
   oval(g, X(cx, s.u + 11), Y(y0, s.v - 2.4, 0.8), 3.4, 1.8, 0xb48a5a, 1, -0.2);
 }
-function canoeShadow(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "canoe" }>) {
+function boatShadow(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "boat" }>) {
   const { cx, y0 } = groundOf(x, y),
     rot = Math.atan2(Math.sin(p.angle) * SQUASH, Math.cos(p.angle)),
     f = hullAt(p.angle, 0, p.side * 13);
@@ -249,7 +288,29 @@ function canoeShadow(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "ca
   oval(g, X(cx, f.u) + 2, Y(y0, f.v, 0) + 1.5, 15, 2.8, SHADE, 0.16, rot);
 }
 
-// ── Landmarks: a stilt hut and a lighthouse ─────────────────────────────────────────────────────────────────────────
+// ── Palms on the beach ──────────────────────────────────────────────────────────────────────────────────────────────
+const SHORE_PALMS = new Map<string, StandingPiece[]>();
+/**
+ * Palms leaning out over the beach: on the dry sand along the shore (`shoreLine` close to the land), about every
+ * third spot, never near the path (entry and reactor included), each leaning towards the sea.
+ */
+function shorePalms(map: MapDefinition): readonly StandingPiece[] {
+  const cached = SHORE_PALMS.get(map.id);
+  if (cached) return cached;
+  const list: StandingPiece[] = [],
+    path = map.path.map((p) => ({ x: (p.x + 0.5) * CELL, y: (p.y + 0.5) * CELL }));
+  if (seaCells(map).size)
+    for (const s of shoreLine(map, 6, 32)) {
+      const rand = mulberry32(fnv(`${map.id}:shore-palm:${Math.round(s.x)}:${Math.round(s.y)}`));
+      if (rand() > 0.4 || path.some((p) => (p.x - s.x) ** 2 + (p.y - s.y) ** 2 < 46 * 46)) continue;
+      const p = palmOf(rand, 0, 0, Math.atan2(s.ny, s.nx), 0.8 + rand() * 0.5, 36 + rand() * 14);
+      list.push({ x: s.x, y: s.y, shadow: (g) => palmShadow(g, s.x, s.y, p), draw: (g) => palm(g, s.x, s.y, p) });
+    }
+  SHORE_PALMS.set(map.id, list);
+  return list;
+}
+
+// ── Landmarks: a painted beach shack and a palm grove with a hammock ────────────────────────────────────────────────
 const LEVEL = frame(0, 0, 0);
 /** Calls `draw` with the ink scaled by `k` about (x, y0), so a landmark is drawn once at its 2×2 size. */
 function scaled(g: Ink, x: number, y0: number, k: number, draw: () => void) {
@@ -261,20 +322,26 @@ function scaled(g: Ink, x: number, y0: number, k: number, draw: () => void) {
 }
 /** Ground centre and scale of a landmark whose block has centre (x, y) and half size s. */
 const landmarkGround = (x: number, y: number, s: number) => ({ y0: y + s * 0.38, k: s / CELL });
-const THATCH = 0xc9a25a,
+const THATCH = 0xd2ab62,
+  WALL = 0x5fc9c0,
   ROOF = { eave: 30, depth: 24, base: 33, apex: 60 } as const;
-function hut(g: Ink) {
-  // Stilts, the deck, a ladder, the walls with a dark doorway, then a hipped thatch roof.
+function shack(g: Ink) {
+  // Stilts, the deck, a ladder, turquoise plank walls with a coral door and yellow shutters, then a hipped thatch roof.
   for (const [u, v] of [[-25, -17], [25, -17], [-25, 17], [25, 17]]) rod(g, 0, 0, u, v, 0, u, v, 11, 2.6, 0x6b4a2c);
   box(g, 0, 0, LEVEL, -30, 30, -22, 22, 10, 13, 0x9a7448);
   g.lineStyle(0.7, 0x5a3e22, 0.7);
   for (let u = -24; u <= 24; u += 6) g.lineBetween(X(0, u), Y(0, 22, 10.5), X(0, u), Y(0, 22, 12.5));
   for (const u of [4, 12]) rod(g, 0, 0, u, 32, 0, u, 22, 11, 1.4, 0x7a5a3a);
   for (let h = 3; h < 11; h += 3) rod(g, 0, 0, 4, 32 - h * 0.9, h, 12, 32 - h * 0.9, h, 1, 0x8a6a48);
-  box(g, 0, 0, LEVEL, -21, 21, -15, 15, 13, ROOF.base, 0xb88e56);
-  g.lineStyle(0.6, 0x7a5a32, 0.6);
-  for (let u = -18; u <= 18; u += 4) g.lineBetween(X(0, u), Y(0, 15, 13.5), X(0, u), Y(0, 15, ROOF.base - 0.5));
-  quad(g, X(0, 3), Y(0, 15, 13), X(0, 13), Y(0, 15, 13), X(0, 13), Y(0, 15, 27), X(0, 3), Y(0, 15, 27), 0x2a1a10);
+  box(g, 0, 0, LEVEL, -21, 21, -15, 15, 13, ROOF.base, WALL);
+  g.lineStyle(0.6, shade(WALL, -0.35), 0.7);
+  for (let h = 16; h < ROOF.base; h += 3.5) g.lineBetween(X(0, -21), Y(0, 15, h), X(0, 21), Y(0, 15, h));
+  const pane = (u0: number, u1: number, h0: number, h1: number, color: number) => quad(g, X(0, u0), Y(0, 15, h0), X(0, u1), Y(0, 15, h0), X(0, u1), Y(0, 15, h1), X(0, u0), Y(0, 15, h1), color);
+  pane(2.5, 13.5, 13, 28, shade(0xe8604a, -0.1));
+  pane(4, 12, 14, 26.5, 0x2a1a10);
+  pane(-17, -13, 18, 28, 0xf2c84a);
+  pane(-13, -6, 18, 28, 0x2a1a10);
+  pane(-6, -2, 18, 28, 0xf2c84a);
   const { eave: e, depth: d, base: b, apex } = ROOF,
     ridge = 9,
     corner = (u: number, v: number) => [X(0, u), Y(0, v, b)] as const,
@@ -282,7 +349,6 @@ function hut(g: Ink) {
     face = (pts: (readonly [number, number])[], normal: number) => {
       pts.forEach(([px, py], i) => point(i, px, py));
       fillPoints(g, pts.length, OUTLINE, 0.9);
-      pts.forEach(([px, py], i) => point(i, px, py + 0.01));
       fillPoints(g, pts.length, shade(THATCH, 0.26 * facing(normal)));
     };
   face([corner(-e, -d), corner(e, -d), top(ridge), top(-ridge)], -Math.PI / 2);
@@ -303,7 +369,7 @@ function hut(g: Ink) {
     g.fillTriangle(ex - 2.6, ey - 0.5, ex + 2.6, ey - 0.5, ex, ey + 3);
   }
 }
-function hutShadow(g: Ink) {
+function shackShadow(g: Ink) {
   const { eave: e, depth: d, base: b } = ROOF;
   // The roof's shadow, feathered: three passes from its own outline to the full offset.
   for (const k of [0.55, 0.8, 1]) {
@@ -312,39 +378,49 @@ function hutShadow(g: Ink) {
     g.fillPoints([q(-e, -d), q(e, -d), q(e, d), q(-e, d)], true);
   }
 }
-const LIGHTHOUSE = { tower: 64, lantern: 76, cap: 88 } as const;
-function lighthouse(g: Ink) {
-  for (const r of [{ du: -14, dv: -6, r: 12, h: 10, radii: [1, 0.9, 0.95, 1, 0.88, 0.94], dark: true }, { du: 12, dv: 8, r: 10, h: 8, radii: [0.9, 1, 0.92, 0.9, 1, 0.95], dark: false }])
-    boulder(g, 0, 0, r);
-  drum(g, 0, 0, 16, 0, 5, 0x8a8478, 0xb0a898, 14);
-  const bands = 6;
-  for (let i = 0; i < bands; i++) {
-    const h0 = 5 + ((LIGHTHOUSE.tower - 5) * i) / bands,
-      h1 = 5 + ((LIGHTHOUSE.tower - 5) * (i + 1)) / bands;
-    drum(g, 0, 0, 12.5 - (3.5 * (i + 0.5)) / bands, h0, h1 + 0.5, i % 2 ? 0xd8483a : 0xf0ece2, undefined, 14);
-  }
-  quad(g, X(0, -2.6), Y(0, 9, 24), X(0, 2.6), Y(0, 9, 24), X(0, 2.6), Y(0, 9, 31), X(0, -2.6), Y(0, 9, 31), 0x23343a);
-  drum(g, 0, 0, 12.5, LIGHTHOUSE.tower, LIGHTHOUSE.tower + 2.5, 0x3a3e40, 0x5a6064, 14);
-  drum(g, 0, 0, 7.2, LIGHTHOUSE.tower + 2.5, LIGHTHOUSE.lantern, 0x2f5a60, 0x4a7076, 12);
-  disc(g, 0, Y(0, 0, LIGHTHOUSE.lantern - 5), 3.2, 0xffe6a0);
-  for (const u of [-5, 0, 5]) rod(g, 0, 0, u, 5.5, LIGHTHOUSE.tower + 2.5, u, 5.5, LIGHTHOUSE.lantern, 0.8, 0x2a2e30);
-  // Conical cap: front half shaded by its facing, then the finial.
-  const n = 12,
-    apex = Y(0, 0, LIGHTHOUSE.cap);
-  for (let i = 0; i < n; i++) {
-    const t0 = (i / n) * Math.PI,
-      t1 = ((i + 1) / n) * Math.PI;
-    g.fillStyle(shade(0xa8352a, 0.3 * facing((t0 + t1) / 2)));
-    g.fillTriangle(X(0, Math.cos(t0) * 9), Y(0, Math.sin(t0) * 9, LIGHTHOUSE.lantern), X(0, Math.cos(t1) * 9), Y(0, Math.sin(t1) * 9, LIGHTHOUSE.lantern), 0, apex);
-  }
-  disc(g, 0, apex - 1.5, 2, 0x3a3e40);
+/** The grove's palms (the first two hold the hammock, the others stand clear of it at the sides), in its 2×2 frame. */
+function grovePalms(rand: Random): Palm[] {
+  return [
+    palmOf(rand, -27, -10, Math.PI * 1.05, 0.35, 54 + rand() * 6),
+    palmOf(rand, 25, -13, -0.1, 0.35, 50 + rand() * 6),
+    palmOf(rand, 36, 22, 0.4, 0.6, 40 + rand() * 6),
+    palmOf(rand, -38, 24, Math.PI * 0.9, 0.6, 36),
+  ].map((p) => ({ ...p, size: 1.25 }));
 }
-function lighthouseShadow(g: Ink) {
-  const h = LIGHTHOUSE.cap,
-    tip = { x: h * SUN.x, y: h * SUN.y };
-  g.fillStyle(SHADE, 0.2);
-  g.fillPoints([{ x: -9, y: 3 }, { x: 9, y: -4 }, { x: tip.x + 4, y: tip.y - 2 }, { x: tip.x - 2, y: tip.y + 3 }], true);
-  oval(g, 3, 3, 22, 13, SHADE, 0.14);
+const HAMMOCK = [0xe8483a, 0xf2c84a, 0x23a9bd, 0xf6f0e0] as const;
+/** A striped hammock slung between two trunks at height h, sagging in the middle. */
+function hammock(g: Ink, a: Palm, b: Palm, h: number) {
+  const at = (p: Palm) => {
+      const o = bend(p, h / p.height);
+      return { x: X(0, p.du + o.u), y: Y(0, p.dv + o.v, h) };
+    },
+    p0 = at(a),
+    p1 = at(b),
+    curve = (dy: number) =>
+      Array.from({ length: 13 }, (_, i) => {
+        const t = i / 12;
+        return { x: p0.x + (p1.x - p0.x) * t, y: p0.y + (p1.y - p0.y) * t + Math.sin(Math.PI * t) * 9 + dy * Math.sin(Math.PI * t) };
+      });
+  g.lineStyle(0.9, 0x5a4a3a, 0.9);
+  g.strokePoints(curve(-2.5), false);
+  g.lineStyle(7.5, OUTLINE, 0.6);
+  g.strokePoints(curve(1), false);
+  HAMMOCK.forEach((c, i) => {
+    g.lineStyle(1.8, c);
+    g.strokePoints(curve(-1.2 + i * 1.6), false);
+  });
+}
+function grove(g: Ink, rand: Random) {
+  const palms = grovePalms(rand),
+    [left, right, front, side] = palms;
+  oval(g, 0, 4, 46, 30, shade(SAND, -0.05));
+  for (const q of [left, right]) palm(g, q.du, q.dv * SQUASH, q);
+  hammock(g, left, right, 13);
+  for (const q of [side, front]) palm(g, q.du, q.dv * SQUASH, q);
+}
+function groveShadow(g: Ink, rand: Random) {
+  const palms = grovePalms(rand);
+  for (const q of palms) palmShadow(g, q.du, q.dv * SQUASH, q);
 }
 
 // ── Channel (the path) and the sea ──────────────────────────────────────────────────────────────────────────────────
@@ -365,13 +441,13 @@ function drawChannel(g: Ink, map: MapDefinition) {
         disc(g, p.x + dx, p.y + dy, bankWidth(seed, p.s, base, k), color);
       }
     };
-  layer(BANKS.damp, 0, 0xddd0ad);
-  layer(BANKS.wet, 1, 0xc9b78d);
+  layer(BANKS.damp, 0, 0xe6dbbf);
+  layer(BANKS.wet, 1, 0xd2c098);
   layer(BANKS.foam, 2, WATER.foam);
   layer(BANKS.water, 3, shade(WATER.shallow, -0.22));
   layer(BANKS.water - 1.4, 3, WATER.shallow, 1.4, 1.6);
   layer(BANKS.mid, 4, WATER.mid, 1, 1.2);
-  layer(BANKS.deep, 5, 0x29a4bd, 1, 1.2);
+  layer(BANKS.deep, 5, 0x10a9c6, 1, 1.2);
   for (let i = 0; i < samples.length; i += 4) {
     const p = samples[i],
       r = hash01(seed, i, 1),
@@ -406,15 +482,15 @@ function drawChannel(g: Ink, map: MapDefinition) {
 }
 /** Shore colours by sea depth (`coast.ts` `seaDepth`): a wide white beach, wet sand, the foam line, lagoon shallows, then the deep ocean. */
 const SHORE: readonly [number, number][] = [
-  [0, 0xebe1c7],
-  [7, 0xe6dabd],
-  [11, 0xcdbb90],
+  [0, 0xf4ecdc],
+  [7, 0xefe5cf],
+  [11, 0xd9c8a0],
   [11.01, WATER.foam],
   [13.5, WATER.foam],
-  [16, 0x8fe6dc],
-  [40, 0x3fc3c9],
-  [95, 0x1d8db3],
-  [170, 0x135f8c],
+  [16, 0x9cf2e4],
+  [40, 0x34d2d4],
+  [95, 0x0fa0c8],
+  [170, 0x0a62a0],
 ];
 /** Depth of the foam line, where the surf runs. */
 const FOAM = 12.3;
@@ -529,57 +605,47 @@ function twinkle(g: Ink, glow: Ink, x: number, y: number, clock: number, seed: n
 }
 export const island: Theme = {
   backdrop: 0x0b4f5e,
-  ground: [SAND, 0xe2d6ba],
-  grid: 0xb3a27c,
-  path: { edge: 0xd0bc8e, bed: 0x3cbcc6, line: 0xf4fffc, arrow: 0xffffff },
+  ground: [SAND, 0xece3cf],
+  grid: 0xbcae8c,
+  path: { edge: 0xd6c69c, bed: 0x22c1cf, line: 0xf4fffc, arrow: 0xffffff },
   accent: 0xff7d5e,
   drawPath: drawChannel,
   sea: drawSea,
   obstacle: (g, x, y, rand) => {
     const p = pieceOf(rand);
-    if (p.kind === "palm") palm(g, x, y, p);
+    if (p.kind === "palms") palms(g, x, y, p);
     else if (p.kind === "rocks") {
       const { cx, y0 } = groundOf(x, y);
       for (const r of p.rocks) boulder(g, cx, y0, r);
     } else if (p.kind === "pool") pool(g, x, y, p);
-    else canoe(g, x, y, p);
+    else boat(g, x, y, p);
   },
   tilted: {
     shadow: (g, x, y, rand) => {
       const p = pieceOf(rand);
-      if (p.kind === "palm") palmShadow(g, x, y, p);
+      if (p.kind === "palms") palmsShadow(g, x, y, p);
       else if (p.kind === "rocks") {
         const { cx, y0 } = groundOf(x, y);
         for (const r of p.rocks) boulderShadow(g, cx, y0, r);
       } else if (p.kind === "pool") poolShadow(g, x, y, p);
-      else canoeShadow(g, x, y, p);
+      else boatShadow(g, x, y, p);
     },
-    landmark: (g, x, y, s, variant) => {
-      const { y0, k } = landmarkGround(x, y, s);
-      scaled(g, x, y0, k, () => (variant ? lighthouseShadow(g) : hutShadow(g)));
-      scaled(g, x, y0, k, () => (variant ? lighthouse(g) : hut(g)));
+    // Two streams of the same seed, so the grove's shadow and body roll the same palms.
+    landmark: (g, x, y, s, variant, rand) => {
+      const { y0, k } = landmarkGround(x, y, s),
+        seed = Math.floor(rand() * 2 ** 32);
+      scaled(g, x, y0, k, () => (variant ? groveShadow(g, mulberry32(seed)) : shackShadow(g)));
+      scaled(g, x, y0, k, () => (variant ? grove(g, mulberry32(seed)) : shack(g)));
     },
-    // The hut's doorway lantern flickers; the lighthouse sweeps its beam round the board.
+    // The shack's doorway lantern flickers.
     landmarkLight: (g, glow, x, y, s, variant, clock, lit) => {
-      const { y0, k } = landmarkGround(x, y, s);
-      if (!variant) {
-        const f = 0.75 + 0.15 * Math.sin(clock * 7 + x) + 0.1 * Math.sin(clock * 17 + y);
-        disc(glow, x + 8 * k, Y(y0, 15 * k, 24 * k), 9 * k, 0xffb860, 0.22 * f * lit);
-        disc(glow, x + 8 * k, Y(y0, 15 * k, 24 * k), 3.5 * k, 0xffe0a0, 0.3 * f * lit);
-        return;
-      }
-      const lx = x,
-        ly = y0 - (LIGHTHOUSE.lantern - 5) * k,
-        a = clock * 0.8,
-        reach = CELL * 4 * k,
-        spread = 0.16;
-      for (const [w, alpha] of [[1, 0.06], [0.55, 0.08]] as const) {
-        glow.fillStyle(0xfff0c0, alpha * lit);
-        glow.fillTriangle(lx, ly, lx + Math.cos(a - spread * w) * reach, ly + Math.sin(a - spread * w) * reach * SQUASH, lx + Math.cos(a + spread * w) * reach, ly + Math.sin(a + spread * w) * reach * SQUASH);
-      }
-      disc(glow, lx, ly, 10 * k, 0xffe6a0, 0.3 * lit);
-      disc(g, lx, ly, 2.6 * k, 0xfff6d8, 0.9);
+      if (variant) return;
+      const { y0, k } = landmarkGround(x, y, s),
+        f = 0.75 + 0.15 * Math.sin(clock * 7 + x) + 0.1 * Math.sin(clock * 17 + y);
+      disc(glow, x + 8 * k, Y(y0, 15 * k, 24 * k), 9 * k, 0xffb860, 0.22 * f * lit);
+      disc(glow, x + 8 * k, Y(y0, 15 * k, 24 * k), 3.5 * k, 0xffe0a0, 0.3 * f * lit);
     },
+    extras: shorePalms,
   },
   decor: (g, x, y, rand) => {
     const kind = rand(),
@@ -606,7 +672,13 @@ export const island: Theme = {
       g.strokePoints([{ x: cx - 8, y: cy }, { x: cx - 3, y: cy - 2 }, { x: cx + 2, y: cy + 1 }, { x: cx + 8, y: cy - 1 }], false);
       g.lineStyle(1, 0x7a9a4a, 0.7);
       g.strokePoints([{ x: cx - 5, y: cy + 2 }, { x: cx, y: cy + 3 }, { x: cx + 5, y: cy + 1 }], false);
-    } else if (kind < 0.85) {
+    } else if (kind < 0.8) {
+      // A fallen hibiscus flower.
+      const c = rand() < 0.5 ? 0xe8364a : 0xf06aa0;
+      star(g, cx + 0.8, cy + 1, 5.4, 3.4, 5, SHADE, rand() * 6, 0.15);
+      star(g, cx, cy, 5.4, 3.4, 5, c, rand() * 6);
+      disc(g, cx, cy, 1.4, 0xffe27a);
+    } else if (kind < 0.9) {
       // Pebbles.
       for (let i = 0; i < 3; i++) {
         const px = cx + (rand() - 0.5) * 12,
