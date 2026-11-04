@@ -2,7 +2,7 @@ import type { Game } from "../core/game";
 import type { TowerId } from "../core/types";
 import type { MissionResult } from "../run/run";
 import { assistsOf } from "../run/xp";
-import { missionStars } from "./rating";
+import { missionStars } from "../campaign/rating";
 /** What a finished run mission reports to its run: reactor left, kills, assists and builds per tower type, stars. */
 export function runResult(game: Game, won: boolean): MissionResult {
   const kills: Partial<Record<TowerId, number>> = {};

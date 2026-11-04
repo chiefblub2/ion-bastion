@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import { isCircleSector, missionNumber } from "../content/missions";
 import { asideOf, atlasNext, atlasPick, atlasSectors, lockText, progressOf, routeLinks } from "./sector-atlas";
-import { campaignLocks } from "../app/campaign-unlock";
+import { campaignLocks } from "../campaign/campaign-unlock";
 const { missions, sectors = [] } = DEFAULT_CONTENT;
 describe("sector atlas", () => {
   const campaign = atlasSectors(DEFAULT_CONTENT, false),

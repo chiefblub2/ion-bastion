@@ -2,7 +2,7 @@ import { missionById } from "../content/missions";
 import type { MissionDefinition } from "../core/types";
 import { isPlaytest } from "../editor/playtest-id";
 import { isRunMission } from "../run/run-id";
-import type { CampaignRecord } from "./progress";
+import type { CampaignRecord } from "./record";
 import type { Lock } from "./campaign-unlock";
 /**
  * What the home page's primary button does: return to the game in memory, move on to the next unwon mission, replay

@@ -6,9 +6,9 @@ import { escape } from "./format";
 import { mapPreviewSvg, missionEnemies } from "./mission-brief";
 import { missionTags } from "./mission-tags";
 import { enemyIcon } from "./wave-forecast";
-import type { CampaignRecord } from "../app/progress";
-import { starText } from "../app/rating";
-import { type Lock, sectorLocked, type Unlocked } from "../app/campaign-unlock";
+import type { CampaignRecord } from "../campaign/record";
+import { starText } from "../campaign/rating";
+import { type Lock, sectorLocked, type Unlocked } from "../campaign/campaign-unlock";
 import { type Box, GLOBE_BOX, headingOf, link, planetLayout, type Region, routePoints, routeShape, serpentine, stars, type Point, WRAP } from "./world-map";
 import { arc, type Camera, DECK_SCALE, deckAnchor, deckSpot, dragCamera, facing, fitCamera, lerpCamera, outlineOnScreen, type Spot, spotOnScreen, surfaceSpot, toSphere, UNIT, type Vec3 } from "./globe";
 import { GlobeGL } from "./globe-gl";
@@ -20,7 +20,7 @@ import { FIT_QUERY } from "../app/compact";
  * The mission page as a Sector Atlas: a world map with every sector of the mode as a landmass (its terrain, its
  * missions as stations on a route, sea lanes to the next sector) that zooms into the selected sector, then the
  * featured mission's whole battlefield and its briefing. Campaign and Circuit sectors
- * are separate modes and never share a gallery. Campaign missions unlock with progress (`app/campaign-unlock.ts`):
+ * are separate modes and never share a gallery. Campaign missions unlock with progress (`campaign/campaign-unlock.ts`):
  * locked ones can be looked at but not started. Each region is updated on its own, so picking a mission never rebuilds the gallery.
  */
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI"];
