@@ -26,7 +26,7 @@ import { familyOf, type Family } from "../audio/families";
 import { halo } from "./material";
 import { arcBand, CELL, disc, fillRound, px, ring, strokeRound, type Pen } from "./shapes";
 import { pathCoverage, towerReach } from "./coverage";
-import { drawAmbient, drawGates, drawTerrain, themeAccent, themeGlow } from "./terrain";
+import { drawAmbient, drawGates, drawTerrain, themeGlow } from "./terrain";
 import { FrameStats } from "./frame-stats";
 import { drawTower, type TowerBadges } from "./towers";
 import { TowerBodies } from "./tower-bodies";
@@ -37,6 +37,7 @@ import { loadGraphics } from "./graphics-settings";
 import { Trails } from "./trails";
 import { TurretAim } from "./aim";
 import { Scorches } from "./decals";
+import { UI } from "./palette";
 import { anchorView, type BoardSize, type BoardView, clampView, fittedView, panView, snapCell, toScreen, toWorld, ZOOMED } from "./board-camera";
 export { CELL } from "./shapes";
 /** Upper bound for the canvas's longer side in pixels, so a huge 4K full screen stays cheap to fill. */
@@ -677,7 +678,7 @@ export class Battlefield extends Phaser.Scene {
   /** The Training coach's cell: a breathing fill and corner brackets that reach out from the cell. */
   private drawHighlight({ x, y }: Point) {
     const g = this.hints,
-      color = themeAccent(this.sim.map),
+      color = UI.accent,
       breath = this.still.matches ? 0.5 : 0.5 + 0.5 * Math.sin(this.fxClock * 4),
       out = 2 + 4 * breath,
       arm = 12,
@@ -693,7 +694,7 @@ export class Battlefield extends Phaser.Scene {
   }
   /**
    * Every attack tower's range, faint enough that overlaps build up into a heat map, and a strip along the path:
-   * red where no tower reaches a ground unit, amber for one, the map's accent for two or more.
+   * red where no tower reaches a ground unit, amber for one, the interface accent for two or more.
    */
   private drawCoverage(strength: number) {
     const g = this.hints,
@@ -706,14 +707,13 @@ export class Battlefield extends Phaser.Scene {
       disc(g, px(r.tower.x), px(r.tower.y), r.range * CELL, color, 0.035 * strength);
       ring(g, px(r.tower.x), px(r.tower.y), r.range * CELL, 1.5, color, 0.3 * strength);
     }
-    const counts = pathCoverage(map, reach),
-      accent = themeAccent(map);
+    const counts = pathCoverage(map, reach);
     map.path.forEach((cell, i) => {
       const next = map.path[i + 1] ?? (map.loop ? map.path[0] : undefined),
         prev = map.path[i - 1],
         dir = next ? { x: next.x - cell.x, y: next.y - cell.y } : { x: cell.x - prev.x, y: cell.y - prev.y },
         n = counts[i],
-        color = n === 0 ? 0xff5a6e : n === 1 ? 0xffc94a : accent,
+        color = n === 0 ? UI.danger : n === 1 ? UI.warn : UI.accent,
         half = CELL * 0.42,
         x = px(cell.x),
         y = px(cell.y);
@@ -748,7 +748,7 @@ export class Battlefield extends Phaser.Scene {
     if (this.view.highlight && !ended) this.drawHighlight(this.view.highlight);
     if (preview && !ended) {
       const valid = !this.view.build || this.sim.canBuild(preview.x, preview.y, this.view.build),
-        color = valid ? towerColor(preview, content) : 0xff647c,
+        color = valid ? towerColor(preview, content) : UI.danger,
         x = px(preview.x),
         y = px(preview.y),
         r = effectiveTowerStats(preview, s.towers, content).range * CELL;
@@ -843,7 +843,7 @@ export class Battlefield extends Phaser.Scene {
       if (this.sim.players > 1) {
         const color = PLAYER_COLORS[t.owner] ?? 0xffffff,
           top = this.towerTop;
-        top.fillStyle(0x050b10, 0.8);
+        top.fillStyle(UI.shade, 0.8);
         fillRound(top, x - CELL / 2 + 7, y - CELL / 2 + 7, 5.5);
         top.fillStyle(color, 1);
         fillRound(top, x - CELL / 2 + 7, y - CELL / 2 + 7, 3.5);

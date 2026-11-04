@@ -1,24 +1,24 @@
 /*
- * Start screen and menu pages: a neon holo-console look (cyan, magenta for Circuit, glass panels, cut corners). Everything is scoped to `.start-screen`
+ * Start screen and menu pages: a holo-console look in the Deep Ion palette (`--ion-*` in style.css: teal, violet for Circuit, glass panels, cut corners). Everything is scoped to `.start-screen`
  * (or to elements that only exist there), so the game HUD in style.css is untouched.
  */
 :root {
-  --m-bg: #05070f;
-  --m-surface: #0b1224;
-  --m-surface-2: #101a33;
-  --m-accent: #3ef2ff;
-  --m-accent-hover: #8ff8ff;
-  --m-text: #e8f6ff;
-  --m-text-2: #9fb4cc;
-  --m-border: #1e3a5c;
-  --m-warn: #ffc94a;
-  --m-star: #ffd166;
-  --m-danger: #ff4d6d;
-  --m-ring: #ff3dcb;
+  --m-bg: var(--ion-bg);
+  --m-surface: var(--ion-surface);
+  --m-surface-2: var(--ion-surface-2);
+  --m-accent: var(--ion-accent);
+  --m-accent-hover: var(--ion-accent-hover);
+  --m-text: var(--ion-text);
+  --m-text-2: var(--ion-text-2);
+  --m-border: var(--ion-line);
+  --m-warn: var(--ion-warn);
+  --m-star: var(--ion-star);
+  --m-danger: var(--ion-danger);
+  --m-ring: var(--ion-second);
   --m-radius: 4px;
   --m-speed: 180ms;
   --m-glass: color-mix(in srgb, var(--m-surface) 72%, transparent);
-  --m-hover: #13214a;
+  --m-hover: var(--ion-hover);
   --m-cut: 12px;
 }
 /* Shared pieces ---------------------------------------------------------------------------------------------- */
@@ -43,9 +43,9 @@
   min-height: 100dvh;
   padding: 40px 24px 64px;
   background:
-    radial-gradient(ellipse 60% 45% at 80% 0%, #3ef2ff1f, transparent 70%),
-    radial-gradient(ellipse 55% 45% at 5% 100%, #ff3dcb1a, transparent 70%),
-    radial-gradient(ellipse 120% 80% at 50% 50%, #0a1430, var(--m-bg) 75%);
+    radial-gradient(ellipse 60% 45% at 80% 0%, color-mix(in srgb, var(--ion-accent) 12%, transparent), transparent 70%),
+    radial-gradient(ellipse 55% 45% at 5% 100%, color-mix(in srgb, var(--ion-second) 10%, transparent), transparent 70%),
+    radial-gradient(ellipse 120% 80% at 50% 50%, #141c27, var(--m-bg) 75%);
   background-attachment: fixed;
 }
 /* Behind the pages: a perspective floor grid at the bottom and CRT scanlines over everything, both inert. */
@@ -59,8 +59,8 @@
   inset: 55% -50% 0;
   z-index: -1;
   background:
-    linear-gradient(#3ef2ff2e 1px, transparent 1px) 0 0 / 60px 60px,
-    linear-gradient(90deg, #3ef2ff2e 1px, transparent 1px) 0 0 / 60px 60px;
+    linear-gradient(color-mix(in srgb, var(--ion-accent) 18%, transparent) 1px, transparent 1px) 0 0 / 60px 60px,
+    linear-gradient(90deg, color-mix(in srgb, var(--ion-accent) 18%, transparent) 1px, transparent 1px) 0 0 / 60px 60px;
   transform: perspective(420px) rotateX(62deg);
   transform-origin: 50% 0;
   mask-image: linear-gradient(transparent, #000 45%);
@@ -109,7 +109,7 @@
   border-color: var(--m-accent);
   background: var(--m-hover);
   color: #fff;
-  box-shadow: inset 0 0 18px #3ef2ff26;
+  box-shadow: inset 0 0 18px color-mix(in srgb, var(--ion-accent) 9%, transparent);
 }
 .start-screen .quiet span {
   color: var(--m-accent);
@@ -125,13 +125,13 @@
   min-height: 48px;
   font: 700 18px "Rajdhani", sans-serif;
   letter-spacing: 0.08em;
-  box-shadow: 0 0 18px #3ef2ff55;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--ion-accent) 20%, transparent);
 }
 .start-screen .primary:hover {
   background: var(--m-accent-hover);
-  box-shadow: 0 0 12px #3ef2ff99, 0 0 36px #3ef2ff44;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--ion-accent) 36%, transparent), 0 0 36px color-mix(in srgb, var(--ion-accent) 16%, transparent);
 }
-/* The briefing's Start follows the mode: cyan for the campaign, magenta for Circuit. */
+/* The briefing's Start follows the mode: teal for the campaign, violet for Circuit. */
 .brief-actions .primary {
   background: var(--mode);
   border-color: var(--mode);
@@ -156,10 +156,10 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   margin-bottom: 18px;
-  text-shadow: 0 0 24px #3ef2ff40;
+  text-shadow: 0 0 24px color-mix(in srgb, var(--ion-accent) 15%, transparent);
 }
 .menu-page .eyebrow {
-  color: var(--m-accent);
+  color: var(--ion-label);
   margin-bottom: 6px;
   letter-spacing: 0.24em;
 }
@@ -252,8 +252,8 @@
   margin: 0 0 14px;
   font: 500 12px var(--mono);
   letter-spacing: 0.32em;
-  color: var(--m-accent);
-  text-shadow: 0 0 8px #3ef2ff88;
+  color: var(--ion-label);
+  text-shadow: none;
 }
 .home-label::before {
   content: "";
@@ -272,17 +272,17 @@
   margin: 0 0 14px;
   font: 900 clamp(34px, 4.6vw, 60px) / 1 var(--display);
   letter-spacing: 0.08em;
-  text-shadow: 0 0 18px #3ef2ff66, 0 0 48px #3ef2ff26;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--ion-accent) 24%, transparent), 0 0 48px color-mix(in srgb, var(--ion-accent) 9%, transparent);
   animation: title-boot 1.4s steps(1) 1 both;
 }
 .menu-home .menu-title .brand-mark {
   width: 0.95em;
   height: 0.95em;
-  filter: drop-shadow(0 0 10px #3ef2ff88);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--ion-accent) 32%, transparent));
 }
 .menu-home .menu-title .brand-light {
   font-weight: 600;
-  filter: drop-shadow(0 0 14px #ff3dcb55);
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--ion-second) 20%, transparent));
 }
 /* A brief power-on flicker of the logo, once. */
 @keyframes title-boot {
@@ -337,11 +337,11 @@
   position: relative;
   overflow: hidden;
   color: var(--on-neon);
-  background: linear-gradient(100deg, var(--m-accent), #7ff6ff 55%, var(--m-accent));
+  background: linear-gradient(100deg, var(--m-accent), #92ece1 55%, var(--m-accent));
   border: 1px solid var(--m-accent);
   border-radius: 0;
   clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
-  box-shadow: inset 0 -4px #02101822, inset 0 0 0 1px #ffffff55, inset 0 0 24px #ffffff33;
+  box-shadow: inset 0 -4px color-mix(in srgb, var(--ion-on-accent) 8%, transparent), inset 0 0 0 1px #ffffff55, inset 0 0 24px #ffffff33;
 }
 /* A light sweep across the button on hover. */
 .home-primary::after {
@@ -353,7 +353,7 @@
   pointer-events: none;
 }
 .home-primary:hover {
-  background: linear-gradient(100deg, var(--m-accent-hover), #c8fbff 55%, var(--m-accent-hover));
+  background: linear-gradient(100deg, var(--m-accent-hover), #d6e2f1 55%, var(--m-accent-hover));
   border-color: var(--m-accent-hover);
 }
 .home-primary:hover::after {
@@ -445,7 +445,7 @@
 }
 .home-primary small {
   font: 500 13px var(--mono);
-  color: #0b3a4a;
+  color: #183d3b;
   overflow-wrap: anywhere;
 }
 .home-primary-icon {
@@ -576,11 +576,11 @@
   min-width: 0;
   padding: 14px;
   background:
-    linear-gradient(180deg, #3ef2ff0d, transparent 30%),
+    linear-gradient(180deg, color-mix(in srgb, var(--ion-accent) 5%, transparent), transparent 30%),
     var(--m-glass);
   border: 1px solid color-mix(in srgb, var(--m-accent) 35%, var(--m-border));
   border-radius: 0;
-  box-shadow: 0 0 40px #3ef2ff14, inset 0 0 40px #3ef2ff0a;
+  box-shadow: 0 0 40px color-mix(in srgb, var(--ion-accent) 5%, transparent), inset 0 0 40px color-mix(in srgb, var(--ion-accent) 2%, transparent);
   backdrop-filter: blur(8px);
   cursor: pointer;
   transition:
@@ -589,7 +589,7 @@
 }
 .home-map:hover {
   border-color: var(--m-accent);
-  box-shadow: 0 0 48px #3ef2ff26, inset 0 0 40px #3ef2ff12;
+  box-shadow: 0 0 48px color-mix(in srgb, var(--ion-accent) 9%, transparent), inset 0 0 40px color-mix(in srgb, var(--ion-accent) 4%, transparent);
 }
 /* The play mark over the map, shown on hover like a video poster. */
 .home-map-play {
@@ -648,8 +648,8 @@
   color: var(--m-text-2);
 }
 .home-map-head span:first-child {
-  color: var(--m-accent);
-  text-shadow: 0 0 8px #3ef2ff88;
+  color: var(--ion-label);
+  text-shadow: none;
   overflow-wrap: anywhere;
 }
 .home-map-view {
@@ -663,7 +663,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(180deg, #05070f33 0 1px, transparent 1px 3px);
+  background: repeating-linear-gradient(180deg, color-mix(in srgb, var(--ion-bg) 20%, transparent) 0 1px, transparent 1px 3px);
   pointer-events: none;
 }
 /* The rendered terrain over the SVG placeholder, letterboxed the same way. */
@@ -688,8 +688,8 @@
   position: absolute;
   inset: 0 0 auto;
   height: 40%;
-  background: linear-gradient(180deg, transparent, #3ef2ff1f 90%, #3ef2ff55);
-  border-bottom: 1px solid #3ef2ff66;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--ion-accent) 12%, transparent) 90%, color-mix(in srgb, var(--ion-accent) 33%, transparent));
+  border-bottom: 1px solid color-mix(in srgb, var(--ion-accent) 40%, transparent);
   transform: translateY(-100%);
   animation: map-scan 7s linear infinite;
   pointer-events: none;
@@ -740,7 +740,7 @@
   margin-bottom: 4px;
   font: 500 11px var(--mono);
   letter-spacing: 0.18em;
-  color: var(--m-accent);
+  color: var(--ion-label);
 }
 .home-map-title {
   display: flex;
@@ -774,8 +774,8 @@
   align-items: center;
   gap: 6px;
   font: 700 22px / 1 "Rajdhani", sans-serif;
-  color: var(--m-accent);
-  text-shadow: 0 0 10px #3ef2ff55;
+  color: var(--m-text);
+  text-shadow: none;
 }
 /* The ◇ and ♡ glyphs come from a fallback font with taller metrics; sized and centred, they sit on the number's line. */
 .home-map-stats strong i {
@@ -897,7 +897,7 @@
   background: color-mix(in srgb, var(--m-ring) 10%, var(--m-bg));
   font-size: 13px;
   line-height: 1.5;
-  color: #ffd6f3;
+  color: #ded8fd;
 }
 .mode-rules {
   grid-area: rules;
@@ -927,7 +927,7 @@
   min-height: 320px;
   max-height: 68vh;
   width: 100%;
-  background: #03060c;
+  background: #05070a;
   border-radius: 14px;
   box-shadow:
     inset 0 0 0 1px #ffffff14,
@@ -940,7 +940,7 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 60%, transparent 50%, #02040ab3 100%);
+  background: radial-gradient(ellipse at 50% 60%, transparent 50%, #040608b3 100%);
   box-shadow: inset 0 0 0 1px #ffffff14;
   border-radius: inherit;
 }
@@ -967,7 +967,7 @@
   pointer-events: none;
 }
 .world-sky {
-  fill: #cfe4ff;
+  fill: #dbe5f3;
   opacity: 0.6;
 }
 /* The painted surface fades in over the flat globe once it is on the GPU. */
@@ -1002,7 +1002,7 @@
   stop-opacity: 0;
 }
 .world-svg .shade-night {
-  stop-color: #01030a;
+  stop-color: #030508;
   stop-opacity: 0.85;
 }
 .world-svg [hidden] {
@@ -1014,17 +1014,17 @@
   pointer-events: none;
 }
 .world-svg .atmo-wide {
-  stroke: var(--atmo, #3fb8ff);
+  stroke: var(--atmo, #65d9d1);
   stroke-width: 26;
   opacity: 0.08;
 }
 .world-svg .atmo-mid {
-  stroke: var(--atmo, #6fd6ff);
+  stroke: var(--atmo, #85e9de);
   stroke-width: 8;
   opacity: 0.18;
 }
 .world-svg .atmo-rim {
-  stroke: color-mix(in srgb, var(--atmo, #6fd6ff) 35%, #fff);
+  stroke: color-mix(in srgb, var(--atmo, #85e9de) 35%, #fff);
   stroke-width: 1.2;
   opacity: 0.8;
 }
@@ -1047,11 +1047,11 @@
 }
 .land {
   --accent: var(--m-accent);
-  --edge: #e9f1ff;
+  --edge: #eef3f9;
   cursor: pointer;
 }
 .land .tint {
-  fill: #05070f;
+  fill: var(--ion-bg);
   opacity: 0.2;
   pointer-events: fill;
   transition: opacity 300ms ease-out;
@@ -1073,7 +1073,7 @@
   --edge: var(--m-danger);
 }
 .land[data-state="hostile"] .tint {
-  fill: #12030a;
+  fill: #9281e4;
   opacity: 0.5;
 }
 .land[data-next] {
@@ -1105,7 +1105,7 @@
   stroke-linecap: round;
 }
 .world-svg .route {
-  filter: drop-shadow(0 0 calc(1.5px * var(--inv)) #000c);
+  filter: drop-shadow(0 0 calc(1.5px * var(--inv)) #000000cc);
   stroke: #ffffff8c;
   stroke-width: calc(1.5px * var(--inv));
   stroke-dasharray: calc(5px * var(--inv)) calc(4px * var(--inv));
@@ -1139,7 +1139,7 @@
   stroke: color-mix(in srgb, var(--mode) 60%, transparent);
 }
 .world-svg .dot {
-  fill: #05070f;
+  fill: var(--ion-bg);
   stroke: #ffffffaa;
   stroke-width: calc(1px * var(--inv));
 }
@@ -1155,7 +1155,7 @@
 }
 /* A station in orbit: a dark hull with its painted plating, floating in space above the horizon. */
 .land.station .deck-hull {
-  fill: #121822;
+  fill: #16191e;
   stroke: #ffffff40;
   stroke-width: calc(1px * var(--inv));
   vector-effect: non-scaling-stroke;
@@ -1193,7 +1193,7 @@
   justify-items: center;
   margin: 0;
   padding: 6px 18px 7px;
-  background: linear-gradient(180deg, #161e2bf2, #080c13f2);
+  background: linear-gradient(180deg, #1b2026f2, #0b0d10f2);
   clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
   box-shadow: inset 0 2px 0 var(--atmo, var(--mode));
 }
@@ -1218,7 +1218,7 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--m-text-2);
-  background: #05070fc4;
+  background: color-mix(in srgb, var(--ion-bg) 77%, transparent);
   border: 1px solid #ffffff1f;
   border-radius: 2px;
 }
@@ -1244,15 +1244,15 @@ span.world-hop {
   opacity: 0;
   visibility: hidden;
   background:
-    radial-gradient(1px 1px at 12% 22%, #fff9, transparent),
-    radial-gradient(1px 1px at 34% 78%, #fff8, transparent),
-    radial-gradient(1px 1px at 58% 14%, #fffa, transparent),
-    radial-gradient(1px 1px at 76% 64%, #fff7, transparent),
-    radial-gradient(1px 1px at 91% 30%, #fff9, transparent),
-    radial-gradient(1px 1px at 46% 52%, #fff6, transparent),
-    radial-gradient(1px 1px at 22% 60%, #fff7, transparent),
-    radial-gradient(1px 1px at 66% 88%, #fff8, transparent),
-    #02040a;
+    radial-gradient(1px 1px at 12% 22%, #ffffff99, transparent),
+    radial-gradient(1px 1px at 34% 78%, #ffffff88, transparent),
+    radial-gradient(1px 1px at 58% 14%, #ffffffaa, transparent),
+    radial-gradient(1px 1px at 76% 64%, #ffffff77, transparent),
+    radial-gradient(1px 1px at 91% 30%, #ffffff99, transparent),
+    radial-gradient(1px 1px at 46% 52%, #ffffff66, transparent),
+    radial-gradient(1px 1px at 22% 60%, #ffffff77, transparent),
+    radial-gradient(1px 1px at 66% 88%, #ffffff88, transparent),
+    #040608;
   transform: scale(1.15);
   transition:
     opacity 450ms ease-out,
@@ -1327,7 +1327,7 @@ span.world-hop {
   height: var(--size);
   border-radius: 50%;
   /* The world's own surface, slowly turning, shaded into a sphere lit from the sun on the left. */
-  background: var(--surface, radial-gradient(circle, #3a4250, #11151c)) 0 50% / auto 100% repeat-x;
+  background: var(--surface, radial-gradient(circle, #3f444a, #141619)) 0 50% / auto 100% repeat-x;
   box-shadow:
     0 0 calc(var(--size) * 0.12) color-mix(in srgb, var(--atmo) 55%, transparent),
     inset 0 0 calc(var(--size) * 0.06) color-mix(in srgb, var(--atmo) 70%, transparent);
@@ -1502,7 +1502,7 @@ span.world-hop {
   /* A gunmetal plaque with chamfered corners and the sector colour along its top edge. */
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent 40%),
-    linear-gradient(180deg, #161e2bf0, #080c13f0);
+    linear-gradient(180deg, #1b2026f0, #0b0d10f0);
   clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%, 0 8px);
   box-shadow:
     inset 0 2px 0 var(--accent),
@@ -1580,7 +1580,7 @@ span.world-hop {
   max-width: calc(100% - 190px);
   margin: 0;
   padding: 9px 14px 10px;
-  background: linear-gradient(180deg, #161e2bf2, #080c13f2);
+  background: linear-gradient(180deg, #1b2026f2, #0b0d10f2);
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
   box-shadow:
     inset 3px 0 0 var(--mode),
@@ -1600,7 +1600,7 @@ span.world-hop {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--m-text);
-  background: linear-gradient(180deg, #1a2331f2, #0a0e15f2);
+  background: linear-gradient(180deg, #20252bf2, #0d0f12f2);
   border: 1px solid #ffffff26;
   border-radius: 2px;
   box-shadow: inset 0 1px 0 #ffffff1a;
@@ -1679,7 +1679,7 @@ span.world-hop {
   width: 100%;
   aspect-ratio: 3 / 2;
   overflow: hidden;
-  background: #03050b;
+  background: #050709;
   border-radius: 10px;
   box-shadow:
     0 0 0 1px #ffffff14,
@@ -1747,7 +1747,7 @@ span.world-hop {
   text-transform: uppercase;
   white-space: nowrap;
   color: var(--m-text-2);
-  background: #03050bcc;
+  background: #050709cc;
   border-radius: 6px;
 }
 .preview-legend span::before {
@@ -1968,7 +1968,7 @@ span.world-hop {
 .brief-actions .mission-warning {
   padding: 7px 10px;
   font-size: 12px;
-  background: color-mix(in srgb, var(--m-warn) 14%, #03050bd9);
+  background: color-mix(in srgb, var(--m-warn) 14%, #050709d9);
 }
 .start-screen .atlas-start {
   display: flex;
@@ -2062,7 +2062,7 @@ span.world-hop {
 }
 .node-mark::after {
   inset: 2px;
-  background: linear-gradient(180deg, #273244, #0b1019 70%);
+  background: linear-gradient(180deg, #2e353d, #0f1216 70%);
 }
 .mission-node[data-final] .node-mark::before,
 .mission-node[data-final] .node-mark::after {
@@ -2098,7 +2098,7 @@ span.world-hop {
   height: 11px;
   padding: 1px;
   color: var(--m-text-2);
-  background: #05070f;
+  background: var(--ion-bg);
   border-radius: 3px;
 }
 /* The stem down to the ground and the ring it stands in. */
@@ -2185,8 +2185,8 @@ span.world-hop {
   text-shadow:
     0 1px 2px #000,
     0 0 8px #000;
-  color: #d8e2ee;
-  background: radial-gradient(closest-side, #05070fd9, #05070f99 55%, transparent);
+  color: #dde2e8;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--ion-bg) 85%, transparent), color-mix(in srgb, var(--ion-bg) 60%, transparent) 55%, transparent);
   border-radius: 3px;
   transition:
     background var(--m-speed),
@@ -2221,7 +2221,7 @@ span.world-hop {
 }
 .node-tag[data-tag="loaded"] {
   color: var(--mode);
-  background: #05070fcc;
+  background: color-mix(in srgb, var(--ion-bg) 80%, transparent);
   box-shadow: inset 0 0 0 1px var(--mode);
 }
 .node-tag[data-tag="new"] {
@@ -2250,7 +2250,7 @@ span.world-hop {
 }
 .mission-node[aria-pressed="true"] .node-copy {
   text-shadow: none;
-  background: linear-gradient(180deg, #1a2331f0, #0b1019f0);
+  background: linear-gradient(180deg, #20252bf0, #0f1216f0);
   box-shadow:
     inset 0 2px 0 var(--mode),
     inset 0 0 0 1px #ffffff1f,
@@ -2305,7 +2305,7 @@ span.world-hop {
   font-size: 12px;
   color: var(--m-text-2);
   border-left: 3px solid #ffffff40;
-  background: #03050bd9;
+  background: #050709d9;
 }
 .start-screen .atlas-start:disabled {
   cursor: not-allowed;
@@ -2499,7 +2499,7 @@ span.world-hop {
   min-height: 150px;
   padding: 18px;
   text-align: left;
-  background: linear-gradient(180deg, #3ef2ff12, transparent 50%), var(--m-glass);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ion-accent) 7%, transparent), transparent 50%), var(--m-glass);
   border: 1px solid var(--m-border);
   border-top: 3px solid var(--m-accent);
   border-radius: 0;
@@ -2510,9 +2510,9 @@ span.world-hop {
   backdrop-filter: blur(6px);
 }
 .choice-card:hover:not(:disabled) {
-  background: linear-gradient(180deg, #3ef2ff26, transparent 60%), var(--m-hover);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ion-accent) 15%, transparent), transparent 60%), var(--m-hover);
   border-color: var(--m-accent);
-  box-shadow: inset 0 0 28px #3ef2ff1f;
+  box-shadow: inset 0 0 28px color-mix(in srgb, var(--ion-accent) 7%, transparent);
 }
 .choice-index {
   font: 500 12px var(--mono);
@@ -2599,7 +2599,7 @@ span.world-hop {
 .room-code {
   font-size: 36px;
   color: var(--m-accent);
-  text-shadow: 0 0 12px #3ef2ff88;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--ion-accent) 32%, transparent);
   text-align: center;
   padding-inline: 8px 0;
 }
@@ -2699,7 +2699,7 @@ span.world-hop {
   border-color: var(--m-accent);
   color: var(--m-accent);
   background: color-mix(in srgb, var(--m-accent) 10%, var(--m-bg));
-  box-shadow: inset 0 -3px var(--m-accent), 0 0 14px #3ef2ff40;
+  box-shadow: inset 0 -3px var(--m-accent), 0 0 14px color-mix(in srgb, var(--ion-accent) 15%, transparent);
 }
 .coop-modes input:checked + span::after {
   content: " ✓";
@@ -2769,8 +2769,8 @@ span.world-hop {
 .start-screen .codex-tab[aria-selected="true"] {
   color: var(--m-text);
   border-color: var(--m-accent);
-  box-shadow: inset 0 -3px var(--m-accent), 0 0 14px #3ef2ff33;
-  text-shadow: 0 0 8px #3ef2ff88;
+  box-shadow: inset 0 -3px var(--m-accent), 0 0 14px color-mix(in srgb, var(--ion-accent) 12%, transparent);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--ion-accent) 32%, transparent);
 }
 .start-screen .codex-card {
   border-radius: 0;
@@ -2779,7 +2779,7 @@ span.world-hop {
 }
 .start-screen .codex-card:hover {
   border-color: color-mix(in srgb, var(--m-accent) 45%, var(--m-border));
-  box-shadow: 0 0 22px #3ef2ff1a;
+  box-shadow: 0 0 22px color-mix(in srgb, var(--ion-accent) 6%, transparent);
 }
 /* The tabs stay reachable on the long codex lists. */
 .start-screen .codex-tabs {
@@ -2975,7 +2975,7 @@ span.world-hop {
   top: 12px;
   font: 800 22px var(--display);
   color: var(--m-accent);
-  text-shadow: 0 0 10px #3ef2ff88;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--ion-accent) 32%, transparent);
 }
 #help-page .tip {
   border-radius: 0 var(--m-radius) var(--m-radius) 0;
@@ -3732,6 +3732,6 @@ span.world-hop {
   /* The shelves fade out at the right edge, a hint that more swipes in. */
   .help-body,
   .start-screen .codex-list {
-    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), #0000);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), #00000000);
   }
 }

@@ -6,6 +6,7 @@ import { arcPath, chamferRect, fillRound, oval, polygon, star, strokeRound, type
 import { drawOilCoat } from "./trap-effects";
 import { drawTranceMarks } from "./trance";
 import { shrinkScale } from "./control-marks";
+import { UI } from "./palette";
 /**
  * Everything the three enemy stages need, built once per enemy and frame by `enemyContext`.
  * Stages, bottom to top: `drawEnemyUnderlay` (fields, trails, rings, shadow), `drawEnemyBody` (the unit itself)
@@ -658,7 +659,7 @@ export function drawEnemyOverlay(g: Ink, c: EnemyDrawContext) {
 /** Bosses keep their bar at full health; everyone else shows it once hurt or shielded, which thins out a fresh wave. */
 const ALWAYS_BAR = new Set(["boss"]);
 /** HP colour steps: healthy, hurt, critical. */
-export const HP_COLORS = { high: 0x93f5b8, mid: 0xffc94a, low: 0xff738a } as const;
+export const HP_COLORS = { high: UI.ok, mid: UI.warn, low: UI.danger } as const;
 /**
  * A 4 px bar in a dark frame above the unit, coloured in three steps, with the remaining shield as a thin strip on
  * top. Hidden at full health without a shield, except on bosses.
@@ -670,7 +671,7 @@ function drawHpBar(g: Ink, c: EnemyDrawContext) {
   if (!c.hpBar || (share >= 1 && shield <= 0 && !ALWAYS_BAR.has(c.definition.id))) return;
   const top = y - r - 10,
     strip = shield > 0 ? 2 : 0;
-  chamferRect(g, x, top + 2 - strip / 2, r + 1.5, 3 + strip / 2, 1, 0x050c12, 0.9);
+  chamferRect(g, x, top + 2 - strip / 2, r + 1.5, 3 + strip / 2, 1, UI.shade, 0.9);
   g.fillStyle(share > 0.6 ? HP_COLORS.high : share > 0.3 ? HP_COLORS.mid : HP_COLORS.low);
   g.fillRect(x - r, top, r * 2 * share, 4);
   if (strip) {

@@ -83,7 +83,7 @@
 .start-screen .ed-tool[aria-pressed="true"] {
   color: var(--m-text);
   border-color: var(--m-accent);
-  box-shadow: 0 0 10px #3ef2ff40;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ion-accent) 15%, transparent);
 }
 .ed-tool kbd {
   font-size: 11px;
@@ -111,10 +111,10 @@
   background: #4b6a63;
 }
 .ed-swatch[data-t="#"] {
-  background: repeating-linear-gradient(45deg, #2a3446 0 3px, #111827 3px 6px);
+  background: repeating-linear-gradient(45deg, #31373f 0 3px, #161b22 3px 6px);
 }
 .ed-swatch[data-t="."] {
-  background: #121e2a;
+  background: #181d24;
 }
 .ed-stage {
   position: relative;

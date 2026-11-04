@@ -5,7 +5,7 @@ import { makeEnemy } from "../core/test-helpers";
 import type { EnemyDefinition, EnemyId } from "../core/types";
 import { statusFlags, type StatusFlags } from "../systems/status";
 import { traitFlags, type TraitFlags } from "../systems/traits";
-import { drawEnemy, drawEnemyBody, drawEnemyOverlay, drawEnemyUnderlay, enemyContext, type EnemyDrawContext } from "./enemies";
+import { drawEnemy, drawEnemyBody, drawEnemyOverlay, drawEnemyUnderlay, enemyContext, type EnemyDrawContext, HP_COLORS } from "./enemies";
 import type { Ink } from "./shapes";
 
 type Call = [string, unknown[]];
@@ -73,11 +73,11 @@ describe("enemy render stages", () => {
     expect(over.some(([name, args]) => name === "lineStyle" && args[1] === 0x6fb8ff)).toBe(true);
     expect(body.every(([name]) => name === "fillStyle" || name === "fillPoints")).toBe(true);
     expect(over.at(-1)?.[0]).toBe("fillRect");
-    expect(fills(over, 0x93f5b8)).toBe(1);
+    expect(fills(over, HP_COLORS.high)).toBe(1);
   });
 
   it("colours the HP bar in three steps, hides it at full health, and leaves it out on request", () => {
-    expect(fills(stages(GROUND, { hp: 200 }).over, 0xff738a)).toBe(1);
+    expect(fills(stages(GROUND, { hp: 200 }).over, HP_COLORS.low)).toBe(1);
     expect(stages(GROUND).over.some(([name]) => name === "fillRect")).toBe(false);
     expect(stages(GROUND, { hpBar: false }).over.some(([name]) => name === "fillRect")).toBe(false);
   });

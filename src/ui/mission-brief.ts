@@ -1,5 +1,6 @@
 import type { ContentPack, EnemyId, MapDefinition, MissionDefinition } from "../core/types";
 import { THEMES } from "../render/terrain";
+import { UI } from "../render/palette";
 const hex = (color: number) => `#${color.toString(16).padStart(6, "0")}`;
 /** Every enemy type of a mission in order of first appearance; `isNew` when no earlier mission sends it. */
 export function missionEnemies(mission: MissionDefinition, content: ContentPack): { id: EnemyId; isNew: boolean }[] {
@@ -24,5 +25,5 @@ export function mapPreviewSvg(map: MapDefinition): string {
     end = map.path[map.path.length - 1],
     marker = (p: { x: number; y: number }, kind: string, color: number) =>
       `<circle class="map-${kind}" cx="${p.x + 0.5}" cy="${p.y + 0.5}" r="0.32" fill="${hex(color)}"/>`;
-  return `<svg class="map-preview" viewBox="0 0 ${map.columns} ${map.rows}" role="img" aria-label="Map ${map.name}">${cells.join("")}<polyline points="${line}${map.loop ? ` ${start.x + 0.5},${start.y + 0.5}` : ""}" fill="none" stroke="${hex(theme.path.line)}" stroke-width="0.12" stroke-linejoin="round"/>${marker(start, "entry", 0xff6b6b)}${map.loop ? "" : marker(end, "reactor", theme.accent)}</svg>`;
+  return `<svg class="map-preview" viewBox="0 0 ${map.columns} ${map.rows}" role="img" aria-label="Map ${map.name}">${cells.join("")}<polyline points="${line}${map.loop ? ` ${start.x + 0.5},${start.y + 0.5}` : ""}" fill="none" stroke="${hex(theme.path.line)}" stroke-width="0.12" stroke-linejoin="round"/>${marker(start, "entry", UI.danger)}${map.loop ? "" : marker(end, "reactor", theme.accent)}</svg>`;
 }
