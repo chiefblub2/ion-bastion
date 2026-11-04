@@ -4,7 +4,7 @@ import { type EditorDraft, LIMITS } from "./draft";
 // A Record over the union makes tsc fail when a theme is added here or in `MapTheme` only (importing THEMES would pull in Phaser).
 const THEME_SET: Record<MapTheme, true> = {
   outpost: true, lock: true, shard: true, ember: true, core: true, frost: true, toxic: true, orbit: true, ruin: true,
-  rift: true, dune: true, abyss: true, storm: true, jungle: true, volcano: true, geode: true, gear: true, tide: true,
+  rift: true, dune: true, abyss: true, storm: true, jungle: true, volcano: true, geode: true, gear: true, tide: true, island: true,
 };
 const THEMES = Object.keys(THEME_SET) as readonly MapTheme[];
 

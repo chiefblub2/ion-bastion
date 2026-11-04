@@ -1,14 +1,15 @@
 import type { MapDefinition, Point } from "../core/types";
-import { arcBand, arcPath, CELL, disc, hash01, type Ink, type Pen, polygon, px, ring, shade, strokeRound } from "./shapes";
-import { blend, drawBoardLight, drawGround, GROUND_FAMILY, groundRandom } from "./ground";
-import { landmarkAt, landmarkSpots } from "./landmarks";
+import { CELL, disc, hash01, type Ink, type Pen, px, shade } from "./shapes";
+import { drawBoardLight, drawGround, GROUND_FAMILY, type GroundFamily, groundRandom } from "./ground";
+import { landmarkAt, type LandmarkSpot, landmarkSpots } from "./landmarks";
 import { type ObstaclePiece, obstaclePieces } from "./obstacle-pieces";
-import { contactShadow, drawLandmark, landmarkLight } from "./landmark-art";
+import { contactShadow, drawLandmark, landmarkFrame, landmarkLight } from "./landmark-art";
 import { drawPathMaterial } from "./path-material";
-import { halo } from "./material";
+import { drawGateBases, drawGateLife } from "./gates";
+import { landOf, seaCells } from "./coast";
 import { fnv } from "../core/hash";
 import type Phaser from "phaser";
-import { along, cellRandom } from "./terrain-themes/kit";
+import { along, cellRandom, type Theme } from "./terrain-themes/kit";
 import { THEMES } from "./terrain-themes";
 export { THEMES };
 const themeOf = (map: MapDefinition) => THEMES[map.theme ?? "outpost"];
@@ -24,16 +25,6 @@ const hex = (color: number) => `#${color.toString(16).padStart(6, "0")}`;
 /** Path in pixels; a ring repeats its first cell at the end so lines and markers close the loop. */
 const pixelPath = (map: MapDefinition) =>
   (map.loop ? [...map.path, map.path[0]] : map.path).map((p) => ({ x: px(p.x), y: px(p.y) }));
-/** Reactor in the theme's accent; `drawGates` pulses its core and a ring between the two outlines. */
-function drawReactor(g: Phaser.GameObjects.Graphics, end: Point, accent: number, backdrop: number) {
-  g.lineStyle(1, accent, 0.3);
-  strokeRound(g, end.x, end.y, 31);
-  disc(g, end.x, end.y, 24, backdrop);
-  g.lineStyle(2, accent);
-  strokeRound(g, end.x, end.y, 22);
-  polygon(g, end.x, end.y, 13, 6, accent, Math.PI / 6);
-  polygon(g, end.x, end.y, 7, 6, shade(accent, -0.65), Math.PI / 6);
-}
 /** A polyline moved sideways by `d` pixels (positive to the right of travel), with mitred corners. */
 function offsetPath(path: readonly Point[], d: number) {
   const normal = (a: Point, b: Point) => {
@@ -59,7 +50,10 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
     onPath = new Set(map.path.map((p) => `${p.x},${p.y}`)),
     family = GROUND_FAMILY[map.theme ?? "outpost"],
     spots = landmarks(map);
-  drawGround(scene.add.graphics(), map, theme, isBlocked, (x, y) => onPath.has(`${x},${y}`));
+  // A coastal theme paints its sea over the ground: the sea counts as open ground there, so the beach gets no contact shadow.
+  const sea = theme.sea ? seaCells(map) : undefined,
+    ground = sea?.size ? (x: number, y: number) => isBlocked(x, y) && !sea.has(`${x},${y}`) : isBlocked;
+  drawGround(scene.add.graphics(), map, theme, ground, (x, y) => onPath.has(`${x},${y}`));
   // Decor is background: drawn quieter than the ground pads, before obstacles so their shadows sit on top of it.
   const decor = scene.add.graphics().setAlpha(0.7);
   for (let y = 0; y < map.rows; y++)
@@ -71,12 +65,60 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
   const g = scene.add.graphics();
   // One light for every theme: a soft shadow to the lower right under each obstacle, then the theme's own drawing.
   // Obstacles as pieces: single cells, and in groups some 2×2 blocks drawn as the theme's own obstacle at twice the size.
+  // Tilted themes stand their pieces up after the path instead (`drawStanding`).
   const parts = pieces(map);
-  for (const p of parts) contactShadow(g, (p.x + p.size / 2) * CELL, (p.y + p.size / 2) * CELL, CELL * 0.46 * p.size, CELL * 0.38 * p.size);
-  for (const p of parts) enlarged(g, p, () => theme.obstacle(g, p.x * CELL, p.y * CELL, cellRandom(map, p.x, p.y)));
-  for (const spot of spots) drawLandmark(g, spot, family, theme, groundRandom(map, "landmark", spot.x, spot.y));
-  const path = pixelPath(map),
-    bed = theme.path.bed;
+  if (!theme.tilted) {
+    for (const p of parts) contactShadow(g, (p.x + p.size / 2) * CELL, (p.y + p.size / 2) * CELL, CELL * 0.46 * p.size, CELL * 0.38 * p.size);
+    for (const p of parts) enlarged(g, p, () => theme.obstacle(g, p.x * CELL, p.y * CELL, cellRandom(map, p.x, p.y)));
+    for (const spot of spots) drawLandmark(g, spot, family, theme, groundRandom(map, "landmark", spot.x, spot.y));
+  }
+  if (theme.sea && sea) theme.sea(g, map, sea);
+  const path = pixelPath(map);
+  if (theme.drawPath) theme.drawPath(g, map);
+  else drawRoad(g, map, theme, path, family);
+  drawStanding(g, map, theme, parts, spots, family);
+  const start = path[0],
+    end = path[path.length - 1],
+    accent = theme.accent;
+  // Entry breach and reactor core in the towers' 3/4 tilt (`gates.ts`); a ring has no reactor.
+  drawGateBases(g, path, !!map.loop, accent);
+  drawBoardLight(scene.add.graphics(), map, theme, themeGlow(map));
+  const label = (x: number, y: number, text: string, color: string) =>
+    scene.add.text(x, y, text, {
+      fontFamily: "monospace",
+      fontSize: "13px",
+      fontStyle: "bold",
+      color,
+      backgroundColor: hex(theme.backdrop),
+      padding: { x: 7, y: 5 },
+    });
+  const width = CELL * map.columns,
+    height = CELL * map.rows;
+  // Centred on `x`, kept inside the board.
+  const place = (text: Phaser.GameObjects.Text, x: number, y: number) =>
+    text.setPosition(
+      Math.min(Math.max(x - text.width / 2, 4), width - text.width - 4),
+      Math.min(Math.max(y, 4), height - text.height - 4),
+    );
+  // Below the gates, clear of their pylons and the core's hologram ring; above them (higher still) on the bottom row.
+  place(
+    label(0, 0, map.loop ? "PORTAL" : "ENTRY", map.loop ? hex(accent) : "#efd297"),
+    start.x,
+    start.y + 34 + 30 < height ? start.y + 34 : start.y - 84,
+  );
+  if (!map.loop) place(label(0, 0, "REACTOR", hex(accent)), end.x, end.y + 36 + 30 < height ? end.y + 36 : end.y - 98);
+  // Map name in the top-left corner, or in the first corner the path keeps clear.
+  const name = label(0, 0, map.name.toUpperCase(), hex(shade(theme.grid, 0.35))),
+    clear = (row: number, fromRight: boolean) =>
+      !map.path.some((p) => p.y === row && (fromRight ? p.x >= map.columns - 4 : p.x < 4));
+  if (clear(0, false)) name.setPosition(20, 22);
+  else if (clear(map.rows - 1, false)) name.setPosition(20, height - name.height - 22);
+  else name.setPosition(width - name.width - 20, clear(0, true) ? 22 : height - name.height - 22);
+  return scene.children.list.slice(first);
+}
+/** The default path: a road sunk into the ground with kerbs, a bed in the family's material, worn lanes, grit and arrows. */
+function drawRoad(g: Ink, map: MapDefinition, theme: Theme, path: readonly Point[], family: GroundFamily) {
+  const bed = theme.path.bed;
   // The road sits in the ground: a cast shadow, a lit and a shaded lip, a sunken bed with its inner shadow.
   g.lineStyle(54, theme.path.line, 0.06);
   g.strokePoints(path, false);
@@ -126,74 +168,44 @@ export function drawTerrain(scene: Phaser.Scene, map: MapDefinition, isBlocked: 
     for (const sign of [-1, 1])
       g.lineBetween(p.x, p.y, p.x - Math.cos(a + sign * 0.65) * 7, p.y - Math.sin(a + sign * 0.65) * 7);
   }
-  const start = path[0],
-    end = path[path.length - 1],
-    accent = theme.accent;
-  contactShadow(g, start.x, start.y, 26, 22, 0.35);
-  if (!map.loop) contactShadow(g, end.x, end.y, 30, 26, 0.35);
-  // A ring has no reactor; its entry portal glows in the accent colour instead.
-  const portal = map.loop ? accent : 0xf0cf87;
-  // Entry: amber in every theme, pointing along the path, inside a dashed ring.
-  disc(g, start.x, start.y, 25, theme.backdrop, 0.6);
-  g.lineStyle(2, portal, 0.5);
-  for (let i = 0; i < 8; i++) {
-    const a = (i * Math.PI) / 4;
-    g.beginPath();
-    arcPath(g, start.x, start.y, 24, a, a + Math.PI / 8);
-    g.strokePath();
+}
+/**
+ * The pieces and landmarks of a tilted theme, over the path: every shadow first, then the bodies row by row from the
+ * north (by their bottom row, then west to east), so a tall piece overlaps the row above it and is overlapped by the
+ * one below. Flat themes draw nothing here.
+ */
+function drawStanding(g: Ink, map: MapDefinition, theme: Theme, parts: readonly ObstaclePiece[], spots: readonly LandmarkSpot[], family: GroundFamily) {
+  const tilted = theme.tilted;
+  if (!tilted) return;
+  for (const p of parts) enlarged(g, p, () => tilted.shadow(g, p.x * CELL, p.y * CELL, cellRandom(map, p.x, p.y)));
+  const items = [
+    ...parts.map((p) => ({ x: p.x, row: p.y + p.size, draw: () => enlarged(g, p, () => theme.obstacle(g, p.x * CELL, p.y * CELL, cellRandom(map, p.x, p.y))) })),
+    ...spots.map((spot) => {
+      const rand = groundRandom(map, "landmark", spot.x, spot.y),
+        { x, y, s } = landmarkFrame(spot);
+      return { x: spot.x, row: spot.y + spot.size, draw: () => (tilted.landmark ? tilted.landmark(g, x, y, s, spot.variant, rand) : drawLandmark(g, spot, family, theme, rand)) };
+    }),
+  ];
+  // Extras stand on a ground point; a cell's piece stands about 0.36 cells above its bottom edge (`groundOf` in the themes).
+  for (const extra of tilted.extras?.(map) ?? []) {
+    extra.shadow(g);
+    items.push({ x: extra.x / CELL, row: extra.y / CELL + 0.36, draw: () => extra.draw(g) });
   }
-  disc(g, start.x, start.y, 19, theme.backdrop);
-  g.lineStyle(2, portal);
-  strokeRound(g, start.x, start.y, 18);
-  polygon(g, start.x, start.y, 8, 3, portal, Math.atan2(path[1].y - start.y, path[1].x - start.x));
-  if (!map.loop) drawReactor(g, end, accent, theme.backdrop);
-  drawBoardLight(scene.add.graphics(), map, theme, themeGlow(map));
-  const label = (x: number, y: number, text: string, color: string) =>
-    scene.add.text(x, y, text, {
-      fontFamily: "monospace",
-      fontSize: "13px",
-      fontStyle: "bold",
-      color,
-      backgroundColor: hex(theme.backdrop),
-      padding: { x: 7, y: 5 },
-    });
-  const width = CELL * map.columns,
-    height = CELL * map.rows;
-  // Centred on `x`, kept inside the board.
-  const place = (text: Phaser.GameObjects.Text, x: number, y: number) =>
-    text.setPosition(
-      Math.min(Math.max(x - text.width / 2, 4), width - text.width - 4),
-      Math.min(Math.max(y, 4), height - text.height - 4),
-    );
-  // Below the entry when the map name label occupies the space above it.
-  place(
-    label(0, 0, map.loop ? "PORTAL" : "ENTRY", map.loop ? hex(accent) : "#efd297"),
-    start.x,
-    start.y < CELL * 2 ? start.y + 26 : start.y - 54,
-  );
-  // Below the reactor unless it sits in the bottom row.
-  if (!map.loop) place(label(0, 0, "REACTOR", hex(accent)), end.x, end.y + 32 + 30 < height ? end.y + 32 : end.y - 58);
-  // Map name in the top-left corner, or in the first corner the path keeps clear.
-  const name = label(0, 0, map.name.toUpperCase(), hex(shade(theme.grid, 0.35))),
-    clear = (row: number, fromRight: boolean) =>
-      !map.path.some((p) => p.y === row && (fromRight ? p.x >= map.columns - 4 : p.x < 4));
-  if (clear(0, false)) name.setPosition(20, 22);
-  else if (clear(map.rows - 1, false)) name.setPosition(20, height - name.height - 22);
-  else name.setPosition(width - name.width - 20, clear(0, true) ? 22 : height - name.height - 22);
-  return scene.children.list.slice(first);
+  items.sort((a, b) => a.row - b.row || a.x - b.x);
+  for (const item of items) item.draw();
 }
 /** Landmark spots per map, computed once (ambient asks every frame). */
 const LANDMARKS = new Map<string, ReturnType<typeof landmarkSpots>>();
 function landmarks(map: MapDefinition) {
   let spots = LANDMARKS.get(map.id);
-  if (!spots) LANDMARKS.set(map.id, (spots = landmarkSpots(map)));
+  if (!spots) LANDMARKS.set(map.id, (spots = landmarkSpots(themeOf(map).sea ? landOf(map) : map)));
   return spots;
 }
 /** Obstacle pieces per map, computed once (ambient asks every frame). */
 const PIECES = new Map<string, ObstaclePiece[]>();
 function pieces(map: MapDefinition) {
   let list = PIECES.get(map.id);
-  if (!list) PIECES.set(map.id, (list = obstaclePieces(map, landmarks(map))));
+  if (!list) PIECES.set(map.id, (list = obstaclePieces(themeOf(map).sea ? landOf(map) : map, landmarks(map))));
   return list;
 }
 /** Runs `draw` (which draws the piece's top-left cell at its normal place) scaled up about that cell's corner to the piece's size. */
@@ -224,7 +236,7 @@ function ambientFrame(map: MapDefinition): AmbientFrame {
     cells = new Float64Array(map.columns * map.rows).fill(-1);
   frame = {
     path: pixelPath(map),
-    blocked: map.blocked.filter((b) => !landmarkAt(spots, b.x, b.y) && !inBig(b.x, b.y)),
+    blocked: (themeOf(map).sea ? landOf(map) : map).blocked.filter((b) => !landmarkAt(spots, b.x, b.y) && !inBig(b.x, b.y)),
     // Cells on the board are cached; other arguments (particle and slot indices) are computed each call.
     hash: (x, y) => {
       if (x < 0 || y < 0 || x >= map.columns || y >= map.rows || x !== Math.floor(x) || y !== Math.floor(y)) return cellRandom(map, x, y)();
@@ -240,7 +252,13 @@ export function drawAmbient(g: Ink, glow: Ink, map: MapDefinition, clock: number
   const family = GROUND_FAMILY[map.theme ?? "outpost"],
     time = still ? 0 : clock,
     lit = themeGlow(map);
-  for (const spot of landmarks(map)) landmarkLight(g, glow, spot, family, themeOf(map).accent, time, lit);
+  const own = themeOf(map).tilted;
+  for (const spot of landmarks(map)) {
+    if (own?.landmark && own.landmarkLight) {
+      const { x, y, s } = landmarkFrame(spot);
+      own.landmarkLight(g, glow, x, y, s, spot.variant, time, lit);
+    } else if (!own?.landmark) landmarkLight(g, glow, spot, family, themeOf(map).accent, time, lit);
+  }
   const frame = ambientFrame(map);
   themeOf(map).ambient({ g, glow, lit, map, clock: time, still, ...frame });
   // Big pieces: the theme's ambient once more per piece, for its top-left cell only, scaled like the piece. No path
@@ -250,45 +268,12 @@ export function drawAmbient(g: Ink, glow: Ink, map: MapDefinition, clock: number
     if (p.size > 1)
       enlarged(g, p, () => enlarged(glow, p, () => themeOf(map).ambient({ g, glow, lit, map: empty, clock: time, still, hash: frame.hash, path: [], blocked: [{ x: p.x, y: p.y }] })));
 }
-const DANGER = 0xff647c;
-/** Portal colour: amber at a reactor map's entry, the accent on a ring's portal (as `drawTerrain` paints it). */
-const portalColor = (map: MapDefinition) => (map.loop ? themeOf(map).accent : 0xf0cf87);
 /**
- * The live part of the entry and the reactor, drawn every frame over the baked terrain: a vortex turning in the entry
- * portal (light on `glow`, thin arcs on `g`) and the reactor core pulsing, with a ring breathing between its outlines.
- * `alarm` (0 to 1) turns the reactor red and quickens it; a ring map has no reactor, so its portal takes the alarm.
- * `still` (reduced motion) keeps everything in place.
+ * The live part of the entry breach and the reactor core, drawn every frame over the baked terrain (`gates.ts`
+ * `drawGateLife`): the vortex and lightning of the breach, the core's pulse and hologram ring. `alarm` (0 to 1) turns
+ * the reactor red and quickens it; a ring map has no reactor, so its breach takes the alarm. `still` (reduced motion)
+ * keeps everything in place.
  */
-export function drawGates({ g, glow }: Pen, map: MapDefinition, clock: number, still: boolean, alarm: number) {
-  const path = pixelPath(map),
-    start = path[0],
-    accent = themeOf(map).accent,
-    lit = themeGlow(map),
-    t = still ? 0 : clock,
-    portal = portalColor(map),
-    danger = Math.max(0, Math.min(1, alarm));
-  // Entry vortex: three arms spiralling inwards, a soft core light.
-  for (let i = 0; i < 3; i++) {
-    const a = -t * 1.2 + (i * Math.PI * 2) / 3;
-    arcBand(glow, start.x, start.y, 11, 3, a, a + 1.4, portal, 0.18 * lit);
-    arcBand(glow, start.x, start.y, 6, 2, a + 0.8, a + 2, portal, 0.14 * lit);
-    g.lineStyle(1, portal, 0.35);
-    g.beginPath();
-    arcPath(g, start.x, start.y, 15, a + 0.4, a + 1.3);
-    g.strokePath();
-  }
-  halo(glow, start.x, start.y, 22, portal, (0.16 + 0.06 * Math.sin(t * 1.7)) * lit);
-  const gate = map.loop ? start : path[path.length - 1],
-    color = danger > 0 ? blend(map.loop ? portal : accent, DANGER, danger) : map.loop ? portal : accent,
-    speed = 1 + danger * 1.5,
-    beat = 0.5 + 0.5 * Math.sin(t * 2.2 * speed);
-  if (!map.loop) {
-    // Reactor core: a breathing light over the hexagon, flaring with the alarm.
-    halo(glow, gate.x, gate.y, 26 + 6 * danger, color, (0.14 + 0.1 * beat + 0.14 * danger) * lit);
-    disc(glow, gate.x, gate.y, 6, color, (0.12 + 0.1 * beat) * lit);
-  }
-  // The ring between the outer and inner outline, as the battlefield drew it before.
-  g.lineStyle(1, color, 0.35 + 0.2 * Math.sin(t * 3 * speed));
-  strokeRound(g, gate.x, gate.y, 26 + Math.sin(t * 2) * 2);
-  if (danger > 0) ring(glow, gate.x, gate.y, 28 + 4 * beat, 3, DANGER, 0.22 * danger * lit);
+export function drawGates(pen: Pen, map: MapDefinition, clock: number, still: boolean, alarm: number) {
+  drawGateLife(pen, pixelPath(map), !!map.loop, themeOf(map).accent, clock, still, alarm, themeGlow(map));
 }

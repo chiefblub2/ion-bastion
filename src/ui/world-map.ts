@@ -340,6 +340,7 @@ const THEME_ROUTES: Record<MapTheme, RouteShape> = {
   geode: "descent",
   gear: "ring",
   tide: "hop",
+  island: "hop",
 };
 export const routeShape = (theme: MapTheme, circle: boolean): RouteShape => (circle && theme !== "tide" ? "ring" : THEME_ROUTES[theme]);
 /**

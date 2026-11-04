@@ -35,6 +35,40 @@ export interface Theme {
   decor: CellDrawing;
   /** Animated layer, redrawn every frame below towers and enemies. */
   ambient: (ctx: AmbientContext) => void;
+  /**
+   * Replaces the default road (kerbs, sunken bed, worn lanes, grit, centre line and arrows) with the theme's own
+   * path, drawn into the static terrain at the same place: Palm Atoll's channel (`coast.ts` `channelOf`).
+   */
+  drawPath?: (g: Ink, map: MapDefinition) => void;
+  /**
+   * Coastal theme: obstacle groups at the board edge are open sea (`coast.ts` `seaCells`), left out of the obstacle
+   * pieces, landmarks and the ambient's `blocked`, and drawn by this into the static terrain before the path.
+   */
+  sea?: (g: Ink, map: MapDefinition, sea: ReadonlySet<string>) => void;
+  /** Terrain in the towers' 3/4 tilt (see `TiltedTerrain`); absent: flat obstacles under the path. */
+  tilted?: TiltedTerrain;
+}
+/**
+ * A theme whose obstacles stand up out of the board in the towers' 3/4 tilt (`tower-art/tilt.ts`). Its obstacles and
+ * landmarks are drawn after the path, north to south, so a tall piece may reach into the cell above; the generic
+ * contact shadow is left out, the theme casts its own. `shadow` gets the same `cellRandom` stream as `obstacle` and
+ * runs for every piece before any body, so no shadow lies on a body.
+ */
+export interface TiltedTerrain {
+  shadow: CellDrawing;
+  /** The theme's own landmark on a spot with centre (x, y) and half size `s` (shadow included); replaces the family's. */
+  landmark?: (g: Ink, x: number, y: number, s: number, variant: 0 | 1, rand: Random) => void;
+  /** Its animated part on the ambient layer (motion on `g`, light on `glow`, scaled by `lit`). */
+  landmarkLight?: (g: Ink, glow: Ink, x: number, y: number, s: number, variant: 0 | 1, clock: number, lit: number) => void;
+  /** More standing pieces outside the obstacle cells (Palm Atoll's palms on the beach), sorted in with the others. */
+  extras?: (map: MapDefinition) => readonly StandingPiece[];
+}
+/** A standing piece on a ground point in pixels, with its shadow (drawn in the shadow pass) and its body. */
+export interface StandingPiece {
+  x: number;
+  y: number;
+  shadow: (g: Ink) => void;
+  draw: (g: Ink) => void;
 }
 /** FNV-1a over the map id and cell, so decoration never moves between redraws. */
 export function seed(id: string, x: number, y: number) {

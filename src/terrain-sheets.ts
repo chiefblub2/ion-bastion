@@ -1,0 +1,115 @@
+import type { Ink } from "./render/shapes";
+import { mulberry32 } from "./render/terrain-themes/kit";
+import * as O from "./render/terrain-themes/outpost-props";
+import * as L from "./render/terrain-themes/lock-props";
+import * as S from "./render/terrain-themes/shard-props";
+import * as E from "./render/terrain-themes/ember-props";
+// Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
+// shadow first, so a prop can be judged at a glance. One list per theme that has one.
+
+export interface SheetItem {
+  label: string;
+  /** Tile width in cells (landmarks take two). */
+  span?: number;
+  shadow: (g: Ink, gx: number, gy: number) => void;
+  draw: (g: Ink, gx: number, gy: number) => void;
+}
+/** Draws a landmark (built around 0, 0 at full 2×2 size) at (gx, gy) shrunk by k. */
+const at = (g: Ink, gx: number, gy: number, k: number, draw: () => void) => {
+  g.save();
+  g.translateCanvas(gx, gy);
+  g.scaleCanvas(k, k);
+  draw();
+  g.restore();
+};
+const r = (n: number) => mulberry32(n);
+export const SHEETS: Partial<Record<string, SheetItem[]>> = {
+  outpost: [
+    ...[1, 2, 3].map((n) => {
+      const c = O.cratesOf(r(100 + n));
+      return { label: "crates", shadow: (g: Ink, x: number, y: number) => c.forEach((q) => O.crateShadow(g, x, y, q)), draw: (g: Ink, x: number, y: number) => O.drawCrates(g, x, y, c) };
+    }),
+    ...[1, 2].map((n) => {
+      const d = O.drumsOf(r(200 + n));
+      return { label: "drums", shadow: (g: Ink, x: number, y: number) => O.drumsShadow(g, x, y, d), draw: (g: Ink, x: number, y: number) => O.drawDrums(g, x, y, d) };
+    }),
+    ...[1, 2].map((n) => {
+      const w = O.sandbagsOf(r(300 + n));
+      return { label: "sandbags", shadow: (g: Ink, x: number, y: number) => O.sandbagsShadow(g, x, y, w), draw: (g: Ink, x: number, y: number) => O.drawSandbags(g, x, y, w) };
+    }),
+    (() => {
+      const b = O.barriersOf(r(401));
+      return { label: "barriers", shadow: (g: Ink, x: number, y: number) => O.barriersShadow(g, x, y, b), draw: (g: Ink, x: number, y: number) => O.drawBarriers(g, x, y, b) };
+    })(),
+    { label: "mast", shadow: (g, x, y) => O.mastShadow(g, x, y), draw: (g, x, y) => O.drawMast(g, x, y, 0.8) },
+    ...[0.2, Math.PI - 0.35].map((a) => {
+      const c = { ...O.containerOf(r(500)), a };
+      return { label: "container", shadow: (g: Ink, x: number, y: number) => O.containerShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => O.drawContainer(g, x, y, c) };
+    }),
+    { label: "generator", shadow: (g, x, y) => O.generatorShadow(g, x, y, 0.5), draw: (g, x, y) => O.drawGenerator(g, x, y, 0.5) },
+    { label: "hedgehog", shadow: (g, x, y) => O.hedgehogShadow(g, x, y), draw: (g, x, y) => O.drawHedgehog(g, x, y, 0.4) },
+    { label: "fence", shadow: (g, x, y) => O.fenceShadow(g, x - 26, y, x + 26, y), draw: (g, x, y) => O.drawFence(g, x - 26, y, x + 26, y) },
+    { label: "watchtower", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => O.watchtowerShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => O.drawWatchtower(g)) },
+    { label: "helipad", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => O.helipadShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => O.drawHelipad(g)) },
+  ],
+  lock: [
+    ...[1, 2, 3].map((n) => {
+      const m = L.mooringOf(r(600 + n));
+      return { label: "mooring", shadow: (g: Ink, x: number, y: number) => L.mooringShadow(g, x, y, m), draw: (g: Ink, x: number, y: number) => L.drawMooring(g, x, y, m) };
+    }),
+    { label: "capstan", shadow: (g, x, y) => L.capstanShadow(g, x, y, 0.6), draw: (g, x, y) => L.drawCapstan(g, x, y, 0.6) },
+    ...[1, 2].map((n) => {
+      const p = L.pipesOf(r(700 + n));
+      return { label: "pipes", shadow: (g: Ink, x: number, y: number) => L.pipesShadow(g, x, y, p), draw: (g: Ink, x: number, y: number) => L.drawPipes(g, x, y, p) };
+    }),
+    ...[1, 2].map((n) => {
+      const p = L.palletsOf(r(800 + n));
+      return { label: "pallets", shadow: (g: Ink, x: number, y: number) => L.palletsShadow(g, x, y, p), draw: (g: Ink, x: number, y: number) => L.drawPallets(g, x, y, p) };
+    }),
+    { label: "cylinders", shadow: (g, x, y) => L.cylindersShadow(g, x, y, 0.2), draw: (g, x, y) => L.drawCylinders(g, x, y, 0.2) },
+    { label: "lantern", shadow: (g, x, y) => L.lanternShadow(g, x, y), draw: (g, x, y) => L.drawLantern(g, x, y) },
+    { label: "kiosk", shadow: (g, x, y) => L.kioskShadow(g, x, y, 0.3), draw: (g, x, y) => L.drawKiosk(g, x, y, 0.3) },
+    { label: "fender", shadow: () => undefined, draw: (g, x, y) => L.fender(g, x, y - 10) },
+    { label: "barge", span: 2, shadow: (g, x, y) => L.bargeShadow(g, x, y), draw: (g, x, y) => L.drawBarge(g, x, y) },
+    { label: "crane", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => L.craneShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => L.drawCrane(g)) },
+    { label: "control tower", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => L.controlTowerShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => L.drawControlTower(g)) },
+  ],
+  shard: [
+    ...[1, 2, 3, 4].map((n) => {
+      const c = S.clusterOf(r(900 + n));
+      return { label: "cluster", shadow: (g: Ink, x: number, y: number) => S.clusterShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => S.drawCluster(g, x, y, c) };
+    }),
+    (() => {
+      const q = S.geodeOf(r(950));
+      return { label: "geode", shadow: (g: Ink, x: number, y: number) => S.geodeShadow(g, x, y, q), draw: (g: Ink, x: number, y: number) => S.drawGeode(g, x, y, q) };
+    })(),
+    { label: "floater", shadow: (g, x, y) => S.floaterShadow(g, x, y), draw: (g, x, y) => S.drawFloater(g, x, y, 0x7fd8ff, 0.5) },
+    { label: "sensor", shadow: (g, x, y) => S.sensorShadow(g, x, y), draw: (g, x, y) => S.drawSensor(g, x, y, 0.6) },
+    { label: "pylon", shadow: (g, x, y) => S.pylonShadow(g, x, y), draw: (g, x, y) => S.drawPylon(g, x, y, 0.2, 0xf0a6d8) },
+    { label: "crystal", shadow: (g, x, y) => S.crystalShadow(g, x, y, { u: 0, v: 0, a: 0.8, lean: 0.3, len: 30, r: 7, color: 0x9d8cff }), draw: (g, x, y) => S.crystal(g, x, y, { u: 0, v: 0, a: 0.8, lean: 0.3, len: 30, r: 7, color: 0x9d8cff }) },
+    { label: "monolith", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => S.monolithShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => S.drawMonolith(g, 0xb8a6ff)) },
+    { label: "split geode", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => S.splitGeodeShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => S.drawSplitGeode(g, 0x9d8cff)) },
+  ],
+  ember: [
+    ...[1, 2].map((n) => {
+      const c = E.columnsOf(r(1000 + n));
+      return { label: "columns", shadow: (g: Ink, x: number, y: number) => E.columnsShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => E.drawColumns(g, x, y, c) };
+    }),
+    (() => {
+      const b = E.boulderOf(r(1010));
+      return { label: "boulder", shadow: (g: Ink, x: number, y: number) => E.boulderShadow(g, x, y, b), draw: (g: Ink, x: number, y: number) => E.drawBoulder(g, x, y, b) };
+    })(),
+    { label: "fumarole", shadow: (g, x, y) => E.fumaroleShadow(g, x, y, 1), draw: (g, x, y) => E.drawFumarole(g, x, y, 1) },
+    (() => {
+      const t = E.treeOf(r(1020));
+      return { label: "tree", shadow: (g: Ink, x: number, y: number) => E.treeShadow(g, x, y, t), draw: (g: Ink, x: number, y: number) => E.drawTree(g, x, y, t) };
+    })(),
+    (() => {
+      const o = E.obsidianOf(r(1030));
+      return { label: "obsidian", shadow: (g: Ink, x: number, y: number) => E.obsidianShadow(g, x, y, o), draw: (g: Ink, x: number, y: number) => E.drawObsidian(g, x, y, o) };
+    })(),
+    { label: "brazier", shadow: (g, x, y) => E.brazierShadow(g, x, y), draw: (g, x, y) => E.drawBrazier(g, x, y) },
+    { label: "cinder cone", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => E.coneShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => E.drawCone(g)) },
+    { label: "shrine", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => E.shrineShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => E.drawShrine(g)) },
+  ],
+};

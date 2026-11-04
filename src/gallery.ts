@@ -11,6 +11,7 @@ import { ART_FILTERING } from "./render/enemy-art-scene";
 import { Showcase, showcaseSize } from "./showcase";
 import { maskedTile } from "./review-kit";
 import { TiltReview, tiltReviewSize } from "./tilt-review";
+import { TerrainReview, terrainReviewSize } from "./terrain-review";
 import { createEnemy } from "./systems/spawn";
 import { statusFlags } from "./systems/status";
 import { traitFlags, type TraitFlags } from "./systems/traits";
@@ -105,7 +106,9 @@ const query = new URLSearchParams(location.search),
   render = query.has("render"),
   /** `?tilt`: every tower at its levels, firing pose, tracks, paths and headings (see `tilt-review.ts`). */
   tilt = query.has("tilt"),
-  pageSize = tilt ? tiltReviewSize : anim ? animReviewSize : art ? artReviewSize : showcase ? showcaseSize : { width: width * ZOOM, height: height * ZOOM };
+  /** `?terrain`: a sample map in one theme with live ambient and a few towers (see `terrain-review.ts`). */
+  terrain = query.has("terrain"),
+  pageSize = terrain ? terrainReviewSize : tilt ? tiltReviewSize : anim ? animReviewSize : art ? artReviewSize : showcase ? showcaseSize : { width: width * ZOOM, height: height * ZOOM };
 if (render)
   void import("./music-render").then((m) => {
     (window as unknown as { __renderMusic: typeof m.renderMusic }).__renderMusic = m.renderMusic;
@@ -119,6 +122,6 @@ else
     transparent: true,
     antialias: true,
     render: ART_FILTERING,
-    scene: tilt ? TiltReview : anim ? AnimReview : art ? ArtReview : showcase ? Showcase : Gallery,
+    scene: terrain ? TerrainReview : tilt ? TiltReview : anim ? AnimReview : art ? ArtReview : showcase ? Showcase : Gallery,
     audio: { noAudio: true },
   });

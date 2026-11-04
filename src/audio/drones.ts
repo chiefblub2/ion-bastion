@@ -53,4 +53,5 @@ export const DRONES: Record<DroneId, PadFlavor> = {
   geode: p(2400, 14, 0.8, 0.07, 0.08, 0.4, "offbeat", "pulse"),
   gear: p(1600, 8, 0.4, 0.05, 0.1, 0.6, "pulse", "call"),
   tide: p(1800, 12, 0.9, 0.08, 0.05, 0.5, "offbeat", "rise"),
+  island: p(2200, 14, 0.8, 0.07, 0.06, 0.45, "offbeat", "call"),
 };
