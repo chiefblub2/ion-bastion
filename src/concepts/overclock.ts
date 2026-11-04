@@ -1,69 +1,98 @@
 import { halo } from "../render/material";
 import { disc, shade } from "../render/shapes";
 import { lamp } from "../render/tower-art/tilt-parts";
-import { SQUASH } from "../render/tower-art/tilt";
-import { STEEL, at, contact, face, gear, roof, slab } from "./kit-support-a";
+import { SQUASH, onGround } from "../render/tower-art/tilt";
+import { STEEL, at, contact, ngon, slab } from "./kit-support-a";
 import type { Concept } from "./types";
 
-/** Overclock: a small clock tower on a plinth; a dial on its front ticks round, a gear ring turns behind it. */
+/**
+ * Overclock: the Overdrive Core. A plinth carrying a dark processor block with a glowing core window on its front and
+ * a heat sink of tall cooling fins on its roof (base). In the boost window the core flares, the fins glow from their
+ * roots and heat shimmers above them; a cooling fan beside the window spins (above, live).
+ */
 const DROP = 5,
   PLINTH = 4,
-  WALL = 24,
-  APEX = 33,
-  DIAL = 16;
-const OLIVE = 0x85b21b;
+  BLOCK = 11,
+  FIN_TOP = 22;
+/** Fins across the roof, west to east. */
+const FINS = [-7.5, -4.5, -1.5, 1.5, 4.5, 7.5];
+/** The boost window: a pulse on the shared clock, sharp to rise and slow to fall. */
+const boost = (clock: number) => Math.max(0, Math.sin(clock * 2.2)) ** 2;
 
 export const concept: Concept = {
   tower: "overclock",
-  name: "Clock Tower",
-  idea: "A square clock tower on a plinth with a pyramid roof; the dial on its front ticks round, a gear ring turns behind it.",
-  tilt: { drop: DROP, squash: SQUASH, height: DIAL, deck: PLINTH },
-  base: ({ g, x, y, level, color }) => {
+  name: "Overdrive Core",
+  idea: "A processor block with a glowing core window under a heat sink of tall cooling fins: in the boost window the core flares, the fins glow and heat shimmers off them; a fan beside the window spins.",
+  tilt: { drop: DROP, squash: SQUASH, height: BLOCK, deck: PLINTH },
+  base: ({ g, x, y, level, color, definition }) => {
     const y0 = y + DROP,
+      c = definition.color,
       P = at(x, y0);
-    contact(g, x, y0, 18, 15);
-    slab(g, x, y0, [-16, -13, 16, -13, 16, 13, -16, 13], 0, PLINTH, 1, STEEL.side, STEEL.top);
-    slab(g, x, y0, [-9, -8, 9, -8, 9, 8, -9, 8], PLINTH, WALL, 0, shade(OLIVE, -0.62), shade(OLIVE, -0.4));
-    roof(g, x, y0, 10, WALL, APEX, shade(OLIVE, -0.35));
-    // Corner pilasters and a cornice band; from level 3 a second, smaller dial on the east wall.
-    for (const u of [-9, 9]) g.lineStyle(1.2, shade(OLIVE, -0.25), 1), g.lineBetween(...P(u, 8, PLINTH + 0.5), ...P(u, 8, WALL - 0.5));
-    g.lineStyle(1.4, level >= 4 ? color : shade(OLIVE, -0.2), 1);
-    g.lineBetween(...P(-9, 8, WALL - 1.2), ...P(9, 8, WALL - 1.2));
-    // The dial: a bezel and a pale face on the front wall (its hands are live).
-    const [dx, dy] = P(0, 8, DIAL);
-    face(g, dx, dy, 7.2, STEEL.deep);
-    face(g, dx, dy, 6.2, 0xe9efd9);
-    g.fillStyle(STEEL.deep);
-    for (let i = 0; i < 12; i++) {
-      const t = (i / 12) * Math.PI * 2,
-        r0 = i % 3 ? 5.2 : 4.6;
-      g.fillRect(dx + Math.cos(t) * r0 - 0.4, dy + Math.sin(t) * r0 - 0.4, 0.8, 0.8);
+    contact(g, x, y0, 18, 14);
+    slab(g, x, y0, [-17, -11, -12, -15, 12, -15, 17, -11, 17, 11, 12, 15, -12, 15, -17, 11], 0, PLINTH, 1, STEEL.side, STEEL.top);
+    // The processor block: dark, with a trim line round its waist from level 4.
+    slab(g, x, y0, [-10.5, -8, 10.5, -8, 10.5, 8, -10.5, 8], PLINTH, BLOCK, 0.8, STEEL.deep, STEEL.side);
+    if (level >= 4) {
+      g.lineStyle(1, color, 1);
+      g.lineBetween(...P(-10.5, 8, PLINTH + 2), ...P(10.5, 8, PLINTH + 2));
     }
-    if (level >= 3) {
-      const [ex, ey] = P(9, 0, DIAL + 2);
-      // A small gauge on the east wall: squashed, it sits on a wall seen from the side.
-      face(g, ex + 0.4, ey, 2.4, STEEL.deep, 1, 1);
-      face(g, ex + 0.4, ey, 1.7, shade(OLIVE, 0.3));
+    // The core window on the front face (its light is live) with contact pins either side.
+    const [wx0, wy0] = P(-5, 8, BLOCK - 1.5),
+      [wx1, wy1] = P(5, 8, PLINTH + 1.5);
+    g.fillStyle(0x0a1410);
+    g.fillRect(wx0, wy0, wx1 - wx0, wy1 - wy0);
+    g.fillStyle(shade(c, -0.55));
+    g.fillRect(wx0 + 1, wy0 + 1, wx1 - wx0 - 2, wy1 - wy0 - 2);
+    g.fillStyle(level >= 3 ? 0xc9a25a : STEEL.metal);
+    for (const u of [-9, -7.5]) {
+      const [px, py] = P(u, 8, PLINTH + 3.2);
+      g.fillRect(px - 0.4, py - 1.5, 0.8, 3);
     }
+    // The heat sink: tall thin fins standing across the roof, taller from level 3.
+    const top = FIN_TOP + (level >= 3 ? 2 : 0);
+    for (const u of FINS) slab(g, x, y0, [u - 0.7, -6.5, u + 0.7, -6.5, u + 0.7, 6.5, u - 0.7, 6.5], BLOCK, top, 0, shade(c, -0.5), shade(c, -0.15), shade(c, 0.3));
+    // The fan on the front face, right of the window: a round frame (the blades spin live).
+    const [fx, fy] = P(7.9, 8, (BLOCK + PLINTH) / 2);
+    disc(g, fx, fy, 2.7, STEEL.side);
+    disc(g, fx, fy, 2.1, 0x0a1410);
+    if (level >= 5) for (const u of [-10.5, 10.5]) slab(g, x, y0, [u - 0.6, -8.6, u + 0.6, -8.6, u + 0.6, 8.6, u - 0.6, 8.6], PLINTH, BLOCK + 1, 0, color, shade(color, 0.2));
   },
   below: () => {},
   turret: () => {},
-  above: ({ g, glow, x, y, tower, clock, level, color }) => {
-    const P = at(x, y + DROP),
-      [dx, dy] = P(0, 8, DIAL),
-      // The hand ticks a step a second; it grows with each level.
-      tick = Math.floor(clock + tower.id) * ((Math.PI * 2) / 12) - Math.PI / 2,
-      len = 3.6 + Math.min(level, 3) * 0.6;
-    // A thin gear ring behind the dial edge, turning faster with each level.
-    gear(g, dx, dy, 8.6, 12, clock * (0.4 + 0.25 * level), shade(OLIVE, -0.1));
-    face(g, dx, dy, 7.2, STEEL.deep);
-    face(g, dx, dy, 6.2, 0xe9efd9);
-    g.lineStyle(1.4, STEEL.deep, 1);
-    g.lineBetween(dx, dy, dx + Math.cos(tick) * len, dy + Math.sin(tick) * len);
-    g.lineStyle(1, shade(OLIVE, -0.3), 1);
-    g.lineBetween(dx, dy, dx + Math.cos(tick / 12) * 2.8, dy + Math.sin(tick / 12) * 2.8);
-    disc(g, dx, dy, 0.9, color);
-    halo(glow, dx, dy, 9, OLIVE, 0.12 + 0.1 * Math.max(0, Math.cos((clock % 1) * Math.PI)));
-    if (level >= 2) lamp(g, glow, ...P(0, 0, APEX + 1.4), color, 0.5 + 0.5 * Math.max(0, Math.sin(clock * Math.PI * 2)));
+  above: ({ g, glow, x, y, tower, clock, level, color, definition, energy }) => {
+    const y0 = y + DROP,
+      c = definition.color,
+      P = at(x, y0),
+      b = boost(clock + tower.id),
+      top = FIN_TOP + (level >= 3 ? 2 : 0);
+    // The core flares in the boost window.
+    const [cx, cy] = P(0, 8, (BLOCK + PLINTH) / 2);
+    g.fillStyle(shade(c, -0.3 + 0.6 * b));
+    g.fillRect(cx - 3.2, cy - 2, 6.4, 4);
+    halo(glow, cx, cy, 8 + 5 * b, c, 0.15 + 0.3 * b + energy);
+    // The fins glow from their roots; heat shimmers above them.
+    for (const u of FINS) {
+      const [fx, fy] = P(u, 6.5, BLOCK + 1),
+        [tx, ty] = P(u, 6.5, BLOCK + 1 + (top - BLOCK - 2) * (0.3 + 0.7 * b));
+      glow.lineStyle(1.6, c, 0.15 + 0.35 * b);
+      glow.lineBetween(fx, fy, tx, ty);
+    }
+    for (let i = 0; i < 3; i++) {
+      const rise = (clock * 0.8 + i / 3 + tower.id * 0.1) % 1,
+        [hx, hy] = P(-5 + i * 5, 0, top + 2 + rise * 8);
+      glow.lineStyle(1.2, c, 0.25 * b * (1 - rise));
+      glow.lineBetween(hx - 2, hy, hx, hy - 1.5);
+      glow.lineBetween(hx, hy - 1.5, hx + 2, hy);
+    }
+    // The fan: blades spinning in their frame, faster in the boost window.
+    const [fx, fy] = P(7.9, 8, (BLOCK + PLINTH) / 2),
+      spin = clock * (6 + 10 * b) + tower.id;
+    g.lineStyle(0.9, STEEL.metal, 1);
+    for (let k = 0; k < 4; k++) {
+      const t = spin + (k * Math.PI) / 2;
+      g.lineBetween(fx, fy, fx + Math.cos(t) * 1.9, fy + Math.sin(t) * 1.9);
+    }
+    disc(g, fx, fy, 0.6, STEEL.deep);
+    if (level >= 2) lamp(g, glow, ...P(-9.5, 8, BLOCK - 1), color, 0.4 + 0.6 * b);
   },
 };
