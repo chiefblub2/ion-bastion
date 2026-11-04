@@ -286,7 +286,6 @@ export function randomTower(run: RunState, content: ContentPack, rarity: TowerRa
   const left = (Object.keys(content.towers) as TowerId[]).filter((id) => !run.roster.includes(id) && towerRarity(id, content) === rarity);
   return draw(streamOf(run.seed, "tower-pick", key), left, 1)[0];
 }
-export const isBossNode = (n?: RunNode) => n?.kind === "boss" || n?.kind === "final";
 /** The act's name: its planet, or the Final Stand. */
 export const actName = (run: Pick<RunState, "act">, content: ContentPack) => actTiers(content)[Math.min(run.act, 3)].name;
 export const rankOfTower = (run: RunState, id: TowerId) => Math.max(rankOf(run.ranks[id]), hasFlag(run.relics, "veteran") ? 1 : 0);

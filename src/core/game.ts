@@ -217,8 +217,6 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
   },
 };
 
-/** Every command type the simulation knows; the relay checks names only, it holds no game logic. */
-export const COMMAND_TYPES: readonly string[] = Object.keys(HANDLERS);
 /** A plain object whose `type` is a known command. */
 export function isCommand<C extends { type: string } = Command>(c: unknown, extra: readonly string[] = []): c is C {
   const type = typeof c === "object" && c !== null ? (c as { type?: unknown }).type : undefined;
