@@ -6,47 +6,33 @@ import { box, frame, rod } from "../tower-art/tilt-frame";
 import { mulberry32, type Random, type StandingPiece, type Theme } from "./kit";
 import { bankWidth, CHANNEL_STEP, channelOf, SEA_TILE, seaCells, seaField, type ShorePoint, shoreLine } from "../coast";
 import { blend } from "../ground";
+import { type Bush, bushOf, bushShadow, drawBush, drawPalm, type Palm, palmOf, palmShadow, SHADE, SUN, trunkOffset } from "./island-flora";
 import { fnv } from "../../core/hash";
 import type { MapDefinition } from "../../core/types";
 
-// Palm Atoll, a Caribbean cay: powder-white sand, a turquoise tidal channel as the path, palms everywhere, and the
-// first terrain drawn in the towers' 3/4 tilt (`Theme.tilted`): palm clusters, boulders, lagoon pools and painted
-// dugouts stand up out of the board, north to south after the path, so palm crowns reach over the cell above; more
-// palms lean out over the beach (`tilted.extras`). Every piece's shape is rolled once by `pieceOf`, so its shadow
-// (drawn for all pieces first) and its body match.
+// Palm Atoll, a Caribbean cay: powder-white sand, a turquoise tidal channel as the path, palms and flowering bushes,
+// and the first terrain drawn in the towers' 3/4 tilt (`Theme.tilted`): palms, bushes (`island-flora.ts`), boulders,
+// lagoon pools and painted dugouts stand up out of the board, north to south after the path, so palm crowns reach over
+// the cell above; more palms and sea grape line the back of the beach (`tilted.extras`). Every piece's shape is rolled
+// once by `pieceOf`, so its shadow (drawn for all pieces first) and its body match.
 
 const SAND = 0xf2eada;
-/** Shadow colour on white sand: warm and see-through, never black. */
-const SHADE = 0x6a5634;
 const WATER = { deep: 0x0d9bc4, mid: 0x1fc3d0, shallow: 0x62e4d6, foam: 0xf6fffd } as const;
 /** Kind thresholds of the first `cellRandom` draw (`hash` in the ambient names the piece the same way). */
-const PALM = 0.6,
+const PALMS = 0.42,
+  BUSHES = 0.62,
   ROCKS = 0.72,
-  POOL = 0.85;
-/** Light falls from the upper left: a point `h` px up casts its shadow this far right and down on the ground. */
-const SUN = { x: 0.5, y: 0.3 } as const;
+  POOL = 0.84;
 const F = new Float64Array(16),
   I = new Float64Array(16);
 
-/** One palm: ground offset, lean (strength and ground direction), trunk height, crown turn and size, coconuts. */
-interface Palm { du: number; dv: number; lean: number; dir: number; height: number; spin: number; size: number; nuts: number }
 interface Rock { du: number; dv: number; r: number; h: number; radii: number[]; dark: boolean }
 type Piece =
-  | { kind: "palms"; palms: Palm[]; tuft: boolean }
+  | { kind: "plants"; palms: Palm[]; bushes: Bush[] }
   | { kind: "rocks"; rocks: Rock[] }
   | { kind: "pool"; rx: number; ry: number; rocks: Rock[] }
   | { kind: "boat"; angle: number; side: 1 | -1; paint: number };
 
-const palmOf = (rand: Random, du: number, dv: number, dir: number, lean = 0.5 + rand() * 0.7, height = 42 + rand() * 14): Palm => ({
-  du,
-  dv,
-  lean,
-  dir: dir + (rand() - 0.5) * 0.9,
-  height,
-  spin: rand() * Math.PI,
-  size: 0.95 + rand() * 0.2,
-  nuts: 2 + Math.floor(rand() * 3),
-});
 const rock = (rand: Random, du: number, dv: number, r: number): Rock => ({
   du,
   dv,
@@ -57,15 +43,24 @@ const rock = (rand: Random, du: number, dv: number, r: number): Rock => ({
 });
 /** Hull colours of the painted dugouts. */
 const BOAT_PAINT = [0x23a9bd, 0xe8604a, 0xf2c84a, 0x3f9a5a] as const;
-/** Rolls a cell's piece; the first draw is its kind (`hash`). Palms come alone, as a diverging pair or as a trio. */
+/**
+ * Rolls a cell's piece; the first draw is its kind (`hash`). Palm cells hold one to three palms, often with a bush at
+ * their feet; bush cells one to three bushes of any kind.
+ */
 function pieceOf(rand: Random): Piece {
   const kind = rand();
-  if (kind < PALM) {
+  if (kind < PALMS) {
     const count = rand(),
-      tuft = rand() < 0.6;
-    if (count < 0.45) return { kind: "palms", palms: [palmOf(rand, 0, 0, rand() * Math.PI * 2)], tuft };
-    if (count < 0.85) return { kind: "palms", palms: [palmOf(rand, -8, -4, Math.PI), palmOf(rand, 9, 5, 0)], tuft };
-    return { kind: "palms", palms: [palmOf(rand, -10, -6, Math.PI * 1.1), palmOf(rand, 10, -5, -0.2), palmOf(rand, 1, 8, Math.PI / 2, 0.4, 32 + rand() * 6)], tuft };
+      palms =
+        count < 0.5 ? [palmOf(rand, 0, -2)]
+        : count < 0.85 ? [palmOf(rand, -9, -5), palmOf(rand, 10, 5)]
+        : [palmOf(rand, -11, -6), palmOf(rand, 11, -4), palmOf(rand, 1, 9)];
+    return { kind: "plants", palms, bushes: rand() < 0.5 ? [bushOf(rand, palms.length === 1 ? 13 : -13, 9, undefined, 0.55 + rand() * 0.2)] : [] };
+  }
+  if (kind < BUSHES) {
+    const count = rand(),
+      spots = count < 0.35 ? [[0, 0]] : count < 0.75 ? [[-8, -4], [9, 6]] : [[-10, -6], [10, -4], [0, 9]];
+    return { kind: "plants", palms: [], bushes: spots.map(([du, dv]) => bushOf(rand, du, dv, undefined, (spots.length === 1 ? 1.05 : 0.8) + rand() * 0.2)) };
   }
   if (kind < ROCKS) {
     const rocks = [rock(rand, -6 + rand() * 4, -4 + rand() * 3, 11 + rand() * 4), rock(rand, 8 + rand() * 4, 3 + rand() * 3, 7 + rand() * 3)];
@@ -79,212 +74,22 @@ function pieceOf(rand: Random): Piece {
 /** Ground centre of a cell's piece (x, y0 in the tilt kit's terms). */
 const groundOf = (x: number, y: number) => ({ cx: x + CELL / 2, y0: y + 36 });
 
-// ── Palm ────────────────────────────────────────────────────────────────────────────────────────────────────────────
-/** Ground offset of the trunk at height fraction t: a long lean along `dir` that curves up a little towards the crown. */
-const bend = (p: Palm, t: number) => {
-  const d = p.lean * p.height * 0.42 * t ** 1.35;
-  return { u: Math.cos(p.dir) * d, v: Math.sin(p.dir) * d };
-};
-type Pt = { x: number; y: number };
-/** Screen point of the trunk's centre line at height fraction t, for a palm standing on (gx, gy). */
-const trunkAt = (gx: number, gy: number, p: Palm, t: number): Pt => {
-  const o = bend(p, t);
-  return { x: gx + o.u, y: gy + o.v * SQUASH - t * p.height };
-};
-const BARK = { body: 0x8c7f6c, lit: 0xb6a892, dark: 0x5c5244, ring: 0x4a4236 } as const;
-/**
- * A smooth, tapering trunk along its curve: a flared foot, the lit left side and shaded right side, fine ring scars
- * that bow with the round trunk, and the fibrous collar under the crown.
- */
-function trunk(g: Ink, gx: number, gy: number, p: Palm) {
-  const n = 14,
-    scale = Math.min(1.2, p.height / 48),
-    spine: Pt[] = [],
-    half: number[] = [];
-  for (let i = 0; i <= n; i++) {
-    const t = i / n;
-    spine.push(trunkAt(gx, gy, p, t));
-    half.push((2.7 - 0.8 * t + 1.8 * Math.max(0, 1 - t / 0.12) ** 2) * scale);
-  }
-  const side = (k: number, f: number) =>
-    spine.map((c, i) => {
-      const a = spine[Math.max(0, i - 1)],
-        b = spine[Math.min(n, i + 1)],
-        l = Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2) || 1;
-      // Normal of the centre line, pointing right of the upward direction.
-      return { x: c.x - ((b.y - a.y) / l) * half[i] * k * f, y: c.y + ((b.x - a.x) / l) * half[i] * k * f };
-    }),
-    band = (k0: number, k1: number, color: number, alpha = 1, grow = 0) => {
-      g.fillStyle(color, alpha);
-      g.fillPoints([...side(-1, k0 + grow), ...side(-1, k1 + grow).reverse()], true);
-    };
-  // Outline, body, the shaded right third and the lit left band.
-  g.fillStyle(OUTLINE, 0.55);
-  g.fillPoints([...side(1, 1.25), ...side(-1, 1.25).reverse()], true);
-  band(-1, 1, BARK.body);
-  band(-1, -0.35, BARK.dark);
-  band(0.35, 0.8, BARK.lit, 0.9);
-  // Rough ring scars: short bowed strokes across the trunk every couple of pixels, uneven in strength.
-  const rings = Math.round(p.height / 2.4);
-  for (let i = 1; i < rings; i++) {
-    const t = i / rings,
-      j = Math.min(n - 1, Math.floor(t * n)),
-      f = t * n - j,
-      c = { x: spine[j].x + (spine[j + 1].x - spine[j].x) * f, y: spine[j].y + (spine[j + 1].y - spine[j].y) * f },
-      w = half[j] + (half[j + 1] - half[j]) * f;
-    g.lineStyle(0.7 + 0.5 * hash01(p.spin, i, 3), BARK.ring, (0.3 + 0.4 * hash01(i, p.spin, 4)) * (1 - 0.4 * t));
-    g.beginPath();
-    g.moveTo(c.x - w, c.y - 0.4);
-    g.lineTo(c.x, c.y + 0.9);
-    g.lineTo(c.x + w, c.y - 0.4);
-    g.strokePath();
-  }
-  // Fibrous collar where the fronds grow out.
-  const top = spine[n];
-  oval(g, top.x, top.y + 1.5, 4.8 * scale, 3 * scale, 0x5a4428);
-  oval(g, top.x - 0.8, top.y + 0.8, 3.4 * scale, 2 * scale, 0x7a6038);
-}
-/** One frond of the crown: its ground direction, length, how high it arches and how far it droops, and its colour. */
-interface Frond { a: number; len: number; rise: number; droop: number; color: number; leaflet: number; hang: number; brown: boolean }
-const LEAF = { young: 0x86c850, mature: 0x3f923a, old: 0x2e7032, dead: 0xa88444, rib: 0xb0c868, tip: 0x9a7a3a } as const;
-const OUTER = 10,
-  INNER = 5,
-  FROND_LEN = 36;
-/**
- * The crown of a palm: an outer ring of mature fronds that arch out and droop, an inner ring of young ones that stand
- * higher, and on some palms an old frond hanging limp or a dead brown one. Derived from the palm's spin alone, so the
- * body and its shadow always agree.
- */
-function crown(p: Palm): Frond[] {
-  const len = FROND_LEN * p.size,
-    seed = p.spin * 1000,
-    fronds: Frond[] = [];
-  for (let i = 0; i < OUTER; i++)
-    fronds.push({
-      a: p.spin + (i * Math.PI * 2) / OUTER + 0.22 * (hash01(seed, i, 1) - 0.5),
-      len: len * (0.9 + 0.25 * hash01(seed, i, 2)),
-      rise: 11 + 5 * hash01(seed, i, 3),
-      droop: 11 + 6 * hash01(seed, i, 4),
-      color: hash01(seed, i, 5) < 0.3 ? LEAF.old : LEAF.mature,
-      leaflet: 7,
-      hang: 0.6,
-      brown: hash01(seed, i, 6) < 0.35,
-    });
-  for (let i = 0; i < INNER; i++)
-    fronds.push({
-      a: p.spin + ((i + 0.5) * Math.PI * 2) / INNER,
-      len: len * 0.42,
-      rise: 15,
-      droop: 0,
-      color: LEAF.young,
-      leaflet: 4.5,
-      hang: 0.15,
-      brown: false,
-    });
-  if (hash01(seed, 9, 9) < 0.45) fronds.push({ a: p.spin + Math.PI * 0.5 + hash01(seed, 9, 8), len: len * 0.7, rise: 1, droop: 26, color: LEAF.dead, leaflet: 4.5, hang: 0.8, brown: false });
-  return fronds;
-}
-/** Screen point `t` along a frond's rachis from the crown top (tx, ty): out along its direction, up, then down. */
-const rachis = (tx: number, ty: number, f: Frond, t: number): Pt => {
-  // A frond reaching towards the viewer droops less on screen, so it never curtains the trunk.
-  const toward = Math.max(0, Math.sin(f.a)),
-    droop = f.droop * (1 - 0.6 * toward);
-  return {
-    x: tx + Math.cos(f.a) * f.len * t,
-    y: ty + Math.sin(f.a) * f.len * t * SQUASH * (1 - 0.35 * toward) - f.rise * Math.sin(Math.PI * Math.min(1, t * 1.1)) + droop * t * t,
-  };
-};
-/**
- * A pinnate frond: long thin leaflets in pairs along the rachis that hang down off both sides like a fringe (young
- * fronds hold theirs stiffly out), longest at mid frond, the sunlit side lighter, some frond tips browning. Then the
- * rachis as a thin lit rib.
- */
-function frond(g: Ink, tx: number, ty: number, f: Frond) {
-  const n = 12,
-    pts = Array.from({ length: n + 1 }, (_, i) => rachis(tx, ty, f, i / n)),
-    lit = facing(f.a);
-  for (let i = 1; i <= n; i++) {
-    const c = pts[i],
-      b = pts[i - 1],
-      l = Math.sqrt((c.x - b.x) ** 2 + (c.y - b.y) ** 2) || 1,
-      dx = (c.x - b.x) / l,
-      dy = (c.y - b.y) / l,
-      t = i / n,
-      size = f.leaflet * (0.35 + Math.sin(Math.PI * Math.min(1, t * 1.05)) * 0.85);
-    for (const side of [-1, 1]) {
-      // Out to the side, swept forward along the frond and pulled down by its weight.
-      const ex = c.x - dy * side * size * 0.75 + dx * size * 0.3,
-        ey = c.y + dx * side * size * 0.75 * SQUASH + dy * size * 0.3 + size * f.hang,
-        base = f.brown && t > 0.82 ? blend(f.color, LEAF.tip, (t - 0.82) / 0.18) : f.color,
-        tone = shade(base, 0.25 * lit + (side < 0 ? 0.1 : -0.12));
-      g.fillStyle(OUTLINE, 0.35);
-      g.fillTriangle(c.x - dx * 1.6, c.y - dy * 1.6 + 0.6, c.x + dx * 0.6, c.y + dy * 0.6 + 0.6, ex, ey + 0.8);
-      g.fillStyle(tone);
-      g.fillTriangle(c.x - dx * 1.5, c.y - dy * 1.5, c.x + dx * 0.6, c.y + dy * 0.6, ex, ey);
-    }
-  }
-  g.lineStyle(1, f.color === LEAF.dead ? 0x8a6a3a : LEAF.rib, 0.75);
-  g.strokePoints(pts, false);
-}
-/** A palm standing on the ground point (gx, gy): trunk, the back of the crown, coconuts, then the front of the crown. */
-function palm(g: Ink, gx: number, gy: number, p: Palm) {
-  trunk(g, gx, gy, p);
-  const top = trunkAt(gx, gy, p, 1),
-    fronds = crown(p).sort((a, b) => Math.sin(a.a) - Math.sin(b.a)),
-    young = (f: Frond) => f.color === LEAF.young;
-  for (const f of fronds) if (Math.sin(f.a) < 0 && !young(f)) frond(g, top.x, top.y, f);
-  for (const f of fronds) if (young(f)) frond(g, top.x, top.y, f);
-  for (let i = 0; i < p.nuts; i++) {
-    const a = (i / Math.max(1, p.nuts - 1)) * Math.PI * 0.8 + 0.3,
-      x = top.x + Math.cos(a) * 4.2,
-      y = top.y + 4 + Math.sin(a) * 1.8,
-      color = i % 2 ? 0x7a8a32 : 0x6b4a2a;
-    disc(g, x, y + 0.5, 3.1, OUTLINE, 0.6);
-    disc(g, x, y, 2.7, color);
-    disc(g, x - 0.9, y - 0.9, 0.9, shade(color, 0.4));
-  }
-  for (const f of fronds) if (Math.sin(f.a) >= 0 && !young(f)) frond(g, top.x, top.y, f);
-}
-/** The palm's shadow on the sand: the trunk as a soft band, each frond as a feathered wedge from the crown's shadow. */
-function palmShadow(g: Ink, gx: number, gy: number, p: Palm) {
-  const top = bend(p, 1),
-    sx = gx + top.u + p.height * SUN.x,
-    sy = gy + top.v * SQUASH + p.height * SUN.y;
-  g.lineStyle(5, SHADE, 0.15);
-  g.lineBetween(gx + 1, gy, sx, sy);
-  g.fillStyle(SHADE, 0.13);
-  for (const f of crown(p)) {
-    if (f.color === LEAF.young) continue;
-    const reach = f.len * 1.05,
-      ex = sx + Math.cos(f.a) * reach,
-      ey = sy + Math.sin(f.a) * reach * SQUASH + 3,
-      nx = -Math.sin(f.a) * 6,
-      ny = Math.cos(f.a) * 6 * SQUASH,
-      mx = (sx + ex) / 2,
-      my = (sy + ey) / 2;
-    g.fillTriangle(sx, sy, mx + nx, my + ny, ex, ey);
-    g.fillTriangle(sx, sy, mx - nx, my - ny, ex, ey);
-  }
-}
-/** Sand mound, beach grass and fallen coconuts under a cell's palms, then the palms back to front. */
-function palms(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "palms" }>) {
+// ── Plants ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+/** A cell's palms and bushes back to front, palms on a low sand mound with fallen coconuts. */
+function plants(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "plants" }>) {
   const { cx, y0 } = groundOf(x, y);
-  oval(g, cx + 1, y0 + 1, 18, 18 * SQUASH, shade(SAND, -0.1));
-  oval(g, cx, y0, 16, 16 * SQUASH, shade(SAND, 0.03));
-  if (p.tuft)
-    for (const side of [-1, 1])
-      for (let i = 0; i < 5; i++) {
-        const a = -Math.PI / 2 + (i - 2) * 0.45,
-          bx = cx + side * 13;
-        g.lineStyle(1.4, 0x5a9a34, 0.9);
-        g.lineBetween(bx, y0 + 3, bx + Math.cos(a) * 7, y0 + 3 + Math.sin(a) * 7);
-      }
-  disc(g, cx + 6, y0 + 5, 2.4, 0x6b4a2a);
-  disc(g, cx + 9, y0 + 4, 2.2, 0x7a5532);
-  for (const q of [...p.palms].sort((a, b) => a.dv - b.dv)) palm(g, cx + q.du, y0 + q.dv * SQUASH, q);
+  if (p.palms.length) {
+    oval(g, cx + 1, y0 + 1, 18, 18 * SQUASH, shade(SAND, -0.08));
+    oval(g, cx, y0, 16, 16 * SQUASH, shade(SAND, 0.03));
+    disc(g, cx + 6, y0 + 5, 2.4, 0x6b4a2a);
+    disc(g, cx - 8, y0 + 6, 2.2, 0x7a5532);
+  }
+  const items = [...p.palms.map((q) => ({ dv: q.dv, draw: () => drawPalm(g, cx + q.du, y0 + q.dv * SQUASH, q) })), ...p.bushes.map((b) => ({ dv: b.dv, draw: () => drawBush(g, cx + b.du, y0 + b.dv * SQUASH, b) }))];
+  for (const item of items.sort((a, b) => a.dv - b.dv)) item.draw();
 }
-function palmsShadow(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "palms" }>) {
+function plantsShadow(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "plants" }>) {
   const { cx, y0 } = groundOf(x, y);
+  for (const b of p.bushes) bushShadow(g, cx + b.du, y0 + b.dv * SQUASH, b);
   for (const q of p.palms) palmShadow(g, cx + q.du, y0 + q.dv * SQUASH, q);
 }
 
@@ -385,25 +190,33 @@ function boatShadow(g: Ink, x: number, y: number, p: Extract<Piece, { kind: "boa
   oval(g, X(cx, f.u) + 2, Y(y0, f.v, 0) + 1.5, 15, 2.8, SHADE, 0.16, rot);
 }
 
-// ── Palms on the beach ──────────────────────────────────────────────────────────────────────────────────────────────
-const SHORE_PALMS = new Map<string, StandingPiece[]>();
+// ── The back of the beach ───────────────────────────────────────────────────────────────────────────────────────────
+const SHORE_PLANTS = new Map<string, StandingPiece[]>();
 /**
- * Palms at the back of the beach, where the dry sand meets the land (`shoreLine` at the land's edge), well away from
- * the waterline: about every third spot, never near the path (entry and reactor included), leaning a little seaward.
+ * Palms and sea grape at the back of the beach, where the dry sand meets the land (`shoreLine` at the land's edge),
+ * well away from the waterline and never near the path (entry and reactor included). The palms stand in every posture,
+ * the leaning ones out towards the sea.
  */
-function shorePalms(map: MapDefinition): readonly StandingPiece[] {
-  const cached = SHORE_PALMS.get(map.id);
+function shorePlants(map: MapDefinition): readonly StandingPiece[] {
+  const cached = SHORE_PLANTS.get(map.id);
   if (cached) return cached;
   const list: StandingPiece[] = [],
     path = map.path.map((p) => ({ x: (p.x + 0.5) * CELL, y: (p.y + 0.5) * CELL }));
   if (seaCells(map).size)
-    for (const s of shoreLine(map, 3, 32)) {
-      const rand = mulberry32(fnv(`${map.id}:shore-palm:${Math.round(s.x)}:${Math.round(s.y)}`));
-      if (rand() > 0.4 || path.some((p) => (p.x - s.x) ** 2 + (p.y - s.y) ** 2 < 46 * 46)) continue;
-      const p = palmOf(rand, 0, 0, Math.atan2(s.ny, s.nx), 0.95 + rand() * 0.5, 48 + rand() * 14);
-      list.push({ x: s.x, y: s.y, shadow: (g) => palmShadow(g, s.x, s.y, p), draw: (g) => palm(g, s.x, s.y, p) });
+    for (const s of shoreLine(map, 3, 30)) {
+      const rand = mulberry32(fnv(`${map.id}:shore-plant:${Math.round(s.x)}:${Math.round(s.y)}`)),
+        roll = rand();
+      if (roll > 0.6 || path.some((p) => (p.x - s.x) ** 2 + (p.y - s.y) ** 2 < 46 * 46)) continue;
+      if (roll < 0.32) {
+        const pose = rand(),
+          p = palmOf(rand, 0, 0, { posture: pose < 0.4 ? "leaning" : pose < 0.75 ? "curved" : "upright", dir: Math.atan2(s.ny, s.nx) + (rand() - 0.5) * 0.8 });
+        list.push({ x: s.x, y: s.y, shadow: (g) => palmShadow(g, s.x, s.y, p), draw: (g) => drawPalm(g, s.x, s.y, p) });
+      } else {
+        const b = bushOf(rand, 0, 0, rand() < 0.8 ? "seagrape" : "agave", 0.75 + rand() * 0.3);
+        list.push({ x: s.x, y: s.y, shadow: (g) => bushShadow(g, s.x, s.y, b), draw: (g) => drawBush(g, s.x, s.y, b) });
+      }
     }
-  SHORE_PALMS.set(map.id, list);
+  SHORE_PLANTS.set(map.id, list);
   return list;
 }
 
@@ -475,20 +288,20 @@ function shackShadow(g: Ink) {
     g.fillPoints([q(-e, -d), q(e, -d), q(e, d), q(-e, d)], true);
   }
 }
-/** The grove's palms (the first two hold the hammock, the others stand clear of it at the sides), in its 2×2 frame. */
-function grovePalms(rand: Random): Palm[] {
-  return [
-    palmOf(rand, -27, -10, Math.PI * 1.05, 0.45, 64 + rand() * 6),
-    palmOf(rand, 25, -13, -0.1, 0.45, 60 + rand() * 6),
-    palmOf(rand, 36, 22, 0.4, 0.9, 50 + rand() * 6),
-    palmOf(rand, -38, 24, Math.PI * 0.9, 0.9, 46),
-  ].map((p) => ({ ...p, size: 1 }));
+/** The grove: two curved palms holding the hammock, a tall upright one behind, and flowering bushes at their feet. */
+function groveOf(rand: Random) {
+  const hold = [palmOf(rand, -27, -10, { posture: "curved", dir: Math.PI, adult: true }), palmOf(rand, 25, -13, { posture: "curved", dir: 0, adult: true })];
+  return {
+    hold,
+    palms: [...hold, palmOf(rand, 6, -30, { posture: "upright", adult: true })].map((p) => ({ ...p, height: Math.max(p.height, 50) })),
+    bushes: [bushOf(rand, -36, 20, "hibiscus", 0.9), bushOf(rand, 34, 18, "banana", 1), bushOf(rand, 46, -2, "bougainvillea", 0.8), bushOf(rand, -12, 26, "seagrape", 0.7)],
+  };
 }
 const HAMMOCK = [0xe8483a, 0xf2c84a, 0x23a9bd, 0xf6f0e0] as const;
 /** A striped hammock slung between two trunks at height h, sagging in the middle. */
 function hammock(g: Ink, a: Palm, b: Palm, h: number) {
   const at = (p: Palm) => {
-      const o = bend(p, h / p.height);
+      const o = trunkOffset(p, h / p.height);
       return { x: X(0, p.du + o.u), y: Y(0, p.dv + o.v, h) };
     },
     p0 = at(a),
@@ -507,17 +320,21 @@ function hammock(g: Ink, a: Palm, b: Palm, h: number) {
     g.strokePoints(curve(-1.2 + i * 1.6), false);
   });
 }
+/** Draws the grove back to front, the hammock right after the two palms that hold it. */
 function grove(g: Ink, rand: Random) {
-  const palms = grovePalms(rand),
-    [left, right, front, side] = palms;
+  const { hold, palms, bushes } = groveOf(rand),
+    items = [
+      ...palms.map((p) => ({ dv: p.dv, draw: () => drawPalm(g, p.du, p.dv * SQUASH, p) })),
+      ...bushes.map((b) => ({ dv: b.dv, draw: () => drawBush(g, b.du, b.dv * SQUASH, b) })),
+      { dv: Math.max(hold[0].dv, hold[1].dv) + 0.1, draw: () => hammock(g, hold[0], hold[1], 13) },
+    ].sort((a, b) => a.dv - b.dv);
   oval(g, 0, 4, 46, 30, shade(SAND, -0.05));
-  for (const q of [left, right]) palm(g, q.du, q.dv * SQUASH, q);
-  hammock(g, left, right, 13);
-  for (const q of [side, front]) palm(g, q.du, q.dv * SQUASH, q);
+  for (const item of items) item.draw();
 }
 function groveShadow(g: Ink, rand: Random) {
-  const palms = grovePalms(rand);
-  for (const q of palms) palmShadow(g, q.du, q.dv * SQUASH, q);
+  const { palms, bushes } = groveOf(rand);
+  for (const b of bushes) bushShadow(g, b.du, b.dv * SQUASH, b);
+  for (const p of palms) palmShadow(g, p.du, p.dv * SQUASH, p);
 }
 
 // ── Channel (the path) and the sea ──────────────────────────────────────────────────────────────────────────────────
@@ -710,7 +527,7 @@ export const island: Theme = {
   sea: drawSea,
   obstacle: (g, x, y, rand) => {
     const p = pieceOf(rand);
-    if (p.kind === "palms") palms(g, x, y, p);
+    if (p.kind === "plants") plants(g, x, y, p);
     else if (p.kind === "rocks") {
       const { cx, y0 } = groundOf(x, y);
       for (const r of p.rocks) boulder(g, cx, y0, r);
@@ -720,7 +537,7 @@ export const island: Theme = {
   tilted: {
     shadow: (g, x, y, rand) => {
       const p = pieceOf(rand);
-      if (p.kind === "palms") palmsShadow(g, x, y, p);
+      if (p.kind === "plants") plantsShadow(g, x, y, p);
       else if (p.kind === "rocks") {
         const { cx, y0 } = groundOf(x, y);
         for (const r of p.rocks) boulderShadow(g, cx, y0, r);
@@ -742,7 +559,7 @@ export const island: Theme = {
       disc(glow, x + 8 * k, Y(y0, 15 * k, 24 * k), 9 * k, 0xffb860, 0.22 * f * lit);
       disc(glow, x + 8 * k, Y(y0, 15 * k, 24 * k), 3.5 * k, 0xffe0a0, 0.3 * f * lit);
     },
-    extras: shorePalms,
+    extras: shorePlants,
   },
   decor: (g, x, y, rand) => {
     const kind = rand(),
