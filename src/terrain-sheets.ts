@@ -17,6 +17,7 @@ import * as W from "./render/terrain-themes/storm-props";
 import * as A from "./render/terrain-themes/abyss-props";
 import * as T2 from "./render/terrain-themes/tide-props";
 import * as J from "./render/terrain-themes/jungle-props";
+import * as V from "./render/terrain-themes/volcano-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -417,5 +418,21 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
     })(),
     { label: "pyramid", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => J.pyramidShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => J.drawPyramid(g)) },
     { label: "strangler fig", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => J.figShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => J.drawFig(g)) },
+  ],
+  volcano: [
+    { label: "sulphur vent", shadow: (g, x, y) => V.ventShadow(g, x, y, 1), draw: (g, x, y) => V.drawVent(g, x, y, 1) },
+    (() => {
+      const o = V.obsidianOf(r(8000));
+      return { label: "obsidian", shadow: (g: Ink, x: number, y: number) => V.obsidianShadow(g, x, y, o), draw: (g: Ink, x: number, y: number) => V.drawObsidian(g, x, y, o) };
+    })(),
+    ...[1, 2].map((n) => {
+      const b = V.bouldersOf(r(8010 + n));
+      return { label: "boulders", shadow: (g: Ink, x: number, y: number) => V.bouldersShadow(g, x, y, b), draw: (g: Ink, x: number, y: number) => V.drawBoulders(g, x, y, b) };
+    }),
+    { label: "drill rig", shadow: (g, x, y) => V.rigShadow(g, x, y), draw: (g, x, y) => V.drawRig(g, x, y, 0.8) },
+    { label: "ore cart", shadow: (g, x, y) => V.cartShadow(g, x, y, 0.3), draw: (g, x, y) => V.drawCart(g, x, y, 0.3) },
+    { label: "sensor hut", shadow: (g, x, y) => V.hutShadow(g, x, y, -0.2), draw: (g, x, y) => V.drawHut(g, x, y, -0.2) },
+    { label: "wellhead", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => V.wellheadShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => V.drawWellhead(g)) },
+    { label: "lava crag", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => V.cragShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => V.drawCrag(g)) },
   ],
 };
