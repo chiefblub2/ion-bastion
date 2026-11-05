@@ -13,6 +13,7 @@ import * as G from "./render/terrain-themes/gear-props";
 import * as V from "./render/terrain-themes/rift-props";
 import * as Gd from "./render/terrain-themes/geode-props";
 import * as D from "./render/terrain-themes/dune-props";
+import * as W from "./render/terrain-themes/storm-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -321,5 +322,24 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
     { label: "cache", shadow: (g, x, y) => D.cacheShadow(g, x, y), draw: (g, x, y) => D.drawCache(g, x, y, false) },
     { label: "rock arch", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => D.archShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => D.drawArch(g)) },
     { label: "colossus", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => D.colossusShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => D.drawColossus(g)) },
+  ],
+  storm: [
+    ...[1, 2].map((n) => {
+      const c = W.needlesOf(r(8000 + n));
+      return { label: "basalt needles", shadow: (g: Ink, x: number, y: number) => W.needlesShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => W.drawNeedles(g, x, y, c) };
+    }),
+    { label: "lightning rod", shadow: (g, x, y) => W.rodShadow(g, x, y), draw: (g, x, y) => W.drawRod(g, x, y) },
+    { label: "turbine", shadow: (g, x, y) => W.turbineShadow(g, x, y), draw: (g, x, y) => { W.drawTurbine(g, x, y); W.blades(g, x, y, 0.4); } },
+    { label: "shelter", shadow: (g, x, y) => W.shelterShadow(g, x, y), draw: (g, x, y) => W.drawShelter(g, x, y) },
+    (() => {
+      const b = W.bouldersOf(r(8010));
+      return { label: "boulders", shadow: (g: Ink, x: number, y: number) => W.bouldersShadow(g, x, y, b), draw: (g: Ink, x: number, y: number) => W.drawBoulders(g, x, y, b) };
+    })(),
+    (() => {
+      const p = W.poleOf(r(8020));
+      return { label: "power pole", shadow: (g: Ink, x: number, y: number) => W.poleShadow(g, x, y, p), draw: (g: Ink, x: number, y: number) => W.drawPole(g, x, y, p) };
+    })(),
+    { label: "tesla tower", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => W.teslaShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => W.drawTesla(g)) },
+    { label: "observatory", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => W.observatoryShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => W.drawObservatory(g)) },
   ],
 };
