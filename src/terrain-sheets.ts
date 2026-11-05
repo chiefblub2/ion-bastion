@@ -8,6 +8,7 @@ import * as C from "./render/terrain-themes/core-props";
 import * as F from "./render/terrain-themes/frost-props";
 import * as T from "./render/terrain-themes/toxic-props";
 import * as B from "./render/terrain-themes/orbit-props";
+import * as R from "./render/terrain-themes/ruin-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -204,5 +205,29 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
     { label: "hydroponics", shadow: (g, x, y) => B.hydroShadow(g, x, y), draw: (g, x, y) => B.drawHydro(g, x, y) },
     { label: "dropship", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => B.shuttleShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => B.drawShuttle(g)) },
     { label: "sensor spire", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => B.commsShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => B.drawComms(g)) },
+  ],
+  ruin: [
+    ...[1, 2].map((n) => {
+      const w = R.wallOf(r(6000 + n));
+      return { label: "wall", shadow: (g: Ink, x: number, y: number) => R.wallShadow(g, x, y, w), draw: (g: Ink, x: number, y: number) => R.drawWall(g, x, y, w) };
+    }),
+    (() => {
+      const c = R.columnOf(r(6010));
+      return { label: "column", shadow: (g: Ink, x: number, y: number) => R.columnShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => R.drawColumn(g, x, y, c) };
+    })(),
+    ...[1, 2].map((n) => {
+      const c = R.carOf(r(6020 + n));
+      return { label: "car", shadow: (g: Ink, x: number, y: number) => R.carShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => R.drawCar(g, x, y, c) };
+    }),
+    (() => {
+      const h = { ...R.heapOf(r(6030)), barrel: true };
+      return { label: "rubble", shadow: (g: Ink, x: number, y: number) => R.heapShadow(g, x, y, h), draw: (g: Ink, x: number, y: number) => R.drawHeap(g, x, y, h) };
+    })(),
+    (() => {
+      const l = R.lampOf(r(6040));
+      return { label: "streetlamp", shadow: (g: Ink, x: number, y: number) => R.lampShadow(g, x, y), draw: (g: Ink, x: number, y: number) => R.drawLamp(g, x, y, l) };
+    })(),
+    { label: "apartment", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => R.apartmentShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => R.drawApartment(g)) },
+    { label: "billboard", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => R.billboardShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => R.drawBillboard(g)) },
   ],
 };
