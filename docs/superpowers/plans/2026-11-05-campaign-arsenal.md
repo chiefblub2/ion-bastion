@@ -53,8 +53,8 @@ Every number below lives in `content/arsenal.ts` (`SALVAGE`), so it can be tuned
 | Daily bounty | ×2 on everything above | One campaign mission per day, picked from the open ones by a date seed (as `run/daily.ts` does). It's shown on the home page and in the atlas with a bounty badge. |
 
 **Rough scale:** about 1,000 waves in the 60 campaign missions × an average of 7.5 Salvage, plus the victory
-bonuses, gives about 10,500 Salvage for one clean pass. One pass researches the whole tree with about a third left
-over for gear. Maxing the gear takes replays.
+bonuses, gives about 10,500 Salvage for one clean pass. That's about 85% of the tree (12,390). The rest of the tree
+and all the gear come from replays.
 
 Runs started with `&wave=` or `&credits=` and playtests pay nothing. This reuses the existing "unmodified
 definition" check in `main.ts`.
