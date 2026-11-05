@@ -1,183 +1,175 @@
-# Campaign Arsenal: an earned tech tree for towers
+# Campaign Arsenal: research towers, level up your gear
 
 ## Problem
 
-The campaign starts with all 60 towers and every upgrade open: only 10 of the 60 campaign missions set
-`availableTowers`, so mission 1 hands a new player four tabs of towers. Winning a mission earns the next mission and
-nothing else; stars are recorded but buy nothing. There is no sense of a growing arsenal.
+The campaign starts with all 60 towers and every upgrade open: only 10 of 60 campaign missions set `availableTowers`,
+so mission 1 hands a new player four tabs of towers. Winning a mission earns the next mission and nothing else, and
+replaying a mission earns nothing at all. There is no sense of a growing arsenal and no reason to go back.
 
-## Decisions
+## Decisions (designer's calls)
 
 | Question | Decision |
 | --- | --- |
-| Unlock model | **Fully earned tech tree** (designer's call): the player spends research on towers of their choice. |
-| Upgrade depth | **Unchanged**: levels 1–8 and all paths stay open on every tower the player has. Only the roster grows. |
-| Balance runs | **Unchanged** (designer's call): no new checks, no strategy edits, no re-tuning. See "Balance stays put". |
-| Scope | Campaign only. Circuit, Training, multiplayer, the editor, Run mode, `?mission=` links and `?unlock=all` keep every tower. |
+| Unlock model | **Earned tech tree**: the player researches towers of their choice. |
+| Guarantees | **None, except the Detector**: a mission with invisible enemies always offers it. Players who research badly will find their way. |
+| Currency | **Not stars.** **Salvage** is earned by playing: every wave cleared pays, replays included. |
+| Replays | **Rewarded**: they pay Salvage and train the towers used, which levels up their **gear** (Mk I–V). |
+| Upgrade levels | Unchanged: levels 1–8 and all paths stay open on every tower the player has. |
+| Balance | **Balance tests and scripts stay as they are.** `scripts/balance.ts`, `sim-golden`, the strategies and `mission-checks.ts` play the base content with every tower, as today. The Arsenal is a campaign-only pack applied on top. |
+| Scope | Campaign only. Circuit, Training, multiplayer, the editor, Run mode, `?mission=` links and `?unlock=all` keep every tower at base stats. |
 
-## Content model
+## The three loops
 
-A campaign mission offers `(core ∪ loadout ∪ researched) ∩ availableTowers`, where an absent `availableTowers` means
-all towers.
+1. **Play → Salvage → Research.** Every mission, won or lost, pays Salvage for its waves. Research makes a tower
+   available in every campaign mission.
+2. **Use → Tower XP.** Each tower type earns XP from its own kills in campaign missions (plus assists for Control,
+   trap and Support towers, as in the Run). XP raises its **veterancy rank** (0–5) and is never spent.
+3. **Rank + Salvage → Gear.** Gear marks (Mk I–V) make a tower type permanently stronger in the campaign. Each mark
+   costs Salvage and needs the veterancy rank of the same number. A replay therefore pays twice: Salvage to spend,
+   and XP for the towers you fielded.
 
-- **Core kit**, always available: Pulse, Nova (`blast`), Cryo (`frost`), Flak, Tesla, Aura. This is the whole of sector I.
-- **Mission loadout** (`MissionDefinition.loadout?: TowerId[]`): the towers a mission hands out for itself, its
-  "signature" towers. An unresearched loadout tower works for that mission only and carries a "Loadout" tag.
-- **Research**: towers made permanent with Research Points. This is the only way to get the 37 towers no mission
-  ever lends.
+## Tower availability
 
-### Balance stays put
+A campaign mission offers `(core ∪ researched ∪ detector-if-stealth) ∩ availableTowers`, where an absent
+`availableTowers` means all towers.
 
-Strategies A/B across the campaign build only 23 distinct towers: the 6 core towers and 17 more. The loadouts below
-are exactly each mission's strategy towers outside the core kit. So whatever a player has researched, every mission
-offers at least what its strategies were balanced with. `scripts/balance.ts` builds games without an arsenal (every
-tower), and its results do not change. No script, check or strategy is touched.
+- **Core kit**, owned from the start: Pulse, Nova (`blast`), Cryo (`frost`), Flak, Tesla, Aura.
+- **Detector exception:** when `hasStealth(mission)` holds (`core/mission-checks.ts`: stealth or cloakField
+  enemies), the Detector is offered whether researched or not. Its card shows "Issued: invisible enemies ahead". This
+  covers Toxic Cauldron, Zero-G, Solar Sail, Command Bridge, Citadel, Core of the Singularity, Black Smoker, Abyss,
+  Gust Corridor, Eye of the Storm, Prism Shaft and any later stealth mission, with no list to maintain.
+- **Restricted missions** keep their restriction: research outside it does not apply, so for example Bunker Line
+  still offers only its four towers.
 
-## The loadouts (content)
+## Salvage (content)
 
-The loadouts are copied from strategies A/B. Missions 1–5 have none, and the Circuit (61–73) is out of scope.
-**First** marks the mission where a tower appears in the field for the first time. Its briefing gets a "New in the
-field: …" line, and the Codex entry opens there.
+Every number below lives in `content/arsenal.ts` (`SALVAGE`), so it can be tuned in one place.
 
-| No. | Mission | Loadout | First |
-| --- | --- | --- | --- |
-| 06 | Icebreaker | lance | **Lance** |
-| 07 | Cryo Valley | inferno | **Ember** |
-| 08–09 | Crevasse, Polar Night | — | |
-| 10 | Frostwall | decay, lance, acid | **Decay**, **Corrosion** |
-| 11 | Seepage Pit | acid | |
-| 12 | Fog Swamp | stasis | **Stasis** |
-| 13 | Brackish Water | acid | |
-| 14 | Digester Tower | — | |
-| 15 | Toxic Cauldron | acid, detector, decay | **Detector** |
-| 16 | Docking Ring | refinery | **Refinery** |
-| 17 | Cargo Lock | — | |
-| 18 | Zero-G | detector, decay, lance | |
-| 19 | Solar Sail | lance, detector | |
-| 20 | Command Bridge | decay, acid, detector, lance | |
-| 21 | Rubble Avenue | lance | |
-| 22 | Bunker Line | — (restricted to core towers) | |
-| 23 | Cathedral | acid, lance | |
-| 24 | Elevated Rail | lance, inferno, decay | |
-| 25 | Citadel | lance, decay, detector, acid, inferno | |
-| 26 | Event Horizon | stasis, decay, lance | |
-| 27 | Rift | lance, acid, decay | |
-| 28 | Time Loop | acid, lance, decay, stasis, inferno | |
-| 29 | Zero Point | lance, acid, decay | |
-| 30 | Core of the Singularity | decay, acid, lance, detector, stasis, inferno | |
-| 31 | Quicksand | acid, lance, decay | |
-| 32 | Caravan Road | mine, spikes, decay, quake | **Mine**, **Caltrops**, **Quake** |
-| 33 | Glass Plain | mine, tar, spikes, pit | **Tar Pit**, **Pitfall** |
-| 34 | Storm Crest | mine, spikes, quake, decay | |
-| 35 | Oasis Zero | mine, spikes, quake, decay | |
-| 36 | Continental Shelf | pit, lance, executioner, decay | **Executioner** |
-| 37 | Coral Trench | lance, executioner, focus, pit, decay | **Focus** |
-| 38 | Pressure Chamber | pit, executioner, decay, lance, focus, stasis | |
-| 39 | Black Smoker | detector, pit, executioner, decay, lance | |
-| 40 | Abyss | detector, lance, executioner, decay, pit, focus, stasis | |
-| 41 | Heat Lightning | pit, executioner, decay | |
-| 42 | Hailfield | executioner, lance, tar, pit, decay | |
-| 43 | Lightning Rod | decay, executioner | |
-| 44 | Gust Corridor | detector, pit, executioner, decay, lance | |
-| 45 | Eye of the Storm | detector, lance, executioner, decay, pit, focus, stasis | |
-| 46 | Vine Trail | shrapnel, executioner, decay, mortar, quake | **Shrapnel**, **Mortar** |
-| 47 | Temple Steps | decay, executioner, quake, acid, mortar | |
-| 48 | Mangrove Swamp | decay, executioner, quake, shrapnel, mortar, acid | |
-| 49 | Snake Pit | decay, shrapnel, executioner, quake, acid, mortar | |
-| 50 | Heart of the Jungle | decay, shrapnel, executioner, quake, acid, mortar | |
-| 51 | Ashfield | executioner, tar, decay, stasis | |
-| 52 | Lava Flow | executioner, tar, decay, stasis, snare | **Bear Trap** |
-| 53 | Slag Ridge | executioner, decay, mortar, quake, spikes, shrapnel, acid, inferno | |
-| 54 | Ember Chamber | executioner, tar, decay, stasis, snare, shrapnel | |
-| 55 | Volcano Throat | executioner, tar, decay, quake, stasis, shrapnel, snare, acid | |
-| 56 | Quartz Gallery | inferno, tar, stasis, executioner, acid | |
-| 57 | Hall of Mirrors | inferno, executioner, decay, stasis, tar, acid | |
-| 58 | Geode Chamber | inferno, executioner | |
-| 59 | Prism Shaft | detector, inferno, executioner, decay, stasis, acid | |
-| 60 | Crystal Heart | inferno, executioner, decay, stasis, acid, tar | |
+| Source | Pays | Notes |
+| --- | --- | --- |
+| Wave cleared | `1 + sector` per wave (sector I: 2, sector XII: 13) | Won or lost; on a loss, the waves before the loss. Later sectors pay more, so farming the frontier beats farming mission 1. |
+| Victory | +10 | Every win, replays included. |
+| First victory | +20 + 5 × sector | Once per mission (derived from the star record: the mission was not won before). |
+| Daily bounty | ×2 on everything above | One campaign mission per day, picked from the open ones by a date seed (as `run/daily.ts` does). It's shown on the home page and in the atlas with a bounty badge. |
 
-Restricted missions keep their restriction: the loadout lies inside it, and research outside it does not apply.
+**Rough scale:** about 1,000 waves in the 60 campaign missions × an average of 7.5 Salvage, plus the victory
+bonuses, gives about 10,500 Salvage for one clean pass. One pass researches the whole tree with about a third left
+over for gear. Maxing the gear takes replays.
 
-## The tree (content)
+Runs started with `&wave=` or `&credits=` and playtests pay nothing. This reuses the existing "unmodified
+definition" check in `main.ts`.
+
+## The research tree (content)
 
 There are four branches, one per build tab (`pageOf`), with four tiers each. A tower needs any one researched tower
 of the tier below in its branch; the core towers count as tier 0. Tiers open with the campaign:
 
 | Tier | Opens | Price |
 | --- | --- | --- |
-| I | from the start | 2 RP |
-| II | Core Fortress (05) won | 3 RP |
-| III | Ashkar reached (sector V open) | 4 RP |
-| IV | Thessaly Prime reached (sector IX open) | 5 RP |
-
-Towers in *italics* are never part of a loadout. Research is the only way to get them.
+| I | from the start | 60 Salvage |
+| II | Core Fortress (05) won | 150 Salvage |
+| III | Ashkar reached (sector V open) | 250 Salvage |
+| IV | Thessaly Prime reached (sector IX open) | 400 Salvage |
 
 | Branch | Tier I | Tier II | Tier III | Tier IV |
 | --- | --- | --- | --- | --- |
-| **Attack** (core: Pulse, Nova, Flak, Tesla) | Lance, Ember | Decay, Shrapnel, Executioner | Mortar, Quake, Focus, *Skyburst* | *Catalyst*, *Orbital* |
-| **Control** (core: Cryo) | Corrosion, Stasis | *Snare Net*, *Jammer*, *Siphon*, *Tether* | *Gravitron*, *Cyclone*, *Amber*, *Shrink Ray* | *Magnetar*, *Mesmer*, *Hex*, *Plasma* |
-| **Traps** | Mine, Caltrops, Tar Pit | Bear Trap, Pitfall, *Flame Grate*, *Oil Slick* | *Barricade*, *Sticky Mine*, *Spring*, *Harpoon* | *Arc Plate*, *Grinder*, *Warp Pad*, *Tripwire* |
-| **Support** (core: Aura) | Detector, Refinery | *Bounty Beacon*, *Tracker*, *Workshop*, *Repair Dock* | *Vault*, *Fire Control*, *Armory*, *Skylink* | *Overclock*, *Recycler*, *Nexus*, *Shield Generator* |
+| **Attack** (core: Pulse, Nova, Flak, Tesla) | Lance, Ember | Decay, Shrapnel, Executioner | Mortar, Quake, Focus, Skyburst | Catalyst, Orbital |
+| **Control** (core: Cryo) | Corrosion, Stasis | Snare Net, Jammer, Siphon, Tether | Gravitron, Cyclone, Amber, Shrink Ray | Magnetar, Mesmer, Hex, Plasma |
+| **Traps** | Mine, Caltrops, Tar Pit | Bear Trap, Pitfall, Flame Grate, Oil Slick | Barricade, Sticky Mine, Spring, Harpoon | Arc Plate, Grinder, Warp Pad, Tripwire |
+| **Support** (core: Aura) | Detector, Refinery | Bounty Beacon, Tracker, Workshop, Repair Dock | Vault, Fire Control, Armory, Skylink | Overclock, Recycler, Nexus, Shield Generator |
 
-The placement follows three rules:
-- Tier I holds the towers the first loadouts lend, so the first research makes a familiar tower permanent.
-- Each branch climbs from plain to combo towers (Catalyst, Hex, Oil Slick, Nexus, Recycler need other towers to
+The placement follows four rules:
+- Tier I holds the towers the early sectors' focus lines name (Lance in Icebreaker, Ember in Cryo Valley, Corrosion
+  in Seepage Pit), so a player who follows the briefings researches in step with the campaign.
+- Each branch climbs from plain to combo towers (Catalyst, Hex, Oil Slick, Nexus and Recycler need other towers to
   shine).
-- Air answers are spread out (Skyburst III, Snare Net II, Cyclone III, Harpoon III, Skylink III), so anti-air variety
-  is something to research, while Flak stays core.
+- Anti-air variety is spread out (Snare Net II, Skyburst III, Cyclone III, Harpoon III, Skylink III), while Flak stays
+  core.
+- The Detector sits in tier I, so a player who wants it outside stealth missions can have it early.
 
-The cost is 197 RP for all 54 towers (Attack 39, Control 52, Traps 54, Support 52).
+The whole tree costs 12,390 Salvage (Attack 2,370 · Control 3,320 · Traps 3,380 · Support 3,320).
 
-### Research Points
+### Dossiers
 
-- **Stars:** each star earned for the first time is worth 1 RP. The best stars per mission count, so a replay for a
-  better rating pays only the difference.
-- **Sector commendation:** +2 RP the first time a sector finale is won.
-- **Field-tested:** a loadout tower costs 1 RP less once the player has won a mission that lent it.
-- **Totals:** 60 × 3 stars + 12 × 2 = 204 RP, so three stars everywhere buys the whole tree with a few points to
-  spare. Two stars everywhere (144 RP) buys about three quarters of it. Sector I alone (at most 17 RP) buys tier I
-  of one or two branches.
-- **Derived, never stored:** RP come from the record, so they cannot drift. Only the list of researched towers is saved.
-- **Refund:** free at full price, outside a mission. Open question; see below.
-- **Returning players:** they keep their stars and open the Arsenal with their earned RP and nothing researched. A
-  "new" flag points them to the page once.
-
-### Dossiers (content)
-
-Each of the 54 towers gets a one-line research dossier: what it adds to the arsenal and which enemy or situation calls
-for it. It's written in the field-manual voice and shown on the Arsenal card and in the Codex while the tower is
-locked. Examples:
+Each of the 54 researchable towers gets a one-line dossier: what it adds and which enemy or situation calls for it.
+It's written in the field-manual voice and shown on the research card and in the Codex while the tower is
+unresearched. Examples:
 
 - **Snare Net:** "Drags flyers into reach of your ground guns. Wanted wherever Stormbirds outrun the Flak."
 - **Barricade:** "A wall on the path: walkers stop and chew. Pair it with anything that hits a crowd."
 - **Vault:** "Interest on unspent credits. For commanders who can hold a line on less."
 
-The dossiers live in `content/arsenal.ts` next to the tree, and every towerId must have one (validation).
+## Gear (content)
+
+Gear is permanent per tower type, campaign only, and applied as a content-pack transform. It reuses the Run's pure
+transforms in `run/transform.ts` (`scaleStat`, `upgradePrice`, `only`, `compose`), so there is no new simulation
+logic.
+
+**Veterancy** (XP per tower type, never spent): 1 XP per kill, plus `XP_BUILT`-style XP for each tower built and
+Run-style assists (`run/xp.ts` `assistsOf`) for Control, trap and Support towers. Rank thresholds:
+200 / 600 / 1,500 / 3,500 / 7,000 XP.
+
+| Mark | Needs | Price | Attack and Control towers | Traps | Support towers |
+| --- | --- | --- | --- | --- | --- |
+| Mk I | rank 1 | 80 | +4% damage | +4% damage | +5% range (radius) |
+| Mk II | rank 2 | 160 | +5% range | levels 2–3 cost 20% less | levels 2–3 cost 20% less |
+| Mk III | rank 3 | 280 | levels 2–3 cost 20% less | +8% damage (total) | +10% range (total) |
+| Mk IV | rank 4 | 450 | +8% damage (total) | build cost −10% | build cost −10% |
+| Mk V | rank 5 | 700 | **Signature mod** (below) | **Signature mod** | **Signature mod** |
+
+**Signature mods (Mk V)** give each tower a small effect none of its paths grant, like the Run's `MASTERY` (Concussion,
+Static Charge and Tracer Rounds already exist for Nova, Tesla and Pulse). Each effect is bounded and deals no damage of
+its own. The first content wave covers the six core towers plus the twelve tier I and II attack and control towers;
+the rest show "Mk V: signature in a later update" and get +4% damage meanwhile. Proposed examples:
+
+- **Flak** "Proximity Fuse": hits splash 20% to flyers within 0.5 cells.
+- **Cryo** "Deep Chill": slowed enemies take 5% more damage.
+- **Aura** "Resonance": +1 tower counted for Nexus-style bonuses inside its radius.
+- **Lance** "Overpenetration": the beam's last target takes +15%.
+
+The ceiling for one tower is about +8% damage, +5–10% range, cheaper early levels and one small effect. That is
+meaningful but bounded, and the campaign stays recognisable.
+
+A full gear set costs 1,670 Salvage per tower, and about 100,000 for all 60. That's a long-tail goal for replays,
+not something to finish.
 
 ## Implementation outline
 
-1. **Content:** `content/arsenal.ts` with `CORE_KIT`, `ARSENAL_TREE` (branch, tier, tower, dossier), tier gates and
-   RP knobs. Add `loadout` to the 50 campaign missions above that have one, and validate that the loadout names known towers and
-   lies inside `availableTowers`.
-2. **Pure logic:** `campaign/arsenal.ts` with `researchPoints(record)`, `canResearch`, `research`/`refund`,
-   `fieldTested`, `campaignTowers(mission, researched, content)` and `firstInField(mission)`. Focused tests for each.
-3. **Storage:** `ion-bastion:arsenal` (researched ids; unknown ids dropped), kept apart from the star record.
-4. **Simulation hook:** the `mission` command takes an optional `towers` list (solo only). `state.arsenal` is absent
-   unless given, so every other mode, the balance scripts and existing hashes stay as they are.
-   `availableTowers()` intersects with it. The definition stays unmodified, so the win still records.
-5. **UI:**
-   - the `/#arsenal` page (four branch columns, one shelf per branch in the fitted layout) and an Arsenal button on
-     the home page with a dot when something is affordable;
-   - a briefing kit row with "New in the field: …";
-   - RP on the win overlay;
-   - Codex locks with the dossier;
-   - a "Loadout" tag in the build menu.
-6. **CLAUDE.md:** the Arsenal section, the storage key and the `loadout` field.
+1. **Content:** `content/arsenal.ts` with `CORE_KIT`, `ARSENAL_TREE` (branch, tier, tower, dossier), tier gates,
+   `SALVAGE`, `VETERANCY`, `GEAR` (marks and effects) and the signature mods. Validation: every researchable tower
+   has a branch, a tier and a dossier.
+2. **Pure logic:** `campaign/arsenal.ts`:
+   - `salvageOf(mission, result, firstWin, bounty)`, `dailyBounty(date, openMissions)`;
+   - `research`/`canResearch`, `veterancy(xp)`, `canForge`/`forge`;
+   - `campaignTowers(mission, arsenal, content)` (the Detector exception lives here);
+   - `gearTransform(arsenal)`, built from the `run/transform.ts` steps;
+   - focused tests for each.
+3. **Storage:** `ion-bastion:arsenal` `{ v, salvage, researched, xp, gear }`, kept apart from the star record.
+   Unknown ids are dropped.
+4. **Loading:** a `campaign` command, next to the `run` command (solo only, else `campaign-solo`), loads a mission
+   with an active pack (`Game.content`) built inside `Game` from the base pack plus the serialised arsenal (`towers`,
+   `gear`), so commands stay plain data. `state` gains nothing. The win check in `main.ts` compares against the base
+   definition by id, so wins and stars still record. Restart keeps the pack.
+5. **Settling:** `main.ts` builds the mission result on `end`: waves cleared, kills per tower type and assists (reusing
+   `app/run-result.ts`), then credits Salvage and XP and shows them on the overlay.
+6. **UI:**
+   - an `/#arsenal` page (`MenuPage` `"arsenal"`, lazy-loaded) with two tabs: **Research** (four branch columns) and
+     **Gear** (each owned tower with rank, XP bar, marks and the next mark's price). In the fitted layout each branch
+     is a swipe shelf.
+   - Home page: an Arsenal button with a dot when something is affordable, and the daily bounty line.
+   - Atlas: a bounty badge on the station, and the briefing's Salvage estimate.
+   - Win and lose overlays: "+184 Salvage · Lance +38 XP · Rank up: Pulse 3".
+   - Codex: unresearched towers locked with their dossier; owned towers show rank and gear.
+   - Build menu: a small Mk badge on geared towers.
+7. **CLAUDE.md:** the Arsenal section, the storage key and the `campaign` command.
+
+No balance script, strategy, golden file or mission check changes.
 
 ## Open questions
 
-- **Refund:** free (encourages experiment) or permanent (every pick matters)? Recommendation: free.
-- **Starting state:** should a new player start with 2–4 RP to make one tier I pick before Outpost 07? That would
-  teach the Arsenal screen at once.
-- **Unlocked-by-tier vs unlocked-by-sector:** should tier II open after sector I's finale, or after any five wins?
-  Recommendation: the finale, since it gives Core Fortress a payoff.
+- **Refund:** can research be refunded? Recommendation: no. With Salvage from every play, mistakes are cheap to
+  recover.
+- **Losses:** should a loss pay the full wave Salvage or half? Recommendation: full.
+- **Signature mods:** write all 60 now, or 18 in the first wave as proposed?
+- **Gear outside the campaign:** should gear also apply in Circuit? Recommendation: no, Circuit stays the base-stat
+  sandbox.
