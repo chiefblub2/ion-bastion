@@ -14,6 +14,7 @@ import * as V from "./render/terrain-themes/rift-props";
 import * as Gd from "./render/terrain-themes/geode-props";
 import * as D from "./render/terrain-themes/dune-props";
 import * as W from "./render/terrain-themes/storm-props";
+import * as A from "./render/terrain-themes/abyss-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -341,5 +342,29 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
     })(),
     { label: "tesla tower", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => W.teslaShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => W.drawTesla(g)) },
     { label: "observatory", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => W.observatoryShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => W.drawObservatory(g)) },
+  ],
+  abyss: [
+    ...[1, 2].map((n) => {
+      const c = A.coralOf(r(7000 + n));
+      return { label: "coral", shadow: (g: Ink, x: number, y: number) => A.coralShadow(g, x, y), draw: (g: Ink, x: number, y: number) => A.drawCoral(g, x, y, c) };
+    }),
+    ...[1, 2].map((n) => {
+      const v = A.ventsOf(r(7010 + n));
+      return { label: "vents", shadow: (g: Ink, x: number, y: number) => A.ventsShadow(g, x, y, v), draw: (g: Ink, x: number, y: number) => A.drawVents(g, x, y, v) };
+    }),
+    (() => {
+      const c = { ...A.clamOf(r(7020)), pearl: true };
+      return { label: "giant clam", shadow: (g: Ink, x: number, y: number) => A.clamShadow(g, x, y), draw: (g: Ink, x: number, y: number) => A.drawClam(g, x, y, c) };
+    })(),
+    (() => {
+      const w = A.wormsOf(r(7030));
+      return { label: "tube worms", shadow: (g: Ink, x: number, y: number) => A.wormsShadow(g, x, y), draw: (g: Ink, x: number, y: number) => A.drawWorms(g, x, y, w) };
+    })(),
+    (() => {
+      const k = A.kelpOf(r(7040));
+      return { label: "kelp", shadow: (g: Ink, x: number, y: number) => A.kelpShadow(g, x, y), draw: (g: Ink, x: number, y: number) => A.drawKelp(g, x, y, k) };
+    })(),
+    { label: "shipwreck", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => A.wreckShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => A.drawWreck(g)) },
+    { label: "black smoker", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => A.smokerShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => A.drawSmoker(g)) },
   ],
 };
