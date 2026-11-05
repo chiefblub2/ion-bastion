@@ -1051,7 +1051,8 @@ export type Command = (
   | { type: "start" }
   | { type: "pause" }
   | { type: "restart" }
-  | { type: "mission"; id: string }
+  /** `towers` (campaign Arsenal, solo only) narrows the offered towers until the next load. */
+  | { type: "mission"; id: string; towers?: readonly TowerId[] }
   | { type: "playtest"; mission: MissionDefinition }
   /** A Run mission (`run/`): generated mission plus the content pack its relics derived; solo only. */
   | { type: "run"; mission: MissionDefinition; content: ContentPack; replay?: Replay }

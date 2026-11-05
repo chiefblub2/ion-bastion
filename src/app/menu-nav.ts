@@ -21,6 +21,7 @@ import { renderAtlas, selectMission as featureMission, selectSector, selectWorld
 import type { Coop } from "./coop";
 import { bindMenuKeys, showCodexTab, showTowerCodex } from "./menu-keys";
 import { campaignRecord, lastMission, rememberUnlocks, seenUnlocks, trainingDone } from "./progress";
+import { arsenalTowers } from "./arsenal-store";
 import { beginJournal, storedJournal } from "./run-journal";
 import { createScreens, GAME, HOME, type MenuPage, type Screen } from "./screens";
 
@@ -148,7 +149,7 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
       screens.show(page("missions"));
       return;
     }
-    execute({ type: "mission", id });
+    execute({ type: "mission", id, towers: unlockAll ? undefined : arsenalTowers(id) });
     browsed = undefined;
     if (!coop.active()) screens.show(GAME);
   }

@@ -96,6 +96,7 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
       const m = findMission(c.id, g.content);
       if (!m) return fail("mission-unknown");
       g.loadMission(m);
+      if (c.towers && g.players === 1) g.arsenal = c.towers;
       return ok("mission-loaded", { number: missionNumber(m, g.content.missions), name: m.name });
     },
   },
@@ -272,6 +273,7 @@ export class Game implements Sim {
   loadMission(mission: MissionDefinition, content = this.baseContent) {
     validateMission(mission, content);
     this.pack = content;
+    this.arsenal = undefined;
     this.mission = mission;
     this.state = initialState(mission, this.players);
     this.ticks = 0;
@@ -282,8 +284,11 @@ export class Game implements Sim {
   setPlayers(players: number) {
     this.players = players;
   }
+  /** The campaign Arsenal's towers for this mission (solo only, kept by restart); undefined offers all. */
+  arsenal?: readonly TowerId[];
   availableTowers() {
-    return availableTowers(this.mission, this.content);
+    const all = availableTowers(this.mission, this.content);
+    return this.arsenal ? all.filter((id) => this.arsenal!.includes(id)) : all;
   }
   isPath(x: number, y: number) {
     return this.path.has(`${x},${y}`);
