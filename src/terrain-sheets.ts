@@ -186,23 +186,23 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
   orbit: [
     ...[1, 2].map((n) => {
       const s = B.solarOf(r(5000 + n));
-      return { label: "solar", shadow: (g: Ink, x: number, y: number) => B.solarShadow(g, x, y, s), draw: (g: Ink, x: number, y: number) => B.drawSolar(g, x, y, s) };
+      return { label: "collector", shadow: (g: Ink, x: number, y: number) => B.solarShadow(g, x, y, s), draw: (g: Ink, x: number, y: number) => B.drawSolar(g, x, y, s) };
     }),
     ...[1, 2].map((n) => {
       const c = B.cargoOf(r(5010 + n));
-      return { label: "cargo", shadow: (g: Ink, x: number, y: number) => B.cargoShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => B.drawCargo(g, x, y, c) };
+      return { label: "cargo modules", shadow: (g: Ink, x: number, y: number) => B.cargoShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => B.drawCargo(g, x, y, c) };
     }),
     (() => {
       const s = B.spheresOf(r(5020));
-      return { label: "spheres", shadow: (g: Ink, x: number, y: number) => B.spheresShadow(g, x, y, s), draw: (g: Ink, x: number, y: number) => B.drawSpheres(g, x, y, s) };
+      return { label: "plasma cells", shadow: (g: Ink, x: number, y: number) => B.spheresShadow(g, x, y, s), draw: (g: Ink, x: number, y: number) => B.drawSpheres(g, x, y, s) };
     })(),
     (() => {
       const a = B.armOf(r(5030));
       return { label: "arm", shadow: (g: Ink, x: number, y: number) => B.armShadow(g, x, y, a), draw: (g: Ink, x: number, y: number) => B.drawArm(g, x, y, a) };
     })(),
-    { label: "dish", shadow: (g, x, y) => B.dishShadow(g, x, y), draw: (g, x, y) => B.drawDish(g, x, y, 0.6) },
+    { label: "sensor dish", shadow: (g, x, y) => B.dishShadow(g, x, y), draw: (g, x, y) => B.drawDish(g, x, y, 0.6) },
     { label: "hydroponics", shadow: (g, x, y) => B.hydroShadow(g, x, y), draw: (g, x, y) => B.drawHydro(g, x, y) },
-    { label: "shuttle", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => B.shuttleShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => B.drawShuttle(g)) },
-    { label: "comms array", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => B.commsShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => B.drawComms(g)) },
+    { label: "dropship", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => B.shuttleShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => B.drawShuttle(g)) },
+    { label: "sensor spire", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => B.commsShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => B.drawComms(g)) },
   ],
 };

@@ -8,17 +8,19 @@ import { fnv } from "../../core/hash";
 import type { MapDefinition } from "../../core/types";
 import {
   armOf, armShadow, cargoOf, cargoShadow, COMMS, commsShadow, dishShadow, dishTip, drawArm, drawCargo, drawComms, drawDish, drawHydro, drawShuttle,
-  drawSolar, drawSpheres, hydroShadow, SHUTTLE, shuttleShadow, solarOf, solarShadow, spheresOf, spheresShadow, wristOf, type Arm, type Cargo, type Solar,
+  CYAN, drawSolar, drawSpheres, hydroShadow, SHUTTLE, solarCores, sphereGlows, shuttleShadow, solarOf, solarShadow, spheresOf, spheresShadow, wristOf, type Arm, type Cargo, type Solar,
   type Spheres,
 } from "./orbit-props";
 
 // Orbital Deck: the hull of a station in orbit, deep blue plating under its own work lights. A maglev lane instead of
 // a road: a recessed track with two glowing rails, grip plating and edge light strips; props in the towers' 3/4 tilt
-// (`Theme.tilted`, `orbit-props.ts`): solar panels on gimbals, cargo pods, pressure spheres, robotic arms, dish
-// antennas and hydroponics domes; a docked shuttle and a comms array as landmarks; and obstacle groups at the board
+// (`Theme.tilted`, `orbit-props.ts`): hex energy collectors, armoured cargo modules, plasma cells, robotic arms, sensor
+// dishes and hydroponics domes; a dropship on its pad and a sensor spire as landmarks; and obstacle groups at the board
 // edge turned into viewports (`Theme.sea`): open space behind a hull rim, black void with nebula haze and stars.
 
 const ACCENT = 0x8fb0ff;
+/** Hot white core of a cyan emitter. */
+const CORE = 0xd8fbff;
 /** Kind thresholds of the first `cellRandom` draw. */
 const SOLAR = 0.24,
   CARGO = 0.44,
@@ -248,20 +250,41 @@ export const orbit: Theme = {
       scaled(g, x, y0, k, () => (variant ? drawComms(g) : drawShuttle(g)));
     },
     // The shuttle's engines idle blue and its wingtip lights blink red and green; the comms array's beacon pulses.
+    // The dropship's engines idle cyan, its canopy glows and its wingtip lights blink red and green; the sensor spire's
+    // emitter pulses and holographic rings turn round its column.
     landmarkLight: (g, glow, x, y, s, variant, clock, lit) => {
       const { y0, k } = landmarkGround(x, y, s);
       if (variant) {
-        navLight(g, glow, x, Y(y0, 0, COMMS.beacon * k), 0xff4a3a, Math.sin(clock * 2.6 + x) > 0.2 ? 1 : 0, lit, 1.6 * k);
-        const life = (clock * 0.6) % 1;
-        glow.lineStyle(1.2 * k, ACCENT, 0.25 * (1 - life) * lit);
-        strokeOval(glow, x, Y(y0, 0, COMMS.beacon * k), (6 + life * 40) * k, (6 + life * 40) * k * 0.65);
+        const ey = Y(y0, 0, (COMMS.beacon - 4) * k),
+          on = 0.7 + 0.3 * Math.sin(clock * 2.2 + x);
+        halo(glow, x, ey, 18 * k, CYAN, 0.28 * on * lit);
+        COMMS.rings.forEach((h, i) => {
+          const r = (24 - i * 5) * k,
+            ry = Y(y0, 0, h * k),
+            spin = clock * (0.8 + i * 0.3) * (i % 2 ? -1 : 1);
+          glow.lineStyle(1.2 * k, CYAN, 0.16 * lit);
+          strokeOval(glow, x, ry, r * 2, r * 2 * 0.65);
+          // Three bright arcs riding round each ring.
+          for (let j = 0; j < 3; j++) {
+            const t = spin + (j / 3) * Math.PI * 2;
+            disc(glow, x + Math.cos(t) * r, ry + Math.sin(t) * r * 0.65, 2.4 * k, CYAN, 0.3 * lit);
+            disc(g, x + Math.cos(t) * r, ry + Math.sin(t) * r * 0.65, 0.9 * k, CORE, Math.sin(t) > 0 ? 0.9 : 0.4);
+          }
+        });
         return;
       }
       for (const e of SHUTTLE.engines) {
         const ex = x + e.u * k,
           ey = Y(y0, e.v * k, e.h * k);
-        disc(g, ex, ey, 2.2 * k, 0xa8c8ff, 0.7 + 0.3 * Math.sin(clock * 9 + e.v));
-        halo(glow, ex - 4 * k, ey, 12 * k, 0x6a9aff, 0.25 * lit);
+        disc(g, ex, ey, 1.8 * k, CORE, 0.7 + 0.3 * Math.sin(clock * 9 + e.v));
+        halo(glow, ex, ey, 14 * k, CYAN, 0.28 * lit);
+      }
+      halo(glow, x + SHUTTLE.canopy.u * k, Y(y0, SHUTTLE.canopy.v * k, SHUTTLE.canopy.h * k), 10 * k, CYAN, 0.18 * lit);
+      // The landing ring's lamps chasing round the pad.
+      for (let i = 0; i < 12; i++) {
+        const t = (i / 12) * Math.PI * 2,
+          on = Math.max(0, Math.sin(clock * 3 - i * 0.6)) ** 3;
+        disc(glow, x + Math.cos(t) * 34 * k, Y(y0, Math.sin(t) * 34 * k, 6.4 * k), 3 * k, CYAN, 0.3 * on * lit);
       }
       SHUTTLE.nav.forEach((n, i) => navLight(g, glow, x + n.u * k, Y(y0, n.v * k, n.h * k), i ? 0x4aff8a : 0xff4a3a, Math.sin(clock * 3 + i * 1.5) > 0.5 ? 1 : 0, lit, 1.4 * k));
     },
@@ -302,15 +325,16 @@ export const orbit: Theme = {
         blink = Math.sin(clock * 2.4 + b.x * 1.3 + b.y) > 0.6 ? 1 : 0;
       if (p.kind === "dish") {
         const t = dishTip(p.a);
-        navLight(g, glow, gx + t.x, gy + t.y, 0xff4a3a, blink, lit);
+        halo(glow, gx + t.x, gy + t.y, 8, CYAN, (0.18 + 0.1 * blink) * lit);
       } else if (p.kind === "arm") {
         const w = wristOf(p.arm),
           ax = gx + ARM_AT.u,
           ay = gy + ARM_AT.v * 0.65;
         navLight(g, glow, ax + w.u, Y(ay, w.v, w.h + 1.5), 0xffc857, 1, lit, 0.9);
       } else if (p.kind === "hydro") halo(glow, gx, Y(gy, 0, 8), 14, 0xd88aff, (0.12 + 0.03 * Math.sin(clock * 0.8 + b.x)) * lit);
-      else if (p.kind === "solar") navLight(g, glow, gx, Y(gy - 2, 0, 19.5), 0x4aff8a, blink, lit, 0.9);
-      else if (p.kind === "spheres") navLight(g, glow, gx, Y(gy, 0, 3), 0xff4a3a, blink, lit, 0.8);
+      else if (p.kind === "solar") for (const c of solarCores(p.solar)) halo(glow, gx + c.x, gy - 2 + c.y, 7, CYAN, (0.2 + 0.08 * Math.sin(clock * 2 + b.x)) * lit);
+      else if (p.kind === "spheres") for (const c of sphereGlows(p.spheres)) halo(glow, gx + c.x, gy + c.y, c.r * 3, p.spheres.color, (0.2 + 0.06 * Math.sin(clock * 3 + c.x + b.y)) * lit);
+      else if (p.kind === "cargo") navLight(g, glow, gx, Y(gy, 0, 2), CYAN, blink, lit, 0.6);
     }
     if (!map.columns) return;
     const samples = channelOf(map),
