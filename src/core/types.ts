@@ -397,6 +397,8 @@ export interface TowerDefinition {
   name: string;
   /** Campaign gear Mk V (`campaign/gear.ts`): its hits also apply this effect. Absent in the base content. */
   signature?: MasteryEffect;
+  /** Campaign gear Mk V: credits added to each kill of this tower type. Absent in the base content. */
+  signatureBounty?: number;
   role: string;
   description: string;
   cost: number;

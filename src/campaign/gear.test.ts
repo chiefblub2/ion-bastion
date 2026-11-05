@@ -17,12 +17,32 @@ describe("campaign gear", () => {
     expect(p.towers.mine.cost).toBeLessThan(base.towers.mine.cost);
   });
 
-  it("Mk V adds the signature mod, or the stand-in", () => {
+  it("Mk V adds the signature mod", () => {
     const p = gearPack(base, { gear: { pulse: 5, refinery: 5, orbital: 5 } });
     expect(p.towers.pulse.signature?.kind).toBe("vulnerable");
     expect(base.towers.pulse.signature).toBeUndefined();
     const amount = (t: typeof p.towers.refinery) => (t.attack as unknown as { amount: number }).amount;
     expect(amount(p.towers.refinery)).toBeGreaterThan(amount(base.towers.refinery));
-    expect(p.towers.orbital.damage).toBeGreaterThan(gearPack(base, { gear: { orbital: 4 } }).towers.orbital.damage);
+    const delay = (t: typeof p.towers.orbital) => (t.attack as unknown as { delay: number }).delay;
+    expect(delay(p.towers.orbital)).toBeLessThan(delay(base.towers.orbital));
+  });
+});
+
+describe("signature mods", () => {
+  it("every tower has one, and every param mod changes a real attack value", async () => {
+    const { SIGNATURES } = await import("../content/arsenal");
+    for (const id of Object.keys(base.towers) as (keyof typeof base.towers)[]) {
+      const sig = SIGNATURES[id];
+      expect(sig, id).toBeDefined();
+      if (!sig || !("param" in sig)) continue;
+      const before = (base.towers[id].attack as unknown as Record<string, number>)[sig.param],
+        after = (gearPack(base, { gear: { [id]: 5 } }).towers[id].attack as unknown as Record<string, number>)[sig.param];
+      expect(typeof before, `${id}.${sig.param}`).toBe("number");
+      expect(after, `${id}.${sig.param}`).not.toBe(before);
+    }
+  });
+
+  it("Reaper's Due adds a credit per kill", () => {
+    expect(gearPack(base, { gear: { executioner: 5 } }).towers.executioner.signatureBounty).toBe(1);
   });
 });

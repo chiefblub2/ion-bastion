@@ -87,6 +87,7 @@ function deal(sim: Sim, src: DamageSource, e: Enemy, amount: number, dot: boolea
   if (e.sentBy === undefined) {
     reward = d.reward;
     for (const bounty of HOOKS.bounty) reward += bounty(sim, e, d.reward);
+    reward += sim.content.towers[src.type]?.signatureBounty ?? 0;
   }
   earn(s, reward);
   for (const kill of HOOKS.onKill) kill(sim, e);

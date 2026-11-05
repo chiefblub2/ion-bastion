@@ -43,7 +43,8 @@ export const MAX_MARK = GEAR_PRICE.length;
 export type Signature =
   | { name: string; hit: MasteryEffect }
   | { name: string; stat: "range" | "damage"; factor: number }
-  | { name: string; param: string; factor: number };
+  | { name: string; param: string; factor: number }
+  | { name: string; bounty: number };
 export const SIGNATURES: Readonly<Partial<Record<TowerId, Signature>>> = {
   pulse: { name: "Tracer Rounds", hit: { kind: "vulnerable", amount: 0.06, duration: 1.5 } },
   blast: { name: "Concussion", hit: { kind: "stun", duration: 0.2, recovery: 2 } },
@@ -63,4 +64,50 @@ export const SIGNATURES: Readonly<Partial<Record<TowerId, Signature>>> = {
   aura: { name: "Wide Field", stat: "range", factor: 1.15 },
   detector: { name: "Long Sight", stat: "range", factor: 1.2 },
   refinery: { name: "Dividend", param: "amount", factor: 1.2 },
+  executioner: { name: "Reaper's Due", bounty: 1 },
+  // Attack
+  mortar: { name: "Danger Close", param: "minRange", factor: 1 / 1.5 },
+  quake: { name: "Tremor", hit: { kind: "slow", factor: 0.8, duration: 0.6 } },
+  focus: { name: "Overcharge", param: "stacks", factor: 1.2 },
+  skyburst: { name: "Flechette Cloud", param: "radius", factor: 1.1 / 0.9 },
+  catalyst: { name: "Volatile Mix", param: "cap", factor: 1.25 },
+  orbital: { name: "Rapid Uplink", param: "delay", factor: 1 / 1.4 },
+  // Control
+  gravity: { name: "Event Horizon", hit: { kind: "vulnerable", amount: 0.06, duration: 2 } },
+  cyclone: { name: "Downdraft", hit: { kind: "slow", factor: 0.8, duration: 1.5 } },
+  amber: { name: "Fault Lines", param: "bonus", factor: 1.3 },
+  shrink: { name: "Lasting Shrink", param: "duration", factor: 1.25 },
+  magnetar: { name: "Strong Field", param: "radius", factor: 1.9 / 1.6 },
+  mesmer: { name: "Lingering Daze", hit: { kind: "slow", factor: 0.85, duration: 2.5 } },
+  hex: { name: "Deep Curse", param: "share", factor: 1.25 },
+  plasma: { name: "Long Burn", param: "duration", factor: 1.25 },
+  // Traps
+  mine: { name: "Shaped Charge", param: "radius", factor: 1.3 / 1.1 },
+  spikes: { name: "Hobble", hit: { kind: "slow", factor: 0.9, duration: 4 } },
+  tar: { name: "Sticky Residue", param: "duration", factor: 2.5 / 1.5 },
+  snare: { name: "Torn Tendon", hit: { kind: "vulnerable", amount: 0.08, duration: 2 } },
+  pit: { name: "Wider Mouth", param: "size", factor: 1.2 },
+  grill: { name: "White Heat", param: "ratio", factor: 1.2 },
+  oil: { name: "Slick Coat", hit: { kind: "slow", factor: 0.85, duration: 4 } },
+  barricade: { name: "Reinforced", param: "hp", factor: 1.25 },
+  limpet: { name: "Short Fuse", param: "fuse", factor: 0.75 },
+  spring: { name: "Hard Landing", hit: { kind: "vulnerable", amount: 0.06, duration: 2 } },
+  harpoon: { name: "Barbed Head", param: "duration", factor: 4 / 3 },
+  arc: { name: "Grounded Coil", param: "jumps", factor: 4 / 3 },
+  grinder: { name: "Chew", hit: { kind: "slow", factor: 0.85, duration: 1 } },
+  warp: { name: "Deep Warp", param: "cells", factor: 1.25 },
+  tripwire: { name: "Long Wire", param: "radius", factor: 1.2 },
+  // Support
+  beacon: { name: "Finder's Fee", param: "bonus", factor: 1.2 },
+  tracker: { name: "Painted Target", param: "amount", factor: 1.2 },
+  workshop: { name: "Master Tools", param: "amount", factor: 1.25 },
+  dock: { name: "Spare Cells", param: "amount", factor: 2 },
+  vault: { name: "Compound Interest", param: "cap", factor: 55 / 40 },
+  firectl: { name: "Hot Rounds", param: "multiplier", factor: 1.2 },
+  armory: { name: "AP Rounds", param: "fraction", factor: 1.2 },
+  skylink: { name: "Sky Lock", param: "factor", factor: 0.7 / 0.6 },
+  nexus: { name: "Wider Net", param: "cap", factor: 7 / 6 },
+  overclock: { name: "Long Burst", param: "window", factor: 4 / 3 },
+  recycler: { name: "Long Chain", param: "reach", factor: 1.3 },
+  shieldgen: { name: "Hardened Cells", param: "amount", factor: 4 / 3 },
 };
