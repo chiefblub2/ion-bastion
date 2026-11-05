@@ -16,7 +16,7 @@ import {
 // a road: a recessed track with two glowing rails, grip plating and edge light strips; props in the towers' 3/4 tilt
 // (`Theme.tilted`, `orbit-props.ts`): solar panels on gimbals, cargo pods, pressure spheres, robotic arms, dish
 // antennas and hydroponics domes; a docked shuttle and a comms array as landmarks; and obstacle groups at the board
-// edge turned into viewports (`Theme.sea`): open space behind a hull rim, stars and the limb of the planet below.
+// edge turned into viewports (`Theme.sea`): open space behind a hull rim, black void with nebula haze and stars.
 
 const ACCENT = 0x8fb0ff;
 /** Kind thresholds of the first `cellRandom` draw. */
@@ -110,18 +110,10 @@ function drawLane(g: Ink, map: MapDefinition) {
 }
 
 // ── Viewports ───────────────────────────────────────────────────────────────────────────────────────────────────────
-/** The planet below, in board pixels: a great disc off the lower edge whose limb crosses the viewports. */
-function planetOf(map: MapDefinition) {
-  const w = map.columns * CELL,
-    h = map.rows * CELL,
-    r = Math.max(w, h) * 0.9;
-  return { x: w * 0.3, y: h + r * 0.62, r };
-}
-/** Space by distance from the hull: the rim, hazard band and frame, then black space with the planet's limb. */
+/** Space by distance from the hull: the rim, hazard band and frame, then black space with faint nebula haze and stars. */
 function drawViewports(g: Ink, map: MapDefinition) {
   const n = CELL / SEA_TILE,
-    seed = fnv(`${map.id}:space`),
-    planet = planetOf(map);
+    seed = fnv(`${map.id}:space`);
   for (const [k, depths] of seaField(map, RIM)) {
     const [cx, cy] = k.split(",").map(Number);
     for (let ty = 0; ty < n; ty++) {
@@ -142,16 +134,10 @@ function drawViewports(g: Ink, map: MapDefinition) {
         else if (d < 6) c = 0x2a3248;
         else if (d < 7) c = 0x0c1024;
         else {
-          const pd = Math.sqrt((x - planet.x) ** 2 + (y - planet.y) ** 2) - planet.r;
-          if (pd < -6) {
-            // The planet: ocean and cloud bands, darker towards the terminator at the lower right.
-            const swirl = Math.sin(y * 0.045 + Math.sin(x * 0.013 + hash01(seed) * 6) * 4) * 0.6 + Math.sin(x * 0.05 + y * 0.02) * 0.4,
-              night = Math.min(1, Math.max(0, (x - planet.x) / planet.r + 0.25)),
-              day = swirl > 0.72 ? blend(0x2a5aa0, 0xb8cce0, (swirl - 0.72) / 0.28) : blend(0x1a3a78, 0x2a5aa0, (swirl + 1) / 1.72);
-            c = blend(day, 0x06101e, night * 0.85);
-          } else if (pd < 0) c = blend(0x8ad0ff, 0x3a6ab0, -pd / 6);
-          else if (pd < 14) c = blend(0x1a3a6a, 0x02040c, pd / 14);
-          else c = 0x02040c;
+          // Faint nebula haze over the void: two slow waves crossed, violet where they agree, blue where they part.
+          const haze = Math.sin(x * 0.011 + Math.sin(y * 0.017 + hash01(seed) * 6) * 2) * Math.sin(y * 0.013 + x * 0.004 + hash01(seed, 1) * 6),
+            deep = blend(0x050816, 0x02030a, Math.min(1, (d - 7) / 30));
+          c = haze > 0.45 ? blend(deep, 0x1e1242, Math.min(1, (haze - 0.45) * 1.4)) : haze < -0.6 ? blend(deep, 0x0a1a3a, Math.min(1, (-haze - 0.6) * 1.6)) : deep;
         }
         if (c !== color) {
           flush(tx);
@@ -162,14 +148,21 @@ function drawViewports(g: Ink, map: MapDefinition) {
       }
       flush(n);
     }
-    // Fixed stars in the black.
-    for (let j = 0; j < 6; j++) {
+    // Fixed stars in the black, a few tinted and a rare bright one with a cross glint.
+    for (let j = 0; j < 14; j++) {
       const tx = Math.floor(hash01(cx, cy, j) * n),
         ty = Math.floor(hash01(cy, cx, j + 7) * n),
         x = cx * CELL + tx * SEA_TILE,
         y = cy * CELL + ty * SEA_TILE;
-      if (depths[ty * n + tx] < 9 || Math.sqrt((x - planet.x) ** 2 + (y - planet.y) ** 2) < planet.r + 4) continue;
-      disc(g, x, y, 0.5 + hash01(j, cx, cy) * 0.7, 0xdbe6ff, 0.5 + hash01(cx, j, cy) * 0.5);
+      if (depths[ty * n + tx] < 9) continue;
+      const h = hash01(j, cx, cy),
+        tint = h < 0.15 ? 0xffd8a8 : h < 0.3 ? 0xa8c8ff : 0xdbe6ff;
+      disc(g, x, y, 0.4 + h * 0.8, tint, 0.4 + hash01(cx, j, cy) * 0.6);
+      if (h > 0.96) {
+        g.lineStyle(0.6, tint, 0.6);
+        g.lineBetween(x - 3, y, x + 3, y);
+        g.lineBetween(x, y - 3, x, y + 3);
+      }
     }
   }
 }
@@ -340,8 +333,7 @@ export const orbit: Theme = {
       for (const side of [-1, 1]) disc(glow, p.x + p.nx * side * 10.6, p.y + p.ny * side * 10.6, 5, 0x8ab0ff, 0.25 * lit);
     }
     // Stars twinkling in the viewports.
-    const n = CELL / SEA_TILE,
-      planet = planetOf(map);
+    const n = CELL / SEA_TILE;
     for (const [key, depths] of seaField(map, RIM)) {
       const [cx, cy] = key.split(",").map(Number);
       for (let j = 0; j < 3; j++) {
@@ -349,7 +341,7 @@ export const orbit: Theme = {
           ty = Math.floor(hash01(cy, cx, j + 27) * n),
           x = cx * CELL + tx * SEA_TILE,
           y = cy * CELL + ty * SEA_TILE;
-        if (depths[ty * n + tx] < 9 || Math.sqrt((x - planet.x) ** 2 + (y - planet.y) ** 2) < planet.r + 4) continue;
+        if (depths[ty * n + tx] < 9) continue;
         const tw = Math.max(0, Math.sin(clock * (0.8 + hash01(j, cx)) + hash01(cx, cy, j) * 30));
         g.fillStyle(0xdbe6ff, tw * 0.8);
         fillRound(g, x, y, 0.6 + tw);
