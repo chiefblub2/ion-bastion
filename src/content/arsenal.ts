@@ -1,4 +1,4 @@
-import type { TowerId } from "../core/types";
+import type { MasteryEffect, TowerId } from "../core/types";
 // Campaign Arsenal content (plan: docs/superpowers/plans/2026-11-05-campaign-arsenal.md): the core kit, the research
 // catalogue by price band, Salvage pay, veterancy thresholds and gear marks. Campaign only; balance scripts never read it.
 
@@ -35,3 +35,32 @@ export const XP_BUILT = 10;
 /** Salvage price of gear marks Mk I–V; Mk n needs veterancy rank n. */
 export const GEAR_PRICE: readonly number[] = [80, 160, 280, 450, 700];
 export const MAX_MARK = GEAR_PRICE.length;
+
+/**
+ * Mk V signature mods (plan tables). `hit`: an effect on the tower's hits; `stat`: a stat factor; `param`: an attack
+ * parameter factor. Towers without an entry get the stand-in (+4% damage, Support +5% range).
+ */
+export type Signature =
+  | { name: string; hit: MasteryEffect }
+  | { name: string; stat: "range" | "damage"; factor: number }
+  | { name: string; param: string; factor: number };
+export const SIGNATURES: Readonly<Partial<Record<TowerId, Signature>>> = {
+  pulse: { name: "Tracer Rounds", hit: { kind: "vulnerable", amount: 0.06, duration: 1.5 } },
+  blast: { name: "Concussion", hit: { kind: "stun", duration: 0.2, recovery: 2 } },
+  flak: { name: "Flight Breaker", hit: { kind: "slow", factor: 0.85, duration: 1 } },
+  tesla: { name: "Static Charge", hit: { kind: "slow", factor: 0.85, duration: 1 } },
+  lance: { name: "Overpenetration", hit: { kind: "vulnerable", amount: 0.08, duration: 1 } },
+  inferno: { name: "Choking Smoke", hit: { kind: "slow", factor: 0.9, duration: 1.5 } },
+  decay: { name: "Brittle Rot", hit: { kind: "vulnerable", amount: 0.05, duration: 2 } },
+  shrapnel: { name: "Stagger", hit: { kind: "slow", factor: 0.85, duration: 0.5 } },
+  frost: { name: "Deep Chill", hit: { kind: "vulnerable", amount: 0.05, duration: 2 } },
+  acid: { name: "Caustic Shock", hit: { kind: "stun", duration: 0.15, recovery: 3 } },
+  stasis: { name: "Afterchill", hit: { kind: "slow", factor: 0.8, duration: 1 } },
+  net: { name: "Weighted Mesh", hit: { kind: "vulnerable", amount: 0.06, duration: 2 } },
+  jammer: { name: "Feedback", hit: { kind: "slow", factor: 0.85, duration: 1.5 } },
+  siphon: { name: "Overdraw", hit: { kind: "vulnerable", amount: 0.05, duration: 1.5 } },
+  tether: { name: "Taut Line", hit: { kind: "vulnerable", amount: 0.05, duration: 3 } },
+  aura: { name: "Wide Field", stat: "range", factor: 1.15 },
+  detector: { name: "Long Sight", stat: "range", factor: 1.2 },
+  refinery: { name: "Dividend", param: "amount", factor: 1.2 },
+};

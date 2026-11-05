@@ -26,7 +26,7 @@ export function renderArsenal(root: HTMLElement, content: ContentPack) {
     ids = [...CORE_KIT, ...(Object.keys(CATALOGUE) as TowerId[])].filter((id) => id in content.towers),
     byPrice = (x: TowerId, y: TowerId) => (researchPrice(x) ?? 0) - (researchPrice(y) ?? 0);
   root.innerHTML =
-    `<p class="arsenal-salvage"><b>${a.salvage}</b> Salvage · ${a.researched.length}/${Object.keys(CATALOGUE).length} researched · Gear takes effect in a coming update</p>` +
+    `<p class="arsenal-salvage"><b>${a.salvage}</b> Salvage · ${a.researched.length}/${Object.keys(CATALOGUE).length} researched</p>` +
     `<div class="arsenal-branches">${BRANCHES.map(
       (b, page) =>
         `<section class="arsenal-branch"><h3>${b}</h3><ul>${ids

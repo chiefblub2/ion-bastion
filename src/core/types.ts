@@ -395,6 +395,8 @@ export interface TowerVisual {
 export interface TowerDefinition {
   id: string;
   name: string;
+  /** Campaign gear Mk V (`campaign/gear.ts`): its hits also apply this effect. Absent in the base content. */
+  signature?: MasteryEffect;
   role: string;
   description: string;
   cost: number;
@@ -1052,7 +1054,7 @@ export type Command = (
   | { type: "pause" }
   | { type: "restart" }
   /** `towers` (campaign Arsenal, solo only) narrows the offered towers until the next load. */
-  | { type: "mission"; id: string; towers?: readonly TowerId[] }
+  | { type: "mission"; id: string; towers?: readonly TowerId[]; content?: ContentPack }
   | { type: "playtest"; mission: MissionDefinition }
   /** A Run mission (`run/`): generated mission plus the content pack its relics derived; solo only. */
   | { type: "run"; mission: MissionDefinition; content: ContentPack; replay?: Replay }

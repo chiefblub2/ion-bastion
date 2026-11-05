@@ -95,8 +95,9 @@ const HANDLERS: { [K in Command["type"]]: Handler<Extract<Command, { type: K }>>
       if (hostOnly(g, c)) return fail("host-only");
       const m = findMission(c.id, g.content);
       if (!m) return fail("mission-unknown");
-      g.loadMission(m);
-      if (c.towers && g.players === 1) g.arsenal = c.towers;
+      const solo = g.players === 1;
+      g.loadMission(m, solo && c.content ? c.content : g.baseContent);
+      if (c.towers && solo) g.arsenal = c.towers;
       return ok("mission-loaded", { number: missionNumber(m, g.content.missions), name: m.name });
     },
   },
