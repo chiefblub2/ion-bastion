@@ -12,6 +12,7 @@ import * as R from "./render/terrain-themes/ruin-props";
 import * as G from "./render/terrain-themes/gear-props";
 import * as V from "./render/terrain-themes/rift-props";
 import * as Gd from "./render/terrain-themes/geode-props";
+import * as D from "./render/terrain-themes/dune-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -295,5 +296,30 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
     { label: "lantern", shadow: (g, x, y) => Gd.lanternShadow(g, x, y), draw: (g, x, y) => Gd.drawLantern(g, x, y) },
     { label: "giant geode", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => Gd.giantShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => Gd.drawGiant(g)) },
     { label: "headframe", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => Gd.headframeShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => Gd.drawHeadframe(g)) },
+  ],
+  dune: [
+    ...[1, 2].map((n) => {
+      const h = D.hoodooOf(r(7000 + n));
+      return { label: "hoodoo", shadow: (g: Ink, x: number, y: number) => D.hoodooShadow(g, x, y, h), draw: (g: Ink, x: number, y: number) => D.drawHoodoo(g, x, y, h) };
+    }),
+    (() => {
+      const h = D.hullOf(r(7010));
+      return { label: "hull", shadow: (g: Ink, x: number, y: number) => D.hullShadow(g, x, y, h), draw: (g: Ink, x: number, y: number) => D.drawHull(g, x, y, h) };
+    })(),
+    (() => {
+      const b = { ...D.ribsOf(r(7020)), skull: true };
+      return { label: "rib cage", shadow: (g: Ink, x: number, y: number) => D.ribsShadow(g, x, y, b), draw: (g: Ink, x: number, y: number) => D.drawRibs(g, x, y, b) };
+    })(),
+    (() => {
+      const c = D.glassOf(r(7030));
+      return { label: "desert glass", shadow: (g: Ink, x: number, y: number) => D.glassShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => D.drawGlass(g, x, y, c) };
+    })(),
+    (() => {
+      const b = D.bouldersOf(r(7040));
+      return { label: "boulders", shadow: (g: Ink, x: number, y: number) => D.bouldersShadow(g, x, y, b), draw: (g: Ink, x: number, y: number) => D.drawBoulders(g, x, y, b) };
+    })(),
+    { label: "cache", shadow: (g, x, y) => D.cacheShadow(g, x, y), draw: (g, x, y) => D.drawCache(g, x, y, false) },
+    { label: "rock arch", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => D.archShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => D.drawArch(g)) },
+    { label: "colossus", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => D.colossusShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => D.drawColossus(g)) },
   ],
 };
