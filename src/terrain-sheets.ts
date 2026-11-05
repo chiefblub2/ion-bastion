@@ -11,7 +11,7 @@ import * as B from "./render/terrain-themes/orbit-props";
 import * as R from "./render/terrain-themes/ruin-props";
 import * as G from "./render/terrain-themes/gear-props";
 import * as V from "./render/terrain-themes/rift-props";
-import * as G from "./render/terrain-themes/geode-props";
+import * as Gd from "./render/terrain-themes/geode-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -277,23 +277,23 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
   ],
   geode: [
     ...[1, 2].map((n) => {
-      const o = { ...G.geodeOf(r(8000 + n)), tint: n - 1 };
-      return { label: "geode", shadow: (g: Ink, x: number, y: number) => G.geodeShadow(g, x, y, o), draw: (g: Ink, x: number, y: number) => G.drawGeode(g, x, y, o) };
+      const o = { ...Gd.geodeOf(r(8000 + n)), tint: n - 1 };
+      return { label: "geode", shadow: (g: Ink, x: number, y: number) => Gd.geodeShadow(g, x, y, o), draw: (g: Ink, x: number, y: number) => Gd.drawGeode(g, x, y, o) };
     }),
     (() => {
-      const c = G.clusterOf(r(8010));
-      return { label: "quartz", shadow: (g: Ink, x: number, y: number) => G.clusterShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => G.drawCluster(g, x, y, c) };
+      const c = Gd.clusterOf(r(8010));
+      return { label: "quartz", shadow: (g: Ink, x: number, y: number) => Gd.clusterShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => Gd.drawCluster(g, x, y, c) };
     })(),
     (() => {
-      const m = G.mitesOf(r(8020));
-      return { label: "stalagmites", shadow: (g: Ink, x: number, y: number) => G.mitesShadow(g, x, y, m), draw: (g: Ink, x: number, y: number) => G.drawMites(g, x, y, m) };
+      const m = Gd.mitesOf(r(8020));
+      return { label: "stalagmites", shadow: (g: Ink, x: number, y: number) => Gd.mitesShadow(g, x, y, m), draw: (g: Ink, x: number, y: number) => Gd.drawMites(g, x, y, m) };
     })(),
     ...[false, true].map((tipped) => {
-      const c = { ...G.cartOf(r(8030)), tipped };
-      return { label: "ore cart", shadow: (g: Ink, x: number, y: number) => G.cartShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => G.drawCart(g, x, y, c) };
+      const c = { ...Gd.cartOf(r(8030)), tipped };
+      return { label: "ore cart", shadow: (g: Ink, x: number, y: number) => Gd.cartShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => Gd.drawCart(g, x, y, c) };
     }),
-    { label: "lantern", shadow: (g, x, y) => G.lanternShadow(g, x, y), draw: (g, x, y) => G.drawLantern(g, x, y) },
-    { label: "giant geode", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => G.giantShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => G.drawGiant(g)) },
-    { label: "headframe", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => G.headframeShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => G.drawHeadframe(g)) },
+    { label: "lantern", shadow: (g, x, y) => Gd.lanternShadow(g, x, y), draw: (g, x, y) => Gd.drawLantern(g, x, y) },
+    { label: "giant geode", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => Gd.giantShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => Gd.drawGiant(g)) },
+    { label: "headframe", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => Gd.headframeShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => Gd.drawHeadframe(g)) },
   ],
 };
