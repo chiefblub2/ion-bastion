@@ -21,6 +21,8 @@ import { renderAtlas, selectMission as featureMission, selectSector, selectWorld
 import type { Coop } from "./coop";
 import { bindMenuKeys, showCodexTab, showTowerCodex } from "./menu-keys";
 import { campaignRecord, lastMission, rememberUnlocks, seenUnlocks, trainingDone } from "./progress";
+import { gearPack } from "../campaign/gear";
+import { arsenalTowers, loadArsenal } from "./arsenal-store";
 import { beginJournal, storedJournal } from "./run-journal";
 import { createScreens, GAME, HOME, type MenuPage, type Screen } from "./screens";
 
@@ -126,6 +128,7 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
     if (to.page === "coop") coop.render();
     if (to.page === "editor") void import("../editor/editor-view").then((m) => m.openEditor(editorHost));
     if (to.page === "run") void import("../ui/run-view").then((m) => m.openRun(runHost));
+    if (to.page === "arsenal") void import("../ui/arsenal-view").then((m) => m.renderArsenal(document.getElementById("arsenal-root")!, game.baseContent));
     // Any page change ends a codex animation preview; opening the codex renders it closed.
     closeCodexPreview();
     if (to.page === "codex") renderCodex(game);
@@ -148,7 +151,8 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
       screens.show(page("missions"));
       return;
     }
-    execute({ type: "mission", id });
+    const towers = unlockAll ? undefined : arsenalTowers(id);
+    execute({ type: "mission", id, towers, content: towers ? gearPack(game.baseContent, loadArsenal()) : undefined });
     browsed = undefined;
     if (!coop.active()) screens.show(GAME);
   }
@@ -256,6 +260,9 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
         break;
       case "menu-run":
         screens.show(page("run"));
+        break;
+      case "menu-arsenal":
+        screens.show(page("arsenal"));
         break;
       case "menu-btn":
       case "rail-menu":
