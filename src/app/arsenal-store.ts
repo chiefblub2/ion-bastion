@@ -1,7 +1,9 @@
-import { type Arsenal, campaignTowers, EMPTY_ARSENAL } from "../campaign/arsenal";
+import { type Arsenal, campaignTowers, EMPTY_ARSENAL, salvageOf, settle, veterancy } from "../campaign/arsenal";
+import { XP_BUILT } from "../content/arsenal";
+import { assistsOf } from "../run/xp";
 import { DEFAULT_CONTENT } from "../content/index";
 import { missionById, MISSIONS } from "../content/missions";
-import { availableTowers } from "../core/game";
+import { availableTowers, type Game } from "../core/game";
 import { hasStealth } from "../core/mission-checks";
 import type { TowerId } from "../core/types";
 // The campaign Arsenal in localStorage (`ion-bastion:arsenal`); unknown tower ids and bad numbers are dropped.
@@ -41,4 +43,24 @@ export function arsenalTowers(id: string, a = loadArsenal()): TowerId[] | undefi
   const m = missionById(id);
   if (!m || m.circle || !MISSIONS.includes(m)) return undefined;
   return campaignTowers(availableTowers(m, DEFAULT_CONTENT), a, hasStealth(m));
+}
+
+/** Tower XP of one play: kills, `XP_BUILT` per tower built and Run-style assists, per type. */
+export function playXp(game: Game): Partial<Record<TowerId, number>> {
+  const xp: Partial<Record<TowerId, number>> = { ...assistsOf(game.state, game.mission, game.content) };
+  for (const t of game.state.towers) xp[t.type] = (xp[t.type] ?? 0) + t.kills + XP_BUILT;
+  return xp;
+}
+/** Pays a finished campaign mission into the stored arsenal; returns the overlay line. */
+export function settleCampaign(game: Game, won: boolean, firstWin: boolean): string {
+  const sectors = game.content.sectors ?? [],
+    sector = sectors.findIndex((s) => s.missions.includes(game.mission)) + 1,
+    waves = won ? game.waves.length : game.state.wave,
+    salvage = salvageOf({ won, waves, sector: Math.max(1, sector), firstWin, bounty: false }),
+    before = loadArsenal(),
+    after = settle(before, salvage, playXp(game));
+  saveArsenal(after);
+  const ranks = (Object.keys(after.xp) as TowerId[]).filter((id) => veterancy(after.xp[id]) > veterancy(before.xp[id]));
+  const names = ranks.map((id) => `${game.content.towers[id].name} ${veterancy(after.xp[id])}`);
+  return `+${salvage} Salvage${names.length ? ` · Rank up: ${names.join(", ")}` : ""}`;
 }

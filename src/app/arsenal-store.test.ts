@@ -24,3 +24,14 @@ describe("arsenal store", () => {
     expect(arsenalTowers(MISSIONS.find((m) => m.circle)!.id, EMPTY_ARSENAL)).toBeUndefined();
   });
 });
+
+describe("campaign payout", () => {
+  it("a loss pays half its cleared waves; XP counts built towers", async () => {
+    const { settleCampaign, playXp } = await import("./arsenal-store");
+    const game = new Game(MISSIONS[0]);
+    game.state.wave = 4;
+    expect(settleCampaign(game, false, false)).toBe("+4 Salvage");
+    game.state.towers.push({ ...({} as never), type: "pulse", kills: 7 } as never);
+    expect(playXp(game).pulse).toBeGreaterThanOrEqual(7);
+  });
+});

@@ -250,6 +250,8 @@ export class Interface {
   session: () => MultiplayerSession | null = () => null;
   /** The rating of the last recorded win, set by the app for the state it was won in. */
   result: { state: GameState; stars: Stars; best: boolean; unlocked?: Unlocked } | null = null;
+  /** The campaign Arsenal's payout line for the finished state (won or lost). */
+  earned: { state: GameState; text: string } | null = null;
   /** The campaign's locked missions, set by the app; undefined locks nothing (multiplayer). */
   locks: () => ReadonlyMap<string, Lock> | undefined = () => undefined;
   /** Runs after every refresh; the Training coach follows the HUD with it. */
@@ -478,7 +480,10 @@ export class Interface {
       if (stars.innerHTML !== html) stars.innerHTML = html;
     }
     const unlock = document.getElementById("overlay-unlock")!,
-      notice = rated?.unlocked ? unlockNotice(rated.unlocked, this.game.content.missions, this.game.content.sectors ?? []) : "";
+      notice = [
+        rated?.unlocked ? unlockNotice(rated.unlocked, this.game.content.missions, this.game.content.sectors ?? []) : "",
+        !match && this.earned?.state === s ? this.earned.text : "",
+      ].filter(Boolean).join(" · ");
     unlock.hidden = !notice;
     text("overlay-unlock", notice);
     if (!overlay.hidden && !match) {
