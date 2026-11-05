@@ -127,6 +127,7 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
     if (to.page === "coop") coop.render();
     if (to.page === "editor") void import("../editor/editor-view").then((m) => m.openEditor(editorHost));
     if (to.page === "run") void import("../ui/run-view").then((m) => m.openRun(runHost));
+    if (to.page === "arsenal") void import("../ui/arsenal-view").then((m) => m.renderArsenal(document.getElementById("arsenal-root")!, game.baseContent));
     // Any page change ends a codex animation preview; opening the codex renders it closed.
     closeCodexPreview();
     if (to.page === "codex") renderCodex(game);
@@ -257,6 +258,9 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
         break;
       case "menu-run":
         screens.show(page("run"));
+        break;
+      case "menu-arsenal":
+        screens.show(page("arsenal"));
         break;
       case "menu-btn":
       case "rail-menu":

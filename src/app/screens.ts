@@ -3,7 +3,7 @@ import { RUN_PREFIX } from "../run/run-id";
 import { missionById } from "../content/missions";
 import type { MissionDefinition } from "../core/types";
 /** The start screen and its pages, or the game. Both views live in one document; only the URL and `data-view` change. */
-export type MenuPage = "home" | "play" | "missions" | "coop" | "codex" | "towers" | "help" | "editor" | "run";
+export type MenuPage = "home" | "play" | "missions" | "coop" | "codex" | "towers" | "help" | "editor" | "run" | "arsenal";
 export type Screen = { view: "menu"; page: MenuPage } | { view: "game" };
 export const HOME: Screen = { view: "menu", page: "home" };
 export const GAME: Screen = { view: "game" };
@@ -16,6 +16,7 @@ const SLUGS: Record<Exclude<MenuPage, "home">, string> = {
   help: "spielhilfe",
   editor: "editor",
   run: "run",
+  arsenal: "arsenal",
 };
 const PAGES = Object.keys(SLUGS) as Exclude<MenuPage, "home">[];
 /** A valid `?mission=` opens the game (the deep link); otherwise the hash names a menu page, unknown ones the home page. */
