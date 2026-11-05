@@ -47,7 +47,8 @@ Every number below lives in `content/arsenal.ts` (`SALVAGE`), so it can be tuned
 
 | Source | Pays | Notes |
 | --- | --- | --- |
-| Wave cleared | `1 + sector` per wave (sector I: 2, sector XII: 13) | Won or lost; on a loss, the waves before the loss. Later sectors pay more, so farming the frontier beats farming mission 1. |
+| Wave cleared (win) | `1 + sector` per wave (sector I: 2, sector XII: 13) | Later sectors pay more, so farming the frontier beats farming mission 1. |
+| Loss | half of the cleared waves' Salvage, rounded down | A failed attempt still moves the player forward, but less than a win. |
 | Victory | +10 | Every win, replays included. |
 | First victory | +20 + 5 × sector | Once per mission (derived from the star record: the mission was not won before). |
 | Daily bounty | ×2 on everything above | One campaign mission per day, picked from the open ones by a date seed (as `run/daily.ts` does). It's shown on the home page and in the atlas with a bounty badge. |
@@ -117,15 +118,42 @@ Run-style assists (`run/xp.ts` `assistsOf`) for Control, trap and Support towers
 | Mk IV | rank 4 | 450 | +8% damage (total) | build cost −10% | build cost −10% |
 | Mk V | rank 5 | 700 | **Signature mod** (below) | **Signature mod** | **Signature mod** |
 
-**Signature mods (Mk V)** give each tower a small effect none of its paths grant, like the Run's `MASTERY` (Concussion,
-Static Charge and Tracer Rounds already exist for Nova, Tesla and Pulse). Each effect is bounded and deals no damage of
-its own. The first content wave covers the six core towers plus the twelve tier I and II attack and control towers;
-the rest show "Mk V: signature in a later update" and get +4% damage meanwhile. Proposed examples:
+**Signature mods (Mk V)** give each tower a small effect none of its paths grant, like the Run's `MASTERY`
+(Concussion, Static Charge and Tracer Rounds already exist for Nova, Tesla and Pulse). Each is bounded and deals no
+damage of its own. **The first wave covers 19 towers:**
+- the 6 core towers,
+- the 4 tier I towers outside traps (Lance, Ember, Corrosion, Stasis),
+- the 7 tier II Attack and Control towers,
+- Detector and Refinery, the tier I Support towers.
 
-- **Flak** "Proximity Fuse": hits splash 20% to flyers within 0.5 cells.
-- **Cryo** "Deep Chill": slowed enemies take 5% more damage.
-- **Aura** "Resonance": +1 tower counted for Nexus-style bonuses inside its radius.
-- **Lance** "Overpenetration": the beam's last target takes +15%.
+The other 41 show "Mk V: signature in a later update" and get a stand-in of +4% damage (Support towers: +5% radius).
+
+Fifteen of the 19 are a status applied on hit (`slow`, `stun` or `vulnerable`), which is the shape
+`Protocols.mastery` (`MasteryEffect`) already carries into the simulation for the Run. They need no new simulation
+code. The usual merge rules apply (the stronger slow or vulnerable wins), so a weak mod never overrides a path's
+stronger effect. Three are plain pack transforms, and one needs a new `MasteryEffect` kind.
+
+| Tower | Mod | Effect | Mechanism |
+| --- | --- | --- | --- |
+| Pulse | Tracer Rounds | hits: target takes +6% damage for 1.5 s | vulnerable (exists) |
+| Nova | Concussion | blasts stun for 0.2 s (then 2 s immune) | stun (exists) |
+| Tesla | Static Charge | arcs slow to 85% for 1 s | slow (exists) |
+| Flak | Flight Breaker | hit flyers slow to 85% for 1 s | slow |
+| Cryo | Deep Chill | hits: target takes +5% damage for 2 s | vulnerable |
+| Aura | Wide Field | +15% aura radius | pack transform |
+| Lance | Overpenetration | every enemy on the line takes +8% damage for 1 s | vulnerable |
+| Ember | Choking Smoke | hits slow to 90% for 1.5 s | slow |
+| Corrosion | Caustic Shock | hits stun for 0.15 s (then 3 s immune) | stun |
+| Stasis | Afterchill | halted enemies stay slowed to 80% for 1 s | slow |
+| Decay | Brittle Rot | hits: target takes +5% damage for 2 s | vulnerable |
+| Shrapnel | Stagger | hits slow to 85% for 0.5 s | slow |
+| Executioner | Reaper's Due | its kills pay +1 credit | new kind `bounty` (added to the kill reward like `bountyBonus`) |
+| Snare Net | Weighted Mesh | netted flyers take +6% damage for 2 s | vulnerable |
+| Jammer | Feedback | disrupted enemies slow to 85% for 1.5 s | slow |
+| Siphon | Overdraw | drained enemies take +5% damage for 1.5 s | vulnerable |
+| Tether | Taut Line | grappled enemies take +5% damage for 3 s | vulnerable |
+| Detector | Long Sight | +20% detection radius | pack transform |
+| Refinery | Dividend | +5 credits per completed wave | pack transform (`mapParam`) |
 
 The ceiling for one tower is about +8% damage, +5–10% range, cheaper early levels and one small effect. That is
 meaningful but bounded, and the campaign stays recognisable.
@@ -165,11 +193,9 @@ not something to finish.
 
 No balance script, strategy, golden file or mission check changes.
 
-## Open questions
+## Settled
 
-- **Refund:** can research be refunded? Recommendation: no. With Salvage from every play, mistakes are cheap to
-  recover.
-- **Losses:** should a loss pay the full wave Salvage or half? Recommendation: full.
-- **Signature mods:** write all 60 now, or 18 in the first wave as proposed?
-- **Gear outside the campaign:** should gear also apply in Circuit? Recommendation: no, Circuit stays the base-stat
-  sandbox.
+- **Research is permanent:** no refunds.
+- **A loss pays half** of its cleared waves' Salvage, with no victory bonus.
+- **Signature mods:** 19 in the first wave (table above), the other 41 later.
+- **Circuit:** no research and no gear. Circuit keeps every tower at base stats.
