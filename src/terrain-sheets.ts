@@ -7,6 +7,7 @@ import * as E from "./render/terrain-themes/ember-props";
 import * as C from "./render/terrain-themes/core-props";
 import * as F from "./render/terrain-themes/frost-props";
 import * as T from "./render/terrain-themes/toxic-props";
+import * as B from "./render/terrain-themes/orbit-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -181,5 +182,27 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
     })(),
     { label: "digester", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => T.digesterShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => T.drawDigester(g)) },
     { label: "pump house", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => T.pumpHouseShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => T.drawPumpHouse(g)) },
+  ],
+  orbit: [
+    ...[1, 2].map((n) => {
+      const s = B.solarOf(r(5000 + n));
+      return { label: "solar", shadow: (g: Ink, x: number, y: number) => B.solarShadow(g, x, y, s), draw: (g: Ink, x: number, y: number) => B.drawSolar(g, x, y, s) };
+    }),
+    ...[1, 2].map((n) => {
+      const c = B.cargoOf(r(5010 + n));
+      return { label: "cargo", shadow: (g: Ink, x: number, y: number) => B.cargoShadow(g, x, y, c), draw: (g: Ink, x: number, y: number) => B.drawCargo(g, x, y, c) };
+    }),
+    (() => {
+      const s = B.spheresOf(r(5020));
+      return { label: "spheres", shadow: (g: Ink, x: number, y: number) => B.spheresShadow(g, x, y, s), draw: (g: Ink, x: number, y: number) => B.drawSpheres(g, x, y, s) };
+    })(),
+    (() => {
+      const a = B.armOf(r(5030));
+      return { label: "arm", shadow: (g: Ink, x: number, y: number) => B.armShadow(g, x, y, a), draw: (g: Ink, x: number, y: number) => B.drawArm(g, x, y, a) };
+    })(),
+    { label: "dish", shadow: (g, x, y) => B.dishShadow(g, x, y), draw: (g, x, y) => B.drawDish(g, x, y, 0.6) },
+    { label: "hydroponics", shadow: (g, x, y) => B.hydroShadow(g, x, y), draw: (g, x, y) => B.drawHydro(g, x, y) },
+    { label: "shuttle", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => B.shuttleShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => B.drawShuttle(g)) },
+    { label: "comms array", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => B.commsShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => B.drawComms(g)) },
   ],
 };
