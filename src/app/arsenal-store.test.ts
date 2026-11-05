@@ -28,9 +28,10 @@ describe("arsenal store", () => {
 describe("campaign payout", () => {
   it("a loss pays half its cleared waves; XP counts built towers", async () => {
     const { settleCampaign, playXp } = await import("./arsenal-store");
-    const game = new Game(MISSIONS[0]);
+    // Mission 6 (sector II) is locked on a fresh record, so it is never today's bounty.
+    const game = new Game(MISSIONS[5]);
     game.state.wave = 4;
-    expect(settleCampaign(game, false, false)).toBe("+4 Salvage");
+    expect(settleCampaign(game, false, false)).toBe("+6 Salvage");
     game.state.towers.push({ type: "pulse", kills: 7 } as never);
     expect(playXp(game).pulse).toBeGreaterThanOrEqual(7);
   });

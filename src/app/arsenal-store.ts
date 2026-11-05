@@ -1,3 +1,7 @@
+import { campaignLocks } from "../campaign/campaign-unlock";
+import { fnv, stable } from "../core/hash";
+import { dailyDate } from "../run/daily";
+import { campaignRecord } from "./progress";
 import { type Arsenal, campaignTowers, EMPTY_ARSENAL, salvageOf, settle, veterancy } from "../campaign/arsenal";
 import { XP_BUILT } from "../content/arsenal";
 import { assistsOf } from "../run/xp";
@@ -56,11 +60,19 @@ export function settleCampaign(game: Game, won: boolean, firstWin: boolean): str
   const sectors = game.content.sectors ?? [],
     sector = sectors.findIndex((s) => s.missions.includes(game.mission)) + 1,
     waves = won ? game.waves.length : game.state.wave,
-    salvage = salvageOf({ won, waves, sector: Math.max(1, sector), firstWin, bounty: false }),
+    salvage = salvageOf({ won, waves, sector: Math.max(1, sector), firstWin, bounty: bountyMission() === game.mission.id }),
     before = loadArsenal(),
     after = settle(before, salvage, playXp(game));
   saveArsenal(after);
   const ranks = (Object.keys(after.xp) as TowerId[]).filter((id) => veterancy(after.xp[id]) > veterancy(before.xp[id]));
   const names = ranks.map((id) => `${game.content.towers[id].name} ${veterancy(after.xp[id])}`);
   return `+${salvage} Salvage${names.length ? ` · Rank up: ${names.join(", ")}` : ""}`;
+}
+
+/** Today's bounty: one open campaign mission per UTC day (date seed), paying double Salvage. */
+export function bountyMission(now = new Date(), record = campaignRecord()): string | undefined {
+  const sectors = DEFAULT_CONTENT.sectors ?? [],
+    locks = campaignLocks(sectors, record),
+    open = MISSIONS.filter((m) => !m.circle && !locks.has(m.id));
+  return open.length ? open[fnv(stable(["bounty", dailyDate(now)])) % open.length].id : undefined;
 }

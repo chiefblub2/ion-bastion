@@ -1,11 +1,17 @@
 import { loadArsenal, saveArsenal } from "../app/arsenal-store";
 import { type Arsenal, canForge, canResearch, forge, markOf, owns, research, researchPrice, veterancy } from "../campaign/arsenal";
-import { CATALOGUE, CORE_KIT, GEAR_PRICE, MAX_MARK, VETERANCY_XP } from "../content/arsenal";
+import { CATALOGUE, CORE_KIT, GEAR_PRICE, MAX_MARK, SIGNATURES, VETERANCY_XP } from "../content/arsenal";
+import { bountyMission } from "../app/arsenal-store";
 import { pageOf } from "../core/tower-pages";
 import type { ContentPack, TowerId } from "../core/types";
 // The Arsenal page (`/#arsenal`): research towers with Salvage and forge gear marks for towers with veterancy.
 const BRANCHES = ["Attack", "Control", "Traps", "Support"] as const;
 const ROMAN = ["", "I", "II", "III", "IV", "V"];
+const bountyLine = (content: ContentPack) => {
+  const id = bountyMission();
+  const m = id ? content.missions.find((x) => x.id === id) : undefined;
+  return m ? ` · Today's bounty: <b>${m.name}</b> pays double Salvage` : "";
+};
 
 function card(a: Arsenal, id: TowerId, content: ContentPack) {
   const name = content.towers[id].name;
@@ -21,12 +27,19 @@ function card(a: Arsenal, id: TowerId, content: ContentPack) {
   return `<li class="arsenal-card owned"><strong>${name}${CORE_KIT.includes(id) ? " <em>core</em>" : ""}</strong><span>Rank ${rank} · ${xp}${next ? `/${next}` : ""} XP · Gear ${mark ? `Mk ${ROMAN[mark]}` : "—"}</span><button data-forge="${id}" ${canForge(a, id) ? "" : "disabled"}>${forgeText}</button></li>`;
 }
 
+/** The Codex line: core, researched (with its gear mark) or the research price; Mk V names the signature mod. */
+export function arsenalStatus(id: TowerId, a = loadArsenal()) {
+  if (!owns(a, id)) return researchPrice(id) === undefined ? "—" : `Locked · ${researchPrice(id)} Salvage`;
+  const mark = markOf(a, id);
+  return `${CORE_KIT.includes(id) ? "Core" : "Researched"}${mark ? ` · Mk ${ROMAN[mark]}${mark >= MAX_MARK && SIGNATURES[id] ? ` (${SIGNATURES[id]!.name})` : ""}` : ""}`;
+}
+
 export function renderArsenal(root: HTMLElement, content: ContentPack) {
   const a = loadArsenal(),
     ids = [...CORE_KIT, ...(Object.keys(CATALOGUE) as TowerId[])].filter((id) => id in content.towers),
     byPrice = (x: TowerId, y: TowerId) => (researchPrice(x) ?? 0) - (researchPrice(y) ?? 0);
   root.innerHTML =
-    `<p class="arsenal-salvage"><b>${a.salvage}</b> Salvage · ${a.researched.length}/${Object.keys(CATALOGUE).length} researched</p>` +
+    `<p class="arsenal-salvage"><b>${a.salvage}</b> Salvage · ${a.researched.length}/${Object.keys(CATALOGUE).length} researched${bountyLine(content)}</p>` +
     `<div class="arsenal-branches">${BRANCHES.map(
       (b, page) =>
         `<section class="arsenal-branch"><h3>${b}</h3><ul>${ids

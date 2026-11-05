@@ -3748,3 +3748,8 @@ span.world-hop {
 .arsenal-card span { grid-column: 1; font-size: 0.8em; color: var(--ion-label); }
 .arsenal-card button { grid-row: 1 / span 2; grid-column: 2; }
 .arsenal-card button:disabled { opacity: 0.4; }
+/* Arsenal in the fitted landscape layout: the four branches are side-swiping shelves, each scrolling on its own. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .arsenal-branches { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(230px, 46%); overflow-x: auto; scroll-snap-type: x mandatory; }
+  .arsenal-branch { scroll-snap-align: start; max-height: calc(100dvh - 120px); overflow-y: auto; }
+}
