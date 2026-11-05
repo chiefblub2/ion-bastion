@@ -1,6 +1,6 @@
 import { CELL, disc, hash01, type Ink, oval, shade } from "../shapes";
 import { SQUASH, Y } from "../tower-art/tilt";
-import { cellRandom, mulberry32, type Random, type StandingPiece, type Theme } from "./kit";
+import { cellRandom, mulberry32, plateAt, type Random, type StandingPiece, type Theme } from "./kit";
 import { CHANNEL_STEP, channelOf, SEA_TILE, seaCells, seaField, shoreLine, wobble } from "../coast";
 import { blend } from "../ground";
 import { halo } from "../material";
@@ -53,31 +53,6 @@ function pieceAt(map: MapDefinition, x: number, y: number) {
   let p = PIECES.get(key);
   if (!p) PIECES.set(key, (p = pieceOf(cellRandom(map, x, y))));
   return p;
-}
-
-// ── Crack network ───────────────────────────────────────────────────────────────────────────────────────────────────
-/**
- * Voronoi plates over the plane: one jittered seed per `cell` px block. Returns the plate's id and how close the
- * point lies to the plate's edge (the gap between the nearest and second nearest seed), so a small gap is a crack.
- */
-function plateAt(seed: number, x: number, y: number, cell: number) {
-  const bx = Math.floor(x / cell),
-    by = Math.floor(y / cell);
-  let d1 = Infinity,
-    d2 = Infinity,
-    id = 0;
-  for (let j = by - 1; j <= by + 1; j++)
-    for (let i = bx - 1; i <= bx + 1; i++) {
-      const sx = (i + 0.15 + 0.7 * hash01(seed, i, j)) * cell,
-        sy = (j + 0.15 + 0.7 * hash01(seed, j, i)) * cell,
-        d = Math.sqrt((x - sx) ** 2 + (y - sy) ** 2);
-      if (d < d1) {
-        d2 = d1;
-        d1 = d;
-        id = i * 7919 + j;
-      } else if (d < d2) d2 = d;
-    }
-  return { id, edge: d2 - d1 };
 }
 
 // ── Lava crust path ─────────────────────────────────────────────────────────────────────────────────────────────────
