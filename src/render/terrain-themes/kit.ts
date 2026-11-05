@@ -135,3 +135,50 @@ export function zigzagPoints(x: number, y: number, rand: Random, length: number,
 export function zigzag(g: Ink, x: number, y: number, rand: Random, length: number, segments: number) {
   g.strokePoints(zigzagPoints(x, y, rand, length, segments), false);
 }
+/** Point on the car wreck in its own frame; the tilt comes from `kind`, so ambient can find the headlights. */
+export function wreckPoint(x: number, y: number, kind: number, dx: number, dy: number) {
+  const tilt = ((kind - 0.6) * 5 - 0.5) * 0.7,
+    c = Math.cos(tilt),
+    s = Math.sin(tilt);
+  return { x: x + 28 + dx * c - dy * s, y: y + 28 + dx * s + dy * c };
+}
+/** Rusted car with smashed windows and a faded teal stripe. */
+export function wreck(g: Ink, x: number, y: number, kind: number, rand: Random) {
+  const p = (dx: number, dy: number) => wreckPoint(x, y, kind, dx, dy),
+    rect = (x0: number, y0: number, x1: number, y1: number) => [p(x0, y0), p(x1, y0), p(x1, y1), p(x0, y1)];
+  g.fillStyle(0x070605, 0.5);
+  g.fillPoints(rect(-21, -11, 21, 11).map((q) => ({ x: q.x + 2, y: q.y + 4 })), true);
+  g.fillStyle(0x141210);
+  const flat = Math.floor(rand() * 4);
+  [[-13, -12], [12, -12], [-13, 12], [12, 12]].forEach(([tx, ty], i) => {
+    if (i !== flat) g.fillPoints(rect(tx - 4, ty - 2.5, tx + 4, ty + 2.5), true);
+  });
+  g.fillStyle(0x5a3a28);
+  g.fillPoints(rect(-21, -11, 21, 11), true);
+  g.fillStyle(0x3f6a64, 0.75);
+  g.fillPoints(rect(-21, -2, 21, 2), true);
+  g.fillStyle(0x7a4422);
+  for (let i = 0; i < 3; i++) {
+    const r = p(-18 + rand() * 36, -9 + rand() * 18);
+    g.fillCircle(r.x, r.y, 1.5 + rand() * 2.5);
+  }
+  g.fillStyle(0x4a3022);
+  g.fillPoints(rect(-8, -9, 9, 9), true);
+  g.fillStyle(0x101618);
+  g.fillPoints([p(9, -8), p(14, -6.5), p(14, 6.5), p(9, 8)], true);
+  g.fillPoints(rect(-13, -7, -8, 7), true);
+  const c0 = p(10, -4),
+    c1 = p(13, 1),
+    c2 = p(11, 5);
+  g.lineStyle(1, 0x5a6a70, 0.6);
+  g.strokePoints([c0, c1, c2], false);
+  g.lineStyle(1, shade(0x5a3a28, 0.25));
+  const e0 = p(-21, -11),
+    e1 = p(21, -11);
+  g.lineBetween(e0.x, e0.y, e1.x, e1.y);
+  g.fillStyle(0x2a2620);
+  for (const hy of [-7, 7]) {
+    const h = p(21, hy);
+    g.fillCircle(h.x, h.y, 1.8);
+  }
+}
