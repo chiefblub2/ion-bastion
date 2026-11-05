@@ -10,6 +10,7 @@ import * as T from "./render/terrain-themes/toxic-props";
 import * as B from "./render/terrain-themes/orbit-props";
 import * as R from "./render/terrain-themes/ruin-props";
 import * as G from "./render/terrain-themes/gear-props";
+import * as V from "./render/terrain-themes/rift-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -254,5 +255,23 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
     })(),
     { label: "clock tower", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => G.clockTowerShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => G.drawClockTower(g)) },
     { label: "escapement", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => G.escapementShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => { G.drawEscapement(g); G.pendulum(g, 0, 0, 1, 0.2); }) },
+  ],
+  rift: [
+    ...[1, 2].map((n) => {
+      const d = V.debrisOf(r(7000 + n));
+      return { label: "debris", shadow: (g: Ink, x: number, y: number) => V.debrisShadow(g, x, y, d), draw: (g: Ink, x: number, y: number) => V.drawDebris(g, x, y, d) };
+    }),
+    { label: "tear", shadow: (g, x, y) => V.tearShadow(g, x, y), draw: (g, x, y) => V.drawTear(g, x, y, 0.1) },
+    (() => {
+      const p = V.pylonOf(r(7010));
+      return { label: "pylon", shadow: (g: Ink, x: number, y: number) => V.pylonShadow(g, x, y, p), draw: (g: Ink, x: number, y: number) => V.drawPylon(g, x, y, p) };
+    })(),
+    { label: "cage", shadow: (g, x, y) => V.cageShadow(g, x, y), draw: (g, x, y) => V.drawCage(g, x, y) },
+    (() => {
+      const s = V.slabsOf(r(7020));
+      return { label: "slabs", shadow: (g: Ink, x: number, y: number) => V.slabsShadow(g, x, y, s), draw: (g: Ink, x: number, y: number) => V.drawSlabs(g, x, y, s) };
+    })(),
+    { label: "portal", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => V.portalShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => V.drawPortal(g)) },
+    { label: "monolith", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => V.monolithShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => V.drawMonolith(g)) },
   ],
 };
