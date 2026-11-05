@@ -16,6 +16,7 @@ import * as D from "./render/terrain-themes/dune-props";
 import * as W from "./render/terrain-themes/storm-props";
 import * as A from "./render/terrain-themes/abyss-props";
 import * as T2 from "./render/terrain-themes/tide-props";
+import * as J from "./render/terrain-themes/jungle-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -391,5 +392,30 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
     })(),
     { label: "lighthouse", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => T2.lighthouseShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => T2.drawLighthouse(g)) },
     { label: "stilt hut", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => T2.hutShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => T2.drawHut(g)) },
+  ],
+  jungle: [
+    ...[1, 2].map((n) => {
+      const t = J.treeOf(r(7000 + n));
+      return { label: "tree", shadow: (g: Ink, x: number, y: number) => J.treeShadow(g, x, y, t), draw: (g: Ink, x: number, y: number) => J.drawTree(g, x, y, t) };
+    }),
+    (() => {
+      const l = { ...J.leafyOf(r(7010)), flower: true };
+      return { label: "giant leaves", shadow: (g: Ink, x: number, y: number) => J.leafyShadow(g, x, y), draw: (g: Ink, x: number, y: number) => J.drawLeafy(g, x, y, l) };
+    })(),
+    ...[1, 2].map((n) => {
+      const k = { ...J.ruinOf(r(7020 + n)), stack: n === 1, glyph: true };
+      return { label: "temple blocks", shadow: (g: Ink, x: number, y: number) => J.ruinShadow(g, x, y, k), draw: (g: Ink, x: number, y: number) => J.drawRuin(g, x, y, k) };
+    }),
+    (() => {
+      const l = J.logOf(r(7030));
+      return { label: "fallen log", shadow: (g: Ink, x: number, y: number) => J.logShadow(g, x, y, l), draw: (g: Ink, x: number, y: number) => J.drawLog(g, x, y, l) };
+    })(),
+    { label: "stone head", shadow: (g, x, y) => J.headShadow(g, x, y, 0.2), draw: (g, x, y) => J.drawHead(g, x, y, 0.2) },
+    (() => {
+      const b = J.bambooOf(r(7040));
+      return { label: "bamboo", shadow: (g: Ink, x: number, y: number) => J.bambooShadow(g, x, y), draw: (g: Ink, x: number, y: number) => J.drawBamboo(g, x, y, b) };
+    })(),
+    { label: "pyramid", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => J.pyramidShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => J.drawPyramid(g)) },
+    { label: "strangler fig", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => J.figShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => J.drawFig(g)) },
   ],
 };
