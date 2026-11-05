@@ -15,6 +15,7 @@ import * as Gd from "./render/terrain-themes/geode-props";
 import * as D from "./render/terrain-themes/dune-props";
 import * as W from "./render/terrain-themes/storm-props";
 import * as A from "./render/terrain-themes/abyss-props";
+import * as T2 from "./render/terrain-themes/tide-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -366,5 +367,29 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
     })(),
     { label: "shipwreck", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => A.wreckShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => A.drawWreck(g)) },
     { label: "black smoker", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => A.smokerShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => A.drawSmoker(g)) },
+  ],
+  tide: [
+    ...[1, 2].map((n) => {
+      const st = T2.stackOf(r(8000 + n));
+      return { label: "sea stack", shadow: (g: Ink, x: number, y: number) => T2.stackShadow(g, x, y, st), draw: (g: Ink, x: number, y: number) => T2.drawStack(g, x, y, st) };
+    }),
+    (() => {
+      const p = T2.poolOf(r(8010));
+      return { label: "tidepool", shadow: (g: Ink, x: number, y: number) => T2.poolShadow(g, x, y), draw: (g: Ink, x: number, y: number) => T2.drawPool(g, x, y, p) };
+    })(),
+    (() => {
+      const d = { ...T2.driftOf(r(8020)), branch: 1 };
+      return { label: "driftwood", shadow: (g: Ink, x: number, y: number) => T2.driftShadow(g, x, y, d), draw: (g: Ink, x: number, y: number) => T2.drawDrift(g, x, y, d) };
+    })(),
+    (() => {
+      const p = { ...T2.postsOf(r(8030)), lantern: true };
+      return { label: "mooring posts", shadow: (g: Ink, x: number, y: number) => T2.postsShadow(g, x, y, p), draw: (g: Ink, x: number, y: number) => T2.drawPosts(g, x, y, p) };
+    })(),
+    (() => {
+      const b = { ...T2.boatOf(r(8040)), creels: 2 };
+      return { label: "rowboat", shadow: (g: Ink, x: number, y: number) => T2.boatShadow(g, x, y, b), draw: (g: Ink, x: number, y: number) => T2.drawBoat(g, x, y, b) };
+    })(),
+    { label: "lighthouse", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => T2.lighthouseShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => T2.drawLighthouse(g)) },
+    { label: "stilt hut", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => T2.hutShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => T2.drawHut(g)) },
   ],
 };
