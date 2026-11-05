@@ -9,6 +9,7 @@ import * as F from "./render/terrain-themes/frost-props";
 import * as T from "./render/terrain-themes/toxic-props";
 import * as B from "./render/terrain-themes/orbit-props";
 import * as R from "./render/terrain-themes/ruin-props";
+import * as G from "./render/terrain-themes/gear-props";
 // Dev-only prop sheets for `/gallery.html?terrain&props` (`terrain-review.ts`): every prop of a theme on its own tile,
 // shadow first, so a prop can be judged at a glance. One list per theme that has one.
 
@@ -229,5 +230,29 @@ export const SHEETS: Partial<Record<string, SheetItem[]>> = {
     })(),
     { label: "apartment", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => R.apartmentShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => R.drawApartment(g)) },
     { label: "billboard", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => R.billboardShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => R.drawBillboard(g)) },
+  ],
+  gear: [
+    ...[1, 2].map((n) => {
+      const s = G.standingOf(r(7000 + n));
+      return { label: "standing cog", shadow: (g: Ink, x: number, y: number) => G.standingShadow(g, x, y, s), draw: (g: Ink, x: number, y: number) => G.drawStanding(g, x, y, s) };
+    }),
+    ...[1, 2].map((n) => {
+      const s = G.stackOf(r(7010 + n));
+      return { label: "gear stack", shadow: (g: Ink, x: number, y: number) => G.stackShadow(g, x, y, s), draw: (g: Ink, x: number, y: number) => G.drawStack(g, x, y, s) };
+    }),
+    (() => {
+      const e = G.engineOf(r(7020));
+      return { label: "piston engine", shadow: (g: Ink, x: number, y: number) => G.engineShadow(g, x, y, e), draw: (g: Ink, x: number, y: number) => G.drawEngine(g, x, y, e) };
+    })(),
+    (() => {
+      const b = G.boilerOf(r(7030));
+      return { label: "boiler", shadow: (g: Ink, x: number, y: number) => G.boilerShadow(g, x, y, b), draw: (g: Ink, x: number, y: number) => G.drawBoiler(g, x, y, b) };
+    })(),
+    (() => {
+      const p = G.pipesOf(r(7040));
+      return { label: "steam pipes", shadow: (g: Ink, x: number, y: number) => G.pipesShadow(g, x, y, p), draw: (g: Ink, x: number, y: number) => G.drawPipes(g, x, y, p) };
+    })(),
+    { label: "clock tower", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => G.clockTowerShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => G.drawClockTower(g)) },
+    { label: "escapement", span: 2, shadow: (g, x, y) => at(g, x, y, 0.75, () => G.escapementShadow(g)), draw: (g, x, y) => at(g, x, y, 0.75, () => { G.drawEscapement(g); G.pendulum(g, 0, 0, 1, 0.2); }) },
   ],
 };
