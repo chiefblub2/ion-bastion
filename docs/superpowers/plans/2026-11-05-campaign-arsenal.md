@@ -157,7 +157,7 @@ The dossiers live in `content/arsenal.ts` next to the tree, and every towerId mu
 ## Implementation outline
 
 1. **Content:** `content/arsenal.ts` with `CORE_KIT`, `ARSENAL_TREE` (branch, tier, tower, dossier), tier gates and
-   RP knobs. Add `loadout` to the 55 campaign missions above, and validate that the loadout names known towers and
+   RP knobs. Add `loadout` to the 50 campaign missions above that have one, and validate that the loadout names known towers and
    lies inside `availableTowers`.
 2. **Pure logic:** `campaign/arsenal.ts` with `researchPoints(record)`, `canResearch`, `research`/`refund`,
    `fieldTested`, `campaignTowers(mission, researched, content)` and `firstInField(mission)`. Focused tests for each.
