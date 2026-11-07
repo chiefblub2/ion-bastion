@@ -278,3 +278,65 @@ No balance script, strategy, golden file or mission check changes.
 - **Signature mods:** all 60 are planned (tables above). The 19 marked ★ are built first, the other 41 in a second batch.
 - **Research gates:** Salvage only. There are no campaign-progress gates and no prerequisites.
 - **Circuit:** no research and no gear. Circuit keeps every tower at base stats.
+
+## Follow-up: research inside the campaign loop
+
+**Problem.** Research lives only on `/#arsenal`, reached from the Play page. A player who goes atlas → mission →
+overlay → next mission never passes it, so Salvage piles up unseen and the campaign still feels like the core kit
+forever.
+
+**Goal.** Every step of the loop shows the Arsenal where it matters: after a mission (spend), before a mission
+(prepare), and during a mission (what you are missing). No step forces a detour.
+
+### 1. Mission end: spend right away (highest impact)
+
+- The win and loss overlays get an **Arsenal** button next to Next mission and Retry when Salvage can buy something
+  (`canResearch` or `canForge` for any tower), labelled e.g. "Arsenal · 2 ready".
+- It opens a **compact research sheet over the overlay** (not the menu page). The sheet shows:
+  - the three best picks for the next open mission (see §2), then "All towers →" to `/#arsenal`;
+  - any towers ready to forge, as one-tap rows.
+
+  Closing the sheet returns to the overlay, so Next mission stays one tap away. The sheet reuses the
+  `arsenal-view.ts` card markup.
+- **First time only** (`ion-bastion:arsenal-intro`), the first overlay that pays Salvage shows a one-line callout: "You
+  earned Salvage. Research new towers for the next missions." The Arsenal button pulses until the sheet is opened once.
+
+### 2. Before a mission: the briefing advises
+
+- The atlas mission card gets an **Arsenal row** under the briefing: your Salvage, and up to three towers suggested for
+  this mission, each with its state (owned, ready to research, or its price). One tap researches it in place.
+- **Suggestions are pure** (`campaign/advice.ts`), built from what the mission's waves need: `needsOf`/`rosterCovers`
+  from `run/threats.ts` (air, stealth, burrow, armor, shields, swarms).
+  1. First, a gap the owned towers cannot answer, e.g. "Burrowers dive here: traps catch them · Mine 60".
+  2. Then towers named in the mission's focus line.
+  3. Then the cheapest unowned tower of an under-owned tab.
+
+  The Detector is never suggested on stealth missions, since it is issued there.
+- When a need is unanswered, the Start button keeps working but the row shows a warning chip. Players stay free to go
+  in anyway.
+
+### 3. During a mission: see what you lack
+
+- **Build menu teaser:** after the owned towers, each tab shows one greyed "Research" tile with a padlock and the
+  count of locked towers in that tab ("+11"). Tapping it pauses a solo wave and opens the same research sheet
+  filtered to that tab. A purchase does **not** add the tower to the running mission. `Game.arsenal` is fixed per load,
+  so a mid-mission purchase cannot change a deterministic game; the sheet says "Available from the next mission".
+- In the fitted (phone) layout the tile is a single "+" at the end of the tab's row.
+
+### 4. Everywhere else: small signals
+
+- The home page shows the Salvage balance next to the primary action ("Continue Campaign · 240 Salvage"), and a dot
+  on the Arsenal button whenever something is affordable.
+- The atlas header shows the daily bounty's mission with a badge on its station.
+- The rank-up text on the overlay links to the tower's gear row when its next mark is affordable.
+
+### Order and scope
+
+1. The overlay button plus the research sheet plus the first-time callout. This one alone makes research part of the
+   loop.
+2. The pure advice and the briefing row.
+3. The build-menu teaser.
+4. The home and atlas signals.
+
+All of it lives in the UI and app layer, except `campaign/advice.ts` (pure, tested). The simulation is untouched, so
+the balance scripts and goldens stay as they are.
