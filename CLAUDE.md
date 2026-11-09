@@ -6,13 +6,11 @@ Notes for agents working on ION BASTION. The player-facing overview (rules, cont
 
 TypeScript 7 (strict, ESM), Phaser 4.2, Vite 8 (Rolldown), Vitest 5, `vite-node` for the scripts and relay, `ws` for the relay. Node 26+.
 
-PNGs under `assets-src/` and `public/assets/` live in Git LFS (`.gitattributes`); new art there is picked up automatically. A checkout without `git lfs pull` has pointer files instead of images, which breaks the art audits and the game's sprites. The Pages workflow caches `.git/lfs/objects`.
-
 ```sh
 npm ci
 npm run dev        # game on :4173 (--host 0.0.0.0)
 npm run server     # multiplayer relay on :4174 (PORT=… overrides)
-npm test           # vitest run: unit and content tests, about 6 s (no campaign simulations; PNG tests skip without `git lfs pull`)
+npm test           # vitest run: unit and content tests, about 6 s (no campaign simulations)
 npm run build      # tsc --noEmit && vite build → dist/
 npx vitest run src/core/match.test.ts     # single file
 npx vite-node scripts/balance.ts -- src/content/sectors/frost.ts src/strategies/frost.ts
@@ -307,7 +305,6 @@ Whole mission packs (new sectors, themes, enemies) follow the project skill `.cl
 - `core/missions.test.ts` keeps the campaign-wide content rules (ids, sector grouping, stealth only with a detector, every enemy appears). There are no golden replays or campaign simulations in the suite; mission balance is checked on demand with `scripts/balance.ts`, behaviour preservation with `scripts/sim-golden.ts` and `scripts/run-golden.sh`.
 - Keep tests lean: a few focused tests per new mechanic (the core formula, one edge, validation if it has params), no exhaustive matrices or snapshot tests. Don't pin tuning numbers (HP, costs, damage values): assert rules and relations, or read the expected value from the definition.
 - Simulations in tests stay short: one or two waves, a few hundred lockstep frames; whole missions belong to the scripts.
-- PNG pixel tests (`render/enemy-art.test.ts`, `render/enemy-animations.test.ts`) skip with one warning when the PNGs are Git LFS pointer files (`lfsReady` in `scripts/png.ts`); CI pulls LFS, so they run there.
 - Multiplayer tests:
   - `core/coop.test.ts`: co-op economy
   - `core/match.test.ts`: versus rules

@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import type { EnemyId } from "../core/types";
-import { artSignature, decodePng, identify, lfsReady, measureArt, VISIBLE_ALPHA, type Png } from "../../scripts/png";
+import { artSignature, decodePng, identify, measureArt, VISIBLE_ALPHA, type Png } from "../../scripts/png";
 import { ANIMATION_BOUNDS } from "./enemy-animation-bounds";
 import {
   allClips,
@@ -146,13 +146,7 @@ describe("animation sheet files", () => {
   });
 });
 
-const PIXELS = lfsReady(
-  new URL("public/assets/enemy-animations/", ROOT),
-  new URL("assets-src/enemy-animations/", ROOT),
-  new URL("public/assets/enemies/", ROOT),
-);
-
-describe.skipIf(!PIXELS)("animation sheets", () => {
+describe("animation sheets", () => {
   // Decoding the 2048×1024 sheets takes a few seconds; keep it out of the first test's time limit.
   beforeAll(() => {
     for (const id of ANIMATED) sheet(animationsFor(id)!.idle!);

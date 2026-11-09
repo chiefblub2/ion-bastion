@@ -17,14 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      # Same LFS cache as the Pages workflow: the art audits in the tests read the real PNGs.
-      - run: git lfs ls-files --long | cut -d ' ' -f1 | sort > .lfs-assets-id
-      - uses: actions/cache@v6
-        with:
-          path: .git/lfs/objects
-          key: lfs-${{ hashFiles('.lfs-assets-id') }}
-          restore-keys: lfs-
-      - run: git lfs pull
       - uses: actions/setup-node@v7
         with:
           node-version: 26

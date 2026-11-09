@@ -2,38 +2,8 @@
  * PNG helpers for the dev tools and tests (no runtime use): decoding through `pngjs`, a lossless RGBA encoder whose
  * bytes never change between runs, and measurements of the visible pixels of sprite art.
  */
-import { closeSync, openSync, readdirSync, readSync } from "node:fs";
 import { crc32, deflateSync } from "node:zlib";
 import { PNG } from "pngjs";
-
-const LFS_POINTER = "version https://git-lfs";
-let lfsWarned = false;
-
-/**
- * True when every PNG in the given directories holds real image data. A checkout without `git lfs pull` has small
- * text pointer files instead (`.gitattributes`), which the art tests cannot decode: they skip, with one warning.
- */
-export function lfsReady(...dirs: URL[]): boolean {
-  const head = Buffer.alloc(LFS_POINTER.length);
-  const pointer = dirs.some((dir) =>
-    readdirSync(dir)
-      .filter((f) => f.endsWith(".png"))
-      .some((f) => {
-        const fd = openSync(new URL(f, dir), "r");
-        try {
-          readSync(fd, head, 0, head.length, 0);
-        } finally {
-          closeSync(fd);
-        }
-        return head.toString("latin1") === LFS_POINTER;
-      }),
-  );
-  if (pointer && !lfsWarned) {
-    lfsWarned = true;
-    console.warn("Enemy PNGs are Git LFS pointer files: the art and animation sheet tests are skipped. Run `git lfs pull`.");
-  }
-  return !pointer;
-}
 
 export interface Png {
   width: number;
