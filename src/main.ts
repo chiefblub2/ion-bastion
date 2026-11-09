@@ -17,7 +17,7 @@ import { createInput } from "./app/input";
 import { registerTools } from "./app/webmcp";
 import { screenFromUrl } from "./app/screens";
 import { campaignRecord, markTrainingDone, recordWin } from "./app/progress";
-import { settleCampaign } from "./app/arsenal-store";
+import { arsenalSummary, settleCampaign } from "./app/arsenal-store";
 import { campaignLocks, newlyUnlocked } from "./campaign/campaign-unlock";
 import { isRunMission } from "./run/run-id";
 import { settleRun } from "./run/session";
@@ -82,7 +82,7 @@ const battlefield = new Battlefield(game, view, {
     // Campaign Arsenal: a menu-started campaign mission (it carries the arsenal's towers) pays won or lost.
     if (end && game.arsenal && !input.match() && game.mission === findMission(game.mission.id, game.content)) {
       const won = end.result === "won";
-      ui.earned = { state: game.state, text: settleCampaign(game, won, won && campaignRecord()[game.mission.id] === undefined) };
+      ui.earned = { state: game.state, text: settleCampaign(game, won, won && campaignRecord()[game.mission.id] === undefined), ready: arsenalSummary().ready };
     }
     if (end?.result !== "won") return;
     if (game.mission.manualWaves) markTrainingDone();

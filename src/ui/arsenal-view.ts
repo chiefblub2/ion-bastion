@@ -3,7 +3,8 @@ import { type Arsenal, canForge, canResearch, forge, markOf, owns, research, res
 import { CATALOGUE, CORE_KIT, GEAR_PRICE, MAX_MARK, SIGNATURES, VETERANCY_XP } from "../content/arsenal";
 import { bountyMission } from "../app/arsenal-store";
 import { pageOf } from "../core/tower-pages";
-import type { ContentPack, TowerId } from "../core/types";
+import type { ContentPack, MissionDefinition, TowerId } from "../core/types";
+import { escape } from "./format";
 // The Arsenal page (`/#arsenal`): research towers with Salvage and forge gear marks for towers with veterancy.
 const BRANCHES = ["Attack", "Control", "Traps", "Support"] as const;
 const ROMAN = ["", "I", "II", "III", "IV", "V"];
@@ -34,12 +35,14 @@ export function arsenalStatus(id: TowerId, a = loadArsenal()) {
   return `${CORE_KIT.includes(id) ? "Core" : "Researched"}${mark ? ` · Mk ${ROMAN[mark]}${mark >= MAX_MARK && SIGNATURES[id] ? ` (${SIGNATURES[id]!.name})` : ""}` : ""}`;
 }
 
-export function renderArsenal(root: HTMLElement, content: ContentPack) {
+/** `next`: the campaign mission to go on with from here (started through the app's `data-mission` click). */
+export function renderArsenal(root: HTMLElement, content: ContentPack, next?: MissionDefinition) {
   const a = loadArsenal(),
     ids = [...CORE_KIT, ...(Object.keys(CATALOGUE) as TowerId[])].filter((id) => id in content.towers),
     byPrice = (x: TowerId, y: TowerId) => (researchPrice(x) ?? 0) - (researchPrice(y) ?? 0);
   root.innerHTML =
     `<p class="arsenal-salvage"><b>${a.salvage}</b> Salvage · ${a.researched.length}/${Object.keys(CATALOGUE).length} researched${bountyLine(content)}</p>` +
+    (next ? `<p class="arsenal-next"><button class="primary" data-mission="${next.id}">Next mission: ${escape(next.name)} <span aria-hidden="true">▶</span></button></p>` : "") +
     `<div class="arsenal-branches">${BRANCHES.map(
       (b, page) =>
         `<section class="arsenal-branch"><h3>${b}</h3><ul>${ids
@@ -52,7 +55,7 @@ export function renderArsenal(root: HTMLElement, content: ContentPack) {
     const b = (e.target as HTMLElement).closest("button");
     if (!b) return;
     const now = loadArsenal(),
-      next = b.dataset.research ? research(now, b.dataset.research as TowerId) : b.dataset.forge ? forge(now, b.dataset.forge as TowerId) : now;
-    if (next !== now) saveArsenal(next), renderArsenal(root, content);
+      after = b.dataset.research ? research(now, b.dataset.research as TowerId) : b.dataset.forge ? forge(now, b.dataset.forge as TowerId) : now;
+    if (after !== now) saveArsenal(after), renderArsenal(root, content, next);
   };
 }
