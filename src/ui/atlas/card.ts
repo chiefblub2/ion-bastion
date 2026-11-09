@@ -1,5 +1,6 @@
 // The atlas's mission card: the battlefield preview, the briefing with its Start button, and Intel.
-import type { Game } from "../../core/game";
+import { availableTowers, type Game } from "../../core/game";
+import { arsenalTowers } from "../../app/arsenal-store";
 import type { MapDefinition, MissionDefinition } from "../../core/types";
 import { isCircleSector, missionNumber, sectorOf } from "../../content/missions";
 import { themeAccent } from "../../render/terrain";
@@ -131,7 +132,13 @@ export function renderFeatured(game: Game, m: MissionDefinition | undefined, { l
     start = lock
       ? `<button class="primary atlas-start" aria-describedby="mission-lock" disabled>Locked <span aria-hidden="true">${LOCK_ICON}</span></button>`
       : `<button class="primary atlas-start" data-mission="${m.id}">${lobby ? "Choose for Room" : "Start Mission"} <span aria-hidden="true">▶</span></button>`;
-  actions.innerHTML = `${lock ? `<p class="mission-lock" id="mission-lock">${lockText(lock, missions, sectors)}</p>` : reset ? '<p class="mission-warning">Starting another mission resets your current defense and progress.</p>' : ""}<div class="brief-go">${step("prev", row[at - 1])}${start}${step("next", row[at + 1])}</div>`;
+  // Campaign missions field the Arsenal's towers (solo, with campaign locks in force): what this one offers, and the way there.
+  const loadout = !lock && !lobby && locks && !m.circle ? arsenalTowers(m.id) : undefined,
+    offered = loadout && availableTowers(m, content).length,
+    loadoutLine = loadout
+      ? `<p class="brief-loadout"><span>Loadout <b>${loadout.length}</b>/${offered} towers</span><button class="quiet brief-arsenal" data-arsenal>⚒ Arsenal <span aria-hidden="true">›</span></button></p>`
+      : "";
+  actions.innerHTML = `${loadoutLine}${lock ? `<p class="mission-lock" id="mission-lock">${lockText(lock, missions, sectors)}</p>` : reset ? '<p class="mission-warning">Starting another mission resets your current defense and progress.</p>' : ""}<div class="brief-go">${step("prev", row[at - 1])}${start}${step("next", row[at + 1])}</div>`;
   body.scrollTop = 0;
   // Restarts the briefing's entry animation.
   body.classList.remove("is-entering");

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CATALOGUE, CORE_KIT, GEAR_PRICE, SALVAGE, TIER_PRICE, VETERANCY_XP } from "../content/arsenal";
 import { DEFAULT_CONTENT } from "../content/index";
 import type { TowerId } from "../core/types";
-import { EMPTY_ARSENAL, campaignTowers, forge, research, salvageOf, settle } from "./arsenal";
+import { EMPTY_ARSENAL, affordable, campaignTowers, forge, research, salvageOf, settle } from "./arsenal";
 
 describe("campaign arsenal", () => {
   it("catalogue and core kit cover every tower exactly once", () => {
@@ -43,5 +43,13 @@ describe("campaign arsenal", () => {
     expect(campaignTowers(offered, EMPTY_ARSENAL, false)).toEqual(["pulse"]);
     expect(campaignTowers(offered, EMPTY_ARSENAL, true)).toEqual(["pulse", "detector"]);
     expect(campaignTowers(["pulse"], EMPTY_ARSENAL, true)).toEqual(["pulse"]);
+  });
+
+  it("affordable counts what research and forging could buy now", () => {
+    const id = "orbital" as TowerId,
+      price = TIER_PRICE[CATALOGUE[id]!];
+    expect(affordable(EMPTY_ARSENAL, [id, "pulse"])).toEqual({ research: 0, forge: 0 });
+    const a = settle({ ...EMPTY_ARSENAL, salvage: Math.max(price, GEAR_PRICE[0]) }, 0, { pulse: VETERANCY_XP[0] });
+    expect(affordable(a, [id, "pulse"])).toEqual({ research: 1, forge: 1 });
   });
 });

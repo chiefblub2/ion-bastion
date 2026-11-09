@@ -837,6 +837,44 @@
   width: 26px;
   height: 26px;
 }
+/* The Campaign Arsenal from the atlas: Salvage on hand, and a teal hint when it buys something now. */
+.start-screen .atlas-arsenal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+.start-screen .atlas-arsenal[hidden],
+#mission-page[data-circle] .atlas-arsenal {
+  display: none;
+}
+.atlas-arsenal i {
+  font-style: normal;
+  color: var(--ion-accent);
+}
+.atlas-arsenal-label {
+  font: 600 16px / 1 "Rajdhani", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.atlas-arsenal-info {
+  font: 500 11px var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.atlas-arsenal-info b {
+  color: var(--m-text);
+}
+.atlas-arsenal-ready {
+  margin-left: 4px;
+  padding: 1px 6px;
+  font-style: normal;
+  color: var(--ion-accent);
+  border: 1px solid color-mix(in srgb, var(--ion-accent) 45%, transparent);
+  border-radius: 2px;
+}
 /* Campaign / Circuit: a small segmented control. */
 .mode-tabs {
   display: inline-flex;
@@ -2298,6 +2336,25 @@ span.world-hop {
       inset 0 0 0 1px transparent;
   }
 }
+/* A campaign mission's loadout from the Arsenal, with the way there. */
+.brief-loadout {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 0;
+  font: 500 12px var(--mono);
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.brief-loadout b {
+  color: var(--m-text);
+}
+.start-screen .brief-arsenal {
+  min-height: 40px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
 /* A locked mission's briefing: what opens it, and a Start button that stays off. */
 .mission-lock {
   margin: 0;
@@ -3345,6 +3402,35 @@ span.world-hop {
   .atlas-head .mode-tabs {
     flex: none;
   }
+  /* Icon and Salvage only: the word and the ready count would crowd the one-row header (the dot keeps the hint). */
+  .start-screen .atlas-arsenal {
+    flex: none;
+    min-height: 42px;
+    padding: 4px 10px;
+    gap: 6px;
+  }
+  .atlas-arsenal-label,
+  .atlas-arsenal-info > :not(b) {
+    display: none;
+  }
+  .atlas-arsenal[data-ready] i::after {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-left: 3px;
+    vertical-align: super;
+    border-radius: 50%;
+    background: var(--ion-accent);
+  }
+  .brief-loadout {
+    justify-content: space-between;
+    font-size: 11px;
+  }
+  .start-screen .brief-arsenal {
+    min-height: 40px;
+    padding: 2px 10px;
+  }
   .start-screen .mode-tab {
     min-height: 42px;
     padding: 4px 10px;
@@ -3738,6 +3824,8 @@ span.world-hop {
 
 /* Campaign Arsenal page (ui/arsenal-view.ts). */
 .arsenal-salvage { margin: 0 0 12px; color: var(--ion-label); }
+.arsenal-next { margin: 0 0 14px; }
+.arsenal-next button { display: inline-flex; align-items: center; gap: 10px; }
 .arsenal-salvage b { color: var(--ion-accent); font-size: 1.2em; }
 .arsenal-branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
 .arsenal-branch h3 { margin: 0 0 6px; color: var(--ion-label); font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; }

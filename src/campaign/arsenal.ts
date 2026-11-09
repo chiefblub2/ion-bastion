@@ -65,3 +65,8 @@ export function settle(a: Arsenal, salvage: number, xp: Readonly<Partial<Record<
  */
 export const campaignTowers = (offered: readonly TowerId[], a: Arsenal, stealth: boolean): TowerId[] =>
   offered.filter((id) => owns(a, id) || (stealth && id === "detector"));
+
+/** How many of `ids` the arsenal could research or forge right now: the menus' "ready" hint. */
+export function affordable(a: Arsenal, ids: readonly TowerId[]): { research: number; forge: number } {
+  return { research: ids.filter((id) => canResearch(a, id)).length, forge: ids.filter((id) => canForge(a, id)).length };
+}

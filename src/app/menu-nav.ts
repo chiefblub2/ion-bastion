@@ -16,13 +16,13 @@ import { type Interface, modeGroups, nextMission, renderCodex, renderMenu, rende
 import type { RunHost } from "../ui/run/state";
 import { atlasSelection, type BriefTab, showBriefTab } from "../ui/atlas/card";
 import { bindGlobe, fitWorld, toggleWorld } from "../ui/atlas/globe-view";
-import type { AtlasOptions } from "../ui/atlas/model";
+import { atlasNext, type AtlasOptions } from "../ui/atlas/model";
 import { renderAtlas, selectMission as featureMission, selectSector, selectWorld } from "../ui/sector-atlas";
 import type { Coop } from "./coop";
 import { bindMenuKeys, showCodexTab, showTowerCodex } from "./menu-keys";
 import { campaignRecord, lastMission, rememberUnlocks, seenUnlocks, trainingDone } from "./progress";
 import { gearPack } from "../campaign/gear";
-import { arsenalTowers, loadArsenal } from "./arsenal-store";
+import { arsenalSummary, arsenalTowers, loadArsenal } from "./arsenal-store";
 import { beginJournal, storedJournal } from "./run-journal";
 import { createScreens, GAME, HOME, type MenuPage, type Screen } from "./screens";
 
@@ -122,13 +122,17 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
       const options = atlas();
       const back = missionSector === undefined && missionPick === undefined ? browsed : undefined;
       renderAtlas(game, options, missionSector ?? back?.sector, missionPick ?? back?.pick);
+      renderAtlasArsenal(!!options.lobby);
       // Every unlock shown now has had its reveal; the next visit only reveals what a later win opens.
       if (options.locks) rememberUnlocks([...(options.seen ?? []), ...game.content.missions.filter((m) => !options.locks!.has(m.id)).map((m) => m.id)]);
     }
     if (to.page === "coop") coop.render();
     if (to.page === "editor") void import("../editor/editor-view").then((m) => m.openEditor(editorHost));
     if (to.page === "run") void import("../ui/run-view").then((m) => m.openRun(runHost));
-    if (to.page === "arsenal") void import("../ui/arsenal-view").then((m) => m.renderArsenal(document.getElementById("arsenal-root")!, game.baseContent));
+    if (to.page === "arsenal") {
+      const next = arsenalNext();
+      void import("../ui/arsenal-view").then((m) => m.renderArsenal(document.getElementById("arsenal-root")!, game.baseContent, next));
+    }
     // Any page change ends a codex animation preview; opening the codex renders it closed.
     closeCodexPreview();
     if (to.page === "codex") renderCodex(game);
@@ -136,6 +140,25 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
     missionSector = missionPick = undefined;
     scrollTo(0, 0);
     section?.focus({ preventScroll: true });
+  }
+  /**
+   * The campaign mission the Arsenal page offers to start: the next open unwon one, unless a mission is under way (Back
+   * returns to it) or a multiplayer session is open.
+   */
+  function arsenalNext() {
+    const s = game.state.status;
+    if (coop.active() || (inProgress() && s !== "won" && s !== "lost")) return undefined;
+    const missions = modeGroups(game.content.sectors ?? []).campaign.flatMap((sector) => sector.missions);
+    return atlasNext(missions, campaignRecord(), locks());
+  }
+  /** The atlas header's Arsenal button: Salvage on hand and what it buys now; hidden in a lobby (the CSS hides it on the Circuit). */
+  function renderAtlasArsenal(lobby: boolean) {
+    const button = document.getElementById("atlas-arsenal")!,
+      { salvage, ready } = arsenalSummary();
+    button.hidden = lobby;
+    button.toggleAttribute("data-ready", ready > 0);
+    button.setAttribute("aria-label", `Arsenal: ${salvage} Salvage${ready ? `, ${ready} ready to buy` : ""}`);
+    document.getElementById("atlas-arsenal-info")!.innerHTML = `<b>${salvage}</b><span> Salvage</span>${ready ? ` <em class="atlas-arsenal-ready">${ready} ready</em>` : ""}`;
   }
   function selectMission(id: string) {
     // Picked for multiplayer (from its page or in a lobby), it is the room's mission; the host launches it from there.
@@ -239,6 +262,7 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
     if (b.dataset.worldZoom !== undefined) return toggleWorld(), true;
     if (b.dataset.planet) return selectWorld(game, Number(b.dataset.planet), atlas()), true;
     if (b.dataset.mission) return selectMission(b.dataset.mission), true;
+    if (b.dataset.arsenal !== undefined) return screens.show(page("arsenal")), true;
     if (b.dataset.briefTab) return showBriefTab(b.dataset.briefTab as BriefTab), true;
     if (b.dataset.pick) {
       pickMission(b.dataset.pick);
@@ -261,7 +285,8 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
       case "menu-run":
         screens.show(page("run"));
         break;
-      case "menu-arsenal":
+      case "atlas-arsenal":
+      case "overlay-arsenal":
         screens.show(page("arsenal"));
         break;
       case "menu-btn":

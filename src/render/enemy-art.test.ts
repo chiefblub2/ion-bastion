@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTENT } from "../content";
 import type { EnemyId } from "../core/types";
-import { decodePng, islands, lfsReady, measureArt, type Png } from "../../scripts/png";
+import { decodePng, islands, measureArt, type Png } from "../../scripts/png";
 import { ART_BOUNDS } from "./enemy-art-bounds";
 import { ART_SCALE, artEdge, artFor, artScale, artUrl, ENEMY_ART, SLENDER_BOOST, type EnemyArt } from "./enemy-art";
 
@@ -67,9 +67,9 @@ describe("enemy art registry", () => {
   });
 });
 
-describe.skipIf(!lfsReady(ART_DIR))("enemy art files", () => {
+describe("enemy art files", () => {
   let decoded: (readonly [EnemyId, EnemyArt, Png])[] | undefined;
-  /** Decoded on first use, so a checkout with LFS pointer files never decodes at collect time. */
+  /** Decoded on first use, not at collect time. */
   const images = () => (decoded ??= painted.map(([id, art]) => [id, art, decodePng(readFileSync(new URL(art.path.replace("assets/enemies/", ""), ART_DIR)))] as const));
 
   it("are readable RGBA PNGs with real transparency: never empty, never on a background", () => {

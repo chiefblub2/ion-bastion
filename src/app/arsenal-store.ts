@@ -2,8 +2,8 @@ import { campaignLocks } from "../campaign/campaign-unlock";
 import { fnv, stable } from "../core/hash";
 import { dailyDate } from "../run/daily";
 import { campaignRecord } from "./progress";
-import { type Arsenal, campaignTowers, EMPTY_ARSENAL, salvageOf, settle, veterancy } from "../campaign/arsenal";
-import { XP_BUILT } from "../content/arsenal";
+import { affordable, type Arsenal, campaignTowers, EMPTY_ARSENAL, salvageOf, settle, veterancy } from "../campaign/arsenal";
+import { CATALOGUE, CORE_KIT, XP_BUILT } from "../content/arsenal";
 import { assistsOf } from "../run/xp";
 import { DEFAULT_CONTENT } from "../content/index";
 import { missionById, MISSIONS } from "../content/missions";
@@ -75,4 +75,10 @@ export function bountyMission(now = new Date(), record = campaignRecord()): stri
     locks = campaignLocks(sectors, record),
     open = MISSIONS.filter((m) => !m.circle && !locks.has(m.id));
   return open.length ? open[fnv(stable(["bounty", dailyDate(now)])) % open.length].id : undefined;
+}
+/** Salvage on hand and how many research or forge purchases it covers now: the campaign's Arsenal buttons. */
+export function arsenalSummary(a = loadArsenal()) {
+  const ids = [...CORE_KIT, ...(Object.keys(CATALOGUE) as TowerId[])].filter(isTower),
+    { research, forge } = affordable(a, ids);
+  return { salvage: a.salvage, ready: research + forge };
 }
