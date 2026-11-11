@@ -22,6 +22,7 @@
   --ion-warn: #f2b84b;
   --ion-star: #f4cf7a;
   --ion-danger: #ff5f6d;
+  --ion-buff: #7ee08a;
 }
 :root {
   font-family: "DM Sans", sans-serif;
@@ -1405,7 +1406,9 @@ dialog::backdrop {
 .aura-upgrade b { white-space: nowrap; font: 500 12px var(--mono); }
 .aura-summary { font-size: 13px; color: #c1f0ea; line-height: 1.6; margin: 0 0 10px; }
 .aura-rule { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 0 0 15px; }
-.aura-stat-detail { color: #9ee6de; font-size: 12px; line-height: 1.5; padding-right: 5px; }
+.aura-stat-detail { color: var(--ion-text-2); font-size: 12px; line-height: 1.5; padding-right: 5px; }
+.aura-stat-detail b { color: var(--ion-buff); font-weight: 600; }
+.tower-stats .is-boosted strong { color: var(--ion-buff); }
 .aura-stats strong { color: var(--path-color, #9ee6de); }
 .aura-stats .inactive { opacity: .45; }
 @media(max-width: 520px) {

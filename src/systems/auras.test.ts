@@ -180,7 +180,7 @@ describe("combat and interface integration", () => {
     const towers = [target, source], preview = upgradeControl(target, towers);
     expect(preview).toContain("22.5"); // 18 * 1.25
     expect(preview).toContain("37.5"); // next upgrades: ["level-2", "level-3"]0 * 1.25
-    expect(towerDetails("pulse", target, towers)).toContain("18 + 4.5 Aura");
+    expect(towerDetails("pulse", target, towers)).toContain("18 <b>+ 4.5 Aura</b>");
     expect(upgradeControl({ ...target, upgrades: ["level-2", "level-3"] }, towers)).toContain("Level 3 → 4");
     expect(upgradeControl({ ...target, upgrades: ["level-2", "level-3", "level-4", "level-5", "overclock-1", "overclock-2", "overclock-3"] }, towers)).toContain("Max level");
     const controls = upgradeControl(source, towers);

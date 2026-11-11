@@ -80,9 +80,9 @@ export function towerDetails(
       ? effectiveTowerStats(tower, towers, content)
       : { ...base, base, bonuses: { damage: 0, speed: 0, range: 0 } };
     values = `<div class="tower-stats">
-      <div><strong>${number(stats.damage)}</strong><span>Damage</span>${stats.bonuses.damage ? `<small class="aura-stat-detail">${number(base.damage)} + ${number(stats.damage - base.damage)} Aura</small>` : ""}</div>
-      <div><strong>${number(stats.range)}</strong><span>Range</span>${stats.bonuses.range ? `<small class="aura-stat-detail">${number(base.range)} + ${number(stats.range - base.range)} Aura</small>` : ""}</div>
-      <div><strong>${number(stats.interval)} s</strong><span>Fire interval</span>${stats.bonuses.speed ? `<small class="aura-stat-detail">${percent(stats.bonuses.speed)} speed · Aura</small>` : ""}</div>
+      <div${stats.bonuses.damage ? ' class="is-boosted"' : ""}><strong>${number(stats.damage)}</strong><span>Damage</span>${stats.bonuses.damage ? `<small class="aura-stat-detail">${number(base.damage)} <b>+ ${number(stats.damage - base.damage)} Aura</b></small>` : ""}</div>
+      <div${stats.bonuses.range ? ' class="is-boosted"' : ""}><strong>${number(stats.range)}</strong><span>Range</span>${stats.bonuses.range ? `<small class="aura-stat-detail">${number(base.range)} <b>+ ${number(stats.range - base.range)} Aura</b></small>` : ""}</div>
+      <div${stats.bonuses.speed ? ' class="is-boosted"' : ""}><strong>${number(stats.interval)} s</strong><span>Fire interval</span>${stats.bonuses.speed ? `<small class="aura-stat-detail"><b>${percent(stats.bonuses.speed)} speed</b> · Aura</small>` : ""}</div>
     </div>`;
   }
   const cancelLabel = tower ? "Deselect (Esc)" : "Exit build mode (Esc)";
