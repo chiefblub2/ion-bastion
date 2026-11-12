@@ -32,7 +32,7 @@ describe("campaign arsenal", () => {
       one = xpOf({ towers: [{ type: "pulse", kills: 3 }] as never }, mission, DEFAULT_CONTENT).pulse!,
       two = xpOf({ towers: [{ type: "pulse", kills: 3 }, { type: "pulse", kills: 0 }] as never }, mission, DEFAULT_CONTENT).pulse!;
     expect(two - one).toBe(XP_BUILT);
-    expect(one).toBe(3 + XP_BUILT + XP_FIELDED);
+    expect(one).toBe(3 + XP_BUILT + XP_FIELDED.armed);
   });
 
   it("research costs Salvage only and is permanent", () => {

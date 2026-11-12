@@ -1,10 +1,9 @@
-import { GEAR_MARKS, type GearClass, MAX_MARK, type MarkEffect, RANK_PASSIVE, SIGNATURES } from "../content/arsenal";
-import { pageOf } from "../core/tower-pages";
+import { GEAR_MARKS, MAX_MARK, type MarkEffect, RANK_PASSIVE, SIGNATURES } from "../content/arsenal";
 import type { ContentPack, MasteryEffect, TowerDefinition, TowerId, UpgradeDefinition } from "../core/types";
 import { isSpecialization } from "../core/upgrades";
 import { kindModule } from "../systems/attacks";
 import { compose, discount, mapParam, mapTowers, only, price, scaleStat, upgradePrice, type PackFn } from "../run/transform";
-import { type Arsenal, veterancy } from "./arsenal";
+import { type Arsenal, gearClassOf, veterancy } from "./arsenal";
 // Campaign gear as a content-pack transform: Mk I–IV from `GEAR_MARKS` by tower class, Mk V the tower's signature
 // mod, plus the veterancy rank's build-price passive.
 
@@ -14,11 +13,8 @@ const paramValue = (key: string, v: number) => (WHOLE.has(key) ? Math.round(v) :
 /** The plain levels 2 and 3 (Aura: the first two tiers of each track), addressed by level, not by id. */
 const isEarly = (u: UpgradeDefinition) => !isSpecialization(u) && (u.effects.level === 2 || u.effects.level === 3);
 
-/** Which mark table a tower uses: Attack and Control, traps, Support with an area, Support without one. */
-export function gearClassOf(t: Readonly<TowerDefinition>): GearClass {
-  const page = pageOf(t);
-  return page <= 1 ? "armed" : page === 2 ? "trap" : t.range > 0 ? "support" : "field";
-}
+/** Which mark table a tower uses (defined in `campaign/arsenal.ts`, which also keys `XP_FIELDED` on it). */
+export { gearClassOf };
 /** The effects of a tower's Mk I–IV, in mark order (Mk V is its signature, `SIGNATURES`). */
 export const markEffects = (t: Readonly<TowerDefinition>): readonly MarkEffect[] => GEAR_MARKS[gearClassOf(t)];
 

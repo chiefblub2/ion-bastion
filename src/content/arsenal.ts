@@ -39,8 +39,12 @@ export const RANK_BONUS: readonly number[] = [15, 25, 40, 60, 90];
 export const RANK_PASSIVE = { build: 0.03 } as const;
 /** XP per tower built. */
 export const XP_BUILT = 10;
-/** XP per tower type built at least once in a mission, on top of kills, `XP_BUILT` and assists. */
-export const XP_FIELDED = 30;
+/**
+ * XP per tower type built at least once in a mission, on top of kills, `XP_BUILT` and assists, by gear class (see
+ * `GEAR_MARKS`). Traps and Support towers without an area rarely kill and earn few or no assists, so they get more:
+ * per fielded type and mission that brings them near the Attack tab's median (about 90 XP).
+ */
+export const XP_FIELDED: Readonly<Record<GearClass, number>> = { armed: 30, trap: 60, support: 30, field: 80 };
 
 /**
  * Loadout slots: `base` at the start, +1 for the first win of the finale of each listed sector (index into the

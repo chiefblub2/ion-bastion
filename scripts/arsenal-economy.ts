@@ -60,7 +60,8 @@ SECTORS.forEach((sector, i) => {
       e[key] = {
         key,
         won,
-        waves: won ? game.waves.length : game.state.wave,
+        // A loss clears the waves before the one lost on (`state.wave` counts the wave in progress).
+        waves: won ? game.waves.length : Math.max(0, game.state.wave - 1),
         stars: won ? missionStars(mission, game.state) : 0,
         xp: xpOf(game.state, mission, content),
         types: types.size,

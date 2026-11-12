@@ -959,7 +959,8 @@ export type GameEvent =
   | { type: "evade"; at: Point }
   /** An overload enemy died: attack towers within `radius` cells are stalled. */
   | { type: "overload"; at: Point; radius: number }
-  | { type: "leak"; at: Point; amount: number }
+  /** An enemy reached the reactor; `enemy` is its type (for the debrief's leak tally). */
+  | { type: "leak"; at: Point; amount: number; enemy: EnemyId }
   | { type: "spawn"; at: Point; enemy: number }
   | { type: "build" | "sell" | "upgrade"; at: Point; tower: TowerId; color: number }
   | { type: "waveStart"; wave: number }

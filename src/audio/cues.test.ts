@@ -28,7 +28,7 @@ describe("cuesFor", () => {
     expect(cuesFor([build, upgrade], DEFAULT_CONTENT, "game").map((c) => c.id)).toEqual(["build", "upgrade"]);
   });
   it("keeps only flow cues while the menu is open", () => {
-    const events: GameEvent[] = [kill, { type: "leak", at, amount: 1 }, { type: "end", result: "lost" }];
+    const events: GameEvent[] = [kill, { type: "leak", at, amount: 1, enemy: "drone" }, { type: "end", result: "lost" }];
     expect(cuesFor(events, DEFAULT_CONTENT, "menu").map((c) => c.id)).toEqual(["leak", "lost"]);
   });
 });

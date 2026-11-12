@@ -23,6 +23,7 @@ import { bindMenuKeys, showCodexTab, showTowerCodex } from "./menu-keys";
 import { campaignRecord, lastMission, rememberUnlocks, seenUnlocks, trainingDone } from "./progress";
 import { gearPack } from "../campaign/gear";
 import { arsenalSummary, arsenalTowers, loadArsenal } from "./arsenal-store";
+import { begin } from "./campaign-session";
 import { beginJournal, storedJournal } from "./run-journal";
 import { createScreens, GAME, HOME, type MenuPage, type Screen } from "./screens";
 
@@ -176,6 +177,8 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
       return;
     }
     const towers = unlockAll ? undefined : arsenalTowers(id);
+    // A paying campaign start: remembered for Replay and as the last loadout (the briefing will pass real picks).
+    if (towers) begin(id, towers);
     execute({ type: "mission", id, towers, content: towers ? gearPack(game.baseContent, loadArsenal()) : undefined });
     browsed = undefined;
     if (!coop.active()) screens.show(GAME);
