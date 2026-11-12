@@ -8,6 +8,7 @@ import { TARGET_PRIORITIES } from "../systems/combat";
 import { discountedCost, upgradeDiscount } from "../systems/workshop";
 import { escape, number } from "./format";
 import { PRIORITY_LABELS } from "./messages";
+import { gearBadge } from "./gear-badge";
 import { towerBranches } from "./tower-branches";
 import { changeText, upgradeChanges, type UpgradeChange } from "./upgrade-changes";
 // The action card beside a selected tower: the only place to upgrade (or choose a path), retarget and sell.
@@ -124,6 +125,8 @@ export interface CardOptions {
   owner?: string;
   /** Slim card: the id of the choice whose details are open (the view's state). */
   open?: string;
+  /** A campaign game's rank and gear mark of this tower type: a badge after the name. */
+  gear?: { rank: number; mark: number };
 }
 const hex = (color: number) => `#${color.toString(16).padStart(6, "0")}`;
 const colorStyle = (c: CardChoice) => (c.color === undefined ? "" : ` style="--path-color:${hex(c.color)}"`);
@@ -180,7 +183,7 @@ export function towerCardHtml(tower: Tower, towers: readonly Tower[], options: C
             (p) => `<button data-priority="${p}" class="${p === active ? "active" : ""}" aria-pressed="${p === active}"${locked}>${PRIORITY_LABELS[p]}</button>`,
           ).join("")}</div>`;
   const subStyle = sub.color === undefined ? "" : ` style="color:${hex(sub.color)}"`;
-  return `<div class="card-head"><strong>${escape(definition.name)}</strong><button class="card-close" data-deselect aria-label="Deselect (Esc)">✕</button><span class="card-sub"${subStyle}>${escape(sub.text)}</span></div>${
+  return `<div class="card-head"><strong>${escape(definition.name)}</strong>${options.gear ? gearBadge(options.gear) : ""}<button class="card-close" data-deselect aria-label="Deselect (Esc)">✕</button><span class="card-sub"${subStyle}>${escape(sub.text)}</span></div>${
     options.owner ? `<p class="card-owner">Owned by ${escape(options.owner)}</p>` : ""
   }<div class="card-upgrades">${upgrades}</div><div class="card-foot">${target}<button class="card-sell" data-sell${locked}>Sell · ◇ ${number(sellValue(tower, towers, content))}</button></div>`;
 }

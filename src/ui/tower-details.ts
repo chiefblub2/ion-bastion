@@ -8,6 +8,7 @@ import { resolveUpgrades, towerLevel, maxTowerLevel, towerColor, towerPath, towe
 import { escape, number, percent, statValue } from "./format";
 import { PRIORITY_LABELS } from "./messages";
 import { towerBranches, type TowerBranch } from "./tower-branches";
+import { gearBlock, type Standing } from "./gear-standing";
 // The sidebar's read-only panel for the armed or selected tower; every action is on the card beside the tower.
 
 const NUMERALS = ["I", "II", "III", "IV", "V"];
@@ -74,8 +75,11 @@ export function towerDetails(
   tower: Tower | undefined,
   towers: readonly Tower[],
   content: ContentPack = DEFAULT_CONTENT,
+  /** A campaign tower's rank and gear mark, with the base pack its texts are computed against. */
+  gear?: { standing: Standing | undefined; base: ContentPack },
 ): string {
   const definition = content.towers[type];
+  const gearHtml = gear ? gearBlock(type, gear.standing, gear.base) : "";
   const support = definition.attack.kind === "aura";
   const path = tower && towerPath(tower, content);
   // Aura: the track first (named by its tier I label), then the path.
@@ -125,5 +129,5 @@ export function towerDetails(
   const cancelLabel = tower ? "Deselect (Esc)" : "Exit build mode (Esc)";
   return `<div class="selection-heading"><span>${tower ? "TOWER SELECTED" : "BUILD MODE"}</span><span class="selection-actions"><b>${heading}</b><button id="cancel-selection" class="cancel-selection" title="${cancelLabel}" aria-label="${cancelLabel}">✕</button></span></div>
     <p>${definition.description}</p>${isSupport(definition.attack) ? "" : `<p class="tower-targets">Targets: <b>${targets(definition.targets)}</b>${attackSummary(type, tower, content)}${tower ? ` · Kills <b id="tower-kills">${tower.kills}</b>` : ""}${tower && retargets ? ` · Target: <b>${PRIORITY_LABELS[tower.priority ?? "first"]}</b>` : ""}</p>`}${values}
-    ${tower ? `${pathLadder(tower, content)}${actionNote(retargets)}` : placementNote(definition.placement === "path")}`;
+    ${tower ? `${gearHtml}${pathLadder(tower, content)}${actionNote(retargets)}` : `${gearHtml}${placementNote(definition.placement === "path")}`}`;
 }

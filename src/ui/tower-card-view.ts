@@ -2,6 +2,8 @@ import type { Game } from "../core/game";
 import type { ViewState } from "../render/scene";
 import type { MultiplayerSession } from "./players";
 import { playerName } from "./players";
+import type { TowerId } from "../core/types";
+import type { Standing } from "./gear-standing";
 import { cardTower, towerCardHtml } from "./tower-card";
 import { type CardPlacement, placeTowerCard } from "./tower-card-place";
 /** Phones in landscape (the full-screen layout's media query) get the slim card. */
@@ -37,6 +39,8 @@ export class TowerCard {
     private session: () => MultiplayerSession | null,
     /** Page rectangle of a cell through the player's zoom (`Battlefield.cellRect`). */
     private cellRect: (cell: { x: number; y: number }) => DOMRect | null = () => null,
+    /** A tower type's campaign standing (`Interface.standing`); none outside a campaign game. */
+    private standing: (id: TowerId) => Standing | undefined = () => undefined,
   ) {
     // A press on the card stays on the card; the board never builds or selects underneath it.
     this.el.addEventListener("pointerdown", (e) => e.stopPropagation());
@@ -75,7 +79,7 @@ export class TowerCard {
       credits = (session?.match ? s.wallets[0] : s.wallets[this.view.player]) ?? 0,
       slim = this.phone.matches || this.board.clientWidth < SLIM_BOARD,
       owner = session && !session.match && t.owner !== this.view.player ? playerName(t.owner) : undefined;
-    const html = towerCardHtml(t, s.towers, { credits, slim, owner, open: slim ? this.open : undefined }, this.game.content);
+    const html = towerCardHtml(t, s.towers, { credits, slim, owner, open: slim ? this.open : undefined, gear: this.standing(t.type) }, this.game.content);
     if (html !== this.html) {
       // The rewrite replaces every button; focus returns to the one that names the same control.
       const focused = this.el.contains(document.activeElement) ? (document.activeElement as HTMLElement) : null,

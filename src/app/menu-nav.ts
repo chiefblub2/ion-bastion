@@ -109,6 +109,9 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
       browsed = undefined;
     },
     image: terrainImage,
+    fielded: (a) => {
+      ui.fielded = a;
+    },
   });
   /** Shows a screen: pauses or resumes the wave between game and menu and fills the menu page. */
   function enter(to: Screen, from: Screen | null) {

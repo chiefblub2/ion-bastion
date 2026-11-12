@@ -1,5 +1,6 @@
 import { briefable } from "../campaign/briefable";
 import { autoLoadout, fieldedTowers, fitsAll, kitOf, validLoadout } from "../campaign/loadout";
+import type { Arsenal } from "../campaign/arsenal";
 import { gearPack } from "../campaign/gear";
 import type { Game } from "../core/game";
 import type { MatchCommand } from "../core/match";
@@ -50,9 +51,11 @@ interface FlowDeps {
   /** The mission was started: the app forgets the atlas's browsed selection. */
   started: () => void;
   image: MapImage;
+  /** The Arsenal a mission is about to start with, for the HUD (before the `mission` command, which renders the HUD). */
+  fielded: (a: Arsenal) => void;
 }
 const BRIEFING: Screen = { view: "menu", page: "briefing" };
-export function createCampaignFlow({ game, execute, screens, solo, unlockAll, locked, underWay, started, image }: FlowDeps) {
+export function createCampaignFlow({ game, execute, screens, solo, unlockAll, locked, underWay, started, image, fielded }: FlowDeps) {
   let draft: Draft | undefined,
     message: string | undefined;
   const root = () => document.getElementById("briefing-root")!;
@@ -132,10 +135,13 @@ export function createCampaignFlow({ game, execute, screens, solo, unlockAll, lo
   function launch(id: string, picks: readonly TowerId[]) {
     const m = content().missions.find((x) => x.id === id);
     if (!m) return false;
-    const kit = kitOf(m, loadArsenal(), campaignRecord(), content()),
+    const arsenal = loadArsenal(),
+      kit = kitOf(m, arsenal, campaignRecord(), content()),
       chosen = fitsAll(kit) ? kit.pool : picks.filter((p) => kit.pool.includes(p)).slice(0, kit.slots);
     begin(id, chosen);
-    return execute({ type: "mission", id, towers: fieldedTowers(kit, chosen, content()), content: gearPack(game.baseContent, loadArsenal()) }).ok;
+    // `begin` stores the picks, which does not touch gear or XP; the snapshot is the one the pack is built from.
+    fielded(arsenal);
+    return execute({ type: "mission", id, towers: fieldedTowers(kit, chosen, content()), content: gearPack(game.baseContent, arsenal) }).ok;
   }
   return {
     /** Opens the briefing for a briefable mission; false (nothing done) for any other. */

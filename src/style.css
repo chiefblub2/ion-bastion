@@ -757,6 +757,23 @@ p {
   border: 1px solid var(--ion-line);
   border-radius: 8px;
 }
+/* Campaign gear: rank chevrons top left, Mk numeral top right; the card does not grow. */
+.tower-card {
+  position: relative;
+}
+.tower-gear .gear-badge {
+  display: contents;
+}
+.tower-gear .rank-chevrons {
+  position: absolute;
+  top: 5px;
+  left: 6px;
+}
+.tower-gear .mk-badge {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+}
 .tower-card.blast {
   --accent: #ffbd76;
 }
@@ -1328,6 +1345,9 @@ dialog::backdrop {
 .aura-stats strong { color: var(--path-color, #9ee6de); }
 .aura-stats .inactive { opacity: .45; }
 /* Sidebar path ladder (tower-details.ts `pathLadder`): level pips, then the branches to choose or the chosen one. */
+.gear-block { margin: 0 0 10px; padding: 6px 8px; border: 1px solid var(--ion-line); border-radius: 6px; font-size: 12px; color: var(--ion-text-2); }
+.gear-block-title { display: block; margin-bottom: 3px; font: 600 10px var(--mono); letter-spacing: 0.08em; color: var(--ion-label); }
+.gear-block ul { margin: 0; padding-left: 14px; }
 .path-ladder { display: flex; flex-direction: column; gap: 6px; margin: 0 0 12px; font-size: 12px; color: var(--ion-text-2); }
 .ladder-pips { display: flex; gap: 3px; }
 .ladder-pips i { flex: 1; height: 5px; border-radius: 2px; background: var(--line); }
@@ -1881,6 +1901,15 @@ dialog::backdrop {
   :root:is(.is-fullscreen, .is-compact) .tower-symbol {
     font-size: 14px;
   }
+  /* The rail keeps only the Mk numeral, tiny, in the corner. */
+  :root:is(.is-fullscreen, .is-compact) .tower-gear .rank-chevrons {
+    display: none;
+  }
+  :root:is(.is-fullscreen, .is-compact) .tower-gear .mk-badge {
+    top: 2px;
+    right: 3px;
+    font-size: 0.5rem;
+  }
   :root:is(.is-fullscreen, .is-compact) .tower-name {
     font-size: 12px;
   }
@@ -1914,6 +1943,12 @@ dialog::backdrop {
   }
   :root:is(.is-fullscreen, .is-compact) .tower-stats {
     margin-bottom: 8px;
+  }
+  :root:is(.is-fullscreen, .is-compact) .gear-block {
+    margin-bottom: 6px;
+    padding: 4px 6px;
+    font-size: 11px;
+    line-height: 1.3;
   }
   :root:is(.is-fullscreen, .is-compact) .tower-stats strong {
     font-size: 13px;

@@ -2,6 +2,9 @@ import { Game, isRunning, SELL_REFUND } from "../core/game";
 import { isCircleSector, missionNumber, nextMissionOf, sectorOf } from "../content/missions";
 import { upgradeDiscount } from "../systems/workshop";
 import { towerDetails } from "./tower-details";
+import { gearLabel, standingIn, type Standing } from "./gear-standing";
+import { gearBadge } from "./gear-badge";
+import type { Arsenal } from "../campaign/arsenal";
 import { enemyDetails, enemyKey } from "./enemy-details";
 import { isHidden } from "../systems/traits";
 import { earlyBonus, wavesLeft } from "../systems/circle";
@@ -89,7 +92,7 @@ export function mountUI(game: Game) {
     .map((id) => TOWERS[id])
     .map(
       (t, i) =>
-        `<button class="tower-card ${t.id}" style="--accent:#${t.color.toString(16).padStart(6, "0")}" data-tower="${t.id}" aria-pressed="false" title="${t.role}: ${t.description}" aria-label="${t.name}, ${t.role}, ${t.cost} credits"><span class="tower-symbol">${t.visual.icon}</span><strong class="tower-name">${t.name}</strong><span class="tower-cost"><b>◇ ${t.cost}</b><kbd>${towerKey(i)}</kbd></span></button>`,
+        `<button class="tower-card ${t.id}" style="--accent:#${t.color.toString(16).padStart(6, "0")}" data-tower="${t.id}" aria-pressed="false" title="${t.role}: ${t.description}" aria-label="${t.name}, ${t.role}, ${t.cost} credits"><span class="tower-symbol">${t.visual.icon}</span><span class="tower-gear"></span><strong class="tower-name">${t.name}</strong><span class="tower-cost"><b>◇ ${t.cost}</b><kbd>${towerKey(i)}</kbd></span></button>`,
     )
     .join("")}</div></div>
   <section id="send-panel" class="send-panel" aria-label="Send enemies" hidden></section><div id="selection" class="selection"></div><section id="live-units" class="live-units" aria-label="Enemies on the field" hidden></section></aside></div>
@@ -269,6 +272,15 @@ export class Interface {
    * debrief page (`stars` is 0 on a loss).
    */
   debrief: { state: GameState; stars: number; best: boolean } | null = null;
+  /**
+   * The Arsenal a paying campaign mission was started with (set by the app before the mission loads, view side only).
+   * Read through `standing`, which ignores it while the game carries no arsenal.
+   */
+  fielded: Arsenal | null = null;
+  /** A tower type's rank and gear mark in this game: undefined outside a menu-started campaign mission or without either. */
+  standing(id: TowerId): Standing | undefined {
+    return standingIn(this.fielded, !!this.game.arsenal, id);
+  }
   /** The campaign's locked missions, set by the app; undefined locks nothing (multiplayer). */
   locks: () => ReadonlyMap<string, Lock> | undefined = () => undefined;
   /** The campaign record for solo play, set by the app; undefined in multiplayer. */
@@ -367,6 +379,13 @@ export class Interface {
       el.classList.toggle("unaffordable", gold < TOWERS[id].cost);
       el.setAttribute("aria-pressed", String(this.view.build === id));
       el.disabled = terminal;
+      // A campaign tower's standing: the badge in the card's corners and the spoken label.
+      const standing = this.standing(id),
+        badge = standing ? gearBadge(standing) : "",
+        tag = gearLabel(standing),
+        slot = el.querySelector(".tower-gear")!;
+      if (slot.innerHTML !== badge) slot.innerHTML = badge;
+      el.setAttribute("aria-label", `${TOWERS[id].name}, ${TOWERS[id].role}, ${tag ? `${tag}, ` : ""}${TOWERS[id].cost} credits`);
     }
     for (const el of document.querySelectorAll<HTMLElement>("[data-wave]")) {
       const n = Number(el.dataset.wave);
@@ -407,7 +426,8 @@ export class Interface {
     let enemy = s.enemies.find((e) => e.id === this.view.enemy);
     if (enemy && isHidden(this.game, enemy)) enemy = undefined;
     if (!enemy) this.view.enemy = null;
-    const key = enemy ? `enemy/${enemyKey(this.game, enemy)}` : `${t?.id}/${t?.priority}/${this.view.build}/${auraKey}`;
+    const gearOf = t ? this.standing(t.type) : d ? this.standing(d.id as TowerId) : undefined,
+      key = enemy ? `enemy/${enemyKey(this.game, enemy)}` : `${t?.id}/${t?.priority}/${this.view.build}/${auraKey}/${gearLabel(gearOf)}`;
     // A selected tower or enemy collapses the build menu, so its details sit higher in the sidebar; the
     // tower's actions are on the card beside it (tower-card-view.ts). On phones in landscape a selected enemy
     // replaces the tower list (style.css).
@@ -433,7 +453,7 @@ export class Interface {
       if (enemy) {
         box.innerHTML = enemyDetails(this.game, enemy);
       } else if (d) {
-        box.innerHTML = towerDetails(d.id as TowerId, t, s.towers, content);
+        box.innerHTML = towerDetails(d.id as TowerId, t, s.towers, content, { standing: gearOf, base: this.game.baseContent });
       } else
         box.innerHTML =
           `<div class="selection-heading"><span>TACTICS</span><b>◇</b></div><p>Build at bends to keep enemies in range longer.</p><div class="placement-note">${isTouch() ? "Tap" : "Click"} a built tower to upgrade it, or an enemy to see its HP and traits.</div>`;
