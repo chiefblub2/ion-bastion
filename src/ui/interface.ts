@@ -216,7 +216,7 @@ export function renderPlay(game: Game, record: CampaignRecord) {
 }
 /** Fills the enemy codex page; called when it opens and on every tab change. */
 export function renderCodex(game: Game, tab: CodexTab = "enemies") {
-  const { tabs, list } = renderEnemyCodex(game.content, tab),
+  const { tabs, list } = renderEnemyCodex(game.baseContent, tab),
     panel = document.getElementById("codex-list")!;
   closeCodexPreview();
   document.getElementById("codex-tabs")!.innerHTML = tabs;
@@ -226,7 +226,7 @@ export function renderCodex(game: Game, tab: CodexTab = "enemies") {
 }
 /** Fills the tower codex page for one build-menu category; called when it opens and on every tab change. */
 export function renderTowerCodexPage(game: Game, page = 0) {
-  const { tabs, list } = renderTowerCodex(game.content, page, matchMedia(PHONE_PAGE).matches),
+  const { tabs, list } = renderTowerCodex(game.baseContent, page, matchMedia(PHONE_PAGE).matches),
     panel = document.getElementById("tower-codex-list")!;
   document.getElementById("tower-codex-tabs")!.innerHTML = tabs;
   panel.innerHTML = list;

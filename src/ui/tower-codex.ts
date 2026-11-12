@@ -5,6 +5,7 @@ import { resolveUpgrades } from "../core/upgrades";
 import { describeAttack, isSupport, type StatRow } from "../systems/attacks";
 import { escape, number, statValue } from "./format";
 import { pageOf, TOWER_PAGES } from "./tower-pages";
+import { type TowerBranch, towerBranches } from "./tower-branches";
 
 /**
  * Tower icons: the README images (`scripts/readme-images.ts -- --only towers`), drawn with the battlefield's own
@@ -68,16 +69,10 @@ export function codexTowers(content: ContentPack): CodexTower[] {
             return { level: u.effects.level!, cost: u.cost, damage: s.damage, range: s.range, interval: s.interval };
           })]
         : [];
-      const byPath = new Map<string, UpgradeDefinition[]>();
-      for (const u of d.upgrades) if (u.path) byPath.set(u.path, [...(byPath.get(u.path) ?? []), u]);
-      const byTrack = new Map<string, UpgradeDefinition[]>();
-      for (const u of d.upgrades) if (u.track) byTrack.set(u.track, [...(byTrack.get(u.track) ?? []), u]);
-      const group = (looks: TowerDefinition["visual"]["paths"]) => ([key, tiers]: [string, UpgradeDefinition[]]): CodexPath => {
-        const visual = looks?.[key];
-        return { id: key, name: visual?.name ?? tiers[0].label, role: visual?.role, color: hex(visual?.color ?? d.color), tiers: tiers.map((t) => ({ label: t.label, cost: t.cost })) };
-      };
-      const paths = [...byPath].map(group(d.visual.paths)),
-        tracks = [...byTrack].map(group(d.visual.tracks));
+      const { paths: pathBranches, tracks: trackBranches } = towerBranches(d),
+        toPath = (b: TowerBranch): CodexPath => ({ id: b.id, name: b.name, role: b.role, color: hex(b.color as number), tiers: b.tiers.map((t) => ({ label: t.label, cost: t.cost })) }),
+        paths = pathBranches.map(toPath),
+        tracks = trackBranches.map(toPath);
       return {
         definition: d,
         page: pageOf(d),

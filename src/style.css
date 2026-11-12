@@ -42,6 +42,57 @@
   --glow: 0 0 14px color-mix(in srgb, var(--ion-accent) 20%, transparent);
   --glow-strong: 0 0 10px color-mix(in srgb, var(--ion-accent) 32%, transparent), 0 0 32px color-mix(in srgb, var(--ion-accent) 12%, transparent);
 }
+/* Gear badges (rank chevrons, mark pips, Mk label): drawn by the menu and the HUD, see ui/gear-badge.ts. */
+.rank-chevrons {
+  display: inline-flex;
+  gap: 1px;
+  vertical-align: middle;
+}
+.rank-chevrons i {
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid var(--ion-star);
+  border-bottom: 2px solid var(--ion-star);
+  transform: rotate(45deg) scale(0.8);
+  margin: -1px 1px 1px;
+}
+.mk-pips {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+.mk-pips i {
+  width: 6px;
+  height: 6px;
+  border: 1px solid color-mix(in srgb, var(--ion-accent) 55%, transparent);
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+.mk-pips i.on {
+  background: var(--ion-accent);
+  border-color: var(--ion-accent);
+}
+.mk-pips i.ready {
+  border-color: var(--ion-accent);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--ion-accent) 60%, transparent);
+}
+.mk-pips[aria-label$="Mk V"] i.on {
+  background: var(--ion-second);
+  border-color: var(--ion-second);
+}
+.gear-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.mk-badge {
+  font: 700 0.62rem/1 var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--ion-accent);
+}
+.mk-badge.is-max {
+  color: var(--ion-second);
+}
 * {
   box-sizing: border-box;
 }
