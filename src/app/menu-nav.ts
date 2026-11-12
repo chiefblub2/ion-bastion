@@ -170,8 +170,10 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
       // Opened from the briefing, the Arsenal leads back to it instead of offering a mission of its own.
       const briefing = from?.view === "menu" && from.page === "briefing" ? flow.mission() : undefined,
         debrief = from?.view === "menu" && from.page === "debrief" ? lastDebrief()?.mission.name : undefined,
-        next = briefing || debrief ? undefined : arsenalNext();
-      void import("../ui/arsenal-view").then((m) => m.renderArsenal(document.getElementById("arsenal-root")!, game.baseContent, next, briefing, debrief));
+        next = briefing || debrief ? undefined : arsenalNext(),
+        // A solo campaign mission under way keeps its towers and gear until its next start or Restart.
+        underway = !coop.active() && game.arsenal !== undefined && inProgress() && game.state.status !== "won" && game.state.status !== "lost";
+      void import("../ui/arsenal-view").then((m) => m.renderArsenal(document.getElementById("arsenal-root")!, game.baseContent, { next, briefing, debrief, underway }));
     }
     if (to.page === "briefing") flow.render();
     if (to.page === "debrief") {

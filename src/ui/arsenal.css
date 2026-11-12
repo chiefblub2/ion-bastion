@@ -1,0 +1,1374 @@
+/*
+ * The Campaign Arsenal (`/#arsenal`, ui/arsenal-view.ts): a band (Salvage, collection, slots, bounty, the way onward),
+ * the collection (branch tabs, filters, tower tiles) and the selected tower's detail with its one purchase button.
+ * Deep Ion tokens and cut-corner glass panels like the briefing and the debrief; the tower's own colour accents its
+ * tile and detail, `--ion-star` marks rank, `--ion-accent` marks, `--ion-second` the Mk V signature. Desktop: the
+ * detail is a sticky column beside the collection; narrow portrait stacks them with the tiles as a swiping shelf; the
+ * fitted landscape layout keeps everything on one screen, the tiles and the detail body scrolling inside their boxes.
+ */
+.menu-arsenal {
+  --mode: var(--ion-accent);
+}
+.ars {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(360px, 34vw, 430px);
+  grid-template-areas:
+    "band band"
+    "coll detail";
+  gap: 16px;
+  align-items: start;
+}
+.ars p,
+.ars ul,
+.ars ol,
+.ars dl,
+.ars dd,
+.ars li,
+.ars h2,
+.ars h3 {
+  margin: 0;
+}
+.ars li {
+  line-height: 1.35;
+}
+.ars-panel,
+.ars-band {
+  min-width: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ion-accent) 6%, transparent), transparent 40%), var(--m-glass);
+  border: 1px solid var(--m-border);
+  border-top: 3px solid var(--m-accent);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%);
+  backdrop-filter: blur(6px);
+}
+.ars-h {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  font: 600 12px var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ion-label);
+}
+.ars-h small {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--ion-muted);
+}
+
+/* Band ------------------------------------------------------------------------------------------------------------ */
+.ars-band {
+  grid-area: band;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px 24px;
+  padding: 12px 16px;
+}
+.ars-salvage {
+  display: grid;
+  line-height: 1;
+}
+.ars-k,
+.ars-fact dt {
+  font: 600 11px var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ion-label);
+}
+.ars-salvage-n {
+  margin-top: 4px;
+  font: 700 36px/1 "Rajdhani", sans-serif;
+  letter-spacing: 0.02em;
+  color: var(--ion-accent);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--ion-accent) 30%, transparent);
+}
+.ars-facts {
+  display: flex;
+  gap: 0;
+  min-width: 0;
+}
+.ars-fact {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 0 18px;
+  border-left: 1px solid var(--m-border);
+}
+.ars-fact dd {
+  font: 500 14px var(--mono);
+  color: var(--m-text-2);
+  white-space: nowrap;
+}
+.ars-fact dd b {
+  font: 700 20px/1 "Rajdhani", sans-serif;
+  color: var(--m-text);
+}
+.ars-fact dd small {
+  font-size: 12px;
+  color: var(--ion-muted);
+}
+.ars-bounty dd {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.ars-bounty-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font: 600 15px "Rajdhani", sans-serif;
+  letter-spacing: 0.03em;
+  color: var(--m-text);
+}
+.ars-bounty dd b {
+  padding: 1px 6px;
+  font: 700 11px var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--ion-on-accent);
+  background: var(--ion-star);
+}
+.ars-bounty.is-paid dd b {
+  color: var(--ion-muted);
+  background: none;
+  border: 1px solid var(--m-border);
+}
+.ars-status {
+  flex: 1;
+  min-width: 0;
+  font: 500 13px var(--mono);
+  color: var(--ion-accent);
+}
+.ars-onward {
+  flex: none;
+  min-width: 0;
+  max-width: 44%;
+}
+.ars-onward:empty {
+  display: none;
+}
+.start-screen .ars-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 6px 18px;
+  font-size: 16px;
+}
+.ars-go-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Words only the fitted layout shows (short labels in place of the hidden headings). */
+.ars-fit {
+  display: none;
+}
+.ars-go-k {
+  flex: none;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+/* Collection ------------------------------------------------------------------------------------------------------ */
+.ars-collection {
+  grid-area: coll;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+.ars-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.ars-tabs,
+.ars-filters {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.start-screen .ars-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 14px;
+  font: 600 15px "Rajdhani", sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--m-text-2);
+  background: var(--m-glass);
+  border: 1px solid var(--m-border);
+  border-radius: 0;
+}
+.start-screen .ars-tab:hover {
+  background: var(--m-hover);
+  border-color: var(--m-accent);
+}
+.start-screen .ars-tab[aria-selected="true"] {
+  color: var(--m-text);
+  border-color: var(--m-accent);
+  box-shadow: inset 0 -3px var(--m-accent);
+}
+.ars-tab-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ars-tab-count {
+  font: 500 12px var(--mono);
+  letter-spacing: 0;
+  color: var(--m-text-2);
+}
+.ars-tab-count small {
+  font-size: 11px;
+  color: var(--ion-muted);
+}
+.ars-tab-ready {
+  align-self: center;
+  min-width: 18px;
+  padding: 1px 5px;
+  font: 700 11px/1.3 var(--mono);
+  text-align: center;
+  color: var(--ion-on-accent);
+  background: var(--ion-accent);
+}
+.ars-filters {
+  padding: 3px;
+  background: color-mix(in srgb, var(--m-surface) 80%, transparent);
+  border: 1px solid var(--m-border);
+}
+.start-screen .ars-filter {
+  min-height: 36px;
+  padding: 4px 12px;
+  font: 600 12px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--m-text-2);
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+.start-screen .ars-filter:hover {
+  color: var(--m-text);
+  background: var(--m-hover);
+}
+.start-screen .ars-filter[aria-pressed="true"] {
+  color: var(--ion-on-accent);
+  background: var(--m-accent);
+}
+.ars-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+.ars-tiles > li {
+  min-width: 0;
+}
+.ars-empty {
+  grid-column: 1 / -1;
+  padding: 18px 12px;
+  font-size: 14px;
+  color: var(--ion-muted);
+  text-align: center;
+  border: 1px dashed var(--m-border);
+}
+.start-screen .ars-tile {
+  --accent: var(--m-accent);
+  position: relative;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-areas:
+    "icon name"
+    "icon standing"
+    "status status";
+  column-gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 0;
+  padding: 8px 10px 0;
+  text-align: left;
+  color: var(--m-text);
+  background: color-mix(in srgb, var(--m-surface) 82%, transparent);
+  border: 1px solid var(--m-border);
+  border-radius: 0;
+  box-shadow: inset 3px 0 var(--accent);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+}
+.start-screen .ars-tile:hover {
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--m-border));
+  background: var(--m-hover);
+}
+.start-screen .ars-tile:focus-visible {
+  outline-offset: -4px;
+}
+.start-screen .ars-tile[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 24%, transparent), transparent 75%), color-mix(in srgb, var(--m-surface) 82%, transparent);
+  box-shadow:
+    inset 3px 0 var(--accent),
+    inset 0 0 0 1px var(--accent);
+}
+.ars-tile-icon {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+}
+.ars-tile-icon :is(img, span) {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.ars-tile-name {
+  grid-area: name;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 600 16px/1.2 "Rajdhani", sans-serif;
+  letter-spacing: 0.04em;
+}
+.ars-tile-standing {
+  grid-area: standing;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 14px;
+}
+/* Five chevrons and five pips fit beside the picture. */
+.ars-tile-standing .rank-chevrons {
+  gap: 0;
+}
+.ars-tile-standing .rank-chevrons i {
+  width: 5px;
+  height: 5px;
+  margin: -1px 1px 1px 0;
+}
+.ars-tile-standing .mk-pips {
+  gap: 2px;
+}
+.ars-tile-standing {
+  overflow: hidden;
+}
+.ars-tile-status {
+  grid-area: status;
+  margin: 8px -10px 0;
+  padding: 3px 10px 4px;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ion-muted);
+  border-top: 1px solid var(--m-border);
+}
+.ars-tile-status b {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.ars-tile-status.is-owned {
+  color: var(--m-text-2);
+}
+.ars-tile-status.is-afford {
+  color: var(--ion-accent);
+  background: color-mix(in srgb, var(--ion-accent) 12%, transparent);
+  border-top-color: color-mix(in srgb, var(--ion-accent) 45%, transparent);
+}
+.ars-tile-status.is-forge {
+  font-weight: 700;
+  color: var(--ion-on-accent);
+  background: var(--ion-accent);
+  border-top-color: var(--ion-accent);
+}
+.ars-tile-status.is-maxed {
+  color: var(--ion-second);
+  background: color-mix(in srgb, var(--ion-second) 12%, transparent);
+}
+/* Locked towers: no colour bar, a dimmed picture, the name still in full text colour. */
+.start-screen .ars-tile.is-locked {
+  box-shadow: none;
+  border-style: dashed;
+  background: color-mix(in srgb, var(--m-surface) 60%, transparent);
+}
+.start-screen .ars-tile.is-locked[aria-pressed="true"] {
+  border-style: solid;
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.ars-tile.is-locked .ars-tile-icon {
+  opacity: 0.5;
+  filter: grayscale(0.85);
+}
+.ars-tile.is-locked .ars-tile-name {
+  color: var(--m-text-2);
+}
+.ars-tile.is-locked.is-ready .ars-tile-icon {
+  opacity: 0.8;
+  filter: grayscale(0.4);
+}
+.ars-tile.is-locked .mk-pips {
+  opacity: 0.45;
+}
+
+/* Detail ---------------------------------------------------------------------------------------------------------- */
+.ars-detail {
+  --accent: var(--m-accent);
+  grid-area: detail;
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  /* Opened under the page title, the purchase button is on screen without scrolling. */
+  max-height: max(460px, calc(100vh - 340px));
+  border-top-color: var(--accent);
+}
+.ars-detail:focus {
+  outline: none;
+}
+.ars-d-head {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px 12px;
+  background: radial-gradient(circle at 50px 50%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 120px);
+}
+.ars-d-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--m-border));
+  background: color-mix(in srgb, var(--m-bg) 70%, transparent);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+.ars-d-icon :is(img, span) {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+.ars-d-title {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.ars-d-eyebrow {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 600 11px var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ion-label);
+}
+.ars .ars-d-title h2 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 28px/1.05 "Rajdhani", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--m-text);
+}
+.ars-d-standing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ars-d-tag {
+  padding: 1px 7px;
+  font: 600 10px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.ars-d-tag.is-locked {
+  color: var(--ion-muted);
+  border-color: var(--m-border);
+}
+.ars-d-body {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-height: 0;
+  padding: 0 16px 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.ars-d-desc {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--m-text-2);
+}
+.ars-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: -6px;
+  padding: 0;
+  list-style: none;
+}
+.ars-chips li {
+  padding: 2px 8px;
+  font: 500 11px var(--mono);
+  color: var(--m-text-2);
+  border: 1px solid var(--m-border);
+  border-radius: 999px;
+}
+.ars-sec {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--m-border);
+}
+/* Veterancy */
+.ars-rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font: 600 12px var(--mono);
+  letter-spacing: 0.06em;
+  color: var(--ion-star);
+}
+.ars-xp {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+.ars-xpbar {
+  display: block;
+  height: 6px;
+  background: color-mix(in srgb, var(--ion-text) 9%, transparent);
+}
+.ars-xpbar i {
+  display: block;
+  height: 100%;
+  background: var(--ion-star);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--ion-star) 45%, transparent);
+}
+.ars-xp-n {
+  font: 500 12px var(--mono);
+  color: var(--m-text-2);
+}
+.ars-next,
+.ars-passive,
+.ars-hint {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--m-text-2);
+}
+.ars-next b {
+  color: var(--ion-star);
+  font-weight: 600;
+}
+.ars-passive {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.ars-hint {
+  color: var(--ion-muted);
+}
+/* Gear track: five nodes joined by a line, the next one with its real before → after values. */
+.ars-track {
+  display: grid;
+  padding: 0;
+  list-style: none;
+}
+.ars-node {
+  --node: var(--m-border);
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px 48px minmax(0, 1fr) auto;
+  column-gap: 8px;
+  align-items: baseline;
+  padding: 6px 6px 6px 0;
+}
+.ars-node::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--m-border);
+}
+.ars-node:first-child::before {
+  top: 14px;
+}
+.ars-node:last-child::before {
+  bottom: calc(100% - 14px);
+}
+.ars-node.is-forged::before {
+  background: color-mix(in srgb, var(--ion-accent) 55%, transparent);
+}
+.ars-node-pip {
+  position: relative;
+  z-index: 1;
+  align-self: start;
+  width: 10px;
+  height: 10px;
+  margin: 4px 0 0 3px;
+  border: 2px solid var(--node);
+  background: var(--m-bg);
+  transform: rotate(45deg);
+}
+.ars-node-mk {
+  white-space: nowrap;
+  font: 700 13px var(--mono);
+  color: var(--m-text-2);
+}
+.ars-node-text {
+  min-width: 0;
+  font-size: 13px;
+  color: var(--m-text-2);
+}
+.ars-node-text b {
+  color: var(--ion-second);
+  font-weight: 600;
+}
+.ars-node-state {
+  font: 500 11px var(--mono);
+  white-space: nowrap;
+  color: var(--ion-muted);
+  text-align: right;
+}
+.ars-node-state b {
+  font-weight: 700;
+}
+.ars-node.is-forged {
+  --node: var(--ion-accent);
+}
+.ars-node.is-forged .ars-node-pip {
+  background: var(--ion-accent);
+}
+.ars-node.is-forged :is(.ars-node-mk, .ars-node-state) {
+  color: var(--ion-accent);
+}
+.ars-node.is-forged .ars-node-text {
+  color: var(--m-text);
+}
+.ars-node:is(.is-ready, .is-rank, .is-salvage) {
+  background: linear-gradient(90deg, transparent 4px, color-mix(in srgb, var(--node) 10%, transparent) 4px, transparent);
+}
+.ars-node:is(.is-ready, .is-rank, .is-salvage) :is(.ars-node-mk, .ars-node-text) {
+  color: var(--m-text);
+}
+.ars-node.is-ready {
+  --node: var(--ion-accent);
+}
+.ars-node.is-ready .ars-node-pip {
+  box-shadow: 0 0 8px var(--ion-accent);
+}
+.ars-node.is-ready .ars-node-state {
+  color: var(--ion-accent);
+}
+.ars-node.is-rank {
+  --node: var(--ion-star);
+}
+.ars-node.is-rank .ars-node-state {
+  color: var(--ion-star);
+}
+.ars-node.is-salvage {
+  --node: var(--ion-warn);
+}
+.ars-node.is-salvage .ars-node-state {
+  color: var(--ion-warn);
+}
+.ars-node.is-sig .ars-node-mk {
+  color: var(--ion-second);
+}
+.ars-node.is-sig.is-forged {
+  --node: var(--ion-second);
+}
+.ars-node.is-sig.is-forged .ars-node-pip {
+  background: var(--ion-second);
+}
+.ars-node.is-sig.is-forged .ars-node-state {
+  color: var(--ion-second);
+}
+.ars-delta {
+  grid-column: 3 / -1;
+  display: grid;
+  gap: 2px;
+  margin-top: 5px;
+  padding: 0;
+  list-style: none;
+}
+.ars-delta li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--m-text-2);
+}
+.ars-delta b {
+  font: 600 12px var(--mono);
+  white-space: nowrap;
+  color: var(--m-text);
+}
+.ars-delta i {
+  font-style: normal;
+  color: var(--node);
+}
+/* Base values and branches */
+.ars-values {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 1px;
+  background: var(--m-border);
+  border: 1px solid var(--m-border);
+}
+.ars-values div {
+  display: grid;
+  gap: 2px;
+  padding: 5px 8px;
+  background: color-mix(in srgb, var(--m-surface) 92%, transparent);
+}
+.ars-values dt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 500 10px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ion-muted);
+}
+.ars-values dd {
+  font: 600 14px var(--mono);
+  color: var(--m-text);
+}
+.ars-paths {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+.ars-paths li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1px 10px;
+  padding: 5px 10px;
+  border-left: 3px solid var(--path);
+  background: color-mix(in srgb, var(--path) 7%, transparent);
+}
+.ars-paths b {
+  font: 600 15px "Rajdhani", sans-serif;
+  letter-spacing: 0.04em;
+  color: var(--path);
+}
+.ars-paths span {
+  align-self: center;
+  font: 500 10px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ion-muted);
+}
+.ars-paths small {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--m-text-2);
+}
+.ars-grows .ars-h + .ars-paths + .ars-h {
+  margin-top: 4px;
+}
+/* Action row: the reason beside the one purchase button. */
+.ars-d-foot {
+  display: grid;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--m-border);
+  background: color-mix(in srgb, var(--m-bg) 55%, transparent);
+}
+.ars-act {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ars-reason {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--m-text-2);
+}
+.ars-reason.is-done {
+  color: var(--ion-second);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.ars-act:has(.ars-buy[aria-disabled="true"]) .ars-reason {
+  color: var(--ion-warn);
+}
+.start-screen .ars-buy {
+  flex: none;
+  width: auto;
+  max-width: 62%;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 6px 18px;
+  font-size: 17px;
+}
+.ars-price {
+  padding: 1px 7px;
+  font: 700 13px var(--mono);
+  background: color-mix(in srgb, var(--ion-on-accent) 18%, transparent);
+}
+.start-screen .ars-buy[aria-disabled="true"] {
+  cursor: not-allowed;
+  color: var(--m-text-2);
+  background: color-mix(in srgb, var(--m-surface) 80%, var(--ion-text) 6%);
+  border-color: var(--m-border);
+  box-shadow: none;
+}
+.start-screen .ars-buy[aria-disabled="true"] .ars-price {
+  background: color-mix(in srgb, var(--ion-text) 8%, transparent);
+}
+.ars-underway {
+  padding: 5px 10px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ion-warn);
+  border-left: 3px solid var(--ion-warn);
+  background: color-mix(in srgb, var(--ion-warn) 9%, transparent);
+}
+
+/* A purchase flares the tile, the changed node and the balance once. */
+@keyframes ars-flare {
+  0% {
+    filter: brightness(1);
+  }
+  25% {
+    filter: brightness(1.9) saturate(1.3);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+.is-flare {
+  animation: ars-flare 700ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .is-flare {
+    animation: none;
+  }
+}
+
+/* Narrower screens (not the fitted landscape layout): the detail under the collection. */
+@media (max-width: 899px) and (min-height: 541px), (max-width: 899px) and (orientation: portrait) {
+  .ars {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "band"
+      "coll"
+      "detail";
+  }
+  .ars-band {
+    flex-wrap: wrap;
+  }
+  .ars-status {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .ars-status:empty {
+    display: none;
+  }
+  .ars-onward {
+    max-width: none;
+    margin-left: auto;
+  }
+  .ars-detail {
+    position: static;
+    max-height: none;
+  }
+  .ars-d-body {
+    overflow: visible;
+  }
+  /* The purchase stays in reach while the page scrolls. */
+  .ars-d-foot {
+    position: sticky;
+    bottom: 0;
+    background: var(--m-bg);
+  }
+}
+@media (max-width: 699px) and (min-height: 541px), (max-width: 699px) and (orientation: portrait) {
+  .ars {
+    gap: 12px;
+  }
+  .ars-band {
+    gap: 10px 14px;
+    padding: 10px 12px;
+  }
+  .ars-salvage-n {
+    font-size: 30px;
+  }
+  .ars-facts {
+    flex: 1 1 auto;
+  }
+  .ars-fact {
+    padding: 0 10px;
+  }
+  .ars-bounty {
+    flex: 1;
+  }
+  .ars-onward {
+    flex: 1 1 100%;
+  }
+  .start-screen .ars-go {
+    width: 100%;
+    justify-content: center;
+  }
+  .ars-collection {
+    padding: 10px;
+  }
+  .ars-tabs {
+    flex: 1 1 100%;
+  }
+  .start-screen .ars-tab {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+    padding: 4px 6px;
+    font-size: 13px;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .ars-filters {
+    flex: 1 1 100%;
+  }
+  .start-screen .ars-filter {
+    flex: 1;
+  }
+  /* The tiles: one row that swipes sideways and snaps. */
+  .ars-tiles {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 136px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 4px;
+  }
+  .ars-tiles > li {
+    scroll-snap-align: start;
+  }
+  .ars-d-head {
+    grid-template-columns: 56px minmax(0, 1fr);
+    padding: 12px;
+  }
+  .ars-d-icon {
+    width: 56px;
+    height: 56px;
+  }
+  .ars-d-icon :is(img, span) {
+    width: 46px;
+    height: 46px;
+  }
+  .ars .ars-d-title h2 {
+    font-size: 24px;
+  }
+  .ars-d-body {
+    padding: 0 12px 12px;
+  }
+  .ars-d-foot {
+    padding: 10px 12px;
+  }
+  .ars-node {
+    grid-template-columns: 16px 48px minmax(0, 1fr);
+  }
+  .ars-node-state {
+    grid-column: 3;
+    text-align: left;
+  }
+}
+
+/* Fitted landscape layout: band, collection and detail on one screen; the tiles and the detail body scroll inside. */
+@media (orientation: landscape) and (max-height: 540px) {
+  #arsenal-page {
+    height: var(--fit-h);
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  #arsenal-page > #arsenal-root {
+    min-height: 0;
+  }
+  .ars {
+    height: 100%;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 6px;
+    align-items: stretch;
+  }
+  .ars-panel,
+  .ars-band {
+    border-top-width: 2px;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+  }
+  .ars-band {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 2px 4px 2px 10px;
+  }
+  .ars-salvage {
+    grid-column: 1;
+  }
+  .ars-facts,
+  .ars-status {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .ars-onward {
+    grid-column: 3;
+  }
+  .ars-salvage {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: baseline;
+    gap: 5px;
+  }
+  .ars-salvage-n {
+    margin: 0;
+    font-size: 24px;
+  }
+  .ars-k,
+  .ars-fact dt {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+  .ars-fact {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 0 10px;
+  }
+  .ars-fact dd b {
+    font-size: 16px;
+  }
+  .ars-fact dd small {
+    font-size: 10px;
+  }
+  .ars-bounty {
+    min-width: 0;
+  }
+  .ars-bounty-name {
+    max-width: 120px;
+    font-size: 13px;
+  }
+  .ars-bounty dd b {
+    font-size: 9px;
+  }
+  /* The status covers the facts (never the balance or the way onward) while it speaks. */
+  .ars-status {
+    position: relative;
+    z-index: 2;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    margin: 4px 0;
+    padding: 0 10px;
+    font-size: 12px;
+    background: var(--m-surface);
+    border-left: 3px solid var(--ion-accent);
+    pointer-events: none;
+  }
+  .ars-status:empty {
+    display: none;
+  }
+  .ars-onward {
+    max-width: 44vw;
+  }
+  .start-screen .ars .ars-go {
+    min-height: 40px;
+    padding: 2px 12px;
+    gap: 6px;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+  }
+  .ars-fit {
+    display: inline;
+  }
+  .ars-long,
+  .ars-fact dt {
+    display: none;
+  }
+  .ars-facts {
+    flex: 0 1 auto;
+    overflow: hidden;
+  }
+  .ars-fact {
+    flex: none;
+  }
+  .ars-fact.ars-bounty {
+    flex: 0 1 auto;
+  }
+  .ars-bounty .ars-fit {
+    font: 600 9px var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ion-label);
+  }
+  .ars-collection {
+    min-height: 0;
+    gap: 6px;
+    padding: 6px;
+  }
+  .ars-bar {
+    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  .ars-tabs {
+    gap: 3px;
+  }
+  .start-screen .ars-tab {
+    flex: 1 1 0;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-width: 0;
+    min-height: 36px;
+    padding: 2px 4px;
+    gap: 1px;
+    font-size: 12px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+  .ars-tab-name {
+    max-width: 100%;
+  }
+  .ars-tab-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ars-tab-count {
+    font-size: 10px;
+  }
+  .ars-tab-count small {
+    font-size: 9px;
+  }
+  .ars-tab-meta {
+    gap: 4px;
+  }
+  .ars-tab-ready {
+    min-width: 13px;
+    padding: 0 3px;
+    font-size: 9px;
+  }
+  .ars-filters {
+    padding: 2px;
+  }
+  .start-screen .ars-filter {
+    flex: 1;
+    min-height: 26px;
+    padding: 0 6px;
+    font-size: 10px;
+  }
+  .ars-tiles {
+    flex: 1 1 auto;
+    min-height: 0;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    align-content: start;
+    gap: 4px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .start-screen .ars-tile {
+    grid-template-columns: 26px minmax(0, 1fr);
+    column-gap: 5px;
+    padding: 4px 5px 0;
+    clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%);
+  }
+  .ars-tile-icon,
+  .ars-tile-icon :is(img, span) {
+    width: 26px;
+    height: 26px;
+  }
+  .ars-tile-name {
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+  .ars-tile-standing {
+    gap: 3px;
+    min-height: 10px;
+  }
+  .ars-tile-standing .mk-pips {
+    gap: 2px;
+  }
+  .ars-tile-standing .mk-pips i {
+    width: 5px;
+    height: 5px;
+  }
+  .ars-tile-standing .rank-chevrons i {
+    width: 5px;
+    height: 5px;
+  }
+  .ars-tile-status {
+    margin: 3px -5px 0;
+    padding: 1px 5px 2px;
+    font-size: 9px;
+    letter-spacing: 0.02em;
+  }
+  .ars-tile-status b {
+    font-size: 11px;
+  }
+  .ars-detail {
+    position: static;
+    min-height: 0;
+    max-height: none;
+  }
+  .ars-d-head {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 8px;
+    padding: 6px 8px;
+    background: radial-gradient(circle at 28px 50%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70px);
+  }
+  .ars-d-icon {
+    width: 40px;
+    height: 40px;
+  }
+  .ars-d-icon :is(img, span) {
+    width: 34px;
+    height: 34px;
+  }
+  .ars-d-title {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 8px;
+    row-gap: 1px;
+  }
+  .ars-d-eyebrow {
+    grid-column: 1 / -1;
+    font-size: 9px;
+  }
+  .ars .ars-d-title h2 {
+    font-size: 19px;
+  }
+  .ars-d-standing {
+    gap: 5px;
+  }
+  .ars-d-tag {
+    font-size: 8px;
+    padding: 0 4px;
+  }
+  .ars-d-body {
+    gap: 8px;
+    padding: 0 8px 8px;
+  }
+  /* What the button buys comes first in the short body; the description and chips stay on top. */
+  .ars-d-desc,
+  .ars-chips {
+    order: -2;
+  }
+  .ars-gear {
+    order: -1;
+  }
+  .ars-d-desc {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .ars-chips {
+    margin-top: -4px;
+  }
+  .ars-chips li {
+    padding: 0 6px;
+    font-size: 10px;
+  }
+  .ars-sec {
+    gap: 5px;
+    padding-top: 7px;
+  }
+  .ars-h {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+  .ars-h small {
+    font-size: 10px;
+  }
+  .ars-next,
+  .ars-passive,
+  .ars-hint,
+  .ars-node-text {
+    font-size: 11px;
+  }
+  .ars-node {
+    grid-template-columns: 16px 42px minmax(0, 1fr);
+    padding: 3px 4px 3px 0;
+  }
+  .ars-node-mk {
+    font-size: 11px;
+  }
+  .ars-node-state {
+    grid-column: 3;
+    font-size: 10px;
+    text-align: left;
+  }
+  .ars-node-pip {
+    margin-top: 3px;
+  }
+  .ars-delta li,
+  .ars-delta b {
+    font-size: 11px;
+  }
+  .ars-values {
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  }
+  .ars-values div {
+    padding: 2px 6px;
+  }
+  .ars-values dt {
+    font-size: 8px;
+  }
+  .ars-values dd {
+    font-size: 12px;
+  }
+  .ars-paths li {
+    padding: 2px 8px;
+  }
+  .ars-paths b {
+    font-size: 13px;
+  }
+  .ars-paths small {
+    font-size: 10px;
+  }
+  .ars-d-foot {
+    gap: 4px;
+    padding: 5px 8px 6px;
+  }
+  .ars-act {
+    gap: 8px;
+  }
+  .ars-reason {
+    font-size: 11px;
+    line-height: 1.25;
+  }
+  .ars-underway {
+    padding: 2px 8px;
+    font-size: 10px;
+  }
+  .start-screen .ars-buy {
+    min-height: 40px;
+    padding: 2px 12px;
+    gap: 6px;
+    font-size: 14px;
+  }
+  .ars-price {
+    font-size: 11px;
+  }
+}

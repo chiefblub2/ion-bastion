@@ -76,7 +76,7 @@
   border-color: var(--ion-accent);
   box-shadow: 0 0 4px color-mix(in srgb, var(--ion-accent) 60%, transparent);
 }
-.mk-pips[aria-label$="Mk V"] i.on {
+.mk-pips.is-max i.on {
   background: var(--ion-second);
   border-color: var(--ion-second);
 }

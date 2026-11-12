@@ -14,7 +14,7 @@ export function rankChevrons(rank: number): string {
 export function markPips(mark: number, ready = false): string {
   const n = clampTo(mark, MAX_MARK);
   const pips = Array.from({ length: MAX_MARK }, (_, i) => `<i${i < n ? ' class="on"' : ready && i === n ? ' class="ready"' : ""}></i>`).join("");
-  return `<span class="mk-pips" role="img" aria-label="Gear ${n ? mkName(n) : "none"}">${pips}</span>`;
+  return `<span class="mk-pips${n === MAX_MARK ? " is-max" : ""}" role="img" aria-label="Gear ${n ? mkName(n) : "none"}">${pips}</span>`;
 }
 /** Compact standing: chevrons plus "Mk III"; empty when both are 0. */
 export function gearBadge(s: { rank: number; mark: number }): string {
