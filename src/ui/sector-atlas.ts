@@ -301,7 +301,7 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
         sectorAt = sector ? sectors.indexOf(sector) : -1,
         finale = !!options.locks && !best && !m.circle && sector && isFinale(m, sectors),
         slot = finale && (LOADOUT.finales as readonly number[]).includes(sectorAt) && slotsOf(record, sectors) < LOADOUT.max,
-        prize = finale ? `<small class="node-finale">Cache +${cachePay(sectorAt + 1)}${slot ? " · +1 slot" : ""}</small>` : "",
+        prize = finale ? `<small class="node-finale"><span>Cache +${cachePay(sectorAt + 1)}</span>${slot ? "<span>+1 slot</span>" : ""}</small>` : "",
         bounty = options.bounty === m.id ? '<b class="node-bounty" title="Today\'s bounty: double Salvage">×2</b>' : "";
       return `<button class="mission-node" data-pick="${m.id}" data-wx="${p.x}" data-wy="${p.y}"${deckAt} aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${flags} title="${escape(title)}"><span class="node-mark"><span class="node-number">${pad(n)}</span>${lock ? LOCK_ICON : ""}</span><span class="node-stem" aria-hidden="true"></span><span class="node-copy"><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (in progress)</span>' : ""}${m === next ? '<span class="sr-only"> (next)</span>' : ""}${lock ? '<span class="sr-only"> (locked)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${lock ? "Locked" : `${i === aside ? "Special op · " : ""}${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}`}</small>${prize}</span>${tags}${bounty}</button>`;
     })

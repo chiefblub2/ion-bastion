@@ -132,7 +132,7 @@ export function renderTowerCodex(content: ContentPack, page: number, collapsed =
         where = t.missions === total ? "every mission" : t.firstMission ? `${t.missions} of ${total} missions · from Mission ${pad(t.firstMission.number)}` : "no mission yet";
       const facts = [
         `<div><b>◇ ${d.cost}</b><span>Build cost</span></div>`,
-        `<div><b>${arsenalStatus(d.id as TowerId, arsenal)}</b><span>Campaign Arsenal</span></div>`,
+        `<div class="codex-wide"><b>${arsenalStatus(d.id as TowerId, arsenal)}</b><span>Campaign Arsenal</span></div>`,
         `<div><b>${d.placement === "path" ? "Path" : "Beside path"}</b><span>Placement</span></div>`,
         ...(isSupport(d.attack) ? (d.range ? [`<div><b>${number(d.range)}</b><span>Radius (cells)</span></div>`] : []) : [`<div><b>${targetText(d)}</b><span>Targets</span></div>`]),
       ].join("");

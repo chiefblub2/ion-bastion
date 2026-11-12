@@ -2271,10 +2271,16 @@ span.world-hop {
 }
 /* A finale's unpaid prize, and the bounty's tag on the other side of the badge. */
 .node-finale {
-  white-space: nowrap;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 0.7em;
   font: 500 10px var(--mono);
   letter-spacing: 0.04em;
   color: var(--m-star);
+}
+.node-finale span {
+  white-space: nowrap;
 }
 .node-bounty {
   position: absolute;
@@ -2961,6 +2967,10 @@ span.world-hop {
 }
 .tower-codex-card .codex-stats span {
   font-size: 12px;
+}
+/* The Arsenal fact ("Core · Rank 2 · Mk II") is the longest: two cells, so it stays on one line. */
+.tower-codex-card .codex-stats .codex-wide {
+  grid-column: span 2;
 }
 .start-screen .tower-codex-card p.tower-codex-params {
   font-size: 13px;

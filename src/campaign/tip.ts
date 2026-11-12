@@ -47,7 +47,8 @@ const leakText = (name: string, n: number) => `${name} leaked ${n}×.`;
 
 /**
  * The loss tip. `leaks` counts leaked enemies per type (`MissionTally`), `fielded` the towers the mission offered,
- * `creditsLeft` the credits at the end. Ties between enemy types go to the one listed first in the content.
+ * `creditsLeft` the credits at the end, `built` the towers standing at the end (none: the credits hint asks for towers,
+ * not upgrades). Ties between enemy types go to the one listed first in the content.
  */
 export function lossTip(
   leaks: Readonly<Partial<Record<EnemyId, number>>>,
@@ -56,11 +57,12 @@ export function lossTip(
   arsenal: Arsenal,
   content: ContentPack,
   creditsLeft: number,
+  built = 1,
 ): Tip {
   const order = Object.keys(content.enemies) as EnemyId[],
     enemy = order.filter((id) => (leaks[id] ?? 0) > 0).sort((a, b) => leaks[b]! - leaks[a]! || order.indexOf(a) - order.indexOf(b))[0];
   const credits = (): Tip | undefined =>
-    creditsLeft > 0 ? { kind: "credits", ...(enemy && { enemy }), text: `${enemy ? leakText(content.enemies[enemy].name, leaks[enemy]!) + " " : ""}◇${creditsLeft} unspent: upgrade earlier.` } : undefined;
+    creditsLeft > 0 ? { kind: "credits", ...(enemy && { enemy }), text: `${enemy ? leakText(content.enemies[enemy].name, leaks[enemy]!) + " " : ""}${built ? `◇${creditsLeft} unspent: upgrade earlier.` : `No towers were built, ◇${creditsLeft} unspent: build towers before calling the wave.`}` } : undefined;
   if (!enemy) return credits() ?? { kind: "general", text: "Cover the path with more towers and upgrade them before the late waves." };
   const def = content.enemies[enemy],
     head = leakText(def.name, leaks[enemy]!),

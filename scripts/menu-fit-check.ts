@@ -3,7 +3,12 @@
  * viewports and fails when a page scrolls or overflows (the Run map with a node's card included), Play does not open the mode list, the Codex switch does not
  * swap its pages, Start Mission leaves the screen, a locked mission loses its
  * explanation, Intel is empty, the atlas forgets the browsed mission after Back, the briefing scrolls or loses its
- * Start, Start does not open the game, or Back from the game returns to the spent briefing.
+ * Start, Start does not open the game, or Back from the game returns to the spent briefing. The campaign loop's pages
+ * run on stored states (`campaign-states.ts`): the briefing (fresh, mid with a full tab, late, a stealth mission, a
+ * special operation: no scrolling, Start on screen and 40 px tall, a toggled tile moves the Loadout counter), the
+ * debrief (the fullest win, a loss: no scrolling, every action on screen), the victory page and the Arsenal (fresh,
+ * mid, late: no scrolling, the action, the Salvage balance and the way onward on screen; selecting a tile, switching
+ * a tab and a purchase keep the selection and the focus, a refused purchase says why).
  * Tablet, desktop and portrait sizes are checked for horizontal overflow only (their pages scroll by design).
  *
  *   npm run dev   # in the background, on :4173
@@ -15,6 +20,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Page } from "playwright-core";
 import { launch } from "./browser";
+import { briefingDraft, briefings, completeProfile, debriefStorage, fullestWin, lossDebrief, profiles, type Profile, type Storage } from "./campaign-states";
 import { bossMapState, midMapState, runStates } from "./run-states";
 
 const arg = (name: string) => {
@@ -30,7 +36,12 @@ const base = arg("url") ?? "http://localhost:4173",
     [390, 844],
   ];
 mkdirSync(out, { recursive: true });
-const states = runStates();
+const states = runStates(),
+  loopProfiles = profiles(),
+  loopBriefings = briefings(),
+  win = fullestWin(),
+  loss = lossDebrief(),
+  complete = completeProfile();
 const browser = await launch(base);
 let failures = 0;
 const fail = (where: string, what: string) => {
@@ -62,6 +73,114 @@ async function step(page: Page, size: string, name: string, [w, h]: [number, num
 }
 /** DOM clicks for the map's anchors: a station or label button is a zero-size anchor with its plate beside it. */
 const tap = (page: Page, selector: string) => page.$eval(selector, (e) => (e as HTMLElement).click());
+
+/** Loads a menu page over stored campaign state: clears both storages, writes the fixtures and reloads on the hash. */
+async function load(page: Page, hash: string, local: Storage["local"], session: Storage["session"] = {}) {
+  await page.goto(`${base}/`);
+  await page.evaluate(
+    ([l, s]) => {
+      localStorage.clear();
+      sessionStorage.clear();
+      for (const [k, v] of Object.entries(l)) localStorage.setItem(k, v);
+      for (const [k, v] of Object.entries(s)) sessionStorage.setItem(k, v);
+    },
+    [local, session] as const,
+  );
+  await page.goto(`${base}/#${hash}`);
+  await page.reload();
+  await page.waitForTimeout(500);
+}
+/** Fails for each selector's visible boxes that leave the screen or are shorter than `min` px; and when none exists. */
+async function onScreen(page: Page, where: string, [w, h]: [number, number], selector: string, what: string, min = 0) {
+  const boxes = await page.$$eval(selector, (list) => list.filter((e) => !e.closest("[hidden]")).map((e) => e.getBoundingClientRect().toJSON()));
+  if (!boxes.length) fail(where, `no ${what}`);
+  for (const b of boxes) if (b.width <= 0 || b.top < -0.5 || b.bottom > h + 0.5 || b.left < -0.5 || b.right > w + 0.5 || b.height < min) fail(where, `${what} is off screen or small (${Math.round(b.top)}–${Math.round(b.bottom)}, ${Math.round(b.height)} px)`);
+}
+const focusedIn = (page: Page, root: string) => page.evaluate((sel) => !!document.activeElement && document.activeElement !== document.body && !!document.querySelector(sel)?.contains(document.activeElement), root);
+const text = async (page: Page, selector: string) => ((await page.textContent(selector)) ?? "").replace(/\s+/g, " ").trim();
+
+/** The campaign loop's pages on stored states: briefing, debrief, victory and Arsenal. */
+async function loopPages(page: Page, size: string, dims: [number, number]) {
+  for (const b of loopBriefings) {
+    const where = `${size} briefing-${b.name}`;
+    await load(page, "briefing", b.profile.local, briefingDraft(b));
+    await step(page, size, `briefing-${b.name}`, dims);
+    if (!(await page.isVisible("#briefing-page"))) {
+      fail(where, "the briefing did not open");
+      continue;
+    }
+    await onScreen(page, where, dims, "#briefing-page .bf-start", "Start", 40);
+    if (!/^Loadout \d+\/\d+/.test(await text(page, "#bf-loadout-title"))) fail(where, `no Loadout n/slots counter (${await text(page, "#bf-loadout-title")})`);
+    if (await page.$("#briefing-page [data-bf-tower]")) {
+      const n = async () => Number((await text(page, "#bf-loadout-title b")) || NaN),
+        before = await n();
+      await page.click("#briefing-page .bf-tile.is-on[data-bf-tower]");
+      await page.waitForTimeout(150);
+      if ((await n()) !== before - 1) fail(where, `dropping a tile moved the counter ${before} → ${await n()}`);
+      await page.click("#briefing-page .bf-tile:not(.is-on)[data-bf-tower]");
+      await page.waitForTimeout(150);
+      if ((await n()) !== before) fail(where, `picking a tile moved the counter to ${await n()}, not back to ${before}`);
+    }
+  }
+  for (const [name, d] of [["win", win] as const, ["loss", loss] as const]) {
+    const where = `${size} debrief-${name}`;
+    await load(page, "debrief", d.profile.local, debriefStorage(d.debrief));
+    await step(page, size, `debrief-${name}`, dims);
+    if (!(await page.isVisible("#debrief-page"))) fail(where, "the debrief did not open");
+    else await onScreen(page, where, dims, "#debrief-page .db-actions button", "action", 40);
+  }
+  await load(page, "victory", complete.local);
+  await step(page, size, "victory", dims);
+  if (!(await page.isVisible("#victory-page"))) fail(`${size} victory`, "the victory page did not open");
+  else await onScreen(page, `${size} victory`, dims, "#victory-page .vc-actions button", "action", 40);
+  for (const name of ["fresh", "mid", "late"] as const) {
+    const where = `${size} arsenal-${name}`,
+      p: Profile = loopProfiles[name];
+    await load(page, "arsenal", p.local);
+    await step(page, size, `arsenal-${name}`, dims);
+    if (!(await page.isVisible("#arsenal-page"))) {
+      fail(where, "the Arsenal did not open");
+      continue;
+    }
+    await onScreen(page, where, dims, "#arsenal-page .ars-buy", "action button");
+    await onScreen(page, where, dims, "#arsenal-page .ars-salvage-n", "Salvage balance");
+    await onScreen(page, where, dims, "#arsenal-page .ars-go", "way onward");
+    if (!(await text(page, "#arsenal-page .ars-salvage-n"))) fail(where, "the Salvage balance is empty");
+    if (name !== "mid") continue;
+    // Selecting a tile and switching a tab keep the selection and the focus on what was used.
+    const tile = await page.$eval("#arsenal-page [data-ars-tile][aria-pressed=false]", (e) => e.getAttribute("data-ars-tile")!);
+    await page.click(`#arsenal-page [data-ars-tile="${tile}"]`);
+    await page.waitForTimeout(150);
+    if (!(await page.evaluate((id) => document.activeElement?.getAttribute("data-ars-tile") === id && document.activeElement.getAttribute("aria-pressed") === "true", tile))) fail(where, "the selected tile lost the selection or the focus");
+    const tab = await page.$eval("#arsenal-page [data-ars-tab][aria-selected=false]", (e) => e.getAttribute("data-ars-tab")!);
+    await page.click(`#arsenal-page [data-ars-tab="${tab}"]`);
+    await page.waitForTimeout(150);
+    if (!(await page.evaluate((id) => document.activeElement?.getAttribute("data-ars-tab") === id && document.activeElement.getAttribute("aria-selected") === "true", tab))) fail(where, "the tab lost the selection or the focus");
+    // A purchase keeps the selected tower and the focus. Playwright refuses an aria-disabled button without `force`.
+    await load(page, "arsenal", p.local);
+    const picked = await page.$eval("#arsenal-page [data-ars-tile][aria-pressed=true]", (e) => e.getAttribute("data-ars-tile")!),
+      salvage = await text(page, "#arsenal-page .ars-salvage-n");
+    if ((await page.getAttribute("#arsenal-page .ars-buy", "aria-disabled")) === "true") fail(where, "the opening tower has no purchase ready");
+    await page.click("#arsenal-page .ars-buy");
+    await page.waitForTimeout(200);
+    if ((await text(page, "#arsenal-page .ars-salvage-n")) === salvage) fail(where, "the purchase did not spend Salvage");
+    if ((await page.getAttribute(`#arsenal-page [data-ars-tile="${picked}"]`, "aria-pressed")) !== "true") fail(where, "the purchase lost the selected tower");
+    if (!(await focusedIn(page, "#arsenal-page"))) fail(where, "the purchase lost the focus");
+    await page.screenshot({ path: `${out}/${size}-arsenal-mid-bought.png` });
+    // A tower held back by its rank: the disabled action says why, spends nothing and the status line repeats it.
+    await load(page, "arsenal", p.local);
+    await page.click('#arsenal-page [data-ars-tile="blast"]');
+    await page.waitForTimeout(150);
+    const before = await text(page, "#arsenal-page .ars-salvage-n");
+    if ((await page.getAttribute("#arsenal-page .ars-buy", "aria-disabled")) !== "true") fail(where, "a tower held back by rank offers a live purchase");
+    else {
+      await page.click("#arsenal-page .ars-buy", { force: true });
+      await page.waitForTimeout(150);
+      if ((await text(page, "#arsenal-page .ars-salvage-n")) !== before) fail(where, "a refused purchase spent Salvage");
+      if (!(await text(page, "#arsenal-page .ars-status"))) fail(where, "a refused purchase says nothing");
+    }
+  }
+}
 
 for (const [w, h] of phones) {
   const size = `${w}x${h}`,
@@ -215,6 +334,7 @@ for (const [w, h] of phones) {
   await page.goBack();
   await page.waitForTimeout(400);
   if (await page.isVisible("#briefing-page")) fail(size, "Back from the game returned to a spent briefing");
+  await loopPages(page, size, [w, h]);
   await page.close();
 }
 for (const [w, h] of others) {

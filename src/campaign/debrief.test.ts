@@ -53,6 +53,14 @@ describe("loss tip", () => {
   it("falls back to unspent credits without leaks", () => {
     expect(lossTip({}, mission, ["blast"], EMPTY_ARSENAL, DEFAULT_CONTENT, 120)).toMatchObject({ kind: "credits" });
   });
+  it("asks for towers, not upgrades, when none were built", () => {
+    const standing = lossTip({ drone: 15 }, mission, ["blast"], EMPTY_ARSENAL, DEFAULT_CONTENT, 275),
+      empty = lossTip({ drone: 15 }, mission, ["blast"], EMPTY_ARSENAL, DEFAULT_CONTENT, 275, 0);
+    expect(standing.text).toContain("upgrade earlier");
+    expect(empty).toMatchObject({ kind: "credits" });
+    expect(empty.text).toContain("build towers");
+    expect(empty.text).not.toContain("upgrade");
+  });
 });
 
 describe("after the debrief", () => {

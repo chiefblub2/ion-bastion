@@ -96,7 +96,7 @@ export function end(game: Game, won: boolean, tally: Pick<MissionTally, "leaks">
     secured: won ? securedOf(mission, sectors, recordBefore, record, unlocked) : undefined,
     ready: arsenalSummary(after).ready,
     leaks: tally.leaks,
-    tip: won ? undefined : lossTip(tally.leaks, mission, game.availableTowers(), after, content, balance(state)),
+    tip: won ? undefined : lossTip(tally.leaks, mission, game.availableTowers(), after, content, balance(state), state.towers.length),
     record,
     locks,
   });

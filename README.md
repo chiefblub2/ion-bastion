@@ -51,7 +51,7 @@ Every sector has its own terrain. In the Circuit (bottom right) there is no reac
 | Input | Action |
 | --- | --- |
 | Pick a tower, click a free tile | Build. Build mode ends afterwards; Shift+click builds more towers of the same type. |
-| Click a built tower | A card beside it offers the upgrade (or the path choice), the target priority and selling; the sidebar shows the full details |
+| Click a built tower | A card beside it offers the upgrade (or the path choice), the target priority and selling; the sidebar only reads out the details and the upgrade ladder |
 | Click an enemy | Show hit points, shield, traits and active effects |
 | `T` | Cycle the target priority of the selected tower |
 | `U` | Buy the next upgrade of the selected tower (next level, or the next tier once a path is chosen; a path choice stays with the buttons) |
@@ -114,9 +114,11 @@ In all modes the host decides mission, restart and speed. Dialogs and tab switch
 
 ## Missions
 
-The start screen leads to Campaign and Circuit (the Sector Atlas: a world map with every sector as an island; pick a sector to fly into it, then a mission, then "Start Mission"), Run, Multiplayer, Training with the rules beside it, Enemy Codex and Tower Codex. Every win earns 1–3 stars (90 % reactor energy left for three, 50 % for two; on a ring, never more than half, or 80 %, of the limit alive at once); the atlas shows the best per mission.
+The start screen leads to Campaign and Circuit (the Sector Atlas: a world map with every sector as an island; pick a sector to fly into it, then a mission, then its briefing), Run, Multiplayer, Training with the rules beside it, Enemy Codex and Tower Codex. Every win earns 1–3 stars (90 % reactor energy left for three, 50 % for two; on a ring, never more than half, or 80 %, of the limit alive at once); the atlas shows the best per mission.
 
 The campaign unlocks as you play: it starts with the first mission, each win opens the next two missions of the sector (so one hard mission can be skipped), and a sector opens once all but one mission of the sector before it are won. Locked missions can still be looked at, and won missions always stay open. Circuit, Run and Multiplayer have no locks.
+
+Every campaign mission is a loop: a **briefing** (the map, its enemies, what they need and what a win pays), the mission, a **debrief**, and on to the next briefing. In the briefing you pick a **loadout**: the towers you own, up to your slots (6 at the start, one more for the first win of the finale of sectors I, III, VI and IX; Auto-fill picks for the mission's threats). Special operations, the missions that restrict their towers, lend their own kit. The debrief pays **Salvage**: for each wave cleared, the win, the first win, every newly earned star (the briefing shows each star's threshold), a sector finale's first win and a rank-up bonus; the daily bounty mission pays double for waves and win. Towers earn XP in play and rank up, which lowers their build price a little. In the **Arsenal** (from the atlas, the briefing or the debrief) you spend Salvage to research towers and to forge gear Mk I–V, each mark needing the tower's rank. Winning the last mission ends the campaign on a victory page. Circuit, Training, Run, multiplayer and `?mission=` links skip all of this and offer every tower.
 
 ### Circuit
 
