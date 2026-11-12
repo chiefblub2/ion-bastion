@@ -23,8 +23,15 @@ export function mapTowers(pack: ContentPack, which: TowerFilter, fn: (t: Readonl
 }
 /** Damage stays whole, so tooltips keep their numbers short. */
 const STEP: Record<keyof TowerStats, number> = { damage: 1, range: 0.01, interval: 0.001 };
-export function scaleStat(stat: keyof TowerStats, factor: number, which: TowerFilter): PackFn {
-  const scale = (v: number) => Math.max(STEP[stat], Math.round((v * factor) / STEP[stat]) * STEP[stat]);
+/**
+ * Scales a stat on the definition and every upgrade that sets it, rounded to the stat's `STEP`, or to `decimals`
+ * places when given (campaign gear keeps one decimal of damage, so small marks never round away).
+ */
+export function scaleStat(stat: keyof TowerStats, factor: number, which: TowerFilter, decimals?: number): PackFn {
+  const unit = decimals === undefined ? 0 : 10 ** decimals,
+    scale = decimals === undefined
+      ? (v: number) => Math.max(STEP[stat], Math.round((v * factor) / STEP[stat]) * STEP[stat])
+      : (v: number) => Math.max(1 / unit, Math.round(v * factor * unit) / unit);
   return (pack) =>
     mapTowers(pack, (t) => which(t) && t[stat] > 0 && !(stat === "range" && t.placement === "path"), (t) => ({
       ...t,

@@ -73,6 +73,7 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
     return lockCache.locks;
   }
   ui.locks = locks;
+  ui.record = () => (coop.active() ? undefined : campaignRecord());
   // The world map keeps its sector in view when the page resizes.
   new ResizeObserver(() => fitWorld()).observe(document.getElementById("world-view")!);
   // A drag turns the atlas's globe.
@@ -323,7 +324,7 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
           screens.show(page("run"));
           break;
         }
-        const next = nextMission(game, locks());
+        const next = nextMission(game, locks(), ui.record());
         if (next) selectMission(next.id);
         break;
       }

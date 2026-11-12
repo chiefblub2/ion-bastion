@@ -24,21 +24,59 @@ export const CATALOGUE: Readonly<Partial<Record<TowerId, Tier>>> = {
   overclock: 3, recycler: 3, nexus: 3, shieldgen: 3,
 };
 
-/** Salvage pay: per wave cleared `perWave + sector` (sector 1-based), a win bonus, a one-time first-win bonus. */
-export const SALVAGE = { perWave: 1, win: 10, firstWin: 20, firstWinPerSector: 5, lossShare: 0.5, bounty: 2 } as const;
+/**
+ * Salvage pay (`campaign/pay.ts`; sector 1-based): per wave cleared `perWave + sector`, a win bonus, a one-time
+ * first-win bonus, `star × (1 + sector)` per newly earned star, a sector finale's first win `cache + cachePerSector ×
+ * sector`; a loss pays `lossShare` of its cleared waves only; the daily bounty multiplies waves and win by `bounty`.
+ */
+export const SALVAGE = { perWave: 1, win: 10, firstWin: 20, firstWinPerSector: 5, lossShare: 0.5, bounty: 2, star: 4, cache: 40, cachePerSector: 15 } as const;
 
 /** Tower XP needed for veterancy ranks 1–5. */
-export const VETERANCY_XP: readonly number[] = [200, 600, 1500, 3500, 7000];
+export const VETERANCY_XP: readonly number[] = [150, 450, 1000, 2200, 4500];
+/** Salvage paid on reaching veterancy rank 1–5. */
+export const RANK_BONUS: readonly number[] = [15, 25, 40, 60, 90];
+/** In play, per veterancy rank: the tower's build price falls by `build` (and by at least one credit per rank). */
+export const RANK_PASSIVE = { build: 0.03 } as const;
 /** XP per tower built. */
 export const XP_BUILT = 10;
+/** XP per tower type built at least once in a mission, on top of kills, `XP_BUILT` and assists. */
+export const XP_FIELDED = 30;
+
+/**
+ * Loadout slots: `base` at the start, +1 for the first win of the finale of each listed sector (index into the
+ * sectors), at most `max`.
+ */
+export const LOADOUT = { base: 6, finales: [0, 2, 5, 8], max: 10 } as const;
 
 /** Salvage price of gear marks Mk I–V; Mk n needs veterancy rank n. */
 export const GEAR_PRICE: readonly number[] = [80, 160, 280, 450, 700];
 export const MAX_MARK = GEAR_PRICE.length;
 
 /**
- * Mk V signature mods (plan tables). `hit`: an effect on the tower's hits; `stat`: a stat factor; `param`: an attack
- * parameter factor. Towers without an entry get the stand-in (+4% damage, Support +5% range).
+ * Gear marks Mk I–IV by tower class (`campaign/gear.ts` `gearClassOf`): `armed` Attack and Control, `trap`, `support`
+ * Support towers with an area, `field` Support towers without one (Refinery, Repair Dock, Vault, Shield Generator).
+ * Factors are totals against the base value, so a later mark of the same kind replaces an earlier one:
+ * - `stat`: damage (kept to one decimal) or range on the definition and every upgrade that sets it;
+ * - `early`: the price of the plain levels 2 and 3 (Aura: the first two tiers of each track);
+ * - `paths`: the price of every specialization tier;
+ * - `build`: the build price.
+ */
+export type MarkEffect =
+  | { stat: "damage" | "range"; total: number }
+  | { early: number }
+  | { paths: number }
+  | { build: number };
+export type GearClass = "armed" | "trap" | "support" | "field";
+export const GEAR_MARKS: Readonly<Record<GearClass, readonly MarkEffect[]>> = {
+  armed: [{ stat: "damage", total: 1.04 }, { stat: "range", total: 1.05 }, { early: 0.8 }, { stat: "damage", total: 1.08 }],
+  trap: [{ stat: "damage", total: 1.04 }, { early: 0.8 }, { stat: "damage", total: 1.08 }, { build: 0.9 }],
+  support: [{ stat: "range", total: 1.05 }, { early: 0.8 }, { stat: "range", total: 1.1 }, { build: 0.9 }],
+  field: [{ build: 0.95 }, { early: 0.8 }, { paths: 0.85 }, { build: 0.9 }],
+};
+
+/**
+ * Mk V signature mods (plan tables), one per tower. `hit`: an effect on the tower's hits; `stat`: a stat factor;
+ * `param`: an attack parameter factor; `bounty`: credits per kill.
  */
 export type Signature =
   | { name: string; hit: MasteryEffect }

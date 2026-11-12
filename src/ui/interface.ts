@@ -25,6 +25,7 @@ import type { HomeAction } from "../campaign/home-action";
 import { BRAND_MARK } from "./brand";
 import { isTouch } from "./touch";
 import type { CampaignRecord } from "../campaign/record";
+import { nextMission as nextOf } from "../campaign/next-mission";
 import { MODE_IDS, MODES } from "../core/modes";
 import { renderPlayers, renderSends, versusOutcome, type MultiplayerSession } from "./players";
 export type { MultiplayerSession } from "./players";
@@ -231,8 +232,13 @@ export function renderTowerCodexPage(game: Game, page = 0) {
   panel.innerHTML = list;
   panel.setAttribute("aria-labelledby", `tower-codex-tab-${page}`);
 }
-/** The mission after the current one, unless the campaign still locks it. */
-export function nextMission(game: Game, locks?: ReadonlyMap<string, Lock>) {
+/**
+ * The win overlay's next mission. With the campaign record (solo play) the one rule of `campaign/next-mission.ts`:
+ * the next unwon, unlocked mission of the same mode, none outside the pack's missions (Training, playtests). Without
+ * it (multiplayer) simply the mission after the current one, unless the campaign still locks it.
+ */
+export function nextMission(game: Game, locks?: ReadonlyMap<string, Lock>, record?: CampaignRecord) {
+  if (record) return game.content.missions.some((m) => m.id === game.mission.id) ? nextOf(game.content.missions, record, { after: game.mission, locks }) : undefined;
   const next = nextMissionOf(game.content.missions, game.mission.id);
   return next && !locks?.has(next.id) ? next : undefined;
 }
@@ -258,6 +264,8 @@ export class Interface {
   earned: { state: GameState; text: string; ready: number } | null = null;
   /** The campaign's locked missions, set by the app; undefined locks nothing (multiplayer). */
   locks: () => ReadonlyMap<string, Lock> | undefined = () => undefined;
+  /** The campaign record for solo play, set by the app; undefined in multiplayer. */
+  record: () => CampaignRecord | undefined = () => undefined;
   /** Runs after every refresh; the Training coach follows the HUD with it. */
   onRefresh: () => void = () => {};
   constructor(
@@ -516,7 +524,7 @@ export class Interface {
             : isTouch() ? "Build and upgrade freely." : "Build and upgrade freely. Space or ▶ resumes.",
       );
       // A Run goes on from its own page: the reward after a win, the summary after a loss.
-      const next = s.status === "won" ? (run ? this.game.mission : nextMission(this.game, this.locks())) : undefined;
+      const next = s.status === "won" ? (run ? this.game.mission : nextMission(this.game, this.locks(), this.record())) : undefined;
       document.getElementById("overlay-next")!.hidden = !next;
       const nextLabel = `${this.game.mission.manualWaves ? "Begin campaign" : run ? "Continue run" : "Next mission"} <span>→</span>`,
         nextButton = document.getElementById("overlay-next")!;

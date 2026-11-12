@@ -4,6 +4,7 @@ import { isCircleSector, missionNumber } from "../../content/missions";
 import { themeAccent } from "../../render/terrain";
 import type { CampaignRecord } from "../../campaign/record";
 import { type Lock, sectorLocked, type Unlocked } from "../../campaign/campaign-unlock";
+import { nextMission } from "../../campaign/next-mission";
 
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI"];
 export const roman = (index: number) => ROMAN[index] ?? String(index + 1);
@@ -69,9 +70,9 @@ export function atlasSectors(content: ContentPack, circle: boolean, record: Camp
   });
 }
 export const NO_LOCKS: ReadonlyMap<string, Lock> = new Map();
-/** The next mission to play: the first one neither won nor locked, undefined once every open one is won. */
+/** The next mission to play among `missions`: the first one neither won nor locked (`nextMission`), undefined once every open one is won. */
 export function atlasNext(missions: readonly MissionDefinition[], record: CampaignRecord, locks: ReadonlyMap<string, Lock> = NO_LOCKS) {
-  return missions.find((m) => !record[m.id] && !locks.has(m.id));
+  return nextMission(missions, record, { locks });
 }
 /** Why a locked mission or sector cannot be started yet, in the player's words. */
 export function lockText(lock: Lock, missions: readonly MissionDefinition[], sectors: readonly MissionSector[]) {

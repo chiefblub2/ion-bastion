@@ -1,5 +1,6 @@
-import { CATALOGUE, CORE_KIT, GEAR_PRICE, MAX_MARK, SALVAGE, TIER_PRICE, VETERANCY_XP } from "../content/arsenal";
-import type { TowerId } from "../core/types";
+import { CATALOGUE, CORE_KIT, GEAR_PRICE, MAX_MARK, TIER_PRICE, VETERANCY_XP, XP_BUILT, XP_FIELDED } from "../content/arsenal";
+import type { ContentPack, GameState, MissionDefinition, TowerId } from "../core/types";
+import { assistsOf } from "../run/xp";
 // Pure Campaign Arsenal logic: Salvage, research, veterancy and gear. Storage and UI live elsewhere.
 
 export interface Arsenal {
@@ -9,27 +10,12 @@ export interface Arsenal {
   readonly xp: Readonly<Partial<Record<TowerId, number>>>;
   /** Gear mark (0–5) per type. */
   readonly gear: Readonly<Partial<Record<TowerId, number>>>;
+  /** The last loadout picked for a campaign mission (`campaign/loadout.ts`). */
+  readonly loadout?: readonly TowerId[];
+  /** Today's bounty: the UTC day, the mission id and whether it has paid. */
+  readonly bounty?: { readonly day: string; readonly id: string; readonly paid: boolean };
 }
 export const EMPTY_ARSENAL: Arsenal = { salvage: 0, researched: [], xp: {}, gear: {} };
-
-export interface PlayResult {
-  readonly won: boolean;
-  /** Waves cleared (all of them on a win). */
-  readonly waves: number;
-  /** 1-based campaign sector of the mission. */
-  readonly sector: number;
-  /** The mission had not been won before. */
-  readonly firstWin: boolean;
-  /** The mission is today's bounty. */
-  readonly bounty: boolean;
-}
-
-/** Salvage paid for one play: waves (half on a loss), win bonuses, the daily bounty doubling all of it. */
-export function salvageOf(r: PlayResult): number {
-  const waves = r.waves * (SALVAGE.perWave + r.sector);
-  const pay = r.won ? waves + SALVAGE.win + (r.firstWin ? SALVAGE.firstWin + SALVAGE.firstWinPerSector * r.sector : 0) : Math.floor(waves * SALVAGE.lossShare);
-  return r.bounty ? pay * SALVAGE.bounty : pay;
-}
 
 export const owns = (a: Arsenal, id: TowerId) => CORE_KIT.includes(id) || a.researched.includes(id);
 /** Research price of a tower, or undefined when it is not in the catalogue (core towers). */
@@ -43,7 +29,19 @@ export const research = (a: Arsenal, id: TowerId): Arsenal =>
   canResearch(a, id) ? { ...a, salvage: a.salvage - researchPrice(id)!, researched: [...a.researched, id] } : a;
 
 export const veterancy = (xp = 0) => VETERANCY_XP.filter((t) => xp >= t).length;
+/**
+ * Progress towards the next rank: `into` XP since the current rank's threshold and the `span` to the next one
+ * (undefined at the top rank). An XP bar fills `into / span`; "n XP to Rank k" is `span - into` to `rank + 1`.
+ */
+export function rankProgress(xp = 0): { rank: number; into: number; span: number | undefined } {
+  const rank = veterancy(xp),
+    from = rank ? VETERANCY_XP[rank - 1] : 0,
+    to = VETERANCY_XP[rank] as number | undefined;
+  return { rank, into: xp - from, span: to === undefined ? undefined : to - from };
+}
 export const markOf = (a: Arsenal, id: TowerId) => a.gear[id] ?? 0;
+/** A tower's veterancy rank and forged mark. */
+export const standingOf = (a: Arsenal, id: TowerId) => ({ rank: veterancy(a.xp[id]), mark: markOf(a, id) });
 /** The next mark needs ownership, the matching veterancy rank and its price. */
 export function canForge(a: Arsenal, id: TowerId) {
   const mark = markOf(a, id);
@@ -57,6 +55,20 @@ export function settle(a: Arsenal, salvage: number, xp: Readonly<Partial<Record<
   const next = { ...a.xp };
   for (const [id, v] of Object.entries(xp) as [TowerId, number][]) next[id] = (next[id] ?? 0) + v;
   return { ...a, salvage: a.salvage + salvage, xp: next };
+}
+
+/**
+ * Tower XP of one play, per type: kills, `XP_BUILT` per tower built, Run-style assists (`run/xp.ts`) and `XP_FIELDED`
+ * once per type built at all. Read from the finished state only.
+ */
+export function xpOf(state: Pick<GameState, "towers">, mission: Pick<MissionDefinition, "map">, content: ContentPack): Partial<Record<TowerId, number>> {
+  const xp: Partial<Record<TowerId, number>> = { ...assistsOf(state, mission, content) },
+    fielded = new Set<TowerId>();
+  for (const t of state.towers) {
+    xp[t.type] = (xp[t.type] ?? 0) + t.kills + XP_BUILT + (fielded.has(t.type) ? 0 : XP_FIELDED);
+    fielded.add(t.type);
+  }
+  return xp;
 }
 
 /**

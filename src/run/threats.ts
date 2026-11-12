@@ -114,3 +114,19 @@ export const hazardPay = (threats: readonly Threat[]) =>
 export function offspring(e: Readonly<EnemyDefinition>): EnemyId[] {
   return (e.traits ?? []).flatMap((t) => ("type" in t && typeof t.type === "string" ? [t.type as EnemyId] : []));
 }
+/**
+ * Every need of a mission (any share): its wave enemy types plus what they split or brood into, in `Need` order.
+ * Unlike `threatsOf`, small air shares count too, so the campaign briefing's need chips can rest on it.
+ */
+export function missionNeeds(mission: Pick<MissionDefinition, "waves">, content: ContentPack): Need[] {
+  const types = new Set<EnemyId>(),
+    queue: EnemyId[] = mission.waves.flatMap((w) => w.groups.map((g) => g.type));
+  while (queue.length) {
+    const id = queue.pop()!;
+    if (types.has(id) || !content.enemies[id]) continue;
+    types.add(id);
+    queue.push(...offspring(content.enemies[id]));
+  }
+  const needs = new Set([...types].flatMap((id) => needsOf(content.enemies[id])));
+  return (["air", "detect", "under"] as const).filter((n) => needs.has(n));
+}

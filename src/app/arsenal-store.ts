@@ -2,9 +2,9 @@ import { campaignLocks } from "../campaign/campaign-unlock";
 import { fnv, stable } from "../core/hash";
 import { dailyDate } from "../run/daily";
 import { campaignRecord } from "./progress";
-import { affordable, type Arsenal, campaignTowers, EMPTY_ARSENAL, salvageOf, settle, veterancy } from "../campaign/arsenal";
-import { CATALOGUE, CORE_KIT, XP_BUILT } from "../content/arsenal";
-import { assistsOf } from "../run/xp";
+import { affordable, type Arsenal, campaignTowers, EMPTY_ARSENAL, settle, veterancy, xpOf } from "../campaign/arsenal";
+import { salvageOf } from "../campaign/pay";
+import { CATALOGUE, CORE_KIT } from "../content/arsenal";
 import { DEFAULT_CONTENT } from "../content/index";
 import { missionById, MISSIONS } from "../content/missions";
 import { availableTowers, type Game } from "../core/game";
@@ -49,12 +49,8 @@ export function arsenalTowers(id: string, a = loadArsenal()): TowerId[] | undefi
   return campaignTowers(availableTowers(m, DEFAULT_CONTENT), a, hasStealth(m));
 }
 
-/** Tower XP of one play: kills, `XP_BUILT` per tower built and Run-style assists, per type. */
-export function playXp(game: Game): Partial<Record<TowerId, number>> {
-  const xp: Partial<Record<TowerId, number>> = { ...assistsOf(game.state, game.mission, game.content) };
-  for (const t of game.state.towers) xp[t.type] = (xp[t.type] ?? 0) + t.kills + XP_BUILT;
-  return xp;
-}
+/** Tower XP of one play (`xpOf`): kills, `XP_BUILT`, assists and `XP_FIELDED`, per type. */
+export const playXp = (game: Game): Partial<Record<TowerId, number>> => xpOf(game.state, game.mission, game.content);
 /** Pays a finished campaign mission into the stored arsenal; returns the overlay line. */
 export function settleCampaign(game: Game, won: boolean, firstWin: boolean): string {
   const sectors = game.content.sectors ?? [],
