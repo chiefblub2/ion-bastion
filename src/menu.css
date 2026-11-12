@@ -2350,6 +2350,14 @@ span.world-hop {
 .brief-loadout b {
   color: var(--m-text);
 }
+/* What a win pays now; the bounty doubles it. */
+.brief-pay b {
+  color: var(--m-accent);
+}
+.brief-bounty {
+  font-style: normal;
+  color: var(--m-star);
+}
 .start-screen .brief-arsenal {
   min-height: 40px;
   padding: 4px 12px;
@@ -3425,11 +3433,18 @@ span.world-hop {
   }
   .brief-loadout {
     justify-content: space-between;
+    gap: 6px;
     font-size: 11px;
+    white-space: nowrap;
+  }
+  /* One row: the pay's label gives way to its amount. */
+  .brief-pay-label {
+    display: none;
   }
   .start-screen .brief-arsenal {
     min-height: 40px;
     padding: 2px 10px;
+    white-space: nowrap;
   }
   .start-screen .mode-tab {
     min-height: 42px;

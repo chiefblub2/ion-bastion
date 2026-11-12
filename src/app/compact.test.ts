@@ -12,6 +12,6 @@ describe("notch side", () => {
 });
 describe("fitted menu layout", () => {
   it("uses the same query in the stylesheets as in the app", () => {
-    for (const sheet of ["../menu.css", "../ui/run.css"]) expect(readFileSync(new URL(sheet, import.meta.url), "utf8")).toContain(`@media ${FIT_QUERY} {`);
+    for (const sheet of ["../menu.css", "../ui/run.css", "../ui/briefing.css"]) expect(readFileSync(new URL(sheet, import.meta.url), "utf8")).toContain(`@media ${FIT_QUERY} {`);
   });
 });

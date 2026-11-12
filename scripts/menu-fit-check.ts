@@ -2,7 +2,8 @@
  * The fitted landscape menus (menu.css, `FIT_QUERY` in app/compact.ts): plays the menu flow on phone-sized landscape
  * viewports and fails when a page scrolls or overflows (the Run map with a node's card included), Play does not open the mode list, the Codex switch does not
  * swap its pages, Start Mission leaves the screen, a locked mission loses its
- * explanation, Intel is empty, the atlas forgets the browsed mission after Back, or Start does not open the game.
+ * explanation, Intel is empty, the atlas forgets the browsed mission after Back, the briefing scrolls or loses its
+ * Start, Start does not open the game, or Back from the game returns to the spent briefing.
  * Tablet, desktop and portrait sizes are checked for horizontal overflow only (their pages scroll by design).
  *
  *   npm run dev   # in the background, on :4173
@@ -199,9 +200,21 @@ for (const [w, h] of phones) {
   await step(page, size, "rotated", [w, h], { start: true });
   await page.click("#mission-modes [data-sector]");
   await page.waitForTimeout(800);
+  // A solo campaign mission opens its briefing; it fits one screen with Start on it, and Start opens the game.
   await page.click(".atlas-start:not(:disabled)");
-  await page.waitForTimeout(600);
-  if ((await page.evaluate(() => document.documentElement.dataset.view)) !== "game") fail(size, "Start Mission did not open the game");
+  await step(page, size, "briefing", [w, h]);
+  if (!(await page.isVisible("#briefing-page"))) fail(size, "Briefing did not open the briefing");
+  else {
+    const go = await page.$eval("#briefing-page .bf-start", (e) => e.getBoundingClientRect().toJSON());
+    if (go.top < 0 || go.bottom > h + 0.5 || go.right > w + 0.5 || go.height < 40) fail(size, "the briefing's Start is off screen or small");
+    await page.click("#briefing-page .bf-start");
+    await page.waitForTimeout(600);
+  }
+  if ((await page.evaluate(() => document.documentElement.dataset.view)) !== "game") fail(size, "the briefing's Start did not open the game");
+  // Start replaces the briefing in the history: Back leaves the game for the atlas.
+  await page.goBack();
+  await page.waitForTimeout(400);
+  if (await page.isVisible("#briefing-page")) fail(size, "Back from the game returned to a spent briefing");
   await page.close();
 }
 for (const [w, h] of others) {

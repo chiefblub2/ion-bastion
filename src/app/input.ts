@@ -103,7 +103,7 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
   const coop = createCoop({ game, view, ui, pickMission: () => nav.pickForRoom(), applied, setDriver });
   const nav = createMenuNav({ game, ui, coop, coach, execute, fitBattlefield });
   const screens = nav.screens;
-  const play = createGameInput({ game, view, ui, audio, dialogs, execute, multiplayer: coop.active, setSpeed: coop.setSpeed, toggleFullscreen, isFullscreen });
+  const play = createGameInput({ game, view, ui, audio, dialogs, execute, multiplayer: coop.active, setSpeed: coop.setSpeed, toggleFullscreen, isFullscreen, restart: () => nav.restart() });
   document.addEventListener("click", (event) => {
     const target = event.target as HTMLElement;
     // The brand links home; a plain click stays in the app instead of reloading it.

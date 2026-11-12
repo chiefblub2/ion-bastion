@@ -21,9 +21,8 @@ import { renderAtlas, selectMission as featureMission, selectSector, selectWorld
 import type { Coop } from "./coop";
 import { bindMenuKeys, showCodexTab, showTowerCodex } from "./menu-keys";
 import { campaignRecord, lastMission, rememberUnlocks, seenUnlocks, trainingDone } from "./progress";
-import { gearPack } from "../campaign/gear";
-import { arsenalSummary, arsenalTowers, loadArsenal } from "./arsenal-store";
-import { begin } from "./campaign-session";
+import { arsenalSummary } from "./arsenal-store";
+import { createCampaignFlow } from "./campaign-flow";
 import { beginJournal, storedJournal } from "./run-journal";
 import { createScreens, GAME, HOME, type MenuPage, type Screen } from "./screens";
 
@@ -82,8 +81,25 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
   const screens = createScreens(playableMissions(game.content), () => game.mission.id, enter);
   /** A mission this session has played on, which "Resume Game" returns to instead of reloading it. */
   const inProgress = () => coop.active() || game.state.wave > 0 || game.state.towers.length > 0;
+  /** The briefing and the paying start of solo campaign missions. */
+  const flow = createCampaignFlow({
+    game,
+    execute,
+    screens,
+    solo: () => !forRoom && !coop.active() && !coop.inLobby(),
+    unlockAll,
+    locked: (id) => !!locks()?.has(id),
+    underWay: () => inProgress() && game.state.status !== "won" && game.state.status !== "lost",
+    started: () => {
+      browsed = undefined;
+    },
+    image: terrainImage,
+  });
   /** Shows a screen: pauses or resumes the wave between game and menu and fills the menu page. */
   function enter(to: Screen, from: Screen | null) {
+    // A briefing without a briefed mission (a stale entry, another tab's link): the atlas instead. First, because the
+    // nested `show` enters the atlas itself.
+    if (to.view === "menu" && to.page === "briefing" && !flow.mission()) return screens.show(page("missions"), { replace: true });
     if (to.view === "game") {
       // Shown on the game view only; refresh() re-places it once the board is laid out.
       requestAnimationFrame(() => coach.refresh());
@@ -132,9 +148,12 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
     if (to.page === "editor") void import("../editor/editor-view").then((m) => m.openEditor(editorHost));
     if (to.page === "run") void import("../ui/run-view").then((m) => m.openRun(runHost));
     if (to.page === "arsenal") {
-      const next = arsenalNext();
-      void import("../ui/arsenal-view").then((m) => m.renderArsenal(document.getElementById("arsenal-root")!, game.baseContent, next));
+      // Opened from the briefing, the Arsenal leads back to it instead of offering a mission of its own.
+      const briefing = from?.view === "menu" && from.page === "briefing" ? flow.mission() : undefined,
+        next = briefing ? undefined : arsenalNext();
+      void import("../ui/arsenal-view").then((m) => m.renderArsenal(document.getElementById("arsenal-root")!, game.baseContent, next, briefing));
     }
+    if (to.page === "briefing") flow.render();
     // Any page change ends a codex animation preview; opening the codex renders it closed.
     closeCodexPreview();
     if (to.page === "codex") renderCodex(game);
@@ -142,6 +161,8 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
     missionSector = missionPick = undefined;
     scrollTo(0, 0);
     section?.focus({ preventScroll: true });
+    // The briefing's first stop is Start.
+    if (to.page === "briefing") flow.focusStart();
   }
   /**
    * The campaign mission the Arsenal page offers to start: the next open unwon one, unless a mission is under way (Back
@@ -176,10 +197,9 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
       screens.show(page("missions"));
       return;
     }
-    const towers = unlockAll ? undefined : arsenalTowers(id);
-    // A paying campaign start: remembered for Replay and as the last loadout (the briefing will pass real picks).
-    if (towers) begin(id, towers);
-    execute({ type: "mission", id, towers, content: towers ? gearPack(game.baseContent, loadArsenal()) : undefined });
+    // A solo campaign mission with the Arsenal in force is briefed first; its Start loads it (`campaign-flow.ts`).
+    if (flow.brief(id)) return;
+    execute({ type: "mission", id });
     browsed = undefined;
     if (!coop.active()) screens.show(GAME);
   }
@@ -344,6 +364,10 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
     pickForRoom() {
       forRoom = true;
       screens.show(page("missions"));
+    },
+    /** HUD Restart: a paying campaign game starts again with its loadout and the current gear, any other restarts. */
+    restart() {
+      if (!flow.restart()) execute({ type: "restart" });
     },
     /** A newly loaded mission starts fresh: no wave waits to resume from a menu pause. */
     missionLoaded() {

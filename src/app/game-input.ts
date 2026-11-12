@@ -27,12 +27,14 @@ interface GameInputDeps {
   setSpeed: (speed: Speed) => void;
   toggleFullscreen: () => Promise<void>;
   isFullscreen: () => boolean;
+  /** Restarts the mission (a campaign game through its loadout, see `campaign-flow.ts`). */
+  restart: () => void;
 }
 /**
  * The game view's input: build mode, selection, the tower card's buttons, the toolbar and its ⚙ menu, and the game's
  * hotkeys. `click` and `key` take what the shared document listeners in `input.ts` hand on.
  */
-export function createGameInput({ game, view, ui, audio, dialogs, execute, multiplayer, setSpeed, toggleFullscreen, isFullscreen }: GameInputDeps) {
+export function createGameInput({ game, view, ui, audio, dialogs, execute, multiplayer, setSpeed, toggleFullscreen, isFullscreen, restart }: GameInputDeps) {
   function choose(type: TowerId) {
     view.build = type;
     view.pending = undefined;
@@ -239,10 +241,10 @@ export function createGameInput({ game, view, ui, audio, dialogs, execute, multi
         break;
       case "confirm-restart":
         dialogs.dismiss("restart");
-        execute({ type: "restart" });
+        restart();
         break;
       case "overlay-restart":
-        execute({ type: "restart" });
+        restart();
         break;
       default:
         return false;

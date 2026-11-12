@@ -27,8 +27,11 @@ describe("screen URLs", () => {
   it("sends a reload during a playtest to the editor", () => {
     expect(screenFromUrl("?mission=playtest%3Amy-draft", "", MISSIONS)).toEqual({ view: "menu", page: "editor" });
   });
+  it("reads the briefing page from its hash", () => {
+    expect(screenFromUrl("", "#briefing", MISSIONS)).toEqual({ view: "menu", page: "briefing" });
+  });
   it("round-trips every screen", () => {
-    for (const screen of [HOME, GAME, ...(["missions", "coop", "codex", "towers", "help", "editor"] as const).map((page) => ({ view: "menu" as const, page }))]) {
+    for (const screen of [HOME, GAME, ...(["missions", "coop", "codex", "towers", "help", "editor", "run", "arsenal", "briefing"] as const).map((page) => ({ view: "menu" as const, page }))]) {
       const url = new URL(urlOf(screen, id, "/game/"), "http://localhost");
       expect(url.pathname).toBe("/game/");
       expect(screenFromUrl(url.search, url.hash, MISSIONS)).toEqual(screen);
