@@ -139,14 +139,15 @@ export function createCampaignFlow({ game, execute, screens, solo, unlockAll, lo
   }
   return {
     /** Opens the briefing for a briefable mission; false (nothing done) for any other. */
-    brief(id: string): boolean {
+    brief(id: string, { replace = false } = {}): boolean {
       if (!missionOf(id)) return false;
       message = undefined;
       save({ id });
       const now = screens.current();
       if (now.view === "menu" && now.page === "briefing") render();
-      // From a finished game ("Next mission") the briefing takes the spent game's place in the history.
-      else screens.show(BRIEFING, { replace: now.view === "game" });
+      // From a finished game ("Next mission") the briefing takes the spent game's place in the history, and from the
+      // debrief (`replace`) the debrief's, so Start → Back never lands on either.
+      else screens.show(BRIEFING, { replace: replace || now.view === "game" });
       return true;
     },
     /** The briefed mission, or undefined when there is none to show (the page then redirects to the atlas). */

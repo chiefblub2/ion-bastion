@@ -114,6 +114,8 @@ export interface AtlasOptions {
   locks?: ReadonlyMap<string, Lock>;
   /** Unlocked mission ids shown before; others play their reveal. Absent: nothing is fresh. */
   seen?: ReadonlySet<string>;
+  /** Today's unpaid bounty mission (pays double Salvage): its node gets a "×2" tag. */
+  bounty?: string;
 }
 /** The next mission of one mode (Campaign, or Circuit with `circle`). */
 export const modeNext = (sectors: readonly MissionSector[], circle: boolean, record: CampaignRecord = {}, locks?: ReadonlyMap<string, Lock>) =>

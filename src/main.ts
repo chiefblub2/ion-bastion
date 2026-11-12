@@ -24,7 +24,7 @@ import { isRunMission } from "./run/run-id";
 import { settleRun } from "./run/session";
 import { endJournal, journalFrame } from "./app/run-journal";
 import { runResult } from "./app/run-result";
-import { missionStars, PeakTracker, type Stars } from "./campaign/rating";
+import { missionStars, PeakTracker } from "./campaign/rating";
 import { Coach } from "./ui/coach-view";
 import { TowerCard } from "./ui/tower-card-view";
 import { BuildConfirm } from "./ui/build-confirm";
@@ -83,22 +83,11 @@ const battlefield = new Battlefield(game, view, {
       settleRun(game.mission.id, runResult(game, end.result === "won"), game.baseContent);
     }
     // Campaign Arsenal: a menu-started campaign mission (it carries the arsenal's towers) pays won or lost; the
-    // session settles it whole (record, unlocks, XP, Salvage) into the debrief, which fills the overlay.
+    // session settles it whole (record, unlocks, XP, Salvage) into the debrief page; the overlay only leads there.
     if (end && game.arsenal && !input.match() && game.mission === findMission(game.mission.id, game.content)) {
-      const d = session.end(game, end.result === "won", tally, peak.peak),
-        sectors = game.content.sectors ?? [],
-        rankUps = d.ranks.filter((r) => r.rankAfter > r.rankBefore).map((r) => `${r.name} ${r.rankAfter}`);
-      ui.earned = { state: game.state, text: `+${d.pay.total} Salvage${rankUps.length ? ` · Rank up: ${rankUps.join(", ")}` : ""}`, ready: d.ready };
-      if (d.won)
-        ui.result = {
-          state: game.state,
-          stars: d.stars as Stars,
-          best: d.stars > d.best,
-          unlocked: {
-            sectors: d.unlocked.sectors.map((s) => sectors[s.number - 1]),
-            missions: d.unlocked.missions.map((m) => findMission(m.id, game.content)!).filter(Boolean),
-          },
-        };
+      const d = session.end(game, end.result === "won", tally, peak.peak);
+      ui.debrief = { state: game.state, stars: d.stars, best: d.stars > d.best };
+      input.debriefSoon(d);
       return;
     }
     if (end?.result !== "won") return;

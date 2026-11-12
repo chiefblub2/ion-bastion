@@ -37,9 +37,10 @@ export function arsenalStatus(id: TowerId, a = loadArsenal()) {
 
 /**
  * `next`: the campaign mission to go on with from here (started through the app's `data-mission` click); `briefing`:
- * the mission whose briefing opened the page, which a Back button returns to instead.
+ * the mission whose briefing opened the page, which a Back button returns to instead; `debrief`: the name of the
+ * mission whose debrief opened it, likewise.
  */
-export function renderArsenal(root: HTMLElement, content: ContentPack, next?: MissionDefinition, briefing?: MissionDefinition) {
+export function renderArsenal(root: HTMLElement, content: ContentPack, next?: MissionDefinition, briefing?: MissionDefinition, debrief?: string) {
   const a = loadArsenal(),
     ids = [...CORE_KIT, ...(Object.keys(CATALOGUE) as TowerId[])].filter((id) => id in content.towers),
     byPrice = (x: TowerId, y: TowerId) => (researchPrice(x) ?? 0) - (researchPrice(y) ?? 0);
@@ -48,6 +49,7 @@ export function renderArsenal(root: HTMLElement, content: ContentPack, next?: Mi
     (briefing
       ? `<p class="arsenal-next"><button class="primary" data-back><span aria-hidden="true">◀</span> Back to briefing: ${escape(briefing.name)}</button></p>`
       : "") +
+    (debrief ? `<p class="arsenal-next"><button class="primary" data-back><span aria-hidden="true">◀</span> Back to debrief: ${escape(debrief)}</button></p>` : "") +
     (next ? `<p class="arsenal-next"><button class="primary" data-mission="${next.id}">Next mission: ${escape(next.name)} <span aria-hidden="true">▶</span></button></p>` : "") +
     `<div class="arsenal-branches">${BRANCHES.map(
       (b, page) =>
@@ -62,6 +64,6 @@ export function renderArsenal(root: HTMLElement, content: ContentPack, next?: Mi
     if (!b) return;
     const now = loadArsenal(),
       after = b.dataset.research ? research(now, b.dataset.research as TowerId) : b.dataset.forge ? forge(now, b.dataset.forge as TowerId) : now;
-    if (after !== now) saveArsenal(after), renderArsenal(root, content, next, briefing);
+    if (after !== now) saveArsenal(after), renderArsenal(root, content, next, briefing, debrief);
   };
 }

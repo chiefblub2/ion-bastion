@@ -70,6 +70,8 @@ export function mountUI(game: Game) {
   <section class="menu-page menu-editor" data-page="editor" tabindex="-1" aria-label="Mission editor" hidden><div id="editor-root"></div></section>
   <section id="run-page" class="menu-page menu-run" data-page="run" tabindex="-1" aria-labelledby="run-title" hidden>${pageHead("ROGUELITE RUN", "Ten missions. Three acts. One reactor.", "run-title")}<div id="run-root"></div></section>
   <section id="arsenal-page" class="menu-page menu-arsenal" data-page="arsenal" tabindex="-1" aria-labelledby="arsenal-title" hidden>${pageHead("CAMPAIGN ARSENAL", "Research towers. Forge their gear.", "arsenal-title")}<div id="arsenal-root"></div></section>
+  <section id="debrief-page" class="menu-page menu-debrief" data-page="debrief" tabindex="-1" aria-labelledby="debrief-title" hidden>${pageHead("DEBRIEF", "Mission debrief", "debrief-title")}<div id="debrief-root" class="debrief-root"></div></section>
+  <section id="victory-page" class="menu-page menu-victory" data-page="victory" tabindex="-1" aria-labelledby="victory-title" hidden>${pageHead("CAMPAIGN COMPLETE", "The bastion stands.", "victory-title")}<div id="victory-root" class="victory-root"></div></section>
   <section id="briefing-page" class="menu-page menu-briefing" data-page="briefing" tabindex="-1" aria-labelledby="briefing-title" hidden>${pageHead("BRIEFING", "Mission briefing", "briefing-title")}<div id="briefing-root" class="briefing-root"></div></section>
   <section id="coop-page" class="menu-page" tabindex="-1" data-page="coop" aria-labelledby="coop-title" hidden>${pageHead("MULTIPLAYER · 2–4 PLAYERS", "Together or against each other.", "coop-title")}<div id="coop-hosting" class="notice notice-warn" role="note" hidden><strong>No multiplayer server on this site.</strong> This copy is a static page (GitHub Pages) and cannot run the relay that connects players. Host one yourself: run <code>npm run server</code> from the source code on a machine everyone can reach, behind TLS (<code>wss://</code>) because this page uses https. Then every player opens this page with <code>?server=wss://&lt;relay-host&gt;</code>. Solo play works without it.</div><p id="coop-error" class="notice notice-error" role="alert" hidden></p><p id="coop-status" class="notice" role="status"></p><div id="coop-choose" class="coop-choose"><button id="coop-create" class="choice-card"><span class="choice-index">01</span><strong>Create Room</strong><span>Host a game, share the four-letter code and pick mode and mission.</span></button><button id="coop-show-join" class="choice-card"><span class="choice-index">02</span><strong>Join Room</strong><span>Enter the code your host gave you.</span></button></div><div id="coop-join-panel" class="coop-panel" hidden><h2>Join a room</h2><form id="coop-join-form" class="coop-join"><label for="coop-code">Room code</label><div class="coop-join-row"><input id="coop-code" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD" aria-describedby="coop-code-help"><button id="coop-join" class="primary" type="submit">Join <span aria-hidden="true">▶</span></button></div><p id="coop-code-help" class="field-help">Four letters, for example ABCD. Capitals and spaces do not matter.</p></form><button id="coop-join-back" class="quiet">← Other options</button></div><div id="coop-room" class="coop-room" hidden><div class="lobby-grid"><section class="coop-panel lobby-code" aria-labelledby="lobby-code-label"><span id="lobby-code-label" class="stat-label">ROOM CODE</span><div class="code-row"><input id="coop-room-code" class="room-code" readonly aria-labelledby="lobby-code-label" value="…" size="4"><button id="coop-copy" class="quiet">Copy code</button></div><p id="coop-copy-status" class="field-help" role="status"></p></section><section class="coop-panel" aria-labelledby="lobby-players-label"><span id="lobby-players-label" class="stat-label">PLAYERS</span><p class="lobby-count"><strong id="coop-count">1/4</strong> <span id="coop-role"></span></p><ul id="coop-seats" class="seats"></ul></section></div><div id="coop-host" class="coop-panel host-panel"><span class="host-tag">HOST CONTROLS</span><fieldset id="coop-modes" class="coop-modes"><legend>Mode</legend>${MODE_IDS.map((id) => `<label><input type="radio" name="coop-mode" value="${id}"${id === "coop" ? " checked" : ""}><span>${MODES[id].name}</span></label>`).join("")}</fieldset><p id="coop-rules" class="coop-rules">${MODES.coop.rules}</p><div class="coop-mission"><div><span class="stat-label">MISSION</span><strong id="coop-mission"></strong></div><button id="coop-pick" class="quiet">Change Mission</button></div></div><p id="coop-wait" class="coop-wait" hidden></p><div class="coop-actions"><button id="coop-leave" class="quiet">Leave Room</button><button id="coop-launch" class="primary" hidden>Start Mission <span aria-hidden="true">▶</span></button></div></div></section>
   <section id="codex-page" class="menu-page" tabindex="-1" data-page="codex" aria-labelledby="codex-title" hidden>${pageHead("ENEMY CODEX", "Know your enemy.", "codex-title", codexSwitch("codex"))}<p>All enemy types in the order the campaign introduces them. HP and speed apply to wave 1; later waves have more HP.</p><div id="codex-tabs" class="codex-tabs" role="tablist" aria-label="Enemy Codex"></div><div id="codex-list" class="codex-list" role="tabpanel"></div><button class="to-top" data-to-top aria-label="Back to top">↑ Top</button></section>
@@ -80,7 +82,7 @@ export function mountUI(game: Game) {
   <main><div class="mission-heading"><div><p class="eyebrow">MISSION <b id="mission-number">01</b> <span>/</span> <b id="mission-sector">DEFENSE</b></p></div><div class="mission-meta"><span class="sector-label" id="sector-label"></span><span class="difficulty" id="difficulty"></span></div></div>
   <div class="workspace"><section class="field-panel" aria-label="Battlefield"><div class="field-toolbar"><div class="resources"><div><span class="stat-label">CREDITS</span><strong class="credits"><span class="resource-icon">◇</span><span id="gold"></span></strong></div><div><span class="stat-label" id="lives-label">REACTOR</span><strong><span class="resource-icon heart">♡</span><span id="lives"></span><small id="lives-max"></small></strong></div><div><span class="stat-label">WAVE</span><strong><span id="wave">00</span><small id="wave-total"></small></strong></div></div><div id="wave-forecast" class="next-wave-slot"></div><div class="playback"><button id="toolbar-start" class="toolbar-start" title="Start next wave (N)"><b class="wave-word">Wave</b> 01 <span>▶</span></button><button id="pause-btn" title="Pause (Space)" aria-label="Pause game" aria-pressed="false">Ⅱ</button><button id="speed-btn" aria-label="Change game speed">1×</button><button id="coverage-btn" title="Show ranges and path coverage (C)" aria-label="Show ranges and path coverage (C)" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2.5"/></svg></button><button id="fullscreen-btn" title="Fullscreen (F)" aria-label="Fullscreen (F)" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 5.5v-4h4M10.5 1.5h4v4M14.5 10.5v4h-4M5.5 14.5h-4v-4"/></svg></button><button id="rail-settings" class="chrome-only" title="Pause and menu" aria-label="Pause and menu" aria-haspopup="true" aria-expanded="false" aria-controls="game-menu">⚙</button></div></div>
   <div id="players-panel" class="players-panel" aria-label="Teammates" hidden></div>
-  <div id="board-wrap"><div id="board" tabindex="0" role="application" aria-label="Tower defense battlefield. Arrow keys select a cell; Enter builds or selects a tower. C shows tower ranges. Keys ${towerKeyRange(Object.keys(TOWERS).length)} pick a tower type."></div><div id="game-overlay" hidden><div id="overlay-icon">Ⅱ</div><p class="eyebrow" id="overlay-kicker">TACTICAL PAUSE</p><h2 id="overlay-title">Time for a plan.</h2><p id="overlay-stars" hidden></p><p id="overlay-unlock" class="overlay-unlock" hidden></p><p id="overlay-copy">The pause button resumes.</p><div class="overlay-actions"><button id="overlay-resume" class="primary" hidden>Resume <span>▶</span></button><button id="overlay-next" class="primary" hidden>Next mission <span>→</span></button><button id="overlay-restart" class="primary" hidden>Restart</button><button id="overlay-missions" class="quiet" hidden>Missions</button><button id="overlay-arsenal" class="quiet" hidden>Arsenal</button></div></div><div id="tower-card" class="tower-card-pop" role="group" aria-label="Selected tower" hidden></div><button id="board-fit" class="board-fit" title="Show the whole battlefield" aria-label="Show the whole battlefield" hidden>⤢</button></div>
+  <div id="board-wrap"><div id="board" tabindex="0" role="application" aria-label="Tower defense battlefield. Arrow keys select a cell; Enter builds or selects a tower. C shows tower ranges. Keys ${towerKeyRange(Object.keys(TOWERS).length)} pick a tower type."></div><div id="game-overlay" hidden><div id="overlay-icon">Ⅱ</div><p class="eyebrow" id="overlay-kicker">TACTICAL PAUSE</p><h2 id="overlay-title">Time for a plan.</h2><p id="overlay-stars" hidden></p><p id="overlay-unlock" class="overlay-unlock" hidden></p><p id="overlay-copy">The pause button resumes.</p><div class="overlay-actions"><button id="overlay-resume" class="primary" hidden>Resume <span>▶</span></button><button id="overlay-next" class="primary" hidden>Next mission <span>→</span></button><button id="overlay-restart" class="primary" hidden>Restart</button><button id="overlay-missions" class="quiet" hidden>Missions</button><button id="overlay-debrief" class="primary" hidden>Debrief <span>→</span></button></div></div><div id="tower-card" class="tower-card-pop" role="group" aria-label="Selected tower" hidden></div><button id="board-fit" class="board-fit" title="Show the whole battlefield" aria-label="Show the whole battlefield" hidden>⤢</button></div>
   <div class="field-footer"><span><i class="legend-path"></i>Enemy path</span><span><i class="legend-build"></i>Free build area</span><span id="cell-label">Pick a tower, then a cell</span></div>
   <div class="wave-timeline"><div class="timeline-label"><span>MISSION PROGRESS</span><b id="progress-label"></b></div><div id="wave-segments"></div></div>
   </section>
@@ -172,7 +174,7 @@ const PREVIEW_LABEL: Record<HomeAction["kind"], string> = {
  * line under it) and, beside it, the map of the mission that button is about (a second way to run it). With nothing
  * to continue there is no preview: Play is the primary button and leads to the modes.
  */
-export function renderMenu(game: Game, action: HomeAction, record: CampaignRecord, image?: MapImage, freshPlayer = false) {
+export function renderMenu(game: Game, action: HomeAction, record: CampaignRecord, image?: MapImage, freshPlayer = false, bounty = false) {
   const missions = game.content.missions,
     m = action.mission,
     sectors = game.content.sectors ?? [],
@@ -195,7 +197,7 @@ export function renderMenu(game: Game, action: HomeAction, record: CampaignRecor
   const place = number ? `MISSION ${pad(number)}` : "TRAINING",
     where = sector ? `SECTOR ${roman(sectors.indexOf(sector))} · ${sector.name.toUpperCase()}` : "OPERATION MAP";
   map.dataset.action = action.kind;
-  map.innerHTML = `<div class="home-map-head"><span>${where}</span><span>${place}</span></div><div class="home-map-view">${mapPreviewSvg(m.map)}<img class="home-map-img" alt=""><i class="scan" aria-hidden="true"></i><span class="home-map-play" aria-hidden="true">▶</span></div><div class="home-map-foot"><small class="home-map-kind">${PREVIEW_LABEL[action.kind]}</small><div class="home-map-title"><strong>${m.name}</strong>${best ? `<span class="home-map-stars" aria-label="Best: ${best} of 3 stars">${starText(best)}</span>` : ""}</div><p>${m.focus}</p><div class="home-map-stats">${stat("WAVES", String(m.waves.length))}${stat("CREDITS", String(m.startingCredits), "◇")}${m.circle ? stat("RING LIMIT", String(m.circle.limit)) : stat("REACTOR", String(m.reactorEnergy), "♡")}</div></div>`;
+  map.innerHTML = `<div class="home-map-head"><span>${where}</span><span>${place}</span></div><div class="home-map-view">${mapPreviewSvg(m.map)}<img class="home-map-img" alt=""><i class="scan" aria-hidden="true"></i><span class="home-map-play" aria-hidden="true">▶</span></div><div class="home-map-foot"><small class="home-map-kind">${PREVIEW_LABEL[action.kind]}${bounty ? ' <em class="home-map-bounty">×2 Bounty</em>' : ""}</small><div class="home-map-title"><strong>${m.name}</strong>${best ? `<span class="home-map-stars" aria-label="Best: ${best} of 3 stars">${starText(best)}</span>` : ""}</div><p>${m.focus}</p><div class="home-map-stats">${stat("WAVES", String(m.waves.length))}${stat("CREDITS", String(m.startingCredits), "◇")}${m.circle ? stat("RING LIMIT", String(m.circle.limit)) : stat("REACTOR", String(m.reactorEnergy), "♡")}</div></div>`;
   // The real terrain fades in over the SVG once it is rendered; not where the layout drops the preview (menu.css).
   const img = map.querySelector<HTMLImageElement>(".home-map-img");
   if (img && image && getComputedStyle(map).display !== "none") fillImage(img, m.map, image);
@@ -235,10 +237,12 @@ export function renderTowerCodexPage(game: Game, page = 0) {
 }
 /**
  * The win overlay's next mission. With the campaign record (solo play) the one rule of `campaign/next-mission.ts`:
- * the next unwon, unlocked mission of the same mode, none outside the pack's missions (Training, playtests). Without
+ * the next unwon, unlocked mission of the same mode, none for playtests (Training offers the first open campaign mission). Without
  * it (multiplayer) simply the mission after the current one, unless the campaign still locks it.
  */
 export function nextMission(game: Game, locks?: ReadonlyMap<string, Lock>, record?: CampaignRecord) {
+  // Training is no campaign mission: its win leads to the first open campaign mission ("Begin campaign").
+  if (record && game.mission.id === game.content.training?.id) return nextOf(game.content.missions, record, { circle: false, locks });
   if (record) return game.content.missions.some((m) => m.id === game.mission.id) ? nextOf(game.content.missions, record, { after: game.mission, locks }) : undefined;
   const next = nextMissionOf(game.content.missions, game.mission.id);
   return next && !locks?.has(next.id) ? next : undefined;
@@ -261,8 +265,11 @@ export class Interface {
   session: () => MultiplayerSession | null = () => null;
   /** The rating of the last recorded win, set by the app for the state it was won in. */
   result: { state: GameState; stars: Stars; best: boolean; unlocked?: Unlocked } | null = null;
-  /** The campaign Arsenal's payout line for the finished state (won or lost). */
-  earned: { state: GameState; text: string; ready: number } | null = null;
+  /**
+   * A paying campaign game that ended in `state`: its overlay shows only the outcome, the stars and the way to the
+   * debrief page (`stars` is 0 on a loss).
+   */
+  debrief: { state: GameState; stars: number; best: boolean } | null = null;
   /** The campaign's locked missions, set by the app; undefined locks nothing (multiplayer). */
   locks: () => ReadonlyMap<string, Lock> | undefined = () => undefined;
   /** The campaign record for solo play, set by the app; undefined in multiplayer. */
@@ -474,18 +481,21 @@ export class Interface {
         text("overlay-kicker", outcome.kicker);
         text("overlay-title", outcome.title);
         text("overlay-copy", outcome.copy);
+        document.getElementById("overlay-copy")!.hidden = false;
         const next = host ? nextMission(this.game) : undefined;
         document.getElementById("overlay-next")!.hidden = !next;
         document.getElementById("overlay-restart")!.hidden = !host;
         text("overlay-restart", "Rematch");
         document.getElementById("overlay-missions")!.hidden = !host;
-        document.getElementById("overlay-arsenal")!.hidden = true;
+        document.getElementById("overlay-debrief")!.hidden = true;
       }
     } else overlay.hidden = !s.paused && !terminal;
     // Paused, the overlay resumes too: the compact layout has no pause button of its own (it pauses from ⚙).
     document.getElementById("overlay-resume")!.hidden = !!match || terminal || !s.paused;
     overlay.classList.toggle("paused", !overlay.hidden && !terminal && !match);
-    const rated = !match && s.status === "won" && this.result?.state === s ? this.result : null,
+    // A paying campaign game's overlay is the outcome, its stars and one button to the debrief page.
+    const paid = !match && terminal && this.debrief?.state === s ? this.debrief : null,
+      rated = paid && s.status === "won" ? paid : !match && s.status === "won" && this.result?.state === s ? this.result : null,
       stars = document.getElementById("overlay-stars")!;
     stars.hidden = !rated;
     if (rated) {
@@ -494,10 +504,8 @@ export class Interface {
       if (stars.innerHTML !== html) stars.innerHTML = html;
     }
     const unlock = document.getElementById("overlay-unlock")!,
-      notice = [
-        rated?.unlocked ? unlockNotice(rated.unlocked, this.game.content.missions, this.game.content.sectors ?? []) : "",
-        !match && this.earned?.state === s ? this.earned.text : "",
-      ].filter(Boolean).join(" · ");
+      opened = rated && rated === this.result ? this.result.unlocked : undefined,
+      notice = opened ? unlockNotice(opened, this.game.content.missions, this.game.content.sectors ?? []) : "";
     unlock.hidden = !notice;
     text("overlay-unlock", notice);
     if (!overlay.hidden && !match) {
@@ -525,18 +533,17 @@ export class Interface {
             : isTouch() ? "Build and upgrade freely." : "Build and upgrade freely. Space or ▶ resumes.",
       );
       // A Run goes on from its own page: the reward after a win, the summary after a loss.
-      const next = s.status === "won" ? (run ? this.game.mission : nextMission(this.game, this.locks(), this.record())) : undefined;
+      const next = !paid && s.status === "won" ? (run ? this.game.mission : nextMission(this.game, this.locks(), this.record())) : undefined;
       document.getElementById("overlay-next")!.hidden = !next;
       const nextLabel = `${this.game.mission.manualWaves ? "Begin campaign" : run ? "Continue run" : "Next mission"} <span>→</span>`,
         nextButton = document.getElementById("overlay-next")!;
       if (nextButton.innerHTML !== nextLabel) nextButton.innerHTML = nextLabel;
-      document.getElementById("overlay-restart")!.hidden = !terminal || !!next || run;
+      document.getElementById("overlay-restart")!.hidden = !terminal || !!next || run || !!paid;
       text("overlay-restart", s.status === "won" ? "Play again" : "Restart");
-      document.getElementById("overlay-missions")!.hidden = !terminal;
-      // A campaign mission that paid Salvage leads to the Arsenal, so the payout can be spent before the next one.
-      const paid = terminal && this.earned?.state === s ? this.earned : null;
-      document.getElementById("overlay-arsenal")!.hidden = !paid;
-      if (paid) text("overlay-arsenal", paid.ready ? `Arsenal · ${paid.ready} ready` : "Arsenal");
+      document.getElementById("overlay-missions")!.hidden = !terminal || !!paid;
+      // A campaign mission that paid Salvage leads to the debrief (Salvage, XP, what to do next) and nowhere else.
+      document.getElementById("overlay-debrief")!.hidden = !paid;
+      document.getElementById("overlay-copy")!.hidden = !!paid;
       text("overlay-missions", isPlaytest(this.game.mission) ? "Editor" : run ? (s.status === "lost" ? "Run summary" : "Run") : "Missions");
     }
     if (this.view.hover)

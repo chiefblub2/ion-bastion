@@ -4,6 +4,9 @@ import { isCircleSector, missionNumber, sectorOf } from "../content/missions";
 import { escape } from "./format";
 import { starText } from "../campaign/rating";
 import { sectorLocked } from "../campaign/campaign-unlock";
+import { cachePay, isFinale } from "../campaign/finale";
+import { slotsOf } from "../campaign/loadout";
+import { LOADOUT } from "../content/arsenal";
 import { headingOf, link, type Region, routePoints, routeShape, stars, type Point } from "./world-map";
 import { arc, type Spot, surfaceSpot, toSphere, type Vec3 } from "./globe";
 import { type WorldEntry, worldOf, worldsOf } from "./planets";
@@ -293,8 +296,14 @@ function showSector(game: Game, sector: MissionSector | undefined, options: Atla
         p = points[i] ?? { x: 0, y: 0 },
         flags = `${best ? ' data-won="true"' : ""}${m === next ? ' data-next="true"' : ""}${i === shown.length - 1 && shown.length > 1 ? ' data-final="true"' : ""}${i === aside ? ' data-special="true"' : ""}${lock ? ' data-locked="true"' : ""}${isNew ? ' data-fresh="true"' : ""}`,
         tags = `${m === next ? '<b class="node-tag" data-tag="next">Next</b>' : ""}${loaded ? '<b class="node-tag" data-tag="loaded">Loaded</b>' : ""}${isNew && m !== next ? '<b class="node-tag" data-tag="new">New</b>' : ""}`,
-        title = lock ? `${m.focus} · ${lockText(lock, missions, sectors)}` : m.focus;
-      return `<button class="mission-node" data-pick="${m.id}" data-wx="${p.x}" data-wy="${p.y}"${deckAt} aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${flags} title="${escape(title)}"><span class="node-mark"><span class="node-number">${pad(n)}</span>${lock ? LOCK_ICON : ""}</span><span class="node-stem" aria-hidden="true"></span><span class="node-copy"><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (in progress)</span>' : ""}${m === next ? '<span class="sr-only"> (next)</span>' : ""}${lock ? '<span class="sr-only"> (locked)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${lock ? "Locked" : `${i === aside ? "Special op · " : ""}${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}`}</small></span>${tags}</button>`;
+        title = lock ? `${m.focus} · ${lockText(lock, missions, sectors)}` : m.focus,
+        // A sector's finale still unwon: the cache its first win pays and the loadout slot it may grant (campaign loop only).
+        sectorAt = sector ? sectors.indexOf(sector) : -1,
+        finale = !!options.locks && !best && !m.circle && sector && isFinale(m, sectors),
+        slot = finale && (LOADOUT.finales as readonly number[]).includes(sectorAt) && slotsOf(record, sectors) < LOADOUT.max,
+        prize = finale ? `<small class="node-finale">Cache +${cachePay(sectorAt + 1)}${slot ? " · +1 slot" : ""}</small>` : "",
+        bounty = options.bounty === m.id ? '<b class="node-bounty" title="Today\'s bounty: double Salvage">×2</b>' : "";
+      return `<button class="mission-node" data-pick="${m.id}" data-wx="${p.x}" data-wy="${p.y}"${deckAt} aria-pressed="${m === picked}"${loaded ? ' aria-current="true"' : ""}${flags} title="${escape(title)}"><span class="node-mark"><span class="node-number">${pad(n)}</span>${lock ? LOCK_ICON : ""}</span><span class="node-stem" aria-hidden="true"></span><span class="node-copy"><span class="node-name">${m.name}${loaded ? '<span class="sr-only"> (in progress)</span>' : ""}${m === next ? '<span class="sr-only"> (next)</span>' : ""}${lock ? '<span class="sr-only"> (locked)</span>' : ""}${best ? `<span class="sr-only">, cleared with ${best} of 3 stars</span>` : ""}</span><small class="node-meta">${best ? `<span class="node-stars" aria-hidden="true">${starText(best)}</span>` : ""}${lock ? "Locked" : `${i === aside ? "Special op · " : ""}${m.waves.length} ${plural(m.waves.length, "wave")}${m.circle ? " · ring" : ""}`}</small>${prize}</span>${tags}${bounty}</button>`;
     })
     .join("");
   setZoom(fly ? "sector" : "planet");

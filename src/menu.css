@@ -2269,6 +2269,35 @@ span.world-hop {
 .node-tag + .node-tag {
   display: none;
 }
+/* A finale's unpaid prize, and the bounty's tag on the other side of the badge. */
+.node-finale {
+  white-space: nowrap;
+  font: 500 10px var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--m-star);
+}
+.node-bounty {
+  position: absolute;
+  top: 0;
+  right: calc(50% + var(--badge) * 0.62);
+  padding: 1px 5px;
+  font: 700 9px / 1.4 var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--on-neon);
+  background: var(--m-star);
+  border-radius: 3px;
+}
+.home-map-bounty {
+  margin-left: 8px;
+  padding: 1px 6px;
+  font: 700 10px / 1.4 var(--mono);
+  font-style: normal;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--on-neon);
+  background: var(--m-star);
+  border-radius: 3px;
+}
 .start-screen .mission-node:hover {
   color: var(--m-text);
 }

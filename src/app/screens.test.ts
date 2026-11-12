@@ -30,8 +30,12 @@ describe("screen URLs", () => {
   it("reads the briefing page from its hash", () => {
     expect(screenFromUrl("", "#briefing", MISSIONS)).toEqual({ view: "menu", page: "briefing" });
   });
+  it("reads the debrief and victory pages from their hashes", () => {
+    expect(screenFromUrl("", "#debrief", MISSIONS)).toEqual({ view: "menu", page: "debrief" });
+    expect(screenFromUrl("", "#victory", MISSIONS)).toEqual({ view: "menu", page: "victory" });
+  });
   it("round-trips every screen", () => {
-    for (const screen of [HOME, GAME, ...(["missions", "coop", "codex", "towers", "help", "editor", "run", "arsenal", "briefing"] as const).map((page) => ({ view: "menu" as const, page }))]) {
+    for (const screen of [HOME, GAME, ...(["missions", "coop", "codex", "towers", "help", "editor", "run", "arsenal", "briefing", "debrief", "victory"] as const).map((page) => ({ view: "menu" as const, page }))]) {
       const url = new URL(urlOf(screen, id, "/game/"), "http://localhost");
       expect(url.pathname).toBe("/game/");
       expect(screenFromUrl(url.search, url.hash, MISSIONS)).toEqual(screen);

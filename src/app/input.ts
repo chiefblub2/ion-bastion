@@ -145,5 +145,5 @@ export function createInput({ game, view, ui, audio, reloadBattlefield, fitBattl
   });
   window.addEventListener("pagehide", () => persist(game));
   const { chooseCell, chooseEnemy, cancel, confirmBuild, dropPending } = play;
-  return { execute, chooseCell, chooseEnemy, cancel, confirmBuild, dropPending, screens, match: coop.match };
+  return { execute, chooseCell, chooseEnemy, cancel, confirmBuild, dropPending, screens, match: coop.match, debriefSoon: nav.debriefSoon };
 }
