@@ -194,9 +194,9 @@ export function createGameInput({ game, view, ui, audio, dialogs, execute, multi
     if (b.dataset.tower) return choose(b.dataset.tower as TowerId), true;
     if (b.dataset.send) return execute({ type: "send", enemy: b.dataset.send as EnemyId }), true;
     if (b.dataset.towerPage) return showTowerPage(Number(b.dataset.towerPage)), true;
+    // The tower card's buttons (ui/tower-card.ts).
     if (b.dataset.priority && view.selected !== null) return execute({ type: "target", id: view.selected, priority: b.dataset.priority as TargetPriority }), true;
     if (b.dataset.upgrade && view.selected !== null) return execute({ type: "upgrade", id: view.selected, upgrade: b.dataset.upgrade }), true;
-    // The tower card's buttons (ui/tower-card.ts).
     if (b.dataset.sell !== undefined && view.selected !== null) return execute({ type: "sell", id: view.selected }), true;
     if (b.dataset.priorityCycle !== undefined) return cycleTarget(), true;
     if (b.dataset.deselect !== undefined) return cancel(), true;
@@ -228,9 +228,6 @@ export function createGameInput({ game, view, ui, audio, dialogs, execute, multi
           ui.refresh();
         } else if (view.player === 0) setSpeed(view.speed === 1 ? 2 : 1);
         else ui.notice(describeResult({ ok: false, code: "host-only" }), true);
-        break;
-      case "sell-btn":
-        if (view.selected !== null) execute({ type: "sell", id: view.selected });
         break;
       case "restart-btn":
       case "rail-restart":
@@ -298,7 +295,7 @@ export function createGameInput({ game, view, ui, audio, dialogs, execute, multi
         if (!t) return;
         const open = openUpgrades(t, game.content);
         if (open.length === 1) execute({ type: "upgrade", id: t.id, upgrade: open[0] });
-        else if (open.length > 1) ui.notice("Choose a path with the upgrade buttons.", true);
+        else if (open.length > 1) ui.notice("Choose a path on the tower card.", true);
         return;
       }
     }

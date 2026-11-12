@@ -783,7 +783,7 @@ export function pathUpgrades(paths: readonly PathData[], base: TowerStats, branc
     make(base).map(({ description, stats, attack, specialization }, index) => ({
       id: `${slug}-${index + 1}`,
       label: `${name} ${NUMERALS[index]}`,
-      description: index === 0 ? `${description} Locks the other two paths.` : description,
+      description,
       cost: branch.costs[index],
       requires: index > 0 ? [`${slug}-${index}`] : typeof branch.after === "string" ? [branch.after] : [],
       ...(index === 0 && typeof branch.after !== "string" ? { minLevel: branch.after.minLevel } : {}),

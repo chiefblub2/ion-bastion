@@ -5,7 +5,6 @@ import { DEFAULT_CONTENT } from "./content";
 import { pageOf, towerOrder } from "./ui/tower-pages";
 import { Battlefield, CELL, LocalDriver, type ViewState } from "./render/scene";
 import { mountUI, Interface, renderMission } from "./ui/interface";
-import { bindUpgradeTooltip } from "./ui/upgrade-tooltip";
 import { installEnemyArtFallback } from "./ui/enemy-art-icon";
 import { Audio } from "./app/audio";
 import { bindUiSounds } from "./audio/ui-sounds";
@@ -55,7 +54,6 @@ if (target && game.mission.id !== target.id) game.command({ type: "mission", id:
 mountUI(game);
 installEnemyArtFallback();
 renderMission(game);
-bindUpgradeTooltip();
 const first = towerOrder(game)[0];
 const view: ViewState = { build: game.mission.manualWaves ? null : first, selected: null, enemy: null, hover: null, speed: 1, player: 0, coverage: false, page: pageOf(game.content.towers[first]) };
 const ui = new Interface(game, view);

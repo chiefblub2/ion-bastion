@@ -1,23 +1,58 @@
 import { isTouch } from "./touch";
 import { DEFAULT_CONTENT } from "../content";
-import { sellValue } from "../core/game";
 import { effectiveTowerStats, isInAura } from "../systems/auras";
 import { harmonicBonuses } from "../systems/aura-paths";
 import { describeAttack, isSupport } from "../systems/attacks";
 import type { ContentPack, Tower, TowerId, UnitLayer } from "../core/types";
 import { resolveUpgrades, towerLevel, maxTowerLevel, towerColor, towerPath, towerTrack } from "../core/upgrades";
-import { number, percent, statValue } from "./format";
-import { upgradeControl } from "./upgrade-tooltip";
+import { escape, number, percent, statValue } from "./format";
 import { PRIORITY_LABELS } from "./messages";
-import { TARGET_PRIORITIES } from "../systems/combat";
+import { towerBranches, type TowerBranch } from "./tower-branches";
+// The sidebar's read-only panel for the armed or selected tower; every action is on the card beside the tower.
 
-/** One button per target priority; the active one is pressed. */
-const priorityControl = (tower: Tower) => {
-  const active = tower.priority ?? "first";
-  return `<div class="target-priority" role="group" aria-label="Target priority (T cycles)"><span>Target</span>${TARGET_PRIORITIES.map(
-    (p) => `<button data-priority="${p}" class="${p === active ? "active" : ""}" aria-pressed="${p === active}">${PRIORITY_LABELS[p]}</button>`,
+const NUMERALS = ["I", "II", "III", "IV", "V"];
+const hex = (color: number | string) => (typeof color === "number" ? `#${color.toString(16).padStart(6, "0")}` : color);
+
+/**
+ * Where a tower stands on its upgrade ladder: one pip per level, then the branches still to choose (names and roles)
+ * or the chosen one in its colour with every tier, owned ones ticked, each with its effect. Aura: its track, then its path.
+ */
+export function pathLadder(tower: Tower, content: ContentPack = DEFAULT_CONTENT): string {
+  const definition = content.towers[tower.type],
+    level = towerLevel(tower, content),
+    max = maxTowerLevel(tower.type, content),
+    { paths, tracks } = towerBranches(definition),
+    path = towerPath(tower, content),
+    track = towerTrack(tower, content),
+    accent = hex(towerColor(tower, content));
+  const pips = `<div class="ladder-pips" role="img" aria-label="Level ${level} of ${max}" style="--path-color:${accent}">${Array.from(
+    { length: max },
+    (_, i) => `<i class="${i < level ? "on" : ""}"></i>`,
   ).join("")}</div>`;
-};
+  const chosen = (branch: TowerBranch) =>
+    `<div class="ladder-branch" style="--path-color:${hex(branch.color)}"><b>${escape(branch.name)}</b>${branch.role ? ` <span>${escape(branch.role)}</span>` : ""}<ol>${branch.tiers
+      .map((tier, i) => {
+        const owned = tower.upgrades.includes(tier.id);
+        return `<li class="${owned ? "owned" : ""}"><b>${owned ? "✓" : NUMERALS[i]}</b><span>${escape(tier.description)}</span></li>`;
+      })
+      .join("")}</ol></div>`;
+  const choice = (branches: readonly TowerBranch[], kind: string) =>
+    branches.length
+      ? `<p class="ladder-next">Lv ${definition.upgrades.find((u) => u.id === branches[0].tiers[0].id)?.effects.level ?? "?"}: ${branches.length > 1 ? `one of ${branches.length} ${kind}s` : `the ${kind}`}</p><ul class="ladder-choices">${branches
+          .map((b) => `<li style="--path-color:${hex(b.color)}"><b>${escape(b.name)}</b>${b.role ? ` <span>${escape(b.role)}</span>` : ""}</li>`)
+          .join("")}</ul>`
+      : "";
+  const trackPart = tracks.length ? (track ? chosen(tracks.find((b) => b.id === track)!) : choice(tracks, "track")) : "";
+  const pathPart = path ? chosen(paths.find((b) => b.id === path)!) : choice(paths, "path");
+  return `<div class="path-ladder">${pips}${trackPart}${pathPart}</div>`;
+}
+
+/** Upgrading, retargeting and selling happen on the card beside the tower. */
+function actionNote(targets: boolean) {
+  const touch = isTouch(),
+    what = targets ? "Upgrade, retarget and sell" : "Upgrade and sell";
+  return `<div class="placement-note">${what} on the card beside the tower.${touch ? "" : `<br><span>U buys the next upgrade${targets ? ", T cycles the target" : ""}.</span>`}</div>`;
+}
 
 /** Attack parameters such as slowdown or chain jumps, generated from the attack module. */
 const attackSummary = (type: TowerId, tower: Tower | undefined, content: ContentPack) =>
@@ -85,8 +120,10 @@ export function towerDetails(
       <div${stats.bonuses.speed ? ' class="is-boosted"' : ""}><strong>${number(stats.interval)} s</strong><span>Fire interval</span>${stats.bonuses.speed ? `<small class="aura-stat-detail"><b>${percent(stats.bonuses.speed)} speed</b> · Aura</small>` : ""}</div>
     </div>`;
   }
+  // Traps and support towers have no target priority.
+  const retargets = !isSupport(definition.attack) && definition.placement !== "path";
   const cancelLabel = tower ? "Deselect (Esc)" : "Exit build mode (Esc)";
   return `<div class="selection-heading"><span>${tower ? "TOWER SELECTED" : "BUILD MODE"}</span><span class="selection-actions"><b>${heading}</b><button id="cancel-selection" class="cancel-selection" title="${cancelLabel}" aria-label="${cancelLabel}">✕</button></span></div>
-    <p>${definition.description}</p>${isSupport(definition.attack) ? "" : `<p class="tower-targets">Targets: <b>${targets(definition.targets)}</b>${attackSummary(type, tower, content)}${tower ? ` · Kills <b id="tower-kills">${tower.kills}</b>` : ""}</p>`}${values}
-    ${tower ? `${isSupport(definition.attack) ? "" : priorityControl(tower)}${upgradeControl(tower, towers, content)}<button id="sell-btn" class="sell">Sell · +${sellValue(tower, towers, content)} credits</button>` : placementNote(definition.placement === "path")}`;
+    <p>${definition.description}</p>${isSupport(definition.attack) ? "" : `<p class="tower-targets">Targets: <b>${targets(definition.targets)}</b>${attackSummary(type, tower, content)}${tower ? ` · Kills <b id="tower-kills">${tower.kills}</b>` : ""}${tower && retargets ? ` · Target: <b>${PRIORITY_LABELS[tower.priority ?? "first"]}</b>` : ""}</p>`}${values}
+    ${tower ? `${pathLadder(tower, content)}${actionNote(retargets)}` : placementNote(definition.placement === "path")}`;
 }

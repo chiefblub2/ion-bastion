@@ -1,6 +1,5 @@
 import { Game, isRunning, SELL_REFUND } from "../core/game";
 import { isCircleSector, missionNumber, nextMissionOf, sectorOf } from "../content/missions";
-import { upgradeOption } from "../core/upgrades";
 import { upgradeDiscount } from "../systems/workshop";
 import { towerDetails } from "./tower-details";
 import { enemyDetails, enemyKey } from "./enemy-details";
@@ -397,7 +396,6 @@ export class Interface {
       panel.innerHTML = liveHtml;
     }
     const t = s.towers.find((t) => t.id === this.view.selected),
-      foreign = !!t && t.owner !== this.view.player,
       d = t ? TOWERS[t.type] : this.view.build ? TOWERS[this.view.build] : null;
     const auraKey = t ? JSON.stringify([
       t.upgrades,
@@ -443,14 +441,6 @@ export class Interface {
     // Kills change every frame in a wave; patch the number instead of rebuilding the panel.
     const kills = document.getElementById("tower-kills");
     if (kills && t && kills.textContent !== String(t.kills)) kills.textContent = String(t.kills);
-    for (const button of document.querySelectorAll<HTMLButtonElement>("[data-upgrade]")) {
-      button.disabled = !t || terminal || foreign || upgradeOption(t, button.dataset.upgrade!, gold, content, upgradeDiscount(t, s.towers, content)).status !== "available";
-    }
-    const sell = document.getElementById(
-      "sell-btn",
-    ) as HTMLButtonElement | null;
-    if (sell) sell.disabled = terminal || foreign;
-    for (const button of document.querySelectorAll<HTMLButtonElement>("[data-priority]")) button.disabled = terminal || foreign;
     // On a ring the next wave comes on a timer and may be called early for a bonus.
     const quick = document.getElementById("toolbar-start") as HTMLButtonElement,
       ready = !!match?.ready[me],
