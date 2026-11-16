@@ -1,0 +1,618 @@
+/*
+ * The mission briefing (`/#briefing`, ui/briefing-view.ts): three glass columns (mission | intel, needs, rewards |
+ * loadout and actions) in the menu's Deep Ion language. Portrait phones stack them; the fitted landscape layout keeps
+ * all three on one screen without page scrolling.
+ */
+.menu-briefing {
+  --mode: var(--ion-accent);
+}
+.bf {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 16px;
+  align-items: start;
+}
+.bf li {
+  margin: 0;
+  line-height: 1.35;
+}
+.bf-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ion-accent) 6%, transparent), transparent 40%), var(--m-glass);
+  border: 1px solid var(--m-border);
+  border-top: 3px solid var(--m-accent);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%);
+  backdrop-filter: blur(6px);
+}
+.bf-h {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 0;
+  font: 600 12px var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ion-label);
+}
+.bf-h:first-child {
+  margin-top: 0;
+}
+.bf-h small {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ion-muted);
+}
+/* Mission column ------------------------------------------------------------------------------------------- */
+.bf-map {
+  margin: 0;
+}
+.bf-focus {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--m-text-2);
+}
+.bf .bf-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+.bf-rules {
+  margin: 0;
+}
+.bf-rules[hidden] {
+  display: none;
+}
+/* Intel, needs and rewards ---------------------------------------------------------------------------------- */
+.bf .bf-enemies {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  margin: 0;
+}
+.bf-needs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bf-need {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 10px;
+  font: 500 12px var(--mono);
+  border: 1px solid;
+  border-radius: 999px;
+}
+.bf-need b {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.bf-need.is-covered {
+  color: var(--ion-buff);
+  border-color: color-mix(in srgb, var(--ion-buff) 40%, transparent);
+  background: color-mix(in srgb, var(--ion-buff) 10%, transparent);
+}
+.bf-need.is-covered span {
+  color: var(--m-text);
+}
+.bf-need.is-open {
+  color: var(--ion-warn);
+  border-color: color-mix(in srgb, var(--ion-warn) 55%, transparent);
+  background: color-mix(in srgb, var(--ion-warn) 12%, transparent);
+}
+.bf-need.is-open b::before {
+  content: "! ";
+}
+.bf-none {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ion-muted);
+}
+.bf-bounty {
+  padding: 1px 7px;
+  font: 700 11px var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--ion-on-accent);
+  background: var(--ion-star);
+}
+.bf-bounty[hidden] {
+  display: none;
+}
+.bf-rewards {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: color-mix(in srgb, var(--ion-text) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ion-text) 7%, transparent);
+}
+.bf-rewards li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 10px;
+  font-size: 13px;
+  color: var(--m-text-2);
+  background: color-mix(in srgb, var(--m-surface) 88%, transparent);
+}
+.bf-rewards li > span {
+  min-width: 0;
+}
+.bf-rewards b {
+  font: 600 13px var(--mono);
+  color: var(--m-accent);
+  white-space: nowrap;
+}
+.bf-rewards li.is-paid {
+  opacity: 0.55;
+}
+.bf-rewards li.is-paid b {
+  color: var(--ion-muted);
+  font-weight: 500;
+}
+.bf-rewards li.is-extra b {
+  color: var(--ion-star);
+}
+/* The fitted layout's star summary; outside it the three full rows show. */
+.bf-rewards li.bf-star-sum {
+  display: none;
+}
+.bf-stars {
+  font-style: normal;
+  letter-spacing: 0.08em;
+  color: var(--m-star);
+}
+/* Loadout ---------------------------------------------------------------------------------------------------- */
+.bf-loadout-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.bf-loadout-head .bf-h {
+  margin: 0;
+}
+.bf-loadout-head .bf-h b {
+  font-size: 1.3em;
+  color: var(--m-text);
+}
+.start-screen .bf-auto {
+  min-height: 40px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+.bf-note {
+  margin: 0;
+  font: 500 12px var(--mono);
+  color: var(--ion-muted);
+}
+.bf-note.bf-special {
+  padding: 5px 10px;
+  color: var(--ion-second);
+  border-left: 3px solid var(--ion-second);
+  background: color-mix(in srgb, var(--ion-second) 10%, transparent);
+}
+.bf-note-wrap:empty {
+  display: none;
+}
+.start-screen .bf .bf-tabs {
+  position: static;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+.start-screen .bf-tab {
+  min-height: 40px;
+  padding: 6px 12px;
+}
+.bf-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bf-tiles > li {
+  margin: 0;
+  min-width: 0;
+}
+.bf-tile {
+  --accent: var(--m-accent);
+  position: relative;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  align-items: center;
+  width: 100%;
+  min-height: 52px;
+  padding: 6px 8px;
+  text-align: left;
+  color: var(--m-text-2);
+  background: color-mix(in srgb, var(--m-surface) 80%, transparent);
+  border: 1px solid var(--m-border);
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+}
+.start-screen .bf-tile {
+  min-height: 52px;
+}
+button.bf-tile:hover {
+  border-color: var(--m-accent);
+  background: var(--m-hover);
+}
+.start-screen .bf-tile:focus-visible {
+  outline-offset: -3px;
+}
+.bf-tile.is-on {
+  color: var(--m-text);
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent 80%), color-mix(in srgb, var(--m-surface) 80%, transparent);
+  box-shadow: inset 3px 0 var(--accent);
+}
+/* A tick in the corner of a fielded tile. */
+.bf-tile.is-on::after {
+  content: "✓";
+  position: absolute;
+  top: 3px;
+  right: 9px;
+  font: 700 11px var(--mono);
+  color: var(--m-accent);
+}
+.bf-tile:not(.is-on) .bf-tile-icon {
+  opacity: 0.6;
+  filter: grayscale(0.6);
+}
+.bf-tile-icon {
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+}
+.bf-tile-icon :is(img, span) {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+.bf-tile-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 600 14px "Rajdhani", sans-serif;
+  letter-spacing: 0.04em;
+}
+.bf-tile-badge {
+  display: flex;
+  min-height: 10px;
+}
+.bf-tile-tag {
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+  font: 600 9px var(--mono);
+  font-style: normal;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ion-second);
+}
+.bf-tile.is-fixed {
+  cursor: default;
+}
+.bf-tile.is-fixed:focus-visible {
+  outline: 2px solid var(--m-accent);
+  outline-offset: -3px;
+}
+.bf-status {
+  min-height: 1.2em;
+  margin: 0;
+  font: 500 12px var(--mono);
+  color: var(--ion-warn);
+}
+.bf-status:empty {
+  min-height: 0;
+}
+.bf-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+}
+.bf-warning {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+.bf-warning[hidden] {
+  display: none;
+}
+.bf-go {
+  display: flex;
+  gap: 8px;
+}
+.bf-go .bf-start {
+  flex: 1;
+}
+.start-screen .bf-start:disabled {
+  cursor: not-allowed;
+  color: var(--m-text-2);
+  background: color-mix(in srgb, var(--m-surface) 80%, var(--ion-text) 6%);
+  border-color: var(--m-border);
+  box-shadow: none;
+}
+/* Narrower screens (not the fitted landscape layout): the loadout under mission and intel, then everything stacked. */
+@media (max-width: 999px) and (min-height: 541px), (max-width: 999px) and (orientation: portrait) {
+  .bf {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .bf-loadout {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 699px) and (min-height: 541px), (max-width: 699px) and (orientation: portrait) {
+  .bf {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Start stays in reach while the stacked page scrolls. */
+  .bf-actions {
+    position: sticky;
+    bottom: 0;
+    padding: 8px 0 4px;
+    background: var(--m-bg);
+  }
+}
+
+/* Fitted landscape layout: three columns in the screen's height, nothing scrolls but the loadout's tiles if needed. */
+@media (orientation: landscape) and (max-height: 540px) {
+  #briefing-page {
+    height: var(--fit-h);
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  #briefing-page > .briefing-root {
+    min-height: 0;
+  }
+  .bf {
+    height: 100%;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1.35fr);
+    gap: 8px;
+    align-items: stretch;
+  }
+  .bf-col {
+    min-height: 0;
+    gap: 4px;
+    padding: 8px;
+    border-top-width: 2px;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+  }
+  .bf-mission {
+    overflow: hidden;
+  }
+  .bf-col > * {
+    flex-shrink: 0;
+  }
+  .bf-info {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .bf-h {
+    margin: 0;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+  .bf-h small {
+    font-size: 10px;
+  }
+  .bf .bf-map {
+    height: auto;
+    aspect-ratio: 3 / 2;
+    border-radius: 6px;
+  }
+  .bf-rewards li.bf-star-row {
+    display: none;
+  }
+  .bf-rewards li.bf-star-sum {
+    display: flex;
+  }
+  .bf-star-sum > span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bf-stars {
+    letter-spacing: 0;
+  }
+  .bf-focus {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+  .bf .bf-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-radius: 6px;
+  }
+  .bf .bf-stats div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 1px 6px;
+  }
+  .bf .bf-stats dt {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 8px;
+    letter-spacing: 0.04em;
+  }
+  .bf .bf-stats dd {
+    font-size: 14px;
+  }
+  .bf-rules li {
+    padding: 2px 8px;
+    font-size: 10px;
+  }
+  .bf .bf-enemies {
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 3px;
+  }
+  .bf .bf-enemies li {
+    gap: 3px;
+    padding: 1px 4px 1px 2px;
+    font-size: 10px;
+    border-radius: 4px;
+  }
+  .bf .bf-enemies .enemy-icon {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+  }
+  .bf .bf-enemies .new-tag {
+    font-size: 8px;
+  }
+  .bf-need {
+    padding: 2px 8px;
+    font-size: 10px;
+  }
+  .bf-rewards li {
+    padding: 2px 7px;
+    font-size: 11px;
+  }
+  .bf-rewards b {
+    font-size: 11px;
+  }
+  .bf-loadout {
+    overflow: hidden;
+  }
+  .bf-loadout-head .bf-h b {
+    font-size: 1.2em;
+  }
+  .bf-loadout-head .bf-h small {
+    display: none;
+  }
+  .start-screen .bf .bf-tabs {
+    flex-wrap: nowrap;
+    gap: 3px;
+  }
+  .start-screen .bf-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 120px;
+    min-height: 40px;
+    padding: 4px 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+  .bf-note {
+    font-size: 10px;
+  }
+  .bf-note.bf-special {
+    padding: 2px 8px;
+  }
+  .bf-tiles {
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: 3px;
+  }
+  .bf-tile,
+  .start-screen .bf-tile {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 22px auto;
+    justify-items: center;
+    row-gap: 1px;
+    min-height: 40px;
+    padding: 3px 2px 1px;
+    text-align: center;
+    clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%);
+  }
+  .bf-tile-icon,
+  .bf-tile-icon :is(img, span) {
+    grid-row: auto;
+    width: 22px;
+    height: 22px;
+  }
+  .bf-tile-name {
+    max-width: 100%;
+    font-size: 9px;
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+  .bf-tile-badge {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    min-height: 0;
+    padding: 0 2px;
+    background: color-mix(in srgb, var(--m-surface) 75%, transparent);
+    transform: scale(0.7);
+    transform-origin: 0 0;
+  }
+  .bf-tile-badge:empty {
+    display: none;
+  }
+  .bf-tile.is-on::after {
+    content: none;
+  }
+  .bf-tile-tag {
+    right: 2px;
+    bottom: auto;
+    top: 14px;
+    font-size: 7px;
+  }
+  .bf-status {
+    font-size: 10px;
+  }
+  .bf-actions {
+    gap: 4px;
+  }
+  .bf-warning {
+    padding: 2px 8px;
+    font-size: 10px;
+    line-height: 1.3;
+  }
+  .bf-go .quiet {
+    padding: 4px 10px;
+    font-size: 13px;
+  }
+  .start-screen .bf .bf-start,
+  .start-screen .bf-go .quiet {
+    min-height: 44px;
+    padding-block: 4px;
+  }
+  .start-screen .bf .bf-start {
+    font-size: 16px;
+  }
+  /* The status line floats over the tiles' lower edge instead of taking a row. */
+  .bf-loadout {
+    position: relative;
+  }
+  .bf-status:not(:empty) {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 56px;
+    z-index: 1;
+    padding: 3px 8px;
+    background: color-mix(in srgb, var(--m-bg) 92%, transparent);
+    border-left: 3px solid var(--ion-warn);
+  }
+}

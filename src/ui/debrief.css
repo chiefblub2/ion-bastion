@@ -1,0 +1,578 @@
+/*
+ * The mission debrief (`/#debrief`, ui/debrief-view.ts): the result on top, the Salvage ledger and the tower XP side by
+ * side, a strip of what the win opened (or the loss tip), then the actions. Deep Ion tokens, cut-corner glass panels.
+ * Every section is laid out from the start; the staging only changes opacity. The fitted landscape layout keeps it all
+ * on one screen without page scrolling.
+ */
+.menu-debrief {
+  --mode: var(--ion-accent);
+}
+.db {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr);
+  grid-template-areas:
+    "outcome outcome"
+    "ledger xp"
+    "strip strip"
+    "actions actions";
+  gap: 14px;
+  align-items: start;
+}
+.db-outcome {
+  grid-area: outcome;
+}
+.db-ledger {
+  grid-area: ledger;
+}
+.db-xp {
+  grid-area: xp;
+}
+.db-strip {
+  grid-area: strip;
+}
+.db-actions {
+  grid-area: actions;
+}
+.db p,
+.db ul,
+.db li {
+  margin: 0;
+}
+.db li {
+  line-height: 1.3;
+}
+.db-outcome,
+.db-ledger,
+.db-xp {
+  min-width: 0;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ion-accent) 6%, transparent), transparent 40%), var(--m-glass);
+  border: 1px solid var(--m-border);
+  border-top: 3px solid var(--m-accent);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%);
+  backdrop-filter: blur(6px);
+}
+.db.is-lost .db-outcome {
+  border-top-color: var(--ion-danger);
+}
+.db-outcome {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 24px;
+  row-gap: 2px;
+}
+.db-title {
+  grid-column: 1;
+  margin: 0;
+  font: 700 28px "Rajdhani", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--m-text);
+}
+.db.is-lost .db-title {
+  color: var(--ion-danger);
+}
+.db-sub {
+  grid-column: 1;
+  font: 500 13px var(--mono);
+  color: var(--m-text-2);
+}
+.db-starline {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+}
+.db-stars {
+  font-size: 34px;
+  letter-spacing: 4px;
+  color: var(--m-star);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--m-star) 40%, transparent);
+}
+.db.is-lost .db-stars {
+  color: var(--ion-muted);
+  text-shadow: none;
+}
+.db-best {
+  padding: 2px 8px;
+  font: 700 11px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ion-on-accent);
+  background: var(--m-star);
+}
+.db-rule {
+  grid-column: 1 / -1;
+  font: 500 12px var(--mono);
+  color: var(--ion-muted);
+}
+.db-h {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  font: 600 12px var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ion-label);
+}
+/* Ledger ---------------------------------------------------------------------------------------------------- */
+.db-rows {
+  display: grid;
+  gap: 1px;
+  padding: 0;
+  list-style: none;
+}
+.db-row,
+.db-total,
+.db-balance {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 8px;
+  font-size: 14px;
+  line-height: 1.3;
+}
+.db-row {
+  background: color-mix(in srgb, var(--m-surface) 80%, transparent);
+}
+.db-row b,
+.db-total b,
+.db-balance b {
+  font: 600 14px var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--m-star);
+}
+.db-row.db-rankbonus b {
+  color: var(--ion-second);
+}
+.db-row.is-empty {
+  color: var(--ion-muted);
+}
+.db-total {
+  margin-top: 6px;
+  border-top: 1px solid var(--m-border);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.db-total b {
+  font-size: 18px;
+}
+.db-balance {
+  color: var(--m-text-2);
+}
+.db-balance b {
+  color: var(--m-text);
+}
+.db-balance i {
+  color: var(--m-accent);
+  font-style: normal;
+}
+.db-from {
+  color: var(--ion-muted);
+}
+/* Tower XP -------------------------------------------------------------------------------------------------- */
+.db-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+.db-tile {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 2px;
+  padding: 4px 8px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%), color-mix(in srgb, var(--m-surface) 80%, transparent);
+  border: 1px solid var(--m-border);
+  border-left: 3px solid var(--accent);
+}
+.db-tile-icon {
+  grid-row: 1 / span 3;
+  width: 34px;
+  height: 34px;
+}
+.db-tile-icon :is(img, span) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.db-tile-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 600 14px "Rajdhani", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.db-tile-rank {
+  min-height: 12px;
+}
+.db-bar {
+  grid-column: 2 / -1;
+  height: 5px;
+  background: color-mix(in srgb, var(--ion-text) 10%, transparent);
+  overflow: hidden;
+}
+.db-bar i {
+  display: block;
+  height: 100%;
+  width: var(--to);
+  background: var(--accent);
+  transition: width 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) 0.2s;
+}
+.is-staging .db-bar i {
+  width: var(--from);
+}
+.is-staging .db-xp.is-in .db-bar i {
+  width: var(--to);
+}
+.db-tile-xp {
+  grid-column: 2 / -1;
+  font: 500 11px var(--mono);
+  color: var(--m-text-2);
+}
+.db-short {
+  display: none;
+}
+.db-tile.is-up {
+  border-color: color-mix(in srgb, var(--ion-star) 60%, var(--m-border));
+  border-left-color: var(--ion-star);
+  box-shadow: inset 0 0 18px color-mix(in srgb, var(--ion-star) 10%, transparent);
+}
+.db-tile.is-up .db-tile-xp {
+  color: var(--ion-star);
+  font-weight: 600;
+}
+.db-none {
+  font-size: 13px;
+  color: var(--ion-muted);
+}
+/* Strip ----------------------------------------------------------------------------------------------------- */
+.db-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.db-strip:empty {
+  display: none;
+}
+.db-block {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 12px;
+  font-size: 14px;
+  line-height: 1.35;
+  background: color-mix(in srgb, var(--m-surface) 80%, transparent);
+  border: 1px solid var(--m-border);
+  border-left: 3px solid var(--m-accent);
+}
+.db-k {
+  flex: none;
+  font: 700 11px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ion-label);
+}
+.db-secured {
+  border-left-color: var(--ion-star);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ion-star) 12%, transparent), transparent 80%), color-mix(in srgb, var(--m-surface) 80%, transparent);
+}
+.db-secured em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--ion-buff);
+}
+.db-unlocked {
+  border-left-color: var(--ion-buff);
+}
+.db-leaks,
+.db-tip {
+  border-left-color: var(--ion-warn);
+}
+.db-tip {
+  flex: 1 1 320px;
+}
+.db-ready {
+  border-left-color: var(--ion-second);
+}
+.db-ready b {
+  color: var(--ion-second);
+}
+/* Actions --------------------------------------------------------------------------------------------------- */
+.db-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: stretch;
+}
+.start-screen .db-actions .primary {
+  width: auto;
+  min-width: 0;
+  background: var(--mode);
+  border-color: var(--mode);
+  padding-inline: 22px;
+}
+.db-actions .db-label {
+  max-width: 28ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.db-actions .primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.db-actions .quiet {
+  padding-inline: 16px;
+}
+.db-actions .db-primary {
+  order: -1;
+}
+/* Staging: sections are laid out, only their opacity moves. ------------------------------------------------- */
+.db-sec {
+  transition: opacity 0.4s ease;
+}
+.is-staging .db-sec:not(.is-in) {
+  opacity: 0;
+}
+.is-skip *,
+.is-skip.db {
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .db-sec,
+  .db-bar i {
+    transition: none;
+  }
+}
+/* Narrower screens (not the fitted landscape layout). ------------------------------------------------------- */
+@media (max-width: 999px) and (min-height: 541px), (max-width: 999px) and (orientation: portrait) {
+  .db {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "outcome" "ledger" "xp" "strip" "actions";
+  }
+}
+@media (max-width: 699px) and (min-height: 541px), (max-width: 699px) and (orientation: portrait) {
+  .db-outcome {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .db-starline {
+    grid-column: 1;
+    grid-row: auto;
+    justify-content: flex-start;
+  }
+  .db-title {
+    font-size: 24px;
+  }
+  .db-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    padding: 8px 0 4px;
+    background: var(--m-bg);
+  }
+  .db-actions .db-primary {
+    flex: 1 1 100%;
+  }
+  .db-actions .quiet {
+    flex: 1 1 40%;
+  }
+}
+
+/* Fitted landscape layout: result and strip | ledger | tower XP, actions below; nothing scrolls. */
+@media (orientation: landscape) and (max-height: 540px) {
+  #debrief-page {
+    height: var(--fit-h);
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  #debrief-page > .debrief-root {
+    min-height: 0;
+  }
+  .db {
+    height: 100%;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.05fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "outcome ledger xp"
+      "strip ledger xp"
+      "actions actions actions";
+    gap: 6px 8px;
+    align-items: stretch;
+  }
+  .db-outcome,
+  .db-ledger,
+  .db-xp {
+    padding: 6px 8px;
+    border-top-width: 2px;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+  }
+  .db-outcome {
+    display: block;
+  }
+  .db-title {
+    font-size: 17px;
+    line-height: 1.1;
+  }
+  .db-sub {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+  .db-starline {
+    gap: 6px;
+    margin: 1px 0;
+  }
+  .db-stars {
+    font-size: 17px;
+    letter-spacing: 2px;
+  }
+  .db-best {
+    padding: 0 5px;
+    font-size: 9px;
+  }
+  .db-rule {
+    font-size: 9px;
+    line-height: 1.3;
+  }
+  .db-h {
+    margin-bottom: 3px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+  .db-ledger,
+  .db-xp {
+    overflow: hidden;
+  }
+  .db-xp {
+    padding-bottom: 2px;
+  }
+  .db-row,
+  .db-total,
+  .db-balance {
+    gap: 6px;
+    padding: 1px 6px;
+    font-size: 11px;
+    line-height: 1.3;
+  }
+  .db-row b,
+  .db-balance b {
+    font-size: 11px;
+  }
+  .db-total {
+    margin-top: 3px;
+  }
+  .db-total b {
+    font-size: 14px;
+  }
+  .db-tiles {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1px;
+  }
+  .db-tile {
+    height: 18px;
+    overflow: hidden;
+    grid-template-columns: 16px minmax(0, 1fr) auto auto;
+    grid-template-rows: auto;
+    column-gap: 5px;
+    padding: 0 5px 0 4px;
+    border-left-width: 2px;
+    min-height: 0;
+  }
+  .db-tile-icon {
+    grid-row: auto;
+    width: 16px;
+    height: 16px;
+  }
+  .db-tile-name {
+    font-size: 11px;
+    letter-spacing: 0.02em;
+  }
+  .db-tile-rank {
+    grid-column: 4;
+    grid-row: 1;
+    min-height: 0;
+    transform: scale(0.85);
+    transform-origin: right center;
+  }
+  .db-bar {
+    grid-column: 3;
+    grid-row: 1;
+    width: 34px;
+    height: 4px;
+  }
+  .db-tile-xp {
+    display: none;
+  }
+  /* A rank-up shows its short call-out ("R2 · +25") where the bar was. */
+  .db-tile.is-up .db-bar {
+    display: none;
+  }
+  .db-tile.is-up .db-tile-xp {
+    display: block;
+    grid-column: 3;
+    grid-row: 1;
+    font-size: 9px;
+    white-space: nowrap;
+  }
+  .db-tile.is-up .db-long {
+    display: none;
+  }
+  .db-tile.is-up .db-short {
+    display: inline;
+  }
+  .db-strip {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 3px;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .db-block {
+    flex-direction: column;
+    gap: 0;
+    padding: 2px 6px;
+    font-size: 10px;
+    line-height: 1.3;
+    border-left-width: 2px;
+  }
+  .db-k {
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+  .db-tip {
+    flex: none;
+  }
+  .db-actions {
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .start-screen .db-actions button {
+    min-height: 44px;
+    padding: 4px 12px;
+    font-size: 14px;
+    flex: 0 1 auto;
+    white-space: nowrap;
+  }
+  .start-screen .db-actions .primary {
+    min-height: 44px;
+    padding-inline: 14px;
+    font-size: 15px;
+  }
+  .db-actions .db-label {
+    max-width: 17ch;
+  }
+}

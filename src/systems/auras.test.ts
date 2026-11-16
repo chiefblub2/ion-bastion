@@ -7,7 +7,7 @@ import type { Enemy } from "../core/types";
 import { auraBonuses, effectiveTowerStats, isInAura, receivedAuraBonuses } from "./auras";
 import { attackEnemies } from "./combat";
 import { landProjectiles, makeEnemy, towerAt } from "../core/test-helpers";
-import { upgradeControl } from "../ui/upgrade-tooltip";
+import { cardChoices, towerCardHtml } from "../ui/tower-card";
 import { towerDetails } from "../ui/tower-details";
 
 function enemy(x: number, y: number): Enemy {
@@ -82,20 +82,15 @@ describe("aura commands and lifecycle", () => {
     const t = g.state.towers[0];
     for (const upgrade of ["damage-2", "damage-3", "speed-3", "range-2"])
       expect(g.command({ type: "upgrade", id, upgrade }).ok).toBe(false);
-    const start = upgradeControl(t, g.state.towers);
-    expect(start.match(/data-upgrade=/g)).toHaveLength(3);
-    expect(start).toContain("Locks in the track");
+    const offered = () => cardChoices(t, g.state.towers, Infinity);
+    expect(offered().map((c) => c.branch?.kind)).toEqual(["track", "track", "track"]);
     expect(g.command({ type: "upgrade", id, upgrade: "damage" }).ok).toBe(true);
-    const afterFirst = upgradeControl(t, g.state.towers);
-    expect(afterFirst.match(/data-upgrade=/g)).toHaveLength(1);
-    expect(afterFirst).toContain('data-upgrade="damage-2"');
+    expect(offered().map((c) => c.id)).toEqual(["damage-2"]);
     for (const upgrade of ["damage-2", "damage-3"]) g.command({ type: "upgrade", id, upgrade });
-    // Tier III owned (✓), then the three paths on offer.
-    const maxed = upgradeControl(t, g.state.towers);
-    expect(maxed.match(/data-upgrade=/g)).toHaveLength(4);
-    expect(maxed.match(/✓/g)).toHaveLength(1);
-    expect(maxed).toContain("Damage III");
-    expect(maxed).toContain('data-upgrade="harmonics-1"');
+    // Tier III owned, then the three paths on offer.
+    expect(offered()).toHaveLength(3);
+    expect(offered().map((c) => c.id)).toContain("harmonics-1");
+    expect(offered().every((c) => c.branch?.kind === "path")).toBe(true);
     expect(towerDetails("aura", t, g.state.towers)).toContain("LEVEL 4 / 7 · DAMAGE");
   });
   it("takes on the colour of its track", () => {
@@ -177,15 +172,16 @@ describe("combat and interface integration", () => {
   });
   it("upgrade previews and selected stats include the same active aura as combat", () => {
     const target = towerAt(1, "pulse", 1, 0), source = towerAt(2, "aura", 0, 0, ["damage"]);
-    const towers = [target, source], preview = upgradeControl(target, towers);
-    expect(preview).toContain("22.5"); // 18 * 1.25
-    expect(preview).toContain("37.5"); // next upgrades: ["level-2", "level-3"]0 * 1.25
+    const towers = [target, source],
+      damage = cardChoices(target, towers, Infinity)[0].changes.find((c) => c.label === "Damage")!;
+    expect(damage.before).toBeCloseTo(22.5); // 18 * 1.25
+    expect(damage.after).toBeCloseTo(37.5); // level 2: 30 * 1.25
     expect(towerDetails("pulse", target, towers)).toContain("18 <b>+ 4.5 Aura</b>");
-    expect(upgradeControl({ ...target, upgrades: ["level-2", "level-3"] }, towers)).toContain("Level 3 → 4");
-    expect(upgradeControl({ ...target, upgrades: ["level-2", "level-3", "level-4", "level-5", "overclock-1", "overclock-2", "overclock-3"] }, towers)).toContain("Max level");
-    const controls = upgradeControl(source, towers);
-    expect((controls.match(/data-upgrade=/g) ?? [])).toHaveLength(1);
-    expect(controls).toContain("+25% → +40%"); // tier I owned, tier II offered
+    expect(cardChoices({ ...target, upgrades: ["level-2", "level-3"] }, towers, Infinity)[0].label).toBe("Upgrade → Lv 4");
+    expect(towerCardHtml({ ...target, upgrades: ["level-2", "level-3", "level-4", "level-5", "overclock-1", "overclock-2", "overclock-3"] }, towers, { credits: 0, slim: false })).toContain("Max level");
+    const controls = cardChoices(source, towers, Infinity);
+    expect(controls).toHaveLength(1);
+    expect(controls[0].changes).toEqual([expect.objectContaining({ before: 25, after: 40, unit: "%" })]); // tier I owned, tier II offered
     expect(towerDetails("aura", source, towers)).toContain("<b>1</b> tower supported");
   });
 });

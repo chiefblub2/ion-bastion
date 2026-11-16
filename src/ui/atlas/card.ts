@@ -1,6 +1,8 @@
 // The atlas's mission card: the battlefield preview, the briefing with its Start button, and Intel.
-import { availableTowers, type Game } from "../../core/game";
-import { arsenalTowers } from "../../app/arsenal-store";
+import type { Game } from "../../core/game";
+import { bountyToday, loadArsenal } from "../../app/arsenal-store";
+import { autoLoadout, kitOf } from "../../campaign/loadout";
+import { payPreview } from "../../campaign/pay";
 import type { MapDefinition, MissionDefinition } from "../../core/types";
 import { isCircleSector, missionNumber, sectorOf } from "../../content/missions";
 import { themeAccent } from "../../render/terrain";
@@ -104,6 +106,8 @@ export function renderFeatured(game: Game, m: MissionDefinition | undefined, { l
   const s = game.state,
     lock = locks?.get(m.id),
     reset = !lobby && !lock && (s.wave > 0 || s.towers.length > 0),
+    // A solo campaign mission with the Arsenal in force opens its briefing (`app/campaign-flow.ts`) instead of starting.
+    briefed = !lock && !lobby && !!locks && !m.circle,
     stat = (label: string, value: string, unit = "") => `<div><dt>${label}</dt><dd>${unit ? `<span class="stat-unit" aria-hidden="true">${unit}</span>` : ""}${value}</dd></div>`,
     stats = [
       stat("Waves", String(m.waves.length)),
@@ -131,13 +135,18 @@ export function renderFeatured(game: Game, m: MissionDefinition | undefined, { l
       `<button class="quiet brief-step" data-step="${dir}"${to ? ` data-pick="${to.id}" aria-label="${dir === "prev" ? "Previous" : "Next"} mission: ${escape(to.name)}"` : ` aria-label="${dir === "prev" ? "No previous" : "No next"} mission" disabled`}><span aria-hidden="true">${dir === "prev" ? "‹" : "›"}</span></button>`,
     start = lock
       ? `<button class="primary atlas-start" aria-describedby="mission-lock" disabled>Locked <span aria-hidden="true">${LOCK_ICON}</span></button>`
-      : `<button class="primary atlas-start" data-mission="${m.id}">${lobby ? "Choose for Room" : "Start Mission"} <span aria-hidden="true">▶</span></button>`;
-  // Campaign missions field the Arsenal's towers (solo, with campaign locks in force): what this one offers, and the way there.
-  const loadout = !lock && !lobby && locks && !m.circle ? arsenalTowers(m.id) : undefined,
-    offered = loadout && availableTowers(m, content).length,
-    loadoutLine = loadout
-      ? `<p class="brief-loadout"><span>Loadout <b>${loadout.length}</b>/${offered} towers</span><button class="quiet brief-arsenal" data-arsenal>⚒ Arsenal <span aria-hidden="true">›</span></button></p>`
-      : "";
+      : `<button class="primary atlas-start" data-mission="${m.id}">${lobby ? "Choose for Room" : briefed ? "Briefing" : "Start Mission"} <span aria-hidden="true">▶</span></button>`;
+  // Campaign missions are briefed and field a loadout from the Arsenal (solo, with campaign locks in force): its size,
+  // what a win pays now, and the way to the Arsenal.
+  let loadoutLine = "";
+  if (briefed) {
+    const base = game.baseContent,
+      arsenal = loadArsenal(),
+      kit = kitOf(m, arsenal, record, base),
+      bounty = bountyToday(),
+      pay = payPreview(m, sectors, record, !!bounty && bounty.id === m.id && !bounty.paid);
+    loadoutLine = `<p class="brief-loadout"><span>Loadout <b>${autoLoadout(kit, m, arsenal, base, arsenal.loadout).length}</b>/${kit.slots}</span><span class="brief-pay"><span class="brief-pay-label">${pay.first ? "First win" : "Win"}</span> <b>+${pay.win}</b>${pay.bounty ? ' <em class="brief-bounty">×2</em>' : ""}<span class="sr-only"> Salvage</span></span><button class="quiet brief-arsenal" data-arsenal>⚒ Arsenal <span aria-hidden="true">›</span></button></p>`;
+  }
   actions.innerHTML = `${loadoutLine}${lock ? `<p class="mission-lock" id="mission-lock">${lockText(lock, missions, sectors)}</p>` : reset ? '<p class="mission-warning">Starting another mission resets your current defense and progress.</p>' : ""}<div class="brief-go">${step("prev", row[at - 1])}${start}${step("next", row[at + 1])}</div>`;
   body.scrollTop = 0;
   // Restarts the briefing's entry animation.

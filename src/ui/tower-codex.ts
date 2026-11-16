@@ -1,10 +1,16 @@
-import { arsenalStatus } from "./arsenal-view";
+import { loadArsenal } from "../app/arsenal-store";
+import type { Arsenal } from "../campaign/arsenal";
+import { markEffects } from "../campaign/gear";
+import { CATALOGUE, CORE_KIT } from "../content/arsenal";
+import { arsenalStatus } from "./arsenal/model";
+import { markText, ROMAN, signatureText } from "./gear-text";
 import { availableTowers } from "../core/game";
 import type { ContentPack, MissionDefinition, TowerDefinition, TowerId, UpgradeDefinition } from "../core/types";
 import { resolveUpgrades } from "../core/upgrades";
 import { describeAttack, isSupport, type StatRow } from "../systems/attacks";
 import { escape, number, statValue } from "./format";
 import { pageOf, TOWER_PAGES } from "./tower-pages";
+import { type TowerBranch, towerBranches } from "./tower-branches";
 
 /**
  * Tower icons: the README images (`scripts/readme-images.ts -- --only towers`), drawn with the battlefield's own
@@ -68,16 +74,10 @@ export function codexTowers(content: ContentPack): CodexTower[] {
             return { level: u.effects.level!, cost: u.cost, damage: s.damage, range: s.range, interval: s.interval };
           })]
         : [];
-      const byPath = new Map<string, UpgradeDefinition[]>();
-      for (const u of d.upgrades) if (u.path) byPath.set(u.path, [...(byPath.get(u.path) ?? []), u]);
-      const byTrack = new Map<string, UpgradeDefinition[]>();
-      for (const u of d.upgrades) if (u.track) byTrack.set(u.track, [...(byTrack.get(u.track) ?? []), u]);
-      const group = (looks: TowerDefinition["visual"]["paths"]) => ([key, tiers]: [string, UpgradeDefinition[]]): CodexPath => {
-        const visual = looks?.[key];
-        return { id: key, name: visual?.name ?? tiers[0].label, role: visual?.role, color: hex(visual?.color ?? d.color), tiers: tiers.map((t) => ({ label: t.label, cost: t.cost })) };
-      };
-      const paths = [...byPath].map(group(d.visual.paths)),
-        tracks = [...byTrack].map(group(d.visual.tracks));
+      const { paths: pathBranches, tracks: trackBranches } = towerBranches(d),
+        toPath = (b: TowerBranch): CodexPath => ({ id: b.id, name: b.name, role: b.role, color: hex(b.color as number), tiers: b.tiers.map((t) => ({ label: t.label, cost: t.cost })) }),
+        paths = pathBranches.map(toPath),
+        tracks = trackBranches.map(toPath);
       return {
         definition: d,
         page: pageOf(d),
@@ -92,6 +92,15 @@ export function codexTowers(content: ContentPack): CodexTower[] {
     });
 }
 
+/** The campaign gear marks Mk I–V of a tower, explained (empty outside the Arsenal). */
+function gearHtml(d: TowerDefinition, content: ContentPack) {
+  const id = d.id as TowerId;
+  if (!CORE_KIT.includes(id) && CATALOGUE[id] === undefined) return "";
+  const sig = signatureText(id, content),
+    marks = markEffects(d).map((e, i) => `<li><span>Mk ${ROMAN[i]}</span><b>${escape(markText(e, d))}</b></li>`);
+  if (sig) marks.push(`<li class="is-sig"><span>Mk ${ROMAN[4]}</span><b>${escape(sig.name)}</b> ${escape(sig.text)}</li>`);
+  return `<h3>Gear (campaign) · one mark per rank</h3><ul class="tower-codex-gear">${marks.join("")}</ul>`;
+}
 const targetText = (d: TowerDefinition) =>
   !d.targets.length ? "No targets" : d.targets.length > 1 ? "Ground · Air" : d.targets[0] === "air" ? "Air only" : "Ground only";
 /** The tower's own picture, or its build-menu glyph in its colour. */
@@ -106,7 +115,7 @@ export const towerIconHtml = (d: TowerDefinition) => {
  * Tab bar (one tab per build-menu category) and card list of the tower codex page. `collapsed` (phones) folds each
  * card's level table, upgrades and paths into a closed disclosure, so the list stays scannable.
  */
-export function renderTowerCodex(content: ContentPack, page: number, collapsed = false) {
+export function renderTowerCodex(content: ContentPack, page: number, collapsed = false, arsenal: Arsenal = loadArsenal()) {
   const towers = codexTowers(content),
     total = content.missions.length;
   const tabs = TOWER_PAGES.map((p, i) => {
@@ -123,7 +132,7 @@ export function renderTowerCodex(content: ContentPack, page: number, collapsed =
         where = t.missions === total ? "every mission" : t.firstMission ? `${t.missions} of ${total} missions · from Mission ${pad(t.firstMission.number)}` : "no mission yet";
       const facts = [
         `<div><b>◇ ${d.cost}</b><span>Build cost</span></div>`,
-        `<div><b>${arsenalStatus(d.id as TowerId)}</b><span>Campaign Arsenal</span></div>`,
+        `<div class="codex-wide"><b>${arsenalStatus(d.id as TowerId, arsenal)}</b><span>Campaign Arsenal</span></div>`,
         `<div><b>${d.placement === "path" ? "Path" : "Beside path"}</b><span>Placement</span></div>`,
         ...(isSupport(d.attack) ? (d.range ? [`<div><b>${number(d.range)}</b><span>Radius (cells)</span></div>`] : []) : [`<div><b>${targetText(d)}</b><span>Targets</span></div>`]),
       ].join("");
@@ -148,7 +157,8 @@ export function renderTowerCodex(content: ContentPack, page: number, collapsed =
             .map((p) => `<li style="--path:${p.color}"><strong>${escape(p.name)}</strong>${p.role ? `<span>${escape(p.role)}</span>` : ""}<small>${p.tiers.map((x) => `◇ ${x.cost}`).join(" → ")}</small></li>`)
             .join("")}</ul>`
         : "";
-      return `<article class="codex-card tower-codex-card" style="--accent:${hex(d.color)}"><header>${towerIconHtml(d)}<span><strong>${escape(d.name)}</strong><small>${escape(d.role)} · ${where}</small></span></header><p>${escape(d.description)}</p><div class="codex-stats">${facts}</div>${params}${levels || upgrades || tracks || paths ? `<details class="tower-codex-more"${collapsed ? "" : " open"}><summary>${t.levels.length ? "Levels, upgrades and paths" : "Paths"}</summary>${levels}${upgrades}${tracks}${paths}</details>` : ""}</article>`;
+      const gear = gearHtml(d, content);
+      return `<article class="codex-card tower-codex-card" style="--accent:${hex(d.color)}"><header>${towerIconHtml(d)}<span><strong>${escape(d.name)}</strong><small>${escape(d.role)} · ${where}</small></span></header><p>${escape(d.description)}</p><div class="codex-stats">${facts}</div>${params}${levels || upgrades || tracks || paths || gear ? `<details class="tower-codex-more"${collapsed ? "" : " open"}><summary>${t.levels.length ? "Levels, upgrades, paths and gear" : "Paths and gear"}</summary>${levels}${upgrades}${tracks}${paths}${gear}</details>` : ""}</article>`;
     })
     .join("");
   return { tabs, list };

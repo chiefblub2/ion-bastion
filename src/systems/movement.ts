@@ -34,7 +34,7 @@ export function moveEnemies(sim: Sim, dt: number) {
       const leak = absorbLeak(sim, e, leakOf(sim, e));
       s.lives = Math.max(0, s.lives - leak);
       if (leak > 0) {
-        s.events.push({ type: "leak", at: { x: e.x, y: e.y }, amount: leak });
+        s.events.push({ type: "leak", at: { x: e.x, y: e.y }, amount: leak, enemy: e.type });
         afterLeak(sim, leak); // Vault and Dock paths: Clean Sheet, Triage
       }
       continue;

@@ -5,7 +5,6 @@ import { DEFAULT_CONTENT } from "./content";
 import { pageOf, towerOrder } from "./ui/tower-pages";
 import { Battlefield, CELL, LocalDriver, type ViewState } from "./render/scene";
 import { mountUI, Interface, renderMission } from "./ui/interface";
-import { bindUpgradeTooltip } from "./ui/upgrade-tooltip";
 import { installEnemyArtFallback } from "./ui/enemy-art-icon";
 import { Audio } from "./app/audio";
 import { bindUiSounds } from "./audio/ui-sounds";
@@ -17,7 +16,8 @@ import { createInput } from "./app/input";
 import { registerTools } from "./app/webmcp";
 import { screenFromUrl } from "./app/screens";
 import { campaignRecord, markTrainingDone, recordWin } from "./app/progress";
-import { arsenalSummary, settleCampaign } from "./app/arsenal-store";
+import * as session from "./app/campaign-session";
+import { MissionTally } from "./campaign/tally";
 import { campaignLocks, newlyUnlocked } from "./campaign/campaign-unlock";
 import { isRunMission } from "./run/run-id";
 import { settleRun } from "./run/session";
@@ -54,13 +54,13 @@ if (target && game.mission.id !== target.id) game.command({ type: "mission", id:
 mountUI(game);
 installEnemyArtFallback();
 renderMission(game);
-bindUpgradeTooltip();
 const first = towerOrder(game)[0];
 const view: ViewState = { build: game.mission.manualWaves ? null : first, selected: null, enemy: null, hover: null, speed: 1, player: 0, coverage: false, page: pageOf(game.content.towers[first]) };
 const ui = new Interface(game, view);
 const audio = new Audio();
 audio.armAutoStart();
 const peak = new PeakTracker();
+const tally = new MissionTally();
 const battlefield = new Battlefield(game, view, {
   // Pointer events only arrive after start-up, once `input` exists.
   chooseCell: (x, y, keepBuilding, touch) => input.chooseCell(x, y, keepBuilding, touch),
@@ -72,6 +72,7 @@ const battlefield = new Battlefield(game, view, {
     audio.frame(e, game, input.match());
     if (e.some((event) => event.type === "income")) ui.flashCredits();
     peak.observe(game.mission, game.state);
+    tally.observe(game.state, e);
     const end = e.find((event) => event.type === "end");
     // A Run mission moves its run on: the reward after a win, the end of the run after a loss.
     if (isRunMission(game.mission)) journalFrame(game, e.some((event) => event.type === "waveEnd"));
@@ -79,10 +80,13 @@ const battlefield = new Battlefield(game, view, {
       endJournal();
       settleRun(game.mission.id, runResult(game, end.result === "won"), game.baseContent);
     }
-    // Campaign Arsenal: a menu-started campaign mission (it carries the arsenal's towers) pays won or lost.
+    // Campaign Arsenal: a menu-started campaign mission (it carries the arsenal's towers) pays won or lost; the
+    // session settles it whole (record, unlocks, XP, Salvage) into the debrief page; the overlay only leads there.
     if (end && game.arsenal && !input.match() && game.mission === findMission(game.mission.id, game.content)) {
-      const won = end.result === "won";
-      ui.earned = { state: game.state, text: settleCampaign(game, won, won && campaignRecord()[game.mission.id] === undefined), ready: arsenalSummary().ready };
+      const d = session.end(game, end.result === "won", tally, peak.peak);
+      ui.debrief = { state: game.state, stars: d.stars, best: d.stars > d.best };
+      input.debriefSoon(d);
+      return;
     }
     if (end?.result !== "won") return;
     if (game.mission.manualWaves) markTrainingDone();
@@ -97,7 +101,7 @@ const battlefield = new Battlefield(game, view, {
   },
 });
 const coach = new Coach(game, view, (cell) => battlefield.cellRect(cell));
-const towerCard = new TowerCard(game, view, () => ui.session(), (cell) => battlefield.cellRect(cell));
+const towerCard = new TowerCard(game, view, () => ui.session(), (cell) => battlefield.cellRect(cell), (id) => ui.standing(id));
 const buildConfirm = new BuildConfirm(game, view, (cell) => battlefield.cellRect(cell), {
   confirm: () => input.confirmBuild(),
   cancel: () => input.dropPending(),

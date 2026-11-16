@@ -7,6 +7,8 @@ import { coachRefusal, coachStep, freshMemory, type CoachStep } from "./coach";
 const GAP = 12;
 /** Space kept free along the window's edges. */
 const EDGE = 16;
+/** A toolbar narrower than this is the phone layout's rail. */
+const RAIL_MAX = 140;
 /**
  * The Training coach on screen: one bubble (`#coach`) beside the element or board cell the current step is about,
  * an outline on that element and the board highlight (`ViewState.highlight`). Reads state only.
@@ -78,6 +80,14 @@ export class Coach {
     if (top + h > innerHeight - EDGE && anchor.top - GAP - h >= EDGE) top = anchor.top - GAP - h;
     const left = Math.max(EDGE, Math.min(innerWidth - EDGE - w, anchor.left + anchor.width / 2 - w / 2));
     top = Math.max(EDGE, Math.min(innerHeight - EDGE - h, top));
+    // A target in the phone layout's one-column rail: the bubble goes beside the rail, so it never covers the stats and buttons.
+    const rail = this.marked?.closest(".field-toolbar")?.getBoundingClientRect();
+    if (rail && rail.width < RAIL_MAX && rail.right + GAP + w <= innerWidth - EDGE) {
+      const beside = Math.max(EDGE, Math.min(innerHeight - EDGE - h, anchor.top + anchor.height / 2 - h / 2));
+      this.el.style.transform = `translate(${Math.round(rail.right + GAP)}px, ${Math.round(beside)}px)`;
+      this.el.dataset.side = "beside";
+      return;
+    }
     this.el.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
     this.el.dataset.side = top < anchor.top ? "above" : "below";
   }

@@ -58,7 +58,7 @@ export const AURA_UPGRADES: readonly UpgradeDefinition[] = AURA_TRACKS.flatMap((
     requires: index === 0 ? [] : [auraId(stat, index)],
     track: stat,
     description: index === 0
-      ? `Locks in the track: +${pct(value)} ${effect}. The other tracks are locked for this tower.`
+      ? `+${pct(value)} ${effect}.`
       : `Raises the bonus from +${pct(tiers[index - 1][1])} to +${pct(value)} ${effect}.`,
     effects: { level: index + 2, aura: { [stat]: value } },
   })),

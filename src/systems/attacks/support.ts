@@ -15,7 +15,7 @@ export const repair: AttackModule<RepairAttack> = {
   reactorOnly: true,
   projectile: "forbidden",
   params: {
-    amount: { label: "Repair per wave", valid: (v) => Number.isInteger(v) && v > 0, unit: " Energie" },
+    amount: { label: "Repair per wave", valid: (v) => Number.isInteger(v) && v > 0, unit: " energy" },
   },
   apply: () => {},
 };

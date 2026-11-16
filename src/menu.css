@@ -2269,6 +2269,41 @@ span.world-hop {
 .node-tag + .node-tag {
   display: none;
 }
+/* A finale's unpaid prize, and the bounty's tag on the other side of the badge. */
+.node-finale {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 0.7em;
+  font: 500 10px var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--m-star);
+}
+.node-finale span {
+  white-space: nowrap;
+}
+.node-bounty {
+  position: absolute;
+  top: 0;
+  right: calc(50% + var(--badge) * 0.62);
+  padding: 1px 5px;
+  font: 700 9px / 1.4 var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--on-neon);
+  background: var(--m-star);
+  border-radius: 3px;
+}
+.home-map-bounty {
+  margin-left: 8px;
+  padding: 1px 6px;
+  font: 700 10px / 1.4 var(--mono);
+  font-style: normal;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--on-neon);
+  background: var(--m-star);
+  border-radius: 3px;
+}
 .start-screen .mission-node:hover {
   color: var(--m-text);
 }
@@ -2349,6 +2384,14 @@ span.world-hop {
 }
 .brief-loadout b {
   color: var(--m-text);
+}
+/* What a win pays now; the bounty doubles it. */
+.brief-pay b {
+  color: var(--m-accent);
+}
+.brief-bounty {
+  font-style: normal;
+  color: var(--m-star);
 }
 .start-screen .brief-arsenal {
   min-height: 40px;
@@ -2925,6 +2968,10 @@ span.world-hop {
 .tower-codex-card .codex-stats span {
   font-size: 12px;
 }
+/* The Arsenal fact ("Core · Rank 2 · Mk II") is the longest: two cells, so it stays on one line. */
+.tower-codex-card .codex-stats .codex-wide {
+  grid-column: span 2;
+}
 .start-screen .tower-codex-card p.tower-codex-params {
   font-size: 13px;
   color: var(--m-text-2);
@@ -3003,6 +3050,37 @@ span.world-hop {
 .tower-codex-paths small {
   font: 500 12px var(--mono);
   color: var(--muted);
+}
+/* Campaign gear marks on a tower card: Mk I–IV, then the Mk V signature in the second colour. */
+.tower-codex-gear {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.start-screen .tower-codex-card .tower-codex-gear li {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 2px 8px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--m-text-2);
+}
+.tower-codex-gear li > span {
+  font: 600 12px var(--mono);
+  color: var(--ion-accent);
+}
+.tower-codex-gear b {
+  font-weight: 600;
+  color: var(--m-text);
+}
+.tower-codex-gear li.is-sig {
+  grid-template-columns: 52px auto minmax(0, 1fr);
+}
+.tower-codex-gear li.is-sig > :is(span, b) {
+  color: var(--ion-second);
 }
 #help-page {
   max-width: 800px;
@@ -3425,11 +3503,18 @@ span.world-hop {
   }
   .brief-loadout {
     justify-content: space-between;
+    gap: 6px;
     font-size: 11px;
+    white-space: nowrap;
+  }
+  /* One row: the pay's label gives way to its amount. */
+  .brief-pay-label {
+    display: none;
   }
   .start-screen .brief-arsenal {
     min-height: 40px;
     padding: 2px 10px;
+    white-space: nowrap;
   }
   .start-screen .mode-tab {
     min-height: 42px;
@@ -3820,24 +3905,4 @@ span.world-hop {
   .start-screen .codex-list {
     mask-image: linear-gradient(90deg, #000 calc(100% - 28px), #00000000);
   }
-}
-
-/* Campaign Arsenal page (ui/arsenal-view.ts). */
-.arsenal-salvage { margin: 0 0 12px; color: var(--ion-label); }
-.arsenal-next { margin: 0 0 14px; }
-.arsenal-next button { display: inline-flex; align-items: center; gap: 10px; }
-.arsenal-salvage b { color: var(--ion-accent); font-size: 1.2em; }
-.arsenal-branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
-.arsenal-branch h3 { margin: 0 0 6px; color: var(--ion-label); font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; }
-.arsenal-branch ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.arsenal-card { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--ion-accent) 20%, transparent); border-radius: 6px; }
-.arsenal-card.locked { opacity: 0.75; }
-.arsenal-card strong em { color: var(--ion-label); font-style: normal; font-size: 0.75em; }
-.arsenal-card span { grid-column: 1; font-size: 0.8em; color: var(--ion-label); }
-.arsenal-card button { grid-row: 1 / span 2; grid-column: 2; }
-.arsenal-card button:disabled { opacity: 0.4; }
-/* Arsenal in the fitted landscape layout: the four branches are side-swiping shelves, each scrolling on its own. */
-@media (orientation: landscape) and (max-height: 540px) {
-  .arsenal-branches { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(230px, 46%); overflow-x: auto; scroll-snap-type: x mandatory; }
-  .arsenal-branch { scroll-snap-align: start; max-height: calc(100dvh - 120px); overflow-y: auto; }
 }

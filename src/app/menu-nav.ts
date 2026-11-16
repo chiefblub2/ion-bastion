@@ -21,8 +21,14 @@ import { renderAtlas, selectMission as featureMission, selectSector, selectWorld
 import type { Coop } from "./coop";
 import { bindMenuKeys, showCodexTab, showTowerCodex } from "./menu-keys";
 import { campaignRecord, lastMission, rememberUnlocks, seenUnlocks, trainingDone } from "./progress";
-import { gearPack } from "../campaign/gear";
-import { arsenalSummary, arsenalTowers, loadArsenal } from "./arsenal-store";
+import { arsenalSummary, bountyToday, loadArsenal } from "./arsenal-store";
+import { createCampaignFlow } from "./campaign-flow";
+import { lastDebrief } from "./campaign-session";
+import { campaignComplete, campaignTotals } from "../campaign/finale";
+import type { Debrief } from "../campaign/debrief";
+import { focusPrimary, renderDebrief, stopStaging } from "../ui/debrief-view";
+import { debriefKey } from "../ui/debrief-text";
+import { focusVictory, renderVictory } from "../ui/victory-view";
 import { beginJournal, storedJournal } from "./run-journal";
 import { createScreens, GAME, HOME, type MenuPage, type Screen } from "./screens";
 
@@ -56,11 +62,20 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
      * The atlas's sector and mission when the player last left it for another menu page, so coming back (Back, the
      * mode buttons) finds them again. Loading a mission forgets it: the atlas then opens on what is being played.
      */
-    browsed: ReturnType<typeof atlasSelection>;
+    browsed: ReturnType<typeof atlasSelection>,
+    /** The debrief that opened by itself (or by its button) already, so the timer never opens it twice. */
+    opened: string | undefined,
+    /** The game entry in the history was pushed from the debrief ("Battlefield"): Back returns to it. */
+    debriefBehind = false;
+  /** Today's unpaid bounty mission, while the campaign loop is in force (solo, locks on). */
+  const bountyId = () => {
+    const b = locks() ? bountyToday() : undefined;
+    return b && !b.paid ? b.id : undefined;
+  };
   /** The Sector Atlas picks for a multiplayer room while the page was opened from there or from a lobby. */
   const atlas = (): AtlasOptions => {
     const lobby = forRoom || coop.inLobby();
-    return { lobby, image: terrainImage, record: campaignRecord(), playing: inProgress(), locks: lobby ? undefined : locks(), seen: seenUnlocks() };
+    return { lobby, image: terrainImage, record: campaignRecord(), playing: inProgress(), locks: lobby ? undefined : locks(), seen: seenUnlocks(), bounty: lobby ? undefined : bountyId() };
   };
   /** `?unlock=all` (QA) opens every mission for this page load. */
   const unlockAll = new URLSearchParams(location.search).get("unlock") === "all";
@@ -73,6 +88,7 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
     return lockCache.locks;
   }
   ui.locks = locks;
+  ui.record = () => (coop.active() ? undefined : campaignRecord());
   // The world map keeps its sector in view when the page resizes.
   new ResizeObserver(() => fitWorld()).observe(document.getElementById("world-view")!);
   // A drag turns the atlas's globe.
@@ -80,8 +96,32 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
   const screens = createScreens(playableMissions(game.content), () => game.mission.id, enter);
   /** A mission this session has played on, which "Resume Game" returns to instead of reloading it. */
   const inProgress = () => coop.active() || game.state.wave > 0 || game.state.towers.length > 0;
+  /** The briefing and the paying start of solo campaign missions. */
+  const flow = createCampaignFlow({
+    game,
+    execute,
+    screens,
+    solo: () => !forRoom && !coop.active() && !coop.inLobby(),
+    unlockAll,
+    locked: (id) => !!locks()?.has(id),
+    underWay: () => inProgress() && game.state.status !== "won" && game.state.status !== "lost",
+    started: () => {
+      browsed = undefined;
+    },
+    image: terrainImage,
+    fielded: (a) => {
+      ui.fielded = a;
+    },
+  });
   /** Shows a screen: pauses or resumes the wave between game and menu and fills the menu page. */
   function enter(to: Screen, from: Screen | null) {
+    // A briefing without a briefed mission (a stale entry, another tab's link): the atlas instead. First, because the
+    // nested `show` enters the atlas itself.
+    if (to.view === "menu" && to.page === "briefing" && !flow.mission()) return screens.show(page("missions"), { replace: true });
+    // The same for a debrief that is gone (a new tab) and a campaign that is not complete.
+    if (to.view === "menu" && to.page === "debrief" && !lastDebrief()) return screens.show(page("missions"), { replace: true });
+    if (to.view === "menu" && to.page === "victory" && !campaignComplete(campaignRecord(), game.baseContent.sectors ?? [])) return screens.show(page("missions"), { replace: true });
+    if (from?.view === "menu" && from.page === "debrief") stopStaging();
     if (to.view === "game") {
       // Shown on the game view only; refresh() re-places it once the board is laid out.
       requestAnimationFrame(() => coach.refresh());
@@ -114,7 +154,7 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
         multiplayer: coop.active(),
       }, record, locks());
       // A newcomer: no Training won, no mission won and none started yet.
-      renderMenu(game, primary, record, terrainImage, !trainingDone() && !Object.keys(record).length && !lastMission());
+      renderMenu(game, primary, record, terrainImage, !trainingDone() && !Object.keys(record).length && !lastMission(), primary.kind !== "play" && bountyId() === primary.mission.id);
     }
     if (to.page === "play") renderPlay(game, campaignRecord());
     if (to.page !== "missions") forRoom = false;
@@ -130,8 +170,26 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
     if (to.page === "editor") void import("../editor/editor-view").then((m) => m.openEditor(editorHost));
     if (to.page === "run") void import("../ui/run-view").then((m) => m.openRun(runHost));
     if (to.page === "arsenal") {
-      const next = arsenalNext();
-      void import("../ui/arsenal-view").then((m) => m.renderArsenal(document.getElementById("arsenal-root")!, game.baseContent, next));
+      // Opened from the briefing, the Arsenal leads back to it instead of offering a mission of its own.
+      const briefing = from?.view === "menu" && from.page === "briefing" ? flow.mission() : undefined,
+        debrief = from?.view === "menu" && from.page === "debrief" ? lastDebrief()?.mission.name : undefined,
+        next = briefing || debrief ? undefined : arsenalNext(),
+        // A solo campaign mission under way keeps its towers and gear until its next start or Restart.
+        underway = !coop.active() && game.arsenal !== undefined && inProgress() && game.state.status !== "won" && game.state.status !== "lost";
+      void import("../ui/arsenal-view").then((m) => m.renderArsenal(document.getElementById("arsenal-root")!, game.baseContent, { next, briefing, debrief, underway }));
+    }
+    if (to.page === "briefing") flow.render();
+    if (to.page === "debrief") {
+      const d = lastDebrief()!;
+      debriefBehind = false;
+      // What the Arsenal buys now, not what it bought when the mission ended.
+      renderDebrief(document.getElementById("debrief-root")!, { ...d, ready: arsenalSummary().ready }, game.baseContent);
+    }
+    if (to.page === "victory") {
+      const sectors = game.baseContent.sectors ?? [],
+        record = campaignRecord(),
+        hunt = modeGroups(sectors).campaign.flatMap((sector) => sector.missions).find((m) => (record[m.id] ?? 0) < 3);
+      renderVictory(document.getElementById("victory-root")!, campaignTotals(record, loadArsenal(), sectors), hunt && { id: hunt.id, name: hunt.name, stars: record[hunt.id] ?? 0 });
     }
     // Any page change ends a codex animation preview; opening the codex renders it closed.
     closeCodexPreview();
@@ -140,6 +198,44 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
     missionSector = missionPick = undefined;
     scrollTo(0, 0);
     section?.focus({ preventScroll: true });
+    // The briefing's first stop is Start.
+    if (to.page === "briefing") flow.focusStart();
+    if (to.page === "debrief") focusPrimary(document.getElementById("debrief-root")!);
+    if (to.page === "victory") focusVictory(document.getElementById("victory-root")!);
+  }
+  /** Opens the debrief page: it takes the finished game's history entry; from a battlefield opened out of it, Back returns. */
+  function openDebrief() {
+    const d = lastDebrief(),
+      now = screens.current();
+    if (!d) return;
+    opened = debriefKey(d);
+    if (now.view === "menu" && now.page === "debrief") return;
+    if (now.view === "game" && debriefBehind) {
+      debriefBehind = false;
+      return screens.back();
+    }
+    screens.show(page("debrief"), { replace: now.view === "game" });
+  }
+  /** What the debrief's buttons do; every exit but Battlefield takes the debrief's history entry. */
+  function debriefAction(what: string) {
+    const d = lastDebrief();
+    if (!d) return;
+    const atlas = (sector?: number) => {
+      missionSector = sector;
+      missionPick = undefined;
+      screens.show(page("missions"), { replace: true });
+    };
+    if (what === "field") {
+      debriefBehind = true;
+      return screens.show(GAME);
+    }
+    if (what === "missions") return atlas();
+    if (what === "replay") return flow.brief(d.mission.id, { replace: true }) || atlas();
+    // Next: a briefing, the atlas flown to the sector the win opened (its flare is the reveal), or the ending.
+    const next = d.next;
+    if (next.kind === "briefing" && next.id) return flow.brief(next.id, { replace: true }) || atlas();
+    if (next.kind === "atlas") return atlas(next.sector === undefined ? undefined : next.sector - 1);
+    if (next.kind === "victory") return screens.show(page("victory"), { replace: true });
   }
   /**
    * The campaign mission the Arsenal page offers to start: the next open unwon one, unless a mission is under way (Back
@@ -174,8 +270,9 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
       screens.show(page("missions"));
       return;
     }
-    const towers = unlockAll ? undefined : arsenalTowers(id);
-    execute({ type: "mission", id, towers, content: towers ? gearPack(game.baseContent, loadArsenal()) : undefined });
+    // A solo campaign mission with the Arsenal in force is briefed first; its Start loads it (`campaign-flow.ts`).
+    if (flow.brief(id)) return;
+    execute({ type: "mission", id });
     browsed = undefined;
     if (!coop.active()) screens.show(GAME);
   }
@@ -263,6 +360,15 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
     if (b.dataset.planet) return selectWorld(game, Number(b.dataset.planet), atlas()), true;
     if (b.dataset.mission) return selectMission(b.dataset.mission), true;
     if (b.dataset.arsenal !== undefined) return screens.show(page("arsenal")), true;
+    if (b.dataset.debrief) return debriefAction(b.dataset.debrief), true;
+    switch (b.dataset.victory) {
+      case "circuit":
+        return chooseMode(true), true;
+      case "atlas":
+        return chooseMode(false), true;
+      case "run":
+        return screens.show(page("run")), true;
+    }
     if (b.dataset.briefTab) return showBriefTab(b.dataset.briefTab as BriefTab), true;
     if (b.dataset.pick) {
       pickMission(b.dataset.pick);
@@ -286,8 +392,10 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
         screens.show(page("run"));
         break;
       case "atlas-arsenal":
-      case "overlay-arsenal":
         screens.show(page("arsenal"));
+        break;
+      case "overlay-debrief":
+        openDebrief();
         break;
       case "menu-btn":
       case "rail-menu":
@@ -323,7 +431,7 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
           screens.show(page("run"));
           break;
         }
-        const next = nextMission(game, locks());
+        const next = nextMission(game, locks(), ui.record());
         if (next) selectMission(next.id);
         break;
       }
@@ -341,9 +449,25 @@ export function createMenuNav({ game, ui, coop, coach, execute, fitBattlefield }
       forRoom = true;
       screens.show(page("missions"));
     },
+    /** HUD Restart: a paying campaign game starts again with its loadout and the current gear, any other restarts. */
+    restart() {
+      if (!flow.restart()) execute({ type: "restart" });
+    },
     /** A newly loaded mission starts fresh: no wave waits to resume from a menu pause. */
     missionLoaded() {
       resumeAfterMenu = false;
+      debriefBehind = false;
+    },
+    /**
+     * A paying campaign game just ended: the debrief opens by itself after a moment, once, unless the player already
+     * opened it, left the game view or started something else.
+     */
+    debriefSoon(d: Debrief) {
+      const key = debriefKey(d);
+      setTimeout(() => {
+        if (opened === key || screens.current().view !== "game" || ui.debrief?.state !== game.state) return;
+        openDebrief();
+      }, 1200);
     },
   };
 }
